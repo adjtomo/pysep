@@ -1,32 +1,11 @@
 This folder contains tools to request seismic data in SAC format and prepare the data for processing with CAP.
 For older instructions about using iris_tools.py see
-~/REPOSITORIES/GEOTOOLS/python_util/sandbox/util_cap/README_iris_tools 
+GEOTOOLS/python_util/sandbox/util_cap/README_iris_tools 
 
-Tool to get SAC data from IRIS
-iris_tools.py
+Tool to get SAC data from IRIS:
+getwaveform_iris.py
 
-Tool to get SAC data from LLNL database
-llnl_tool.py
+Tool to get SAC data from LLNL database: 
+getwaveform_llnl.py
 
-Example 1. Python script to get data for the Iniskin event
---------
-import obspy
-import iris_tools
-import copy
-from obspy.clients.fdsn import Client
-
-c = Client("IRIS")
-
-otime = obspy.UTCDateTime("2016-01-24T10:30:29")
-
-cat = c.get_events(starttime = otime-10, endtime = otime+10)
-network='AK,AT,YV,PS,AV,IU,II,XZ,XM'
-iris_tools.run_get_waveform(ev=cat[0], min_dist=0, max_dist=500, 
-        before = 20, after = 600,
-        network=network, channel='BH*', samp_freq=20.0, rotate=True,
-        output_cap_weight_file=True, remove_response=True,
-        detrend=True, demean=True, output_event_info=True,
-                     pre_filt=(0.005, 0.006, 5.0, 10.0)
-                     )
---------
-
+Try examples in run_getwaveform.py
