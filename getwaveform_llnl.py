@@ -163,7 +163,17 @@ def run_get_waveform(llnl_db_client, event, min_dist=20, max_dist=300,
     time_shift_sac(st2, -1 * before)
 
     # Now do some QA: throw out traces with missing data
+    # keep a log with status of trace extraction
+    # this is mirrored in llnl_tool.py and iris_tools.py
+    outlog = "get_data_status_LLNL.log"
+    fid = open(outlog, "a")
+    fid.write("\n--------------------\n%s\n" % event.short_str())
+
     for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
         if (tr.stats.starttime > evtime - before) or \
                 (tr.stats.endtime < evtime + after):
             print("===========")
@@ -176,6 +186,7 @@ def run_get_waveform(llnl_db_client, event, min_dist=20, max_dist=300,
                   "Pass:", tr.stats.endtime < evtime + after)
             print("Removing %s. Not in requested temporal range." % tr.id)
             print("===========")
+            fid.write(" -- data missing. removing.")
             st2.remove(tr)
 
     print("--> %i waveforms left." % len(st2))

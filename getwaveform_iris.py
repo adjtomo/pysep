@@ -143,10 +143,21 @@ def run_get_waveform(ev, min_dist=20, max_dist=300, before=100, after=300,
         resample(st2, freq=samp_freq)
 
     # Now do some QA: throw out traces with missing data
+    # keep a log with status of trace extraction
+    # this is mirrored in llnl_tool.py and iris_tools.py
+    outlog = "get_data_status_IRIS.log"
+    fid = open(outlog, "a")
+    fid.write("\n--------------------\n%s\n" % ev.short_str())
+
     for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
         if tr.stats.npts < tr.stats.sampling_rate * (before + after):
             print("WARNING. missing data for station %s" % tr.stats.station)
             print("WARNING. removing this station")
+            fid.write(" -- data missing. removing.")
             st2.remove(tr)
 
     write_stream_sac(st2, evtime)
