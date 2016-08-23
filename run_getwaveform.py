@@ -32,10 +32,29 @@ if iex == 1:
 if iex == 2:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 0 
-    max_dist = 300
+    max_dist = 500
     before = 100
     after = 300
-    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
+    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM,IM'
+    channel = 'BH*'
+    samp_freq = 20.0
+    rotate = True
+    output_cap_weight_file = True
+    remove_response = True
+    detrend = True
+    demean = True
+    output_event_info = True
+    pre_filt = (0.005, 0.006, 5.0, 10.0)
+
+# Example for showing the script crashes when requesting for IM network stations
+if iex == 3:
+    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
+    min_dist = 300 
+    max_dist = 500
+    before = 100
+    after = 300
+    #network = 'AK,YV,IM' # Crashes (Error because of the IM network)
+    network = 'AK,YV'   # works fine 
     channel = 'BH*'
     samp_freq = 20.0
     rotate = True
