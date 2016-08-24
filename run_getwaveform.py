@@ -17,7 +17,7 @@ if iex == 1:
     max_dist = 500
     before = 20
     after = 600
-    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
+    network = 'AK,AT,ZE,PS,AV,IU,II,XV,XZ,XM'
     channel = 'BH*'
     samp_freq = 20.0
     rotate = True
@@ -56,6 +56,24 @@ if iex == 3:
     #network = 'AK,YV,IM' # Crashes (Error because of the IM network)
     network = 'AK,YV'   # works fine 
     channel = 'BH*'
+    samp_freq = 20.0
+    rotate = True
+    output_cap_weight_file = True
+    remove_response = True
+    detrend = True
+    demean = True
+    output_event_info = True
+    pre_filt = (0.005, 0.006, 5.0, 10.0)
+
+# Iniskin earthquake -- trying to get waveforms from ZE (SALMON), which is embargoed
+if iex == 4:
+    otime = obspy.UTCDateTime("2016-01-24T10:30:29")
+    min_dist = 0 
+    max_dist = 500
+    before = 20
+    after = 600
+    network = 'AK,ZE'   # no ZE waveforms returned
+    channel = '*H*'
     samp_freq = 20.0
     rotate = True
     output_cap_weight_file = True
