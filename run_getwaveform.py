@@ -17,8 +17,8 @@ if iex == 1:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    #before = 100   # Crashes
-    before = 20    # works fine
+    #before = 42   # Crashes
+    before = 41    # works fine
     after = 600
     network = 'AK,AT,AV,CN,II,IU,TA,XM,XV,XZ,ZE'
     channel = 'BH*'
