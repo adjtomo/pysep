@@ -11,13 +11,15 @@ c = Client("IRIS")
 iex = 2
 
 # Iniskin earthquake
+# This produces NO waveforms and exits with this error:
+# ValueError: The length of the input vector x must be at least padlen, which is 39.
 if iex == 1:
-    otime = obspy.UTCDateTime("2016-01-24T10:30:29")
+    otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before = 20
+    before = 100
     after = 600
-    network = 'AK,AT,ZE,PS,AV,IU,II,XV,XZ,XM'
+    network = 'AK,AT,AV,CN,II,IU,TA,XM,XV,XZ,ZE'   # fails
     channel = 'BH*'
     samp_freq = 20.0
     rotate = True
@@ -53,8 +55,8 @@ if iex == 3:
     max_dist = 500
     before = 100
     after = 300
-    #network = 'AK,YV,IM' # Crashes (Error because of the IM network)
-    network = 'AK,YV'   # works fine 
+    #network = 'AK,IM' # Crashes (Error because of the IM network)
+    network = 'AK'   # works fine 
     channel = 'BH*'
     samp_freq = 20.0
     rotate = True
@@ -67,10 +69,10 @@ if iex == 3:
 
 # Iniskin earthquake -- trying to get waveforms from ZE (SALMON), which is embargoed
 if iex == 4:
-    otime = obspy.UTCDateTime("2016-01-24T10:30:29")
+    otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before = 20
+    before = 100
     after = 600
     network = 'AK,ZE'   # no ZE waveforms returned
     channel = '*H*'
@@ -84,11 +86,12 @@ if iex == 4:
     pre_filt = (0.005, 0.006, 5.0, 10.0)
 
 # Iniskin earthquake -- trying to get KDAK waveforms (different location codes)
+# note that we should have B = -100 but that is not the case
 if iex == 5:
-    otime = obspy.UTCDateTime("2016-01-24T10:30:29")
+    otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before = 20
+    before = 100
     after = 600
     network = 'II'
     channel = 'BH*'
