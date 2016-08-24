@@ -58,11 +58,11 @@ def resample(st, freq):
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman")
 
-
-def run_get_waveform(ev, min_dist=20, max_dist=300, before=100, after=300,
-                     network='*', channel='BH*', samp_freq=20.0, rotate=True,
-                     output_cap_weight_file=True, remove_response=True,
-                     detrend=True, demean=True, output_event_info=True,
+def run_get_waveform(ev,
+                     min_dist=20, max_dist=300, before=100, after=300,
+                     network='*', channel='BH*', samp_freq=20.0, 
+                     ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
+                     ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2,
                      pre_filt=(0.005, 0.006, 10.0, 15.0)):
     """
@@ -80,18 +80,18 @@ def run_get_waveform(ev, min_dist=20, max_dist=300, before=100, after=300,
     channel -  component(s) to get, accepts comma separated (default='BH*')
     samp_freq- sampling frequency to resample files (default 20.0, 0 for
                                                      no resampling)
-    rotate - Boolean, if true will output sac files rotated to baz
+    ifrotate - Boolean, if true will output sac files rotated to baz
                unrotated sac files will also be written
-    output_cap_weight_file - Boolean, make weight files for CAP
-    output_event_info- Boolean, output 'ev_info.dat' containg event info (True)
-    remove_response - Boolean, will remove response (True)
-    detrend - Boolean, will remove linear trend from data (True)
-    demean  - Boolean, will insult the data (True)
+    ifCapInp - Boolean, make weight files for CAP
+    ifEvInfo - Boolean, output 'ev_info.dat' containg event info (True)
+    ifRemoveResponse - Boolean, will remove response (True)
+    ifDetrend - Boolean, will remove linear trend from data (True)
+    ifDemean  - Boolean, will insult the data (True)
     scale_factor - scale all data by one value (10.0**2)
                     This usually puts the data in the units required by CAP
                     From m/s to cm/s
     pre_filt  - list, corner frequencies of filter to apply before deconv
-                a good idea when deconvolving (remove_response=True)
+                a good idea when deconvolving (ifRemoveResponse=True)
     """
     # BK network doesn't return data when using the IRIS client.
     # this option switches to NCEDC if BK is 
@@ -119,13 +119,13 @@ def run_get_waveform(ev, min_dist=20, max_dist=300, before=100, after=300,
     stream = c.get_waveforms_bulk(bulk_list)
     print(stream)
 
-    if demean:
+    if ifDemean:
         stream.detrend('demean')
 
-    if detrend:
+    if ifDetrend:
         stream.detrend('linear')
 
-    if remove_response:
+    if ifRemoveResponse:
         stream.remove_response(inventory=stations, pre_filt=pre_filt,
                                output="VEL")
 
@@ -162,13 +162,13 @@ def run_get_waveform(ev, min_dist=20, max_dist=300, before=100, after=300,
 
     write_stream_sac(st2, evtime)
 
-    if rotate:
+    if ifrotate:
         rotate_and_write_stream(st2, evtime)
 
-    if output_cap_weight_file:
+    if ifCapInp:
         write_cap_weights(st2, evtime)
 
-    if output_event_info:
+    if ifEvInfo:
         write_ev_info(ev, evtime)
 
 
