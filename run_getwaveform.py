@@ -17,9 +17,10 @@ if iex == 1:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before = 100
+    #before = 100   # Crashes
+    before = 20    # works fine
     after = 600
-    network = 'AK,AT,AV,CN,II,IU,TA,XM,XV,XZ,ZE'   # fails
+    network = 'AK,AT,AV,CN,II,IU,TA,XM,XV,XZ,ZE'
     channel = 'BH*'
     samp_freq = 20.0
     rotate = True
@@ -37,7 +38,7 @@ if iex == 2:
     max_dist = 500
     before = 100
     after = 300
-    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM,IM'
+    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
     channel = 'BH*'
     samp_freq = 20.0
     rotate = True
@@ -49,6 +50,7 @@ if iex == 2:
     pre_filt = (0.005, 0.006, 5.0, 10.0)
 
 # Example for showing the script crashes when requesting for IM network stations
+# NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
 if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
