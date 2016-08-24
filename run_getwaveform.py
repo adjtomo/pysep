@@ -83,6 +83,24 @@ if iex == 4:
     output_event_info = True
     pre_filt = (0.005, 0.006, 5.0, 10.0)
 
+# Iniskin earthquake -- trying to get KDAK waveforms (different location codes)
+if iex == 5:
+    otime = obspy.UTCDateTime("2016-01-24T10:30:29")
+    min_dist = 0 
+    max_dist = 500
+    before = 20
+    after = 600
+    network = 'II'
+    channel = 'BH*'
+    samp_freq = 20.0
+    rotate = True
+    output_cap_weight_file = True
+    remove_response = True
+    detrend = True
+    demean = True
+    output_event_info = True
+    pre_filt = (0.005, 0.006, 5.0, 10.0)
+
 cat = c.get_events(starttime = otime-10, endtime = otime+10)
 
 # Extract waveforms 
