@@ -215,6 +215,8 @@ def run_get_waveform(llnl_db_client, event,
     if decon is False:
         print("WARNING waveforms NOT corrected for instrument response")
 
+    #Fix b and e sac headers
+    correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/',before,after)
 
 def rotate_and_write_stream(stream, reftime):
     """
@@ -420,6 +422,21 @@ def time_shift_sac(st, tshift=0):
         tr.stats.sac['b'] = tr.stats.sac['b'] + tshift
         tr.stats.sac['e'] = tr.stats.sac['e'] + tshift
 
+def correct_sac_tshift(targetdir,before=100.0,after=300.0):
+    """
+    Change the b and e header values of every sac file by 
+    before and after (floats)
+    """
+    import os
+    os.chdir(targetdir)
+    fnam='sac_cmd'
+    ff=open(fnam,'w')
+    ff.write('r *.r *.t *.z *.sac\n')
+    ff.write('ch b '+str(-1*before)+' e '+str(after)+'\n')
+    ff.write('w over\nquit')
+    ff.close()
+    os.system('sac<sac_cmd')
+    os.chdir('../')
 
 class Stalist(list):
     """
