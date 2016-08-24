@@ -57,12 +57,12 @@ def resample(st, freq, starttime, npts):
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman", starttime = starttime, npts = npts)
 
-
-def run_get_waveform(llnl_db_client, event, min_dist=20, max_dist=300,
-                     before=100, after=300, network='*', channel='BH*',
-                     samp_freq=20.0, rotate=True, output_cap_weight_file=True,
-                     remove_response=True, detrend=True, demean=True,
-                     output_event_info=True, scale_factor=10.0**2,
+def run_get_waveform(llnl_db_client, event, 
+                     min_dist=20, max_dist=300, before=100, after=300, 
+                     network='*', channel='BH*', samp_freq=20.0,
+                     ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
+                     ifDetrend=True, ifDemean=True, ifEvInfo=True,
+                     scale_factor=10.0**2,
                      pre_filt=(0.005, 0.006, 10.0, 15.0)):
     """
     Get SAC waveforms for an event
@@ -80,18 +80,18 @@ def run_get_waveform(llnl_db_client, event, min_dist=20, max_dist=300,
     channel -  component(s) to get, accepts comma separated (default='BH*')
     samp_freq- sampling frequency to resample files (default 20.0, 0 for
                                                      no resampling)
-    rotate - Boolean, if true will output sac files rotated to baz
+    ifrotate - Boolean, if true will output sac files rotated to baz
                unrotated sac files will also be written
-    output_cap_weight_file - Boolean, make weight files for CAP
-    output_event_info- Boolean, output 'ev_info.dat' containg event info (True)
-    remove_response - Boolean, will remove response (True)
-    detrend - Boolean, will remove linear trend from data (True)
-    demean  - Boolean, will insult the data (True)
+    ifCapInp - Boolean, make weight files for CAP
+    ifEvInfo - Boolean, output 'ev_info.dat' containg event info (True)
+    ifRemoveResponse - Boolean, will remove response (True)
+    ifDetrend - Boolean, will remove linear trend from data (True)
+    ifDemean  - Boolean, will insult the data (True)
     scale_factor - scale all data by one value (10.0**2)
                     This usually puts the data in the units required by CAP
                     From m/s to cm/s
     pre_filt  - list, corner frequencies of filter to apply before deconv
-                a good idea when deconvolving (remove_response=True)
+                a good idea when deconvolving (ifRemoveResponse=True)
     """
     # Get event an inventory from the LLNL DB.
     event_number = event
@@ -116,13 +116,13 @@ def run_get_waveform(llnl_db_client, event, min_dist=20, max_dist=300,
 
     print("--> Extracted %i waveforms from the LLNL db database." % len(st))
 
-    if demean:
+    if ifDemean:
         st.detrend('demean')
 
-    if detrend:
+    if ifDetrend:
         st.detrend('linear')
 
-    if remove_response:
+    if ifRemoveResponse:
         decon=True
         passed_st = obspy.Stream()
         failed_st = []
@@ -203,13 +203,13 @@ def run_get_waveform(llnl_db_client, event, min_dist=20, max_dist=300,
 
     write_stream_sac(st2, evtime)
 
-    if rotate:
+    if ifrotate:
         rotate_and_write_stream(st2, evtime)
 
-    if output_cap_weight_file:
+    if ifCapInp:
         write_cap_weights(st2, evtime)
 
-    if output_event_info:
+    if ifEvInfo:
         write_ev_info(event, evtime)
 
     if decon is False:
