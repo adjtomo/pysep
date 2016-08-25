@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES:
-iex = 4    # Choose example to run 
+iex = 2    # Choose example to run 
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 
 # default settings
@@ -37,11 +37,11 @@ if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    #before = 42   # Crashes
-    before = 41    # works fine
+    before = 42          # Crashes
+    #before = 41         # works fine
     after = 600
-    # Vipul: figure out which network it is
-    network = 'AK,AT,AV,CN,II,IU,TA,XM,XV,XZ,ZE'
+    #network = 'AK,AT,CN,II,IU,TA,XM,XV,XZ,ZE'
+    network = 'AV'       # Crashes when -  before = 42; Works fine when - before 41
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
