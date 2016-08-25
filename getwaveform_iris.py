@@ -172,8 +172,8 @@ def run_get_waveform(ev,
         write_ev_info(ev, evtime)
 
     #Fix b and e sac headers
-    correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/',before,after)
-
+    correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
+            before, after)
 
 def rotate_and_write_stream(stream, reftime):
     """
@@ -361,7 +361,6 @@ def add_sac_metadata(st, ev=[], stalist=[]):
               tr.stats.sac['stlo'], tr.stats.sac['stla'], tr.stats.sac['dist'])
     return st
 
-
 def time_shift_sac(st, tshift=0):
     """
     Shift the b and e values in the sac header
@@ -374,16 +373,21 @@ def correct_sac_tshift(targetdir,before=100.0,after=300.0):
     """
     Change the b and e header values of every sac file by 
     before and after (floats)
+
+    NOTE
+    - requires SAC
     """
     import os
     os.chdir(targetdir)
     fnam='sac_cmd'
     ff=open(fnam,'w')
-    ff.write('r *.r *.t *.z *.sac\n')
+    ff.write('r *.r *.t *.z *.sac;\n')
     ff.write('ch b '+str(-1*before)+' e '+str(after)+'\n')
-    ff.write('w over\nquit')
+    #ff.write('w over\nquit')
+    ff.write('w over;\n')
+    ff.write('quit;\n')
     ff.close()
-    os.system('sac<sac_cmd')
+    os.system('sac < sac_cmd;')
     os.chdir('../')
 
 class Stalist(list):
