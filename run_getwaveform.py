@@ -18,9 +18,10 @@ pre_filt = (0.005, 0.006, 5.0, 10.0)    # Why is this needed?
 resamp_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
-# Iniskin earthquake
-# This produces NO waveforms and exits with this error:
-# ValueError: The length of the input vector x must be at least padlen, which is 39.
+# ERROR EXAMPLE [obspy]
+# GOAL: to get all waveforms for this event
+# PROBLEM: No waveforms are returned -- perhaps related to the tbefore request
+# ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
 if iex == 1:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -42,19 +43,24 @@ if iex == 2:
     network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
     channel = 'BH*'
 
-# Example for showing the script crashes when requesting for IM network stations
-# NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
+# ERROR EXAMPLE [obspy]
+# GOAL: to be able to set network = '*'
+# PROBLEM: is a particular network is requested (either explicitly or within *), no waveforms are returned
+# ERROR MESSAGE: NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
 if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
     max_dist = 500
     before = 100
     after = 300
-    #network = 'AK,IM' # Crashes (Error because of the IM network)
-    network = 'AK'   # works fine 
+    #network = '*'       # crashes
+    #network = 'AK,IM'   # crashes (Error because of the IM network)
+    network = 'AK'       # works fine 
     channel = 'BH*'
 
-# Iniskin earthquake -- trying to get waveforms from ZE (SALMON), which is embargoed
+# ERROR EXAMPLE [IRIS + obspy]
+# GOAL: to be able to get waveforms that are embargoed
+# PROBLEM: cannot get ZE waveforms (SALMON)
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -64,8 +70,9 @@ if iex == 4:
     network = 'AK,ZE'   # no ZE waveforms returned
     channel = '*H*'
 
-# Iniskin earthquake -- trying to get KDAK waveforms (different location codes)
-# note that we should have B = -100 but that is not the case
+# ERROR EXAMPLE [UAF]
+# GOAL: to get multiple waveforms for same station, different location
+# PROBLEM: file name does not have location code
 if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
