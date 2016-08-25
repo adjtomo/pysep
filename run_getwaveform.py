@@ -4,8 +4,8 @@ import obspy
 import copy
 
 # EXAMPLES:
-iex = 2
-idb = 1    # default: =1-IRIS, =2-AEC, =3-LLNL
+iex = 2    # Choose example to run 
+idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 
 # default settings
 rotate = True
@@ -14,8 +14,9 @@ remove_response = True
 detrend = True
 demean = True
 output_event_info = True
-pre_filt = (0.005, 0.006, 5.0, 10.0)
-samp_freq = 20.0
+pre_filt = (0.005, 0.006, 5.0, 10.0)    # Why is this needed?
+resamp_freq = 20.0                      # =0 for no resampling
+scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
 # Iniskin earthquake
 # This produces NO waveforms and exits with this error:
@@ -84,9 +85,10 @@ if idb == 1:
     # (future: for Alaska events, read the AEC catalog)
     cat = c.get_events(starttime = otime-10, endtime = otime+10)
 
-    # Extract waveforms 
-    getwaveform_iris.run_get_waveform(ev = cat[0], min_dist = min_dist, max_dist = max_dist, 
-        before = before, after = after, network = network, channel = channel, 
-        samp_freq = samp_freq, rotate = rotate,
-        output_cap_weight_file = output_cap_weight_file, remove_response = remove_response,
-        detrend = detrend, demean = demean, output_event_info = output_event_info, pre_filt = pre_filt)
+# Extract waveforms 
+getwaveform_iris.run_get_waveform(ev = cat[0], min_dist = min_dist, max_dist = max_dist, 
+                                  before = before, after = after, network = network, channel = channel, 
+                                  samp_freq = resamp_freq, ifrotate = rotate,
+                                  ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
+                                  ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
+                                  scale_factor = scale_factor, pre_filt = pre_filt)
