@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES:
-iex = 2    # Choose example to run 
+iex = 1    # Choose example to run (default = 1)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 
 # default settings
@@ -41,7 +41,7 @@ if iex == 2:
     #before = 41         # works fine
     after = 600
     #network = 'AK,AT,CN,II,IU,TA,XM,XV,XZ,ZE'
-    network = 'AV'       # Crashes when -  before = 42; Works fine when - before 41
+    network = 'AV'       # Crashes when -  before = 42; Works fine when - before = 41
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
@@ -88,10 +88,10 @@ if idb == 1:
     # import functions to access waveforms
     import getwaveform_iris
     from obspy.clients.fdsn import Client
-    c = Client("IRIS")
+    client = Client("IRIS")
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
-    cat = c.get_events(starttime = otime-10, endtime = otime+10)
+    cat = client.get_events(starttime = otime-10, endtime = otime+10)
 
 # Extract waveforms 
 getwaveform_iris.run_get_waveform(ev = cat[0], min_dist = min_dist, max_dist = max_dist, 
