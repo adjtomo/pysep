@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES:
-iex = 2    # Choose example to run 
+iex = 4    # Choose example to run 
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 
 # default settings
@@ -18,11 +18,22 @@ pre_filt = (0.005, 0.006, 5.0, 10.0)    # Why is this needed?
 resamp_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
+# WORKING EXAMPLE (default)
+# SilwalTape2016 example event (Anchorage)
+if iex == 1:
+    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
+    min_dist = 0 
+    max_dist = 500
+    before = 100
+    after = 300
+    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
+    channel = 'BH*'
+
 # ERROR EXAMPLE [obspy]
 # GOAL: to get all waveforms for this event
 # PROBLEM: No waveforms are returned -- perhaps related to the tbefore request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
-if iex == 1:
+if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
@@ -31,16 +42,6 @@ if iex == 1:
     after = 600
     # Vipul: figure out which network it is
     network = 'AK,AT,AV,CN,II,IU,TA,XM,XV,XZ,ZE'
-    channel = 'BH*'
-
-# SilwalTape2016 example event (Anchorage)
-if iex == 2:
-    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
-    min_dist = 0 
-    max_dist = 500
-    before = 100
-    after = 300
-    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
@@ -64,11 +65,11 @@ if iex == 3:
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
-    max_dist = 500
+    max_dist = 700
     before = 100
     after = 600
     network = 'AK,ZE'   # no ZE waveforms returned
-    channel = '*H*'
+    channel = 'BH*,HH*'
 
 # ERROR EXAMPLE [UAF]
 # GOAL: to get multiple waveforms for same station, different location
