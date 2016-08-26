@@ -31,7 +31,7 @@ def resample(st, freq):
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman")
 
-def run_get_waveform(ev,
+def run_get_waveform(event,
                      min_dist=20, max_dist=300, before=100, after=300,
                      network='*', channel='BH*', samp_freq=20.0, 
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
@@ -42,9 +42,9 @@ def run_get_waveform(ev,
     Get SAC waveforms for an event
 
     basic usage:
-        run_get_waveform(ev)
+        run_get_waveform(event)
 
-    ev -       obspy Event object
+    event -       obspy Event object
 
     min_dist - minimum station distance (default = 20)
     max_dist - maximum station distance (default =300)
@@ -76,7 +76,7 @@ def run_get_waveform(ev,
         print("\nUsing IRIS client")
         c = Client("IRIS")
 
-    evtime = ev.preferred_origin().time
+    evtime = event.preferred_origin().time
 
     print("Download stations...")
     stations = c.get_stations(network=network, starttime=evtime - before,
@@ -85,7 +85,7 @@ def run_get_waveform(ev,
 
     print(stations)
 
-    sta_limit_distance(ev, stations, min_dist=min_dist, max_dist=max_dist)
+    sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist)
 
     print("Downloading waveforms...")
     bulk_list = make_bulk_list_from_stalist(
@@ -109,7 +109,7 @@ def run_get_waveform(ev,
 
     stream.detrend('demean')
 
-    st2 = add_sac_metadata(stream, ev=ev, stalist=stations)
+    st2 = add_sac_metadata(stream, ev=event, stalist=stations)
 
     time_shift_sac(st2, -1 * before)
 
@@ -121,7 +121,7 @@ def run_get_waveform(ev,
     # this is mirrored in llnl_tool.py and iris_tools.py
     outlog = "get_data_status_IRIS.log"
     fid = open(outlog, "a")
-    fid.write("\n--------------------\n%s\n" % ev.short_str())
+    fid.write("\n--------------------\n%s\n" % event.short_str())
 
     for tr in st2:
         fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
@@ -143,7 +143,7 @@ def run_get_waveform(ev,
         write_cap_weights(st2, evtime)
 
     if ifEvInfo:
-        write_ev_info(ev, evtime)
+        write_ev_info(event, evtime)
 
     #Fix b and e sac headers
     correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
