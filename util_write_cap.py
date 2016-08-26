@@ -355,9 +355,9 @@ def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
             os.makedirs(outdir)
             print(outdir, tr.stats.station)
 
-        outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' + \
-            tr.stats.station + '.' + tr.stats.channel + '.' + \
-            tr.stats.network + '.sac'
+        outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+                + tr.stats.network + '.' + tr.stats.station + '.' \
+                + tr.stats.location + '.' + tr.stats.channel + '.sac'
         tr.write(outfnam, format='SAC')
 
 
