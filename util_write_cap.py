@@ -120,9 +120,9 @@ def rotate_and_write_stream(stream, reftime):
         # as KNB_[component], so one is lost. this change fixes that.
         #outfnam = outdir + tr.stats.station + '_' + tr.stats.network + '.' + \
         #    tr.stats.channel[-1].lower()
-        outfnam = outdir + tr.stats.station + '_' + tr.stats.network \
-                + tr.stats.channel[-3] + tr.stats.channel[-2] + '.' \
-                + tr.stats.channel[-1].lower()
+        outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+                + tr.stats.network + '.' + tr.stats.station + '.' \
+                + tr.stats.location + '.' + tr.stats.channel
         tr.write(outfnam, format='SAC')
 
 def write_cap_weights(stream, reftime=''):
@@ -137,7 +137,7 @@ def write_cap_weights(stream, reftime=''):
         outdir = './'
     else:
         outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
-    outform = ('%12s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f '
+    outform = ('%35s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f '
                '%4.0f %4.0f\n')
     laststa = ''
     #f = open(outdir + 'weight.dat', 'w')   # original (overwrites weightfile)
@@ -152,7 +152,13 @@ def write_cap_weights(stream, reftime=''):
         # Only write once per 3 components
         if s.station == laststa:
             continue
-        f.write(outform % (s.station + '_' + s.network, s.sac['dist'],
+
+        usetime = tr.stats.starttime
+        outfnam = reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+                + tr.stats.network + '.' + tr.stats.station + '.' \
+                + tr.stats.location + '.' + tr.stats.channel
+
+        f.write(outform % (outfnam, s.sac['dist'],
                 1, 1, 1, 1, 1, 0, 0, 0, 0, 0))
         laststa = s.station
 
