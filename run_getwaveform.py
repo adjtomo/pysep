@@ -15,7 +15,7 @@ detrend = True
 demean = True
 output_event_info = True
 pre_filt = (0.005, 0.006, 5.0, 10.0)    # Why is this needed?
-resamp_freq = 20.0                      # =0 for no resampling
+resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
 # WORKING EXAMPLE (default)
@@ -96,7 +96,7 @@ if idb == 1:
 # Extract waveforms 
 getwaveform_iris.run_get_waveform(event = cat[0], min_dist = min_dist, max_dist = max_dist, 
                                   before = before, after = after, network = network, channel = channel, 
-                                  samp_freq = resamp_freq, ifrotate = rotate,
+                                  resample_freq = resample_freq, ifrotate = rotate,
                                   ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
                                   ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
                                   scale_factor = scale_factor, pre_filt = pre_filt)

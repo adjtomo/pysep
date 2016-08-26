@@ -32,7 +32,7 @@ def resample(st, freq, starttime, npts):
 
 def run_get_waveform(llnl_db_client, event, 
                      min_dist=20, max_dist=300, before=100, after=300, 
-                     network='*', channel='BH*', samp_freq=20.0,
+                     network='*', channel='BH*', resample_freq=20.0,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2,
@@ -51,7 +51,7 @@ def run_get_waveform(llnl_db_client, event,
     after  -   time window length after the event time (default = 300)
     network -  network codes of potential stations (default=*)
     channel -  component(s) to get, accepts comma separated (default='BH*')
-    samp_freq- sampling frequency to resample files (default 20.0, 0 for
+    resample_freq- sampling frequency to resample files (default 20.0, 0 for
                                                      no resampling)
     ifrotate - Boolean, if true will output sac files rotated to baz
                unrotated sac files will also be written
@@ -167,12 +167,12 @@ def run_get_waveform(llnl_db_client, event,
     if not st2:
         raise Exception("No waveforms left")
 
-    if samp_freq != 0:
-        print("--> Resampling...")
-        npts = (after - before) * samp_freq
+    if resample_freq != 0:
+        print("\n--> !! WARNING !! Resampling...\n")
+        npts = (after - before) * resample_freq
         t1 = evtime - before
         print("%s\n%s" % (evtime, evtime - before))
-        resample(st2, freq=samp_freq, starttime = t1, npts = npts)
+        resample(st2, freq=resample_freq, starttime = t1, npts = npts)
 
     write_stream_sac(st2, evtime)
 
