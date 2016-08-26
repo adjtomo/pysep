@@ -13,8 +13,6 @@ import obspy
 import os
 from scipy import signal
 
-print("ENTERING WRITE CAP MODULE")
-
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
     Custom Chebychev type two zerophase lowpass filter useful for
@@ -122,7 +120,8 @@ def rotate_and_write_stream(stream, reftime):
         #    tr.stats.channel[-1].lower()
         outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
-                + tr.stats.location + '.' + tr.stats.channel
+                + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+                + tr.stats.channel[-1].lower()
         tr.write(outfnam, format='SAC')
 
 def write_cap_weights(stream, reftime=''):
@@ -140,6 +139,8 @@ def write_cap_weights(stream, reftime=''):
     outform = ('%35s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f '
                '%4.0f %4.0f\n')
     laststa = ''
+    lastloc = ''
+    lastcha = ''
     #f = open(outdir + 'weight.dat', 'w')   # original (overwrites weightfile)
     # append instead of overwrite. This is needed when fetching data from
     # multiple sources (IRIS, NCEDC). Else weight files are overwritten.
@@ -148,19 +149,21 @@ def write_cap_weights(stream, reftime=''):
     # Sort the traces by distance
     sorted_traces = sorted(stream.traces, key=lambda k: k.stats.sac['dist'])
     for tr in sorted_traces:
-        s = tr.stats
+        current_sta = tr.stats
         # Only write once per 3 components
-        if s.station == laststa:
+        if (current_sta.station == laststa) and (current_sta.channel[:-1] == lastcha) and (current_sta.location == lastloc):
             continue
 
-        usetime = tr.stats.starttime
         outfnam = reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
-                + tr.stats.location + '.' + tr.stats.channel
+                + tr.stats.location + '.' + tr.stats.channel[:-1]
 
-        f.write(outform % (outfnam, s.sac['dist'],
+        f.write(outform % (outfnam, current_sta.sac['dist'],
                 1, 1, 1, 1, 1, 0, 0, 0, 0, 0))
-        laststa = s.station
+
+        laststa = current_sta.station
+        lastloc = current_sta.location
+        lastcha = current_sta.channel[:-1]
 
 def write_ev_info(ev, reftime):
     if reftime == '':
