@@ -93,10 +93,10 @@ if idb == 1:
     # (future: for Alaska events, read the AEC catalog)
     cat = client.get_events(starttime = otime-10, endtime = otime+10)
 
-# Extract waveforms 
-getwaveform_iris.run_get_waveform(event = cat[0], min_dist = min_dist, max_dist = max_dist, 
-                                  before = before, after = after, network = network, channel = channel, 
-                                  resample_freq = resample_freq, ifrotate = rotate,
-                                  ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
-                                  ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
-                                  scale_factor = scale_factor, pre_filt = pre_filt)
+    # Extract waveforms, IRIS
+    getwaveform_iris.run_get_waveform(event = cat[0], min_dist = min_dist, max_dist = max_dist, 
+            before = before, after = after, network = network, channel = channel, 
+            resample_freq = resample_freq, ifrotate = rotate,
+            ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
+            ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
+            scale_factor = scale_factor, pre_filt = pre_filt)
