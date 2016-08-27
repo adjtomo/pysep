@@ -83,6 +83,21 @@ if iex == 5:
     network = 'II'
     channel = 'BH*'
 
+# ERROR EXAMPLE LLNL #1
+# GOAL: extract waveforms with correct SAC headers
+# PROBLEM: SAC headers 'b' and 'e' are not aligned with actual beginning and end of traces
+if iex == 6:
+    #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
+    evid = 635527   # Hoya
+    min_dist = 0 
+    max_dist = 500
+    before = 20
+    after = 600
+    network = '*'
+    channel = 'BH*'
+    #scale_factor = 10.0**2  # original
+    scale_factor = 2e-1     # Hoya  
+
 # fetch and process waveforms
 if idb == 1:
     # import functions to access waveforms
