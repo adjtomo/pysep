@@ -100,3 +100,20 @@ if idb == 1:
             ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
             ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
             scale_factor = scale_factor, pre_filt = pre_filt)
+
+if idb == 3:
+    import llnl_db_client
+    import getwaveform_llnl
+    client = llnl_db_client.LLNLDBClient(
+            "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
+
+    # Extract waveforms, LLNL
+    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
+            network = network, channel = channel, 
+            min_dist = min_dist, max_dist = max_dist, 
+            before = before, after = after, 
+            resample_freq = resample_freq,
+            ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
+            ifDetrend=True, ifDemean=True, ifEvInfo=True,
+            scale_factor = scale_factor,
+            pre_filt=(0.005, 0.006, 10.0, 15.0))
