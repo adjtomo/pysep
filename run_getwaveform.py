@@ -25,13 +25,13 @@ if iex == 1:
     max_dist = 500
     before = 100
     after = 300
-    network = 'AK,AT,CN,II,IU,TA,XM,XV,XZ,ZE'  # note: cannot use '*' because of IM
+    network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
 # PROBLEM: No waveforms are returned -- perhaps related to the tbefore request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
-# SOLUTION/KLUDGE: change the before time to 41 or do not use AV network
+# KLUDGE: change the before time to 41 or do not use AV network
 if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -45,7 +45,7 @@ if iex == 2:
 # ERROR EXAMPLE [obspy]
 # PROBLEM: is a particular network is requested (either explicitly or within *), no waveforms are returned
 # ERROR MESSAGE: NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
-# SOLUTION/KLUDGE: list all networks explicitly, except IM
+# KLUDGE: list all networks explicitly, except IM
 if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
@@ -59,7 +59,7 @@ if iex == 3:
 
 # ERROR EXAMPLE [IRIS + obspy]
 # PROBLEM: cannot get embargoed waveforms (ZE waveforms = SALMON)
-# SOLUTION: need to consult with IRIS and/or obspy
+# PENDING SOLUTION: need to consult with IRIS and/or obspy
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -88,7 +88,9 @@ if iex == 5:
     channel = 'BH*'
 
 # ERROR EXAMPLE LLNL #1
-# PROBLEM: SAC headers 'b' and 'e' are not aligned with actual beginning and end of traces
+# PROBLEM: SAC headers 'b' and 'e' are set based on user-secified 'before' and 'after',
+#          whereas they need to be set based on whatever data is available.
+# KLUDGE: use large (incorrect) time shifts in CAP
 if iex == 6:
     # to get the LLNL client, which is a private repo from Lion Krischer:
     # cd $REPOS
