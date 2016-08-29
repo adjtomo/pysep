@@ -3,11 +3,11 @@
 import obspy
 import copy
 
-# EXAMPLES:
-iex = 1    # Choose example to run (default = 1)
-idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
+# EXAMPLES (choose one)
+iex = 1
 
 # default settings
+idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 rotate = True
 output_cap_weight_file = True
 remove_response = True
@@ -18,7 +18,6 @@ pre_filt = (0.005, 0.006, 5.0, 10.0)    # Why is this needed?
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
-# WORKING EXAMPLE (default)
 # SilwalTape2016 example event (Anchorage)
 if iex == 1:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
@@ -26,13 +25,13 @@ if iex == 1:
     max_dist = 500
     before = 100
     after = 300
-    network = 'AK,AT,YV,PS,AV,IU,II,XZ,XM'
+    network = 'AK,AT,CN,II,IU,TA,XM,XV,XZ,ZE'  # note: cannot use '*' because of IM
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
-# GOAL: to get all waveforms for this event
 # PROBLEM: No waveforms are returned -- perhaps related to the tbefore request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
+# SOLUTION/KLUDGE: change the before time to 41 or do not use AV network
 if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -40,14 +39,13 @@ if iex == 2:
     before = 42          # Crashes
     #before = 41         # works fine
     after = 600
-    #network = 'AK,AT,CN,II,IU,TA,XM,XV,XZ,ZE'
     network = 'AV'       # Crashes when -  before = 42; Works fine when - before = 41
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
-# GOAL: to be able to set network = '*'
 # PROBLEM: is a particular network is requested (either explicitly or within *), no waveforms are returned
 # ERROR MESSAGE: NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
+# SOLUTION/KLUDGE: list all networks explicitly, except IM
 if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
@@ -60,8 +58,8 @@ if iex == 3:
     channel = 'BH*'
 
 # ERROR EXAMPLE [IRIS + obspy]
-# GOAL: to be able to get waveforms that are embargoed
-# PROBLEM: cannot get ZE waveforms (SALMON)
+# PROBLEM: cannot get embargoed waveforms (ZE waveforms = SALMON)
+# SOLUTION: need to consult with IRIS and/or obspy
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -71,9 +69,10 @@ if iex == 4:
     network = 'AK,ZE'   # no ZE waveforms returned
     channel = 'BH*,HH*'
 
-# ERROR EXAMPLE [UAF]
-# GOAL: to get multiple waveforms for same station, different location
-# PROBLEM: file name does not have location code
+# ERROR EXAMPLE
+# PROBLEM 1: output file names should be BHR and BHT (not BH1 and BH2)
+# PROBLEM 2: output files are NOT being rotated
+# PROBLEM 3: output file names should be EID.NN.SSS.LL.CCC.sac
 if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -84,9 +83,9 @@ if iex == 5:
     channel = 'BH*'
 
 # ERROR EXAMPLE LLNL #1
-# GOAL: extract waveforms with correct SAC headers
 # PROBLEM: SAC headers 'b' and 'e' are not aligned with actual beginning and end of traces
 if iex == 6:
+    idb = 3
     #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
     evid = 635527   # Hoya
     min_dist = 0 
