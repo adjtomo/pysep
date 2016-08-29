@@ -43,7 +43,7 @@ if iex == 2:
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
-# PROBLEM: is a particular network is requested (either explicitly or within *), no waveforms are returned
+# PROBLEM: If a particular network is requested (either explicitly or within *), no waveforms are returned.
 # ERROR MESSAGE: NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
 # KLUDGE: list all networks explicitly, except IM
 if iex == 3:
@@ -59,14 +59,14 @@ if iex == 3:
 
 # ERROR EXAMPLE [IRIS + obspy]
 # PROBLEM: cannot get embargoed waveforms (ZE waveforms = SALMON)
-# PENDING SOLUTION: need to consult with IRIS and/or obspy
+# --> need to consult with IRIS and/or obspy
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 700
     before = 100
     after = 600
-    network = 'AK,ZE'   # no ZE waveforms returned
+    network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
     channel = 'BH*,HH*'
 
 # ERROR EXAMPLE
