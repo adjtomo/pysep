@@ -73,6 +73,11 @@ if iex == 4:
 # PROBLEM 1: output file names should be BHR and BHT (not BH1 and BH2)
 # PROBLEM 2: output files are NOT being rotated
 # PROBLEM 3: output file names should be EID.NN.SSS.LL.CCC.sac
+# MAIN PROBLEM: All rotations should be based on the azimuth of the sensor
+#    (CMPAZ header in sac), which, combined with the station-source backazimuth,
+#    will provide the rotation to radial and transverse components.
+#    The rotation should NOT depend on channel names like E or N.
+#    (Even for GSN stations the E and N do not point exactly E and N.)
 if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -85,6 +90,10 @@ if iex == 5:
 # ERROR EXAMPLE LLNL #1
 # PROBLEM: SAC headers 'b' and 'e' are not aligned with actual beginning and end of traces
 if iex == 6:
+    # to get the LLNL client, which is a private repo from Lion Krischer:
+    # cd $REPOS
+    # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
+    # then follow instructions for install
     idb = 3
     #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
     evid = 635527   # Hoya
@@ -92,7 +101,7 @@ if iex == 6:
     max_dist = 500
     before = 20
     after = 600
-    network = '*'
+    network = '*'  # note that the client will look for BK stations in the list
     channel = 'BH*'
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
