@@ -31,7 +31,7 @@ def resample(st, freq):
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman")
 
-def run_get_waveform(event,
+def run_get_waveform(c, event,
                      min_dist=20, max_dist=300, before=100, after=300,
                      network='*', channel='BH*', resample_freq=20.0, 
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
@@ -72,9 +72,6 @@ def run_get_waveform(event,
     if "BK" in network:
         print("\nWARNING. BK network. Using NCEDC client")
         c = Client("NCEDC")
-    else:
-        print("\nUsing IRIS client")
-        c = Client("IRIS")
 
     evtime = event.preferred_origin().time
 

@@ -8,13 +8,19 @@ iex = 1
 
 # default settings
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
+# username and password for accessing embargoed data from IRIS
+# Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
+# Run example iex = 4 to check
+user = ""
+password = ""
+# Pre-processing (manily for CAP)
 rotate = True
 output_cap_weight_file = True
 remove_response = True
 detrend = True
 demean = True
 output_event_info = True
-pre_filt = (0.005, 0.006, 5.0, 10.0)    # Why is this needed?
+pre_filt = (0.005, 0.006, 5.0, 10.0)      # Why is this needed?
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
@@ -113,13 +119,16 @@ if idb == 1:
     # import functions to access waveforms
     import getwaveform_iris
     from obspy.clients.fdsn import Client
-    client = Client("IRIS")
+    if not user and not password:
+        client = Client("IRIS")
+    else:
+        client = Client("IRIS",user=user,password=password)
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
     cat = client.get_events(starttime = otime-10, endtime = otime+10)
 
     # Extract waveforms, IRIS
-    getwaveform_iris.run_get_waveform(event = cat[0], min_dist = min_dist, max_dist = max_dist, 
+    getwaveform_iris.run_get_waveform(c = client, event = cat[0], min_dist = min_dist, max_dist = max_dist, 
             before = before, after = after, network = network, channel = channel, 
             resample_freq = resample_freq, ifrotate = rotate,
             ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
