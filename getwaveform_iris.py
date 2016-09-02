@@ -108,7 +108,12 @@ def run_get_waveform(c, event,
 
     st2 = add_sac_metadata(stream, ev=event, stalist=stations)
 
-    time_shift_sac(st2, -1 * before)
+    # 20160902 cralvizuri@alaska.edu -- 
+    # see also correct_sac_tshift
+    # This command overwrites SAC headers "b" and "e" with a timeshift. But
+    # this is not neeeded since obspy handles this internally.
+    # This command is now disabled.
+    #time_shift_sac(st2, -1 * before)
 
     if resample_freq != 0:
         print("\n--> !! WARNING !! Resampling...\n")
@@ -143,7 +148,12 @@ def run_get_waveform(c, event,
     if ifEvInfo:
         write_ev_info(event, evtime)
 
+    # 20160902 cralvizuri@alaska.edu -- 
+    # see also time_shift_sac
+    # This command overwrites SAC headers "b" and "e" with a timeshift. But
+    # this is not neeeded since obspy handles this internally.
+    # This command is now disabled.
     #Fix b and e sac headers
-    correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
-            before, after)
+    #correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
+    #        before, after)
 

@@ -133,7 +133,12 @@ def run_get_waveform(llnl_db_client, event,
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(st, ev=event, stalist=inventory)
 
-    time_shift_sac(st2, -1 * before)
+    # 20160902 cralvizuri@alaska.edu -- 
+    # see also correct_sac_tshift
+    # This command overwrites SAC headers "b" and "e" with a timeshift. But
+    # this is not neeeded since obspy handles this internally.
+    # This command is now disabled.
+    #time_shift_sac(st2, -1 * before)
 
     # Now do some QA: throw out traces with missing data
     # keep a log with status of trace extraction
@@ -188,7 +193,12 @@ def run_get_waveform(llnl_db_client, event,
     if decon is False:
         print("WARNING waveforms NOT corrected for instrument response")
 
+    # 20160902 cralvizuri@alaska.edu -- 
+    # see also time_shift_sac
+    # This command overwrites SAC headers "b" and "e" with a timeshift. But
+    # this is not neeeded since obspy handles this internally.
+    # This command is now disabled.
     #Fix b and e sac headers
-    correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
-            before, after)
+    #correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
+    #        before, after)
 
