@@ -93,42 +93,40 @@ if iex == 5:
     network = 'II'
     channel = 'BH*'
 
-# ERROR EXAMPLE LLNL #1
-# see also iex = 7
-# PROBLEM: SAC headers 'b' and 'e' are set based on user-secified 'before' and 'after',
-#          whereas they need to be set based on whatever data is available.
-# KLUDGE: use large (incorrect) time shifts in CAP
+# ERROR EXAMPLE LLNL #1 (see also iex = 7)
+# PROBLEM: The O marker is in a different place, depending on whether one
+#          gets waveforms from LLNL (iex=6) or from IRIS (iex=7).
+#          ---> The key stations for comparison are IU.ANMO and IU.COR
 if iex == 6:
     # to get the LLNL client, which is a private repo from Lion Krischer:
     # cd $REPOS
     # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
     # then follow instructions for install
-    idb = 3 # NOTE this is a request for LLNL. See also iex=7 (IRIS)
-    otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
-    evid = 635527   # Hoya
+    idb = 3            # LLNL database
+    resample_freq = 0  # no resampling
+    #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
+    evid = 635527      # Hoya
     min_dist = 0 
     max_dist = 1200
-    before = 20
+    before = 100
     after = 600
-    network = '*'  # note that the client will look for BK stations in the list
-    channel = 'BH*'
+    network = '*'      # note that the client will look for BK stations in the list
+    channel = 'BH*'    # note that LH* and BH* will be returned
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
 
-# ERROR EXAMPLE FOR HOYA EVENT
-# see also iex = 6
-# PROBLEM: there is an 80 second offset between IRIS and LLNL data. For example
-# see station ANMO.
+# same as iex=6 but for the IRIS database
 if iex == 7:
-    idb = 1 # NOTE this is a request for IRIS. See also iex=6 (LLNL)
+    idb = 1            # IRIS database
+    resample_freq = 0  # no resampling
     otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
-    evid = 635527   # Hoya
+    #evid = 635527     # Hoya
     min_dist = 0 
     max_dist = 1200
-    before = 20
+    before = 100
     after = 600
-    network = '*'  # note that the client will look for BK stations in the list
-    channel = 'BH*'
+    network = '*'
+    channel = 'BH*,LH*'
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
 
