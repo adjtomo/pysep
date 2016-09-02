@@ -43,7 +43,7 @@ if iex == 2:
     min_dist = 0 
     max_dist = 500
     before = 42          # Crashes
-    #before = 41         # works fine
+    before = 41         # works fine
     after = 600
     network = 'AV'       # Crashes when -  before = 42; Works fine when - before = 41
     channel = 'BH*'
@@ -94,6 +94,7 @@ if iex == 5:
     channel = 'BH*'
 
 # ERROR EXAMPLE LLNL #1
+# see also iex = 7
 # PROBLEM: SAC headers 'b' and 'e' are set based on user-secified 'before' and 'after',
 #          whereas they need to be set based on whatever data is available.
 # KLUDGE: use large (incorrect) time shifts in CAP
@@ -102,11 +103,28 @@ if iex == 6:
     # cd $REPOS
     # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
     # then follow instructions for install
-    idb = 3
-    #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
+    idb = 3 # NOTE this is a request for LLNL. See also iex=7 (IRIS)
+    otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
     evid = 635527   # Hoya
     min_dist = 0 
-    max_dist = 500
+    max_dist = 1200
+    before = 20
+    after = 600
+    network = '*'  # note that the client will look for BK stations in the list
+    channel = 'BH*'
+    #scale_factor = 10.0**2  # original
+    scale_factor = 2e-1     # Hoya  
+
+# ERROR EXAMPLE FOR HOYA EVENT
+# see also iex = 6
+# PROBLEM: there is an 80 second offset between IRIS and LLNL data. For example
+# see station ANMO.
+if iex == 7:
+    idb = 1 # NOTE this is a request for IRIS. See also iex=6 (LLNL)
+    otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
+    evid = 635527   # Hoya
+    min_dist = 0 
+    max_dist = 1200
     before = 20
     after = 600
     network = '*'  # note that the client will look for BK stations in the list
