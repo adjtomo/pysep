@@ -66,6 +66,8 @@ def run_get_waveform(llnl_db_client, event,
     pre_filt  - list, corner frequencies of filter to apply before deconv
                 a good idea when deconvolving (ifRemoveResponse=True)
     """
+    print("Preparing request for LLNL ...")
+
     # Get event an inventory from the LLNL DB.
     event_number = event
     event = llnl_db_client.get_obspy_event(event)
@@ -173,7 +175,8 @@ def run_get_waveform(llnl_db_client, event,
         raise Exception("No waveforms left")
 
     if resample_freq != 0:
-        print("\n--> !! WARNING !! Resampling...\n")
+        print("\n--> !! WARNING -- Resampling !!")
+        print("--> New sample rate = %5.1f\n" % resample_freq)
         npts = (after - before) * resample_freq
         t1 = evtime - before
         print("%s\n%s" % (evtime, evtime - before))
