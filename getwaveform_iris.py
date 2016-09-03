@@ -82,7 +82,7 @@ def run_get_waveform(c, event,
 
     print(stations)
 
-    sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist)
+    sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist, ifverbose=True)
 
     print("Downloading waveforms...")
     bulk_list = make_bulk_list_from_stalist(
