@@ -13,7 +13,8 @@ from scipy import signal
 
 from util_write_cap import *
 
-def resample(st, freq, starttime, npts):
+#def resample(st, freq, starttime, npts):
+def resample(st, freq):
     """
     Custom resampling with a very sharp zerophase filter.
     """
@@ -27,8 +28,10 @@ def resample(st, freq, starttime, npts):
         tr.taper(max_percentage=0.02, type="hann")
         tr.data = np.require(tr.data, requirements=["C"])
         # "Perfect" sinc resampling.
+        #tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+        #               window="blackman", starttime = starttime, npts = npts)
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                       window="blackman", starttime = starttime, npts = npts)
+                       window="blackman")
 
 def run_get_waveform(llnl_db_client, event, 
                      min_dist=20, max_dist=300, before=100, after=300, 
@@ -177,10 +180,11 @@ def run_get_waveform(llnl_db_client, event,
     if resample_freq != 0:
         print("\n--> !! WARNING -- Resampling !!")
         print("--> New sample rate = %5.1f\n" % resample_freq)
-        npts = (after - before) * resample_freq
-        t1 = evtime - before
+        #npts = (after - before) * resample_freq
+        #t1 = evtime - before
         print("%s\n%s" % (evtime, evtime - before))
-        resample(st2, freq=resample_freq, starttime = t1, npts = npts)
+        #resample(st2, freq=resample_freq, starttime = t1, npts = npts)
+        resample(st2, freq=resample_freq)
 
     write_stream_sac(st2, evtime)
 
