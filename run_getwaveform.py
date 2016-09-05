@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 1
+iex = 7
 
 # default settings
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -94,31 +94,47 @@ if iex == 5:
     channel = 'BH*'
 
 # ERROR EXAMPLE LLNL #1 (see also iex = 7)
-# PROBLEM: The O marker is in a different place, depending on whether one
-#          gets waveforms from LLNL (iex=6) or from IRIS (iex=7).
-#          ---> The key stations for comparison are IU.ANMO and IU.COR
+# PROBLEM: For IRIS, the B marker matches O -- both are 0.
+#          For LLNL, when no cutting/resampling are used, the B marker matches O -- both are 0.
+#          For LLNL, when cutting/resampling is used, the B marker does not match the O marker.
 if iex == 6:
     # to get the LLNL client, which is a private repo from Lion Krischer:
     # cd $REPOS
     # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
     # then follow instructions for install
-    idb = 3            # LLNL database
-    resample_freq = 0  # no resampling
+    idb = 3              # LLNL database
+    resample_freq = 0    # no resampling and no cutting
+    resample_freq = 20   # resampling and cutting
     #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
-    evid = 635527      # Hoya
+    evid = 635527        # Hoya
     min_dist = 0 
     max_dist = 1200
-    before_t0_sec = 100
-    after_t0_sec = 600
-    network = '*'      # note that the client will look for BK stations in the list
-    channel = 'BH*'    # note that LH* and BH* will be returned
+    before_t0_sec = 100  # no cutting if resample_freq = 0
+    after_t0_sec = 600   # no cutting if resample_freq = 0
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # note that LH* and BH* will be returned
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
 
 # same as iex=6 but for the IRIS database
+# SAC HEADERS (https://ds.iris.edu/files/sac-manual/manual/file_format.html)
+#            NZYEAR, NZJDAY, etc: reference time
+#            O = Event origin time (seconds relative to reference time.)
+#            B = Beginning value of the independent variable. [required]
+#            E = Ending value of the independent variable. [required]
+# NOTE: At the moment we are NOT manually calculating B and E.
+#       The starting point for us is that we need the reference time to be the event origin time.
+# PROBLEM: In either case, we want the reference time (NZYEAR, NZJDAY, etc) 
+#          to be the (user-specified) event origin time, and therefore it should 
+#          be the same for all traces, and O should be 0 for all traces.
+#          Furthermore B and E are times, in seconds, relative to O = 0.
+#          At present, the 'reference time' is set to the start time, NOT to the origin time.
+# DEBUGGING HELPER LINE:
+#   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
+# (This will show clearly that the reference time is NOT the origin time.)
 if iex == 7:
     idb = 1            # IRIS database
-    resample_freq = 0  # no resampling
+    #resample_freq = 0  # no resampling
     otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
     #evid = 635527     # Hoya
     min_dist = 0 
