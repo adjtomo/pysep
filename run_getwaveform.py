@@ -29,23 +29,23 @@ if iex == 1:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 0 
     max_dist = 500
-    before = 100
-    after = 300
+    before_t0 = 100
+    after_t0 = 300
     network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
-# PROBLEM: No waveforms are returned -- perhaps related to the tbefore request
+# PROBLEM: No waveforms are returned -- perhaps related to the before_t0 request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
-# KLUDGE: change the before time to 41 or do not use AV network
+# KLUDGE: change the before_t0 time to 41 or do not use AV network
 if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before = 42          # Crashes
-    before = 41         # works fine
-    after = 600
-    network = 'AV'       # Crashes when -  before = 42; Works fine when - before = 41
+    before_t0 = 42          # Crashes
+    before_t0 = 41         # works fine
+    after_t0 = 600
+    network = 'AV'       # Crashes when -  before_t0 = 42; Works fine when - before_t0 = 41
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
@@ -56,8 +56,8 @@ if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
     max_dist = 500
-    before = 100
-    after = 300
+    before_t0 = 100
+    after_t0 = 300
     #network = '*'       # crashes
     #network = 'AK,IM'   # crashes (Error because of the IM network)
     network = 'AK'       # works fine 
@@ -70,8 +70,8 @@ if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 700
-    before = 100
-    after = 600
+    before_t0 = 100
+    after_t0 = 600
     network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
     channel = 'BH*,HH*'
 
@@ -88,8 +88,8 @@ if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before = 100
-    after = 600
+    before_t0 = 100
+    after_t0 = 600
     network = 'II'
     channel = 'BH*'
 
@@ -108,8 +108,8 @@ if iex == 6:
     evid = 635527      # Hoya
     min_dist = 0 
     max_dist = 1200
-    before = 100
-    after = 600
+    before_t0 = 100
+    after_t0 = 600
     network = '*'      # note that the client will look for BK stations in the list
     channel = 'BH*'    # note that LH* and BH* will be returned
     #scale_factor = 10.0**2  # original
@@ -123,8 +123,8 @@ if iex == 7:
     #evid = 635527     # Hoya
     min_dist = 0 
     max_dist = 1200
-    before = 100
-    after = 600
+    before_t0 = 100
+    after_t0 = 600
     network = '*'
     channel = 'BH*,LH*'
     #scale_factor = 10.0**2  # original
@@ -145,7 +145,7 @@ if idb == 1:
 
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = cat[0], min_dist = min_dist, max_dist = max_dist, 
-            before = before, after = after, network = network, channel = channel, 
+            before = before_t0, after = after_t0, network = network, channel = channel, 
             resample_freq = resample_freq, ifrotate = rotate,
             ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
             ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
@@ -161,7 +161,7 @@ if idb == 3:
     getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
             network = network, channel = channel, 
             min_dist = min_dist, max_dist = max_dist, 
-            before = before, after = after, 
+            before = before_t0, after = after_t0, 
             resample_freq = resample_freq,
             ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
             ifDetrend=True, ifDemean=True, ifEvInfo=True,
