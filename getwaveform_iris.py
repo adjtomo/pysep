@@ -67,8 +67,6 @@ def run_get_waveform(c, event,
     pre_filt  - list, corner frequencies of filter to apply before deconv
                 a good idea when deconvolving (ifRemoveResponse=True)
     """
-    print("Preparing request for IRIS ...")
-
     # BK network doesn't return data when using the IRIS client.
     # this option switches to NCEDC if BK is 
     if "BK" in network:
@@ -84,7 +82,7 @@ def run_get_waveform(c, event,
 
     print(stations)
 
-    sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist, ifverbose=True)
+    sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist)
 
     print("Downloading waveforms...")
     bulk_list = make_bulk_list_from_stalist(
@@ -118,8 +116,7 @@ def run_get_waveform(c, event,
     #time_shift_sac(st2, -1 * before)
 
     if resample_freq != 0:
-        print("\n--> !! WARNING -- Resampling !!")
-        print("--> New sample rate = %5.1f\n" % resample_freq)
+        print("\n--> !! WARNING !! Resampling...\n")
         resample(st2, freq=resample_freq)
 
     # Now do some QA: throw out traces with missing data
