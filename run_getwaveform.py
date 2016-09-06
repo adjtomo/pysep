@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 7
+iex = 1
 
 # default settings
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL

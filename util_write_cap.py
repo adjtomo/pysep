@@ -304,11 +304,19 @@ def make_bulk_list_from_stalist(stations, t1, t2, loc='*', cmp='BH*'):
     return bulk_list
 
 def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
-                       ifverbose=False):
+                       ifverbose=True):
     # Remove stations greater than a certain distance from event
     elat = ev.preferred_origin().latitude
     elon = ev.preferred_origin().longitude
+    reftime = ev.preferred_origin().time
     remlist = []
+    
+    outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    f = open(outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '_station.dat', 'w') 
+    outform = '%s %s %f %f %f %f\n'
 
     # Loop over network and stations
     for net in stations:
@@ -332,6 +340,8 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                     elat, elon, sta. latitude, sta.longitude)
                 print(sta.code, elon, elat, sta.longitude, sta.latitude,
                       dist / 1000)
+                f.write(outform % (sta.code, net.code, sta.latitude, sta.longitude, dist / 1000, az))
+                                       
 
 def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
     """
