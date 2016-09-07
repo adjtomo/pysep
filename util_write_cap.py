@@ -10,6 +10,7 @@ For reference see versions prior to Aug 25, 2016 for:
 """
 
 import obspy
+from obspy.io.sac import SACTrace
 import os
 from scipy import signal
 
@@ -370,4 +371,17 @@ def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
                 + tr.stats.location + '.' + tr.stats.channel + '.sac'
         tr.write(outfnam, format='SAC')
 
+def set_reftime(stream, evtime):
+    """
+    Set a reftime for all traces. For CAP we currently set the reftime as 
+    the event time.
+    """
+    stream2 = obspy.Stream()
+    for tr in stream:
+        sac = SACTrace.from_obspy_trace(tr)
+        sac.reftime = evtime
+        sac.o = 0
+        tr = sac.to_obspy_trace()
+        stream2.append(tr)
+    return(stream2)
 
