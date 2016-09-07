@@ -152,8 +152,8 @@ def run_get_waveform(llnl_db_client, event,
     # Now do some QA: throw out traces with missing data
     # keep a log with status of trace extraction
     # this is mirrored in llnl_tool.py and iris_tools.py
-    outlog = "get_data_status_LLNL.log"
-    fid = open(outlog, "a")
+    output_log = "data_processing_status_LLNL.log"
+    fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
 
     for tr in st2:

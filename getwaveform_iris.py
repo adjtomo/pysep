@@ -72,8 +72,11 @@ def run_get_waveform(c, event,
     # BK network doesn't return data when using the IRIS client.
     # this option switches to NCEDC if BK is 
     if "BK" in network:
+        output_log = "data_processing_status_NCEDC.log"
         print("\nWARNING. BK network. Using NCEDC client")
         c = Client("NCEDC")
+    else:
+        output_log = "data_processing_status_IRIS.log"
 
     evtime = event.preferred_origin().time
 
@@ -130,8 +133,7 @@ def run_get_waveform(c, event,
     # Now do some QA: throw out traces with missing data
     # keep a log with status of trace extraction
     # this is mirrored in llnl_tool.py and iris_tools.py
-    outlog = "get_data_status_IRIS.log"
-    fid = open(outlog, "a")
+    fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
 
     for tr in st2:
