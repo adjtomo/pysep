@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 1
+iex = 6
 
 # default settings
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -37,7 +37,7 @@ if iex == 1:
 # ERROR EXAMPLE [obspy]
 # PROBLEM: No waveforms are returned -- perhaps related to the before_t0_sec request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
-# KLUDGE: change the before_t0_sec time to 41 or do not use AV network
+# SOLUTION: iex = 2 fails because the input data is much to short. The input is a trace with 38 sample but sampled at 50 Hz and you want to resample to 10 Hz. The IIR filter coefficients it calculates are just too long. I'm working on getting such a filter into ObsPy which should then have nicer error messages. I doubt its possible to meaningfully filter such short data with a very sharpy filter. For now: Just add a QA step that makes sure that at least a certain number of samples enter the decimation routine.
 if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -52,6 +52,9 @@ if iex == 2:
 # PROBLEM: If a particular network is requested (either explicitly or within *), no waveforms are returned.
 # ERROR MESSAGE: NotImplementedError: ResponseListResponseStage not yet implemented due to missing example data. Please contact the developers with a test data set (waveforms and StationXML metadata).
 # KLUDGE: list all networks explicitly, except IM
+# SOLUTION: https://github.com/obspy/obspy/issues/1514
+#           If you want to use it right now you'd have to use that branch 
+#           - it will be a while before we release a new ObsPy version.
 if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
@@ -63,9 +66,7 @@ if iex == 3:
     network = 'AK'       # works fine 
     channel = 'BH*'
 
-# ERROR EXAMPLE [IRIS + obspy]
-# PROBLEM: cannot get embargoed waveforms (ZE waveforms = SALMON)
-# --> need to consult with IRIS and/or obspy
+# SALMON example (restricted data from IRIS)
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
@@ -93,58 +94,53 @@ if iex == 5:
     network = 'II'
     channel = 'BH*'
 
-# ERROR EXAMPLE LLNL #1 (see also iex = 7)
-# PROBLEM: For IRIS, the B marker matches O -- both are 0.
-#          For LLNL, when no cutting/resampling are used, the B marker matches O -- both are 0.
-#          For LLNL, when cutting/resampling is used, the B marker does not match the O marker.
+# nuclear event: LLNL (see also iex = 7)
+# GOAL: To find events in the LLNL database based on a target origin time,
+#       rather than an eid. Perhaps a second parameter is needed to say
+#       "find closest event within 30 seconds of target time".
+#       (The reference time (NZYEAR, etc) should then be assined as the actual origin time,
+#       not the target origin time.)
+# DEBUGGING HELPER LINE:
+#   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
+# (This will show clearly that the reference time is NOT the origin time.)
 if iex == 6:
     # to get the LLNL client, which is a private repo from Lion Krischer:
     # cd $REPOS
     # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
     # then follow instructions for install
     idb = 3              # LLNL database
-    resample_freq = 0    # no resampling and no cutting
-    resample_freq = 20   # resampling and cutting
-    #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
-    evid = 635527        # Hoya
+    #resample_freq = 0    # no resampling and no cutting
+
+    # TARGET origin time (8.031 s from actual origin time)
+    #otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")
+    evid = 635527        # Hoya event id in LLNL database
+
     min_dist = 0 
     max_dist = 1200
-    before_t0_sec = 100  # no cutting if resample_freq = 0
-    after_t0_sec = 600   # no cutting if resample_freq = 0
+    before_t0_sec = 100
+    after_t0_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # note that LH* and BH* will be returned
+    channel = 'BH*'      # ALL channels from LLNL are returned
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
 
 # same as iex=6 but for the IRIS database
-# SAC HEADERS (https://ds.iris.edu/files/sac-manual/manual/file_format.html)
-#            NZYEAR, NZJDAY, etc: reference time
-#            O = Event origin time (seconds relative to reference time.)
-#            B = Beginning value of the independent variable. [required]
-#            E = Ending value of the independent variable. [required]
-# NOTE: At the moment we are NOT manually calculating B and E.
-#       The starting point for us is that we need the reference time to be the event origin time.
-# PROBLEM: In either case, we want the reference time (NZYEAR, NZJDAY, etc) 
-#          to be the (user-specified) event origin time, and therefore it should 
-#          be the same for all traces, and O should be 0 for all traces.
-#          Furthermore B and E are times, in seconds, relative to O = 0.
-#          At present, the 'reference time' is set to the start time, NOT to the origin time.
-# DEBUGGING HELPER LINE:
-#   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
-# (This will show clearly that the reference time is NOT the origin time.)
+# GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
+#       origin time, hypocenter, magnitude.
+#       (Unsure what the threshold is for IRIS catalog.)
+#       We need a flag to decide whether to find/use source parameters in the IRIS
+#       catalog, or to assign them ourselves.
 if iex == 7:
     idb = 1            # IRIS database
     #resample_freq = 0  # no resampling
-    otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya
-    #evid = 635527     # Hoya
+    #otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya actual
+    otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
     min_dist = 0 
     max_dist = 1200
     before_t0_sec = 100
     after_t0_sec = 600
     network = '*'
-    channel = 'BH*,LH*'
-    #scale_factor = 10.0**2  # original
-    scale_factor = 2e-1     # Hoya  
+    channel = 'BH*,LH*' 
 
 # fetch and process waveforms
 if idb == 1:
