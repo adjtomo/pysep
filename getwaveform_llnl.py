@@ -87,10 +87,14 @@ def run_get_waveform(llnl_db_client, event,
     stations = set([sta.code for net in inventory for sta in net])
 
     _st = llnl_db_client.get_waveforms_for_event(event_number)
-    st = obspy.Stream()
+    _st2 = obspy.Stream()
     for tr in _st:
         if tr.stats.station in stations:
-            st.append(tr)
+            _st2.append(tr)
+
+    # set reftime
+    st = obspy.Stream()
+    st = set_reftime(_st2, evtime)
 
     print("--> Extracted %i waveforms from the LLNL db database." % len(st))
 
@@ -182,8 +186,6 @@ def run_get_waveform(llnl_db_client, event,
         print("--> New sample rate = %5.1f" % resample_freq)
         npts = (after - before) * resample_freq
         t1 = evtime - before
-        print("--> %s <-- t0" % (evtime))
-        print("--> %s <-- t0 - before_t0\n" % (evtime - before))
         resample(st2, freq = resample_freq, starttime = t1, npts = npts)
         #resample(st2, freq=resample_freq)
 

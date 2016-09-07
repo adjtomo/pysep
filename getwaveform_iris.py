@@ -89,8 +89,12 @@ def run_get_waveform(c, event,
     print("Downloading waveforms...")
     bulk_list = make_bulk_list_from_stalist(
         stations, evtime - before, evtime + after, cmp=channel)
-    stream = c.get_waveforms_bulk(bulk_list)
-    print(stream)
+    _stream = c.get_waveforms_bulk(bulk_list)
+    print(_stream)
+
+    # set reftime
+    stream = obspy.Stream()
+    stream = set_reftime(_stream, evtime)
 
     if ifDemean:
         stream.detrend('demean')
