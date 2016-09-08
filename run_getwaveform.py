@@ -29,23 +29,23 @@ if iex == 1:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 0 
     max_dist = 500
-    before_t0_sec = 100
-    after_t0_sec = 300
+    tbefore_sec = 100
+    tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
-# PROBLEM: No waveforms are returned -- perhaps related to the before_t0_sec request
+# PROBLEM: No waveforms are returned -- perhaps related to the tbefore_sec request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
 # SOLUTION: iex = 2 fails because the input data is much to short. The input is a trace with 38 sample but sampled at 50 Hz and you want to resample to 10 Hz. The IIR filter coefficients it calculates are just too long. I'm working on getting such a filter into ObsPy which should then have nicer error messages. I doubt its possible to meaningfully filter such short data with a very sharpy filter. For now: Just add a QA step that makes sure that at least a certain number of samples enter the decimation routine.
 if iex == 2:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before_t0_sec = 42          # Crashes
-    before_t0_sec = 41         # works fine
-    after_t0_sec = 600
-    network = 'AV'       # Crashes when -  before_t0_sec = 42; Works fine when - before_t0_sec = 41
+    tbefore_sec = 42          # Crashes
+    tbefore_sec = 41         # works fine
+    tafter_sec = 600
+    network = 'AV'       # Crashes when -  tbefore_sec = 42; Works fine when - tbefore_sec = 41
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
@@ -59,8 +59,8 @@ if iex == 3:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
     max_dist = 500
-    before_t0_sec = 100
-    after_t0_sec = 300
+    tbefore_sec = 100
+    tafter_sec = 300
     #network = '*'       # crashes
     #network = 'AK,IM'   # crashes (Error because of the IM network)
     network = 'AK'       # works fine 
@@ -71,8 +71,8 @@ if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 700
-    before_t0_sec = 100
-    after_t0_sec = 600
+    tbefore_sec = 100
+    tafter_sec = 600
     network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
     channel = 'BH*,HH*'
 
@@ -89,8 +89,8 @@ if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
-    before_t0_sec = 100
-    after_t0_sec = 600
+    tbefore_sec = 100
+    tafter_sec = 600
     network = 'II'
     channel = 'BH*'
 
@@ -117,8 +117,8 @@ if iex == 6:
 
     min_dist = 0 
     max_dist = 1200
-    before_t0_sec = 100
-    after_t0_sec = 600
+    tbefore_sec = 100
+    tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
     channel = 'BH*'      # ALL channels from LLNL are returned
     #scale_factor = 10.0**2  # original
@@ -137,8 +137,8 @@ if iex == 7:
     otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
     min_dist = 0 
     max_dist = 1200
-    before_t0_sec = 100
-    after_t0_sec = 600
+    tbefore_sec = 100
+    tafter_sec = 600
     network = '*'
     channel = 'BH*,LH*' 
 
@@ -173,7 +173,7 @@ if idb == 3:
     getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
             network = network, channel = channel, 
             min_dist = min_dist, max_dist = max_dist, 
-            before = before_t0_sec, after = after_t0_sec, 
+            before = tbefore_sec, after = tafter_sec, 
             resample_freq = resample_freq,
             ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
             ifDetrend=True, ifDemean=True, ifEvInfo=True,
