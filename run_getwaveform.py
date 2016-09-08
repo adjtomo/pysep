@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 1
 
 # default settings
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -24,6 +24,9 @@ pre_filt = (0.005, 0.006, 5.0, 10.0)      # Why is this needed?
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
 
+# (Do not use)
+# This is a template for testing before creating an example.
+# We can delete this if it creates more issues.
 if iex == 0:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 0 
