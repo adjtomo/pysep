@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 6
+iex = 0
 
 # default settings
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -23,6 +23,15 @@ output_event_info = True
 pre_filt = (0.005, 0.006, 5.0, 10.0)      # Why is this needed?
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
+
+if iex == 0:
+    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
+    min_dist = 0 
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 300
+    network = 'XP'
+    channel = '*Z'
 
 # SilwalTape2016 example event (Anchorage)
 if iex == 1:
@@ -157,7 +166,7 @@ if idb == 1:
 
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = cat[0], min_dist = min_dist, max_dist = max_dist, 
-            before = before_t0_sec, after = after_t0_sec, network = network, channel = channel, 
+            before = tbefore_sec, after = tafter_sec, network = network, channel = channel, 
             resample_freq = resample_freq, ifrotate = rotate,
             ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
             ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
