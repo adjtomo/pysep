@@ -289,19 +289,19 @@ class Stalist(list):
             # Assumes one name per line
             self.append(line.strip().split()[0])
 
-    def make_bulk_list(self, t1, t2, net="*", loc="*", cmp="BH*"):
+    def make_bulk_list(self, t1, t2, net="*", loc="*", channel="BH*"):
         # Create a list for client.Client.get_stations_bulk or
         # get_waveforms_bulk
         # t1 and t2 are in UTCDateTime format
         self.bulk_list = []
         for sta in self:
-            self.bulk_list.append((net, sta, loc, cmp, t1, t2))
+            self.bulk_list.append((net, sta, loc, channel, t1, t2))
 
-def make_bulk_list_from_stalist(stations, t1, t2, loc='*', cmp='BH*'):
+def make_bulk_list_from_stalist(stations, t1, t2, loc='*', channel='BH*'):
     bulk_list = []
     for net in stations:
         for sta in net:
-            bulk_list.append((net.code, sta.code, loc, cmp, t1, t2))
+            bulk_list.append((net.code, sta.code, loc, channel, t1, t2))
     return bulk_list
 
 def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
