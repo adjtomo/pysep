@@ -22,7 +22,7 @@ demean = True
 output_event_info = True
 pre_filt = (0.005, 0.006, 5.0, 10.0)      # Why is this needed?
 resample_freq = 20.0                      # =0 for no resampling
-scale_factor = 10.0**2                    # =10.0**2 (convert m/s to cm/s)
+scale_factor = 0                          # 10**2 to convert m/s to cm/s
 
 # (Do not use)
 # This is a template for testing before creating an example.

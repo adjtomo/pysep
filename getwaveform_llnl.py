@@ -134,6 +134,7 @@ def run_get_waveform(llnl_db_client, event,
         print("WARNING -- NOT correcting for instrument response")
 
     if scale_factor > 0:
+        print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
         for tr in st.traces:
             tr.data = tr.data * scale_factor
 
@@ -182,7 +183,7 @@ def run_get_waveform(llnl_db_client, event,
         raise Exception("No waveforms left")
 
     if resample_freq != 0:
-        print("\n--> !! WARNING -- Resampling !!")
+        print("\n--> WARNING -- Resampling")
         print("--> New sample rate = %5.1f" % resample_freq)
         t1 = evtime - before
         # it's the same for negative and positive 'after'

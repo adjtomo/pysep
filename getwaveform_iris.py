@@ -110,6 +110,7 @@ def run_get_waveform(c, event,
                                output="VEL")
 
     if scale_factor > 0:
+        print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
         for tr in stream.traces:
             tr.data = tr.data * scale_factor
 
@@ -126,7 +127,7 @@ def run_get_waveform(c, event,
     #time_shift_sac(st2, -1 * before)
 
     if resample_freq != 0:
-        print("\n--> !! WARNING -- Resampling !!")
+        print("\n--> WARNING -- RESAMPLING")
         print("--> New sample rate = %5.1f\n" % resample_freq)
         resample(st2, freq=resample_freq)
 
