@@ -146,6 +146,8 @@ def write_cap_weights(stream, reftime=''):
     # append instead of overwrite. This is needed when fetching data from
     # multiple sources (IRIS, NCEDC). Else weight files are overwritten.
     f = open(outdir + 'weight.dat', 'a')    
+    fb = open(outdir + 'weight_body.dat', 'a')    
+    fs = open(outdir + 'weight_surf.dat', 'a')    
 
     # Sort the traces by distance
     sorted_traces = sorted(stream.traces, key=lambda k: k.stats.sac['dist'])
@@ -161,6 +163,10 @@ def write_cap_weights(stream, reftime=''):
 
         f.write(outform % (outfnam, current_sta.sac['dist'],
                 1, 1, 1, 1, 1, 0, 0, 0, 0, 0))
+        fb.write(outform % (outfnam, current_sta.sac['dist'],
+                1, 1, 0, 0, 0, 0, 0, 0, 0, 0))
+        fs.write(outform % (outfnam, current_sta.sac['dist'],
+                0, 0, 1, 1, 1, 0, 0, 0, 0, 0))
 
         laststa = current_sta.station
         lastloc = current_sta.location
