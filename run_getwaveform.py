@@ -6,13 +6,8 @@ import copy
 # EXAMPLES (choose one)
 iex = 1
 
-# default settings
+# DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
-# username and password for accessing embargoed data from IRIS
-# Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
-# Run example iex = 4 to check
-user = ""
-password = ""
 # Pre-processing (manily for CAP)
 rotate = True
 output_cap_weight_file = True
@@ -20,9 +15,23 @@ remove_response = True
 detrend = True
 demean = True
 output_event_info = True
-pre_filt = (0.005, 0.006, 5.0, 10.0)      # Why is this needed?
+# pre-filter for deconvolution
+# https://ds.iris.edu/files/sac-manual/commands/transfer.html
+# fmaxc should be based on sampling rate (desired channels)
+# fminc should be based on the request length of the time series
+fminc = 1/200
+fmaxc = 10
+pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)    
+#pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
+# for CAP all waveforms need to have the same sample rate
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 0                          # 10**2 to convert m/s to cm/s
+
+# username and password for accessing embargoed data from IRIS
+# Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
+# Run example iex = 4 to check
+user = ""
+password = ""
 
 # (Do not use)
 # This is a template for testing before creating an example.
