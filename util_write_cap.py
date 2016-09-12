@@ -125,7 +125,7 @@ def rotate_and_write_stream(stream, reftime):
                 + tr.stats.channel[-1].lower()
         tr.write(outfnam, format='SAC')
 
-def write_cap_weights(stream, reftime=''):
+def write_cap_weights(stream, reftime='', client_name=''):
     """
     Write CAP weight files from an Obspy stream
 
@@ -145,9 +145,19 @@ def write_cap_weights(stream, reftime=''):
     #f = open(outdir + 'weight.dat', 'w')   # original (overwrites weightfile)
     # append instead of overwrite. This is needed when fetching data from
     # multiple sources (IRIS, NCEDC). Else weight files are overwritten.
-    f = open(outdir + 'weight.dat', 'a')    
-    fb = open(outdir + 'weight_body.dat', 'a')    
-    fs = open(outdir + 'weight_surf.dat', 'a')    
+    # weight.dat    - append. includes all stations from all clients
+    # weight_body_XX.dat  - write a weight (body waves) file for client XX
+    # weight_surf_XX.dat  - write a weight (surf waves) file for client XX
+    wfile = outdir + "weight.dat"
+    wfile_body = outdir + "weight_body" + ".dat"
+    wfile_surf = outdir + "weight_surf" + ".dat"
+    wfile_body_client = outdir + "weight_body" + "_" + client_name + ".dat"
+    wfile_surf_client = outdir + "weight_surf" + "_" + client_name + ".dat"
+    f =  open(wfile, 'a') 
+    fb = open(wfile_body, 'a') 
+    fs = open(wfile_surf, 'a') 
+    fbc = open(wfile_body_client, 'w') 
+    fsc = open(wfile_surf_client, 'w') 
 
     # Sort the traces by distance
     sorted_traces = sorted(stream.traces, key=lambda k: k.stats.sac['dist'])
@@ -161,12 +171,16 @@ def write_cap_weights(stream, reftime=''):
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1]
 
-        f.write(outform % (outfnam, current_sta.sac['dist'],
-                1, 1, 1, 1, 1, 0, 0, 0, 0, 0))
-        fb.write(outform % (outfnam, current_sta.sac['dist'],
-                1, 1, 0, 0, 0, 0, 0, 0, 0, 0))
-        fs.write(outform % (outfnam, current_sta.sac['dist'],
-                0, 0, 1, 1, 1, 0, 0, 0, 0, 0))
+        f.write(outform % (outfnam, current_sta.sac['dist'], 
+            1, 1, 1, 1, 1, 0, 0, 0, 0, 0))
+        fb.write(outform % (outfnam, current_sta.sac['dist'], 
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 0))
+        fs.write(outform % (outfnam, current_sta.sac['dist'], 
+            0, 0, 1, 1, 1, 0, 0, 0, 0, 0))
+        fbc.write(outform % (outfnam, current_sta.sac['dist'], 
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 0))
+        fsc.write(outform % (outfnam, current_sta.sac['dist'], 
+            0, 0, 1, 1, 1, 0, 0, 0, 0, 0))
 
         laststa = current_sta.station
         lastloc = current_sta.location
