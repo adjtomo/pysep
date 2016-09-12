@@ -69,6 +69,7 @@ def run_get_waveform(llnl_db_client, event,
     pre_filt  - list, corner frequencies of filter to apply before deconv
                 a good idea when deconvolving (ifRemoveResponse=True)
     """
+    client_name = "LLNL"
     print("Preparing request for LLNL ...")
 
     # Get event an inventory from the LLNL DB.
@@ -153,7 +154,7 @@ def run_get_waveform(llnl_db_client, event,
     # Now do some QA: throw out traces with missing data
     # keep a log with status of trace extraction
     # this is mirrored in llnl_tool.py and iris_tools.py
-    output_log = "data_processing_status_LLNL.log"
+    output_log = "data_processing_status" + "_" + client_name + ".log"
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
 
@@ -196,7 +197,7 @@ def run_get_waveform(llnl_db_client, event,
         rotate_and_write_stream(st2, evtime)
 
     if ifCapInp:
-        write_cap_weights(st2, evtime)
+        write_cap_weights(st2, evtime, client_name)
 
     if ifEvInfo:
         write_ev_info(event, evtime)
