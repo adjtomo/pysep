@@ -36,7 +36,7 @@ def run_get_waveform(c, event,
                      network='*', channel='BH*', resample_freq=20.0, 
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
-                     scale_factor=0,
+                     scale_factor=10.0**2,
                      pre_filt=(0.005, 0.006, 10.0, 15.0)):
     """
     Get SAC waveforms for an event
@@ -137,17 +137,22 @@ def run_get_waveform(c, event,
     output_log = "data_processing_status" + "_" + client_name + ".log"
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
-
+    fid.write("evtime net sta cha starttime endtime npts length (sec)\n")
     for tr in st2:
         fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
                 tr.stats.network, tr.stats.station, tr.stats.channel, \
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
                 float(tr.stats.npts / tr.stats.sampling_rate)))
         if tr.stats.npts < tr.stats.sampling_rate * (before + after):
-            print("WARNING. missing data for station %s" % tr.stats.station)
-            print("WARNING. removing this station")
-            fid.write(" -- data missing. removing.")
-            st2.remove(tr)
+            print("WARNING. Missing data for station %s" % tr.stats.station)
+            print("WARNING. consider removing this station")
+            fid.write(" -- data missing.")
+            # 20160912 cralvizuri@alaska.edu --
+            # the original code removes waveforms that do not have the same
+            # length as the requested window. 
+            # Rejection is now disabled per discussion today.
+            # This is also mirrored in getwaveform_llnl.py
+            #st2.remove(tr)
 
     write_stream_sac(st2, evtime)
 

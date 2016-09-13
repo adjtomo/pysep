@@ -175,8 +175,15 @@ def run_get_waveform(llnl_db_client, event,
                   "Pass:", tr.stats.endtime < evtime + after)
             print("Removing %s. Not in requested temporal range." % tr.id)
             print("===========")
-            fid.write(" -- data missing. removing.")
-            st2.remove(tr)
+            print("WARNING. Missing data for station %s" % tr.stats.station)
+            print("WARNING. consider removing this station")
+            fid.write(" -- data missing.")
+            # 20160912 cralvizuri@alaska.edu --
+            # the original code removes waveforms that do not have the same
+            # length as the requested window. 
+            # Rejection is now disabled per discussion today.
+            # This is also mirrored in getwaveform_iris.py
+            #st2.remove(tr)
 
     print("--> %i waveforms left." % len(st2))
 
