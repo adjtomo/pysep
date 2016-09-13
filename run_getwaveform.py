@@ -26,6 +26,7 @@ pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)
 # for CAP all waveforms need to have the same sample rate
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 0                          # 10**2 to convert m/s to cm/s
+sec_before_after_event = 10     # time window to search event in the catalog
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -174,7 +175,8 @@ if idb == 1:
         client = Client("IRIS",user=user,password=password)
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
-    cat = client.get_events(starttime = otime-10, endtime = otime+10)
+    cat = client.get_events(starttime = otime - sec_before_after_event,\
+            endtime = otime + sec_before_after_event)
 
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = cat[0], min_dist = min_dist, max_dist = max_dist, 
