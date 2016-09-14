@@ -7,29 +7,11 @@ from __future__ import print_function
 
 import os
 
-import numpy as np
 import obspy
 from obspy.clients.fdsn import Client
 from scipy import signal
 
 from util_write_cap import *
-
-def resample(st, freq):
-    """
-    Custom resampling with a very sharp zerophase filter.
-    """
-    new_nyquist = 0.5 * freq
-    for tr in st:
-        current_nyquist = 0.5 * tr.stats.sampling_rate
-        # Filter if necessary.
-        if new_nyquist < current_nyquist:
-            zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
-        tr.detrend("linear")
-        tr.taper(max_percentage=0.02, type="hann")
-        tr.data = np.require(tr.data, requirements=["C"])
-        # "Perfect" sinc resampling.
-        tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                       window="blackman")
 
 def run_get_waveform(c, event,
                      min_dist=20, max_dist=300, before=100, after=300,
@@ -152,7 +134,7 @@ def run_get_waveform(c, event,
             # length as the requested window. 
             # Rejection is now disabled per discussion today.
             # This is also mirrored in getwaveform_llnl.py
-            #st2.remove(tr)
+            st2.remove(tr)
 
     write_stream_sac(st2, evtime)
 
