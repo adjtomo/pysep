@@ -422,7 +422,7 @@ def resample(st, freq):
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman")
 
-def resample_cut(st, freq, starttime, npts):
+def resample_cut(st, freq, evtime, before, after):
     """
     Custom resampling with a very sharp zerophase filter.
     """
@@ -435,5 +435,18 @@ def resample_cut(st, freq, starttime, npts):
         tr.detrend("linear")
         tr.taper(max_percentage=0.02, type="hann")
         tr.data = np.require(tr.data, requirements=["C"])
+        if (tr.stats.starttime > evtime - before):
+            print("WARNING. trace starttime > otime-before for station %s" % \
+                    tr.stats.station)
+            before = evtime - tr.stats.starttime # assuming starttime > evtime!
+            print("Setting before = evtime - starttime = %f" % before)
+        if (tr.stats.endtime < evtime + after):
+            print("WARNING. trace endtime < otime+after for station %s" % \
+                    tr.stats.station)
+            after = evtime + tr.stats.endtime
+            print("Setting after = evtime + endtime = %f" % after)
+        starttime = evtime - before
+        npts = (before + after) * freq
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman", starttime = starttime, npts = npts)
+
