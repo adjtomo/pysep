@@ -13,6 +13,7 @@ import obspy
 from obspy.io.sac import SACTrace
 import os
 from scipy import signal
+import numpy as np
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -405,3 +406,34 @@ def set_reftime(stream, evtime):
         stream2.append(tr)
     return(stream2)
 
+def resample(st, freq):
+    """
+    Custom resampling with a very sharp zerophase filter.
+    """
+    new_nyquist = 0.5 * freq
+    for tr in st:
+        current_nyquist = 0.5 * tr.stats.sampling_rate
+        # Filter if necessary.
+        if new_nyquist < current_nyquist:
+            zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
+        tr.detrend("linear")
+        tr.taper(max_percentage=0.02, type="hann")
+        tr.data = np.require(tr.data, requirements=["C"])
+        tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+                       window="blackman")
+
+def resample_cut(st, freq, starttime, npts):
+    """
+    Custom resampling with a very sharp zerophase filter.
+    """
+    new_nyquist = 0.5 * freq
+    for tr in st:
+        current_nyquist = 0.5 * tr.stats.sampling_rate
+        # Filter if necessary.
+        if new_nyquist < current_nyquist:
+            zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
+        tr.detrend("linear")
+        tr.taper(max_percentage=0.02, type="hann")
+        tr.data = np.require(tr.data, requirements=["C"])
+        tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+                       window="blackman", starttime = starttime, npts = npts)
