@@ -109,11 +109,11 @@ if iex == 4:
 #    (Even for GSN stations the E and N do not point exactly E and N.)
 if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
-    min_dist = 0 
-    max_dist = 500
+    min_dist = 200 
+    max_dist = 250
     tbefore_sec = 100
     tafter_sec = 600
-    network = 'II'
+    network = 'II,AK'
     channel = 'BH*'
 
 # nuclear event: LLNL (see also iex = 7)
@@ -176,8 +176,7 @@ if idb == 1:
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
     cat = client.get_events(starttime = otime - sec_before_after_event,\
-            endtime = otime + sec_before_after_event)
-
+                                endtime = otime + sec_before_after_event)
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = cat[0], min_dist = min_dist, max_dist = max_dist, 
             before = tbefore_sec, after = tafter_sec, network = network, channel = channel, 

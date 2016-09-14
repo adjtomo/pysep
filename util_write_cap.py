@@ -11,6 +11,7 @@ For reference see versions prior to Aug 25, 2016 for:
 
 import obspy
 from obspy.io.sac import SACTrace
+import obspy.signal.rotate as rt
 import os
 from scipy import signal
 import numpy as np
@@ -93,10 +94,16 @@ def rotate_and_write_stream(stream, reftime):
     stalist = []
     for tr in stream.traces:
         stalist.append(tr.stats.station)
+        # stalist.append(tr.stats.station +'.'+ tr.stats.location)
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
+    # XXX: This is the reason why only one of the sensor is rotated when there are
+    # multiple sensor with same station names 
     for station in stalist:
+        # XXX: Rotate to NEZ first
+        # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
+        # Run iex = 5 (run_getwaveform.py) for one such case
         substr = stream.select(station=station)
         try:
             substr.rotate('NE->RT')
@@ -106,6 +113,7 @@ def rotate_and_write_stream(stream, reftime):
 
     # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
     # Fix cmpaz metadata for Radial and Transverse components
+    # XXX: What about .1 and .2 files?
     for tr in stream.traces:
         if tr.stats.channel[-1] == 'R':
             tr.stats.sac['cmpaz'] = tr.stats.sac['az']
@@ -249,14 +257,27 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         tr.stats.sac['dist'] = tr.stats.sac['dist'] / 1000
 
         # Now add component info. obspy should do this but doesn't
+        # Now add component info.
         tmp = tr.stats.channel[2]
-        tr.stats.sac['cmpinc'] = 90.0
-        tr.stats.sac['cmpaz'] = 0.0
-
-        if tmp == 'E':
-            tr.stats.sac['cmpaz'] = 90.0
-        elif tmp == 'Z':
-            tr.stats.sac['cmpinc'] = 0.0
+        for ch in sta:
+            if (tmp == ch.code[2]) and (tr.stats.location == ch.location_code):
+                tr.stats.sac['cmpinc'] = ch.dip
+                tr.stats.sac['cmpaz'] = ch.azimuth
+                
+        # obspy has cmpinc for Z component as -90
+        #if tmp == 'Z':
+        #    tr.stats.sac['cmpinc'] = 0.0
+      
+        #-------- obsolete (remove?) ------
+        # We should not be assuming the component azimuth=0 and cmpinc=90
+        #tr.stats.sac['cmpinc'] = 90.0
+        #tr.stats.sac['cmpaz'] = 0.0
+            
+        #if tmp == 'E':
+        #    tr.stats.sac['cmpaz'] = 90.0
+        #elif tmp == 'Z':
+        #    tr.stats.sac['cmpinc'] = 0.0
+        #--------------------------------
 
         # Now some extra things
         tr.stats.sac['o'] = 0
