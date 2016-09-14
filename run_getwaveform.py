@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 1
+iex = 8
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -163,6 +163,16 @@ if iex == 7:
     tafter_sec = 600
     network = '*'
     channel = 'BH*,LH*' 
+
+# PROBLEM: does not rotate components (1,2,3) to (R,T,Z) for station BKS
+if iex == 8:
+    otime = obspy.UTCDateTime("1989-09-14T15:00:00.100000Z")
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = 'BK'
+    channel = 'BH*'
 
 # fetch and process waveforms
 if idb == 1:
