@@ -180,19 +180,20 @@ if iex == 9:
     # Input parameters from AEC catalog (read_eq_AEC.m)
     # Very bad way of creating event object 
     # I am using some known event time and creating event object for that
-    # Then replaing otime, lat, lon and dep (mag optional) 
+    # Then replaing otime, lat, lon, dep and mag (magnitude could be made optional)
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     etime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
     elat = 61.4542
     elon =-149.7428
     edep = 33033.6  # in meters
+    emag = 4.6
     min_dist = 0 
     max_dist = 500
     tbefore_sec = 100
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
-    use_catalog = 0                           # To get (lat,lon, etime, dep) from some catalog = 1 OR use defined = 0 (see iex=9)
+    use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
 
 # fetch and process waveforms
 if idb == 1:
@@ -212,6 +213,7 @@ if idb == 1:
         cat[0].origins[0].latitude = elat
         cat[0].origins[0].longitude = elon
         cat[0].origins[0].depth = edep   
+        cat[0].magnitudes[0].mag = emag
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = cat[0], 
             min_dist = min_dist, max_dist = max_dist, 
