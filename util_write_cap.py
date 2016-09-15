@@ -90,22 +90,71 @@ def rotate_and_write_stream(stream, reftime):
                       ' Number of traces: ', len(substr))
                 stream.remove(subtr)
 
-    # Get list of unique stations
+    # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
     for tr in stream.traces:
-        stalist.append(tr.stats.station)
-        # stalist.append(tr.stats.station +'.'+ tr.stats.location)
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.station +'.'+ tr.stats.location)
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
-    # XXX: This is the reason why only one of the sensor is rotated when there are
-    # multiple sensor with same station names 
-    for station in stalist:
-        # XXX: Rotate to NEZ first
+    print(stalist)
+    for stn in stalist:
+        # split STNM.LOC
+        tmp = stn.split('.')
+        station = tmp[0]
+        location = tmp[1]
+        # Get 3 traces (subset based on matching station name and location code)
+        substr = stream.select(station=station,location=location)
+        print(substr)
+
+        # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
         # Run iex = 5 (run_getwaveform.py) for one such case
-        substr = stream.select(station=station)
+        d1 = substr[0].data
+        d2 = substr[1].data
+        d3 = substr[2].data
+        az1 = substr[0].stats.sac['cmpaz']
+        az2 = substr[1].stats.sac['cmpaz']
+        az3 = substr[2].stats.sac['cmpaz']
+        dip1 = substr[0].stats.sac['cmpinc']
+        dip2 = substr[1].stats.sac['cmpinc']
+        dip3 = substr[2].stats.sac['cmpinc']
+        print('Rotating random orientation to NEZ first')
+        data_array = rt.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+        # Rotates an arbitrarily oriented three-component vector to ZNE( [0]-Z, [1]-N, [2]-E)
+        # XXX: Check 012 in correct order? 
+        substr[0].data =  data_array[2]  # E
+        substr[1].data =  data_array[1]  # N
+        substr[2].data =  data_array[0]  # Z
+        # Fix the channel names in the traces.stats
+        substr[0].stats.channel = substr[0].stats.channel[0:2] + 'E'
+        substr[1].stats.channel = substr[0].stats.channel[0:2] + 'N'
+        substr[2].stats.channel = substr[0].stats.channel[0:2] + 'Z'
+        # Fix the sac headers since the traces have been rotated now
+        substr[0].stats.sac['cmpaz'] = 90.0
+        substr[1].stats.sac['cmpaz'] = 0.0
+        substr[2].stats.sac['cmpaz'] = 0.0
+        # matlab files had following cmpinc: E = 90, N = 90, Z = 0
+        # XXX: Will this cause problem??
+        substr[0].stats.sac['cmpinc'] = 0.0
+        substr[1].stats.sac['cmpinc'] = 0.0
+        substr[2].stats.sac['cmpinc'] = -90.0
+        # Fix sac headers
+        substr[0].stats.sac['kcmpnm'] = substr[0].stats.channel
+        substr[1].stats.sac['kcmpnm'] = substr[1].stats.channel
+        substr[2].stats.sac['kcmpnm'] = substr[2].stats.channel
+        
+        # save NEZ waveforms
+        for tr in substr:
+            outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+                + tr.stats.network + '.' + tr.stats.station + '.' \
+                + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+                + tr.stats.channel[-1].lower()
+            tr.write(outfnam, format='SAC')
+            
         try:
+            print('Rotating ENZ to RTZ')
             substr.rotate('NE->RT')
         except:
             "Rotation failed, skipping..."
@@ -113,14 +162,16 @@ def rotate_and_write_stream(stream, reftime):
 
     # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
     # Fix cmpaz metadata for Radial and Transverse components
-    # XXX: What about .1 and .2 files?
     for tr in stream.traces:
         if tr.stats.channel[-1] == 'R':
+            tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'R'
             tr.stats.sac['cmpaz'] = tr.stats.sac['az']
         elif tr.stats.channel[-1] == 'T':
+            tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'T'
             tr.stats.sac['cmpaz'] = tr.stats.sac['az']+90.0
             if tr.stats.sac['cmpaz'] > 360.0:
                 tr.stats.sac['cmpaz'] += -360
+
         # Now Write
         # 20160805 cralvizuri@alaska.edu -- some llnl stations have traces with
         # multiple channel types. The original filename does not include 
