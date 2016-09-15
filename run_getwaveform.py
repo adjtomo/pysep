@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 9
+iex = 5
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -24,11 +24,16 @@ fmaxc = 10
 pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)    
 #pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
 # for CAP all waveforms need to have the same sample rate
-resample_freq = 20.0                      # =0 for no resampling
-scale_factor = 0                          # 10**2 to convert m/s to cm/s
-sec_before_after_event = 10     # time window to search event in the catalog
-station = '*'       # default=look for all stations. Else specify station code
-use_catalog = 1                           # To get (lat,lon, etime, dep) from some catalog = 1 OR use defined = 0 (see iex=9)
+resample_freq = 20.0         # =0 for no resampling
+scale_factor = 0             # 10**2 to convert m/s to cm/s
+# event parameters
+use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
+sec_before_after_event = 10  # time window to search for a target event in a catalog
+min_dist = 0 
+max_dist = 20000
+# station parameters
+network = '*'                # all networks
+station = '*'                # all stations
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -100,29 +105,23 @@ if iex == 4:
     network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
     channel = 'BH*,HH*'
 
-# ERROR EXAMPLE
-# PROBLEM 1: output file names should be BHR and BHT (not BH1 and BH2)
-# PROBLEM 2: output files are NOT being rotated
-# PROBLEM 3: output file names should be EID.NN.SSS.LL.CCC.sac
-# MAIN PROBLEM: All rotations should be based on the azimuth of the sensor
+# ROTATION example for components 1,2,Z
+#    All rotations should be based on the azimuth of the sensor
 #    (CMPAZ header in sac), which, combined with the station-source backazimuth,
 #    will provide the rotation to radial and transverse components.
 #    The rotation should NOT depend on channel names like E or N.
 #    (Even for GSN stations the E and N do not point exactly E and N.)
 if iex == 5:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
-    min_dist = 200 
-    max_dist = 250
     tbefore_sec = 100
     tafter_sec = 600
-    network = 'II,AK'
+    #network = 'II,AK'
+    station = 'KDAK,SWD'
     channel = 'BH*'
 
 # nuclear event: LLNL (see also iex = 7)
-# GOAL: To find events in the LLNL database based on a target origin time,
-#       rather than an eid. Perhaps a second parameter is needed to say
-#       "find closest event within 30 seconds of target time".
-#       (The reference time (NZYEAR, etc) should then be assined as the actual origin time,
+# GOAL: To find events in the LLNL database based on a target origin time, rather than an eid.
+#       (The reference time (NZYEAR, etc) should then be assigned as the actual origin time,
 #       not the target origin time.)
 # DEBUGGING HELPER LINE:
 #   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
@@ -151,9 +150,6 @@ if iex == 6:
 # same as iex=6 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
 #       origin time, hypocenter, magnitude.
-#       (Unsure what the threshold is for IRIS catalog.)
-#       We need a flag to decide whether to find/use source parameters in the IRIS
-#       catalog, or to assign them ourselves.
 if iex == 7:
     idb = 1            # IRIS database
     #resample_freq = 0  # no resampling
@@ -166,21 +162,9 @@ if iex == 7:
     network = '*'
     channel = 'BH*,LH*' 
 
-# PROBLEM: does not rotate components (1,2,3) to (R,T,Z) for station BKS
-if iex == 8:
-    otime = obspy.UTCDateTime("1989-09-14T15:00:00.100000Z")
-    min_dist = 0 
-    max_dist = 1200
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = 'BK'
-    channel = 'BH*'
-
+# PROBLEM: need to create an event object from user-inputed otime, lon, lat, dep, mag
+# KLUDGE: use known event time from catalog, then create event object, then replace otime, lat, lon, dep and mag
 if iex == 9:
-    # Input parameters from AEC catalog (read_eq_AEC.m)
-    # Very bad way of creating event object 
-    # I am using some known event time and creating event object for that
-    # Then replaing otime, lat, lon, dep and mag (magnitude could be made optional)
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     etime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
     elat = 61.4542
