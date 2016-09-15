@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 8
+iex = 9
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -28,6 +28,7 @@ resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 0                          # 10**2 to convert m/s to cm/s
 sec_before_after_event = 10     # time window to search event in the catalog
 station = '*'       # default=look for all stations. Else specify station code
+use_catalog = 1                           # To get (lat,lon, etime, dep) from some catalog = 1 OR use defined = 0 (see iex=9)
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -175,6 +176,24 @@ if iex == 8:
     network = 'BK'
     channel = 'BH*'
 
+if iex == 9:
+    # Input parameters from AEC catalog (read_eq_AEC.m)
+    # Very bad way of creating event object 
+    # I am using some known event time and creating event object for that
+    # Then replaing otime, lat, lon and dep (mag optional) 
+    otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
+    etime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
+    elat = 61.4542
+    elon =-149.7428
+    edep = 33033.6  # in meters
+    min_dist = 0 
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 300
+    network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+    channel = 'BH*'
+    use_catalog = 0                           # To get (lat,lon, etime, dep) from some catalog = 1 OR use defined = 0 (see iex=9)
+
 # fetch and process waveforms
 if idb == 1:
     # import functions to access waveforms
@@ -188,6 +207,11 @@ if idb == 1:
     # (future: for Alaska events, read the AEC catalog)
     cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
+    if use_catalog==0:
+        cat[0].origins[0].time = etime
+        cat[0].origins[0].latitude = elat
+        cat[0].origins[0].longitude = elon
+        cat[0].origins[0].depth = edep   
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = cat[0], 
             min_dist = min_dist, max_dist = max_dist, 
