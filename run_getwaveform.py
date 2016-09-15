@@ -27,6 +27,7 @@ pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)
 resample_freq = 20.0                      # =0 for no resampling
 scale_factor = 0                          # 10**2 to convert m/s to cm/s
 sec_before_after_event = 10     # time window to search event in the catalog
+station = '*'       # default=look for all stations. Else specify station code
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -188,11 +189,15 @@ if idb == 1:
     cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
     # Extract waveforms, IRIS
-    getwaveform_iris.run_get_waveform(c = client, event = cat[0], min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, network = network, channel = channel, 
+    getwaveform_iris.run_get_waveform(c = client, event = cat[0], 
+            min_dist = min_dist, max_dist = max_dist, 
+            before = tbefore_sec, after = tafter_sec, 
+            network = network, station = station, channel = channel, 
             resample_freq = resample_freq, ifrotate = rotate,
-            ifCapInp = output_cap_weight_file, ifRemoveResponse = remove_response,
-            ifDetrend = detrend, ifDemean = demean, ifEvInfo = output_event_info, 
+            ifCapInp = output_cap_weight_file, 
+            ifRemoveResponse = remove_response,
+            ifDetrend = detrend, ifDemean = demean, 
+            ifEvInfo = output_event_info, 
             scale_factor = scale_factor, pre_filt = pre_filt)
 
 if idb == 3:

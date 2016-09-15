@@ -15,7 +15,8 @@ from util_write_cap import *
 
 def run_get_waveform(c, event,
                      min_dist=20, max_dist=300, before=100, after=300,
-                     network='*', channel='BH*', resample_freq=20.0, 
+                     network='*', station = '*', channel='BH*', 
+                     resample_freq=20, 
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2,
@@ -63,9 +64,10 @@ def run_get_waveform(c, event,
     evtime = event.preferred_origin().time
 
     print("Download stations...")
-    stations = c.get_stations(network=network, starttime=evtime - before,
-                              endtime=evtime + after, channel=channel,
-                              level="response")
+    stations = c.get_stations(network=network, station=station, 
+            channel=channel,
+            starttime=evtime - before, endtime=evtime + after,
+            level="response")
 
     print(stations)
 
