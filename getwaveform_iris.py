@@ -136,7 +136,7 @@ def run_get_waveform(c, event,
             # length as the requested window. 
             # Rejection is now disabled per discussion today.
             # This is also mirrored in getwaveform_llnl.py
-            st2.remove(tr)
+            #st2.remove(tr)
 
     write_stream_sac(st2, evtime)
 

@@ -162,7 +162,7 @@ def run_get_waveform(llnl_db_client, event,
             # length as the requested window. 
             # Rejection is now disabled per discussion today.
             # This is also mirrored in getwaveform_iris.py
-            st2.remove(tr)
+            #st2.remove(tr)
 
     print("--> %i waveforms left." % len(st2))
 
