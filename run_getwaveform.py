@@ -216,6 +216,15 @@ if idb == 3:
     client = llnl_db_client.LLNLDBClient(
             "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
+    # get event time and event ID
+    cat = client.get_catalog()
+    mintime_str = "time > %s" % (otime - sec_before_after_event)
+    maxtime_str = "time < %s" % (otime + sec_before_after_event)
+    print(mintime_str, maxtime_str)
+    cat0 = cat.filter(mintime_str, maxtime_str)[0]
+    print(cat0)
+    evid = int(cat0.event_descriptions[0].text)
+
     # Extract waveforms, LLNL
     getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
             network = network, channel = channel, 
