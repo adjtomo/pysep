@@ -94,7 +94,7 @@ def rotate_and_write_stream(stream, reftime):
     stalist = []
     for tr in stream.traces:
         #stalist.append(tr.stats.station)
-        stalist.append(tr.stats.station +'.'+ tr.stats.location)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location)
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
@@ -102,10 +102,11 @@ def rotate_and_write_stream(stream, reftime):
     for stn in stalist:
         # split STNM.LOC
         tmp = stn.split('.')
-        station = tmp[0]
-        location = tmp[1]
+        netw = tmp[0]
+        station = tmp[1]
+        location = tmp[2]
         # Get 3 traces (subset based on matching station name and location code)
-        substr = stream.select(station=station,location=location)
+        substr = stream.select(network=netw,station=station,location=location)
         print(substr)
 
         # Rotate to NEZ first
@@ -309,11 +310,15 @@ def add_sac_metadata(st, ev=[], stalist=[]):
 
         # Now add component info. obspy should do this but doesn't
         # Now add component info.
-        tmp = tr.stats.channel[2]
-        for ch in sta:
-            if (tmp == ch.code[2]) and (tr.stats.location == ch.location_code):
-                tr.stats.sac['cmpinc'] = ch.dip
-                tr.stats.sac['cmpaz'] = ch.azimuth
+        tmp = tr.stats.channel
+        
+        for net in stalist:
+            for sta in net:
+                for ch in sta:
+                    if (tmp == ch.code) and (tr.stats.location == ch.location_code):
+                        #print('---------', sta.code, net.code, tmp, ch.code, tr.stats.location, ch.location_code)
+                        tr.stats.sac['cmpinc'] = ch.dip
+                        tr.stats.sac['cmpaz'] = ch.azimuth
                 
         # obspy has cmpinc for Z component as -90
         #if tmp == 'Z':
