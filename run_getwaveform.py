@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 5
+iex = 9
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -165,8 +165,7 @@ if iex == 7:
 # PROBLEM: need to create an event object from user-inputed otime, lon, lat, dep, mag
 # KLUDGE: use known event time from catalog, then create event object, then replace otime, lat, lon, dep and mag
 if iex == 9:
-    otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
-    etime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
+    otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
     elat = 61.4542
     elon =-149.7428
     edep = 33033.6  # in meters
@@ -184,22 +183,31 @@ if idb == 1:
     # import functions to access waveforms
     import getwaveform_iris
     from obspy.clients.fdsn import Client
+    from obspy.core.event import Event, Origin, Magnitude
     if not user and not password:
         client = Client("IRIS")
     else:
         client = Client("IRIS",user=user,password=password)
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
-    cat = client.get_events(starttime = otime - sec_before_after_event,\
+    if use_catalog==1:
+        cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
-    if use_catalog==0:
-        cat[0].origins[0].time = etime
-        cat[0].origins[0].latitude = elat
-        cat[0].origins[0].longitude = elon
-        cat[0].origins[0].depth = edep   
-        cat[0].magnitudes[0].mag = emag
+        ev = cat[0]
+    else:
+        ev = Event()
+        org = Origin()
+        org.latitude = elat
+        org.longitude = elon
+        org.depth = edep
+        org.time = otime
+        mag = Magnitude()
+        mag.mag = emag
+        mag.magnitude_type = "Mw"
+        ev.origins.append(org)
+        ev.magnitudes.append(mag)
     # Extract waveforms, IRIS
-    getwaveform_iris.run_get_waveform(c = client, event = cat[0], 
+    getwaveform_iris.run_get_waveform(c = client, event = ev, 
             min_dist = min_dist, max_dist = max_dist, 
             before = tbefore_sec, after = tafter_sec, 
             network = network, station = station, channel = channel, 
@@ -209,6 +217,7 @@ if idb == 1:
             ifDetrend = detrend, ifDemean = demean, 
             ifEvInfo = output_event_info, 
             scale_factor = scale_factor, pre_filt = pre_filt)
+
 
 if idb == 3:
     import llnl_db_client

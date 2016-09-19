@@ -255,8 +255,8 @@ def write_ev_info(ev, reftime):
     outform = '%s %f %f %f %f'
     f = open(outdir + 'ev_info.dat', 'w')
     f.write(outform % (
-        ev.preferred_origin().time, ev.preferred_origin().longitude,
-        ev.preferred_origin().latitude, ev.preferred_origin().depth / 1000.0,
+        ev.origins[0].time, ev.origins[0].longitude,
+        ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
 def add_sac_metadata(st, ev=[], stalist=[]):
@@ -285,15 +285,15 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         tr.stats.sac['stel'] = sta.elevation / 1000.0
 
         # Event info
-        tr.stats.sac['evla'] = ev.preferred_origin().latitude
-        tr.stats.sac['evlo'] = ev.preferred_origin().longitude
-        tr.stats.sac['evdp'] = ev.preferred_origin().depth/1000
+        tr.stats.sac['evla'] = ev.origins[0].latitude
+        tr.stats.sac['evlo'] = ev.origins[0].longitude
+        tr.stats.sac['evdp'] = ev.origins[0].depth/1000
         m = ev.preferred_magnitude() or ev.magnitudes[0]
         tr.stats.sac['mag'] = m.mag
 
         # !!!!Weird!!!
         tr.stats.sac['kevnm'] = \
-            ev.preferred_origin().time.strftime('%Y%m%d%H%M%S%f')[:-3]
+            ev.origins[0].time.strftime('%Y%m%d%H%M%S%f')[:-3]
 
         # Station-event info
         tr.stats.sac['dist'], tr.stats.sac['az'], tr.stats.sac['baz'] = \
@@ -405,9 +405,9 @@ def make_bulk_list_from_stalist(stations, t1, t2, loc='*', channel='BH*'):
 def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                        ifverbose=True):
     # Remove stations greater than a certain distance from event
-    elat = ev.preferred_origin().latitude
-    elon = ev.preferred_origin().longitude
-    reftime = ev.preferred_origin().time
+    elat = ev.origins[0].latitude
+    elon = ev.origins[0].longitude
+    reftime = ev.origins[0].time
     remlist = []
     
     outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'

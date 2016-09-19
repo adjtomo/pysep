@@ -61,7 +61,8 @@ def run_get_waveform(c, event,
     else:
         client_name = "IRIS"
 
-    evtime = event.preferred_origin().time
+    #evtime = event.preferred_origin().time
+    evtime = event.origins[0].time
 
     print("Download stations...")
     stations = c.get_stations(network=network, station=station, 
@@ -136,7 +137,7 @@ def run_get_waveform(c, event,
             # length as the requested window. 
             # Rejection is now disabled per discussion today.
             # This is also mirrored in getwaveform_llnl.py
-            #st2.remove(tr)
+            st2.remove(tr)
 
     write_stream_sac(st2, evtime)
 

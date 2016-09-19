@@ -56,7 +56,7 @@ def run_get_waveform(llnl_db_client, event,
     event = llnl_db_client.get_obspy_event(event)
     inventory = llnl_db_client.get_inventory()
 
-    evtime = event.preferred_origin().time
+    evtime = event.origins[0].time
 
     print("--> Total stations in LLNL DB: %i" % (
         len(inventory.get_contents()["stations"])))
