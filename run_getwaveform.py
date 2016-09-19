@@ -135,8 +135,8 @@ if iex == 6:
     #resample_freq = 0    # no resampling and no cutting
 
     # TARGET origin time (8.031 s from actual origin time)
-    #otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")
-    evid = 635527        # Hoya event id in LLNL database
+    otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")
+    #evid = 635527        # Hoya event id in LLNL database
 
     min_dist = 0 
     max_dist = 1200
