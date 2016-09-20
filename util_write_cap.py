@@ -94,7 +94,7 @@ def rotate_and_write_stream(stream, reftime):
     stalist = []
     for tr in stream.traces:
         #stalist.append(tr.stats.station)
-        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
@@ -105,9 +105,12 @@ def rotate_and_write_stream(stream, reftime):
         netw = tmp[0]
         station = tmp[1]
         location = tmp[2]
+        chan = tmp[3] + '*'
         # Get 3 traces (subset based on matching station name and location code)
-        substr = stream.select(network=netw,station=station,location=location)
+        substr = stream.select(network=netw,station=station,location=location,channel=chan)
         print(substr)
+        if len(substr) != 3:
+            raise ValueError('Cannot perform rotation: More than 3 traces for', netw +'.' +station+ '.' +location, '. This could be due to gappy data.')
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
@@ -308,15 +311,16 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         # Kilometers
         tr.stats.sac['dist'] = tr.stats.sac['dist'] / 1000
 
-        # Now add component info. obspy should do this but doesn't
-        # Now add component info.
+        # Now add component info. CMPAZ and CMPINC info is in the station inventor
+        # and not in the trace.stats
         tmp = tr.stats.channel
         
+        # match trace station info with the station inventory info
         for net in stalist:
-            for sta in net:
-                for ch in sta:
-                    if (tmp == ch.code) and (tr.stats.location == ch.location_code):
-                        #print('---------', sta.code, net.code, tmp, ch.code, tr.stats.location, ch.location_code)
+            for sta in net.stations:
+                for ch in sta.channels:
+                    if tr.stats.channel == ch.code and tr.stats.location == ch.location_code and tr.stats.station == sta.code and tr.stats.network == net.code:
+                        print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip)
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
                 
