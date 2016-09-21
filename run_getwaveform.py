@@ -162,8 +162,8 @@ if iex == 7:
     network = '*'
     channel = 'BH*,LH*' 
 
-# PROBLEM: need to create an event object from user-inputed otime, lon, lat, dep, mag
-# KLUDGE: use known event time from catalog, then create event object, then replace otime, lat, lon, dep and mag
+# 1. Waveform extraction for user defined event info
+# 2. Subset of stations for quickly testing data gaps and padding tests
 if iex == 9:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
     elat = 61.4542
@@ -176,6 +176,7 @@ if iex == 9:
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
+    # station = 'FIB,SAW'                      # For testing data gaps 
     use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
 
 # fetch and process waveforms

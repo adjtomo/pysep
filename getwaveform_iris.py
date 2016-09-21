@@ -137,7 +137,22 @@ def run_get_waveform(c, event,
             # length as the requested window. 
             # Rejection is now disabled per discussion today.
             # This is also mirrored in getwaveform_llnl.py
-            st2.remove(tr)
+            # st2.remove(tr)
+
+    # fill gaps with 0
+    print(st2)
+    st2.merge(method=0,fill_value=0)
+    print(st2)
+    # Pad with zero
+    st2.trim(starttime=evtime-before, endtime=evtime+after,pad=True, nearest_sample=False,fill_value=0)
+    print(st2)
+
+    fid.write("\n--------After filling the gaps------------")
+    for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
 
     write_stream_sac(st2, evtime)
 
