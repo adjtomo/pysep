@@ -1,10 +1,20 @@
-#!/opt/antelope/python2.7.6/bin/python
+#!/usr/bin/python
+
+####!/opt/antelope/python2.7.6/bin/python
 # units for state of health can be found here:
 # https://www.passcal.nmt.edu/content/data-archiving/documentation/passive-source
 
-#from obspy.core import *
-#from obspy.clients.fdsn import Client
-#
+#import os
+#import sys
+
+#import signal
+
+#signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+#sys.path.append(os.environ['ANTELOPE'] + "/data/python")
+#import antelope
+
+
 from get_soh import get_iris_soh
 from get_soh import get_aec_soh
 import matplotlib.pyplot as plt
@@ -12,19 +22,25 @@ import numpy
 import matplotlib.dates as dates
 import datetime
 import obspy
+
+import obspy
 from obspy.core import *
+from obspy.clients.fdsn import Client
+#
+#from obspy.core import read, Stream, UTCDateTime
+#from obspy_ext.antelope.utils import add_antelope_path
+#from obspy_ext.antelope.dbobjects import Dbrecord, DbrecordList 
 
-import os
-import sys
 
-sys.path.append(os.environ['ANTELOPE'] + "/data/python")
+print(sys.version)
+
 
 # Set parameters
 net = "XV"
 sta = "FTGH"
 
 time1 = UTCDateTime(2015,8,1,0,0,0)
-time2 = UTCDateTime(2015,9,1,0,0,0)
+time2 = UTCDateTime(2016,9,3,0,0,0)
 
 
 # get data
@@ -81,10 +97,10 @@ fig.savefig(sta + "soh.pdf", dpi=200)
 
 plt.show()
 
+
+
 '''
-
 cha = "VM0"
-
 vmo_aec = get_aec_soh(sta,cha,2016,8,1,0,0,0)
 '''
 

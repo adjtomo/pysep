@@ -4,7 +4,7 @@
 #import sys
 
 #sys.path.append(os.environ['ANTELOPE'] + "/data/python")
-
+#print(sys.version)
 
 import obspy
 from obspy.core import *
