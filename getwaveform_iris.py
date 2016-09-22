@@ -143,11 +143,44 @@ def run_get_waveform(c, event,
     # print(st2)    # code for debugging.
     st2.merge(method=0,fill_value=0)
     # print(st2)    # code for debugging.
-    # Pad with zero
-    st2.trim(starttime=evtime-before, endtime=evtime+after,pad=True, nearest_sample=False,fill_value=0)
-    # print(st2)    # code for debugging.
+
 
     fid.write("\n--------After filling the gaps------------")
+    for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
+
+    # Get list of unique stations + locaiton (example: 'KDAK.00')
+    stalist = []
+    for tr in st2.traces:
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+
+    # Crazy way of getting a unique list of stations
+    stalist = list(set(stalist))
+    print(stalist)
+    st3 = obspy.Stream()
+    # Trim the edges in case 3 channels have different lengths
+    for stn in stalist:
+        # split STNM.LOC
+        tmp = stn.split('.')
+        netw = tmp[0]
+        station = tmp[1]
+        location = tmp[2]
+        chan = tmp[3] + '*'
+        # Get 3 traces (subset based on matching station name and location code)
+        substr = stream.select(network=netw,station=station,location=location,channel=chan)        
+        max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime,substr[2].stats.starttime)
+        min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)       
+        substr.trim(starttime=max_starttime, endtime=min_endtime, pad=False, nearest_sample=True, fill_value=0)
+        for tr in substr.traces:
+            st3 = st3.append(tr)
+        
+    st2=st3
+
+    fid.write("\n--------After trimming the edges (in case the 3 channels have different lengths)------------")
     for tr in st2:
         fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
                 tr.stats.network, tr.stats.station, tr.stats.channel, \

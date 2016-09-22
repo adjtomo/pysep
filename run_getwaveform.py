@@ -176,7 +176,8 @@ if iex == 9:
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
-    # station = 'FIB,SAW'                      # For testing data gaps 
+    network = 'AV'
+    station = 'SPBG,KABU'                      # For testing data gaps 
     use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
 
 # fetch and process waveforms
