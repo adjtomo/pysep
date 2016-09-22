@@ -507,7 +507,14 @@ def resample(st, freq):
         # Filter if necessary.
         if new_nyquist < current_nyquist:
             zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
-        tr.detrend("linear")
+        try:
+            tr.detrend("linear")
+        except:
+            print("WARNING. Unable to detrend for " + tr.stats.network \
+                    + '.' + tr.stats.station + '.' + tr.stats.channel + '. '\
+                    "Waveforms may contain NaN or Inf values")
+            # XXX REMOVE TRACE? TR.REMOVE(...
+            continue
         tr.taper(max_percentage=0.02, type="hann")
         tr.data = np.require(tr.data, requirements=["C"])
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
@@ -523,7 +530,14 @@ def resample_cut(st, freq, evtime, before, after):
         # Filter if necessary.
         if new_nyquist < current_nyquist:
             zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
-        tr.detrend("linear")
+        try:
+            tr.detrend("linear")
+        except:
+            print("WARNING. Rejecting station %s. Unable to detrend. " % \
+                    tr.stats.station)
+            print("This may be to NaN and Inf values in the data.")
+            # XXX REMOVE TRACE? TR.REMOVE(...
+            continue
         tr.taper(max_percentage=0.02, type="hann")
         tr.data = np.require(tr.data, requirements=["C"])
         if (tr.stats.starttime > evtime - before):
