@@ -99,7 +99,7 @@ def rotate_and_write_stream(stream, reftime):
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
-    print(stalist)
+    #print(stalist)
     for stn in stalist:
         # split STNM.LOC
         tmp = stn.split('.')
@@ -128,7 +128,8 @@ def rotate_and_write_stream(stream, reftime):
         dip1 = substr[0].stats.sac['cmpinc']
         dip2 = substr[1].stats.sac['cmpinc']
         dip3 = substr[2].stats.sac['cmpinc']
-        print('--> Rotating random orientation to NEZ first')
+        print('--> Station ' + netw + '.' + station + '.' + location + \
+            ' Rotating random orientation to NEZ.')
         data_array = rt.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
         # Rotates an arbitrarily oriented three-component vector to ZNE( [0]-Z, [1]-N, [2]-E)
         # XXX: Check 012 in correct order? 
@@ -162,7 +163,8 @@ def rotate_and_write_stream(stream, reftime):
             tr.write(outfnam, format='SAC')
 
         try:
-            print('--> Rotating ENZ to RTZ')
+            print('--> Station ' + netw + '.' + station + '.' + location + \
+                ' Rotating ENZ to RTZ.')
             substr.rotate('NE->RT')
         except:
             "Rotation failed, skipping..."
