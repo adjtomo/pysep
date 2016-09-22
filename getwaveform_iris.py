@@ -129,8 +129,8 @@ def run_get_waveform(c, event,
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
                 float(tr.stats.npts / tr.stats.sampling_rate)))
         if tr.stats.npts < tr.stats.sampling_rate * (before + after):
-            print("WARNING. Missing data for station %s" % tr.stats.station)
-            print("WARNING. consider removing this station")
+            print("WARNING. data available < (before + after) for station " + \
+                    tr.stats.station + " -- consider removing this station")
             fid.write(" -- data missing.")
             # 20160912 cralvizuri@alaska.edu --
             # the original code removes waveforms that do not have the same
