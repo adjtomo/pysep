@@ -78,7 +78,7 @@ def run_get_waveform(c, event,
     bulk_list = make_bulk_list_from_stalist(
         stations, evtime - before, evtime + after, channel=channel)
     _stream = c.get_waveforms_bulk(bulk_list)
-    print(_stream)
+    #print(_stream)  # code for debugging. partial print stations
 
     # set reftime
     stream = obspy.Stream()
@@ -140,12 +140,12 @@ def run_get_waveform(c, event,
             # st2.remove(tr)
 
     # fill gaps with 0
-    print(st2)
+    # print(st2)    # code for debugging.
     st2.merge(method=0,fill_value=0)
-    print(st2)
+    # print(st2)    # code for debugging.
     # Pad with zero
     st2.trim(starttime=evtime-before, endtime=evtime+after,pad=True, nearest_sample=False,fill_value=0)
-    print(st2)
+    # print(st2)    # code for debugging.
 
     fid.write("\n--------After filling the gaps------------")
     for tr in st2:

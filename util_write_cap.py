@@ -70,7 +70,8 @@ def rotate_and_write_stream(stream, reftime):
     # Add backazimuth to metadata in a particular way...
     for tr in stream.traces:
         tr.stats.back_azimuth = tr.stats.sac['baz']
-        print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)
+        # code for debugging. print station and backazimuth
+        #print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
 
         # Do some qc: throw out any stations without three components
         substr = stream.select(station=tr.stats.station)
@@ -108,7 +109,7 @@ def rotate_and_write_stream(stream, reftime):
         chan = tmp[3] + '*'
         # Get 3 traces (subset based on matching station name and location code)
         substr = stream.select(network=netw,station=station,location=location,channel=chan)
-        print(substr)
+        #print(substr)   # code for debugging. print stream information
         if len(substr) != 3:
             raise ValueError('Cannot perform rotation: More than 3 traces for', netw +'.' +station+ '.' +location, '. This could be due to gappy data.')
 
@@ -346,8 +347,9 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         # I don't even know
         tr.stats.sac['lcalda'] = 1
 
-        print(tr.stats.station, tr.stats.sac['evlo'], tr.stats.sac['evla'],
-              tr.stats.sac['stlo'], tr.stats.sac['stla'], tr.stats.sac['dist'])
+        # code for debugging.
+        #print(tr.stats.station, tr.stats.sac['evlo'], tr.stats.sac['evla'],
+        #      tr.stats.sac['stlo'], tr.stats.sac['stla'], tr.stats.sac['dist'])
     return st
 
 def time_shift_sac(st, tshift=0):
@@ -462,7 +464,8 @@ def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
         if use_sta_as_dirname:
             outdir = odir + tr.stats.station + '/'
 
-        print(outdir)
+        # code for debugging. print the output directory for waveforms.
+        #print(outdir)
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
