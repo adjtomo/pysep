@@ -111,7 +111,10 @@ def rotate_and_write_stream(stream, reftime):
         substr = stream.select(network=netw,station=station,location=location,channel=chan)
         #print(substr)   # code for debugging. print stream information
         if len(substr) != 3:
-            raise ValueError('Cannot perform rotation: More than 3 traces for', netw +'.' +station+ '.' +location, '. This could be due to gappy data.')
+            print('Warning. Cannot perform rotation: More than 3 traces for', 
+                    netw + '.' + station + '.' + location, \
+                            'This could be due to gappy data.')
+            continue # XXX remove this trace? continue?
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
@@ -157,7 +160,7 @@ def rotate_and_write_stream(stream, reftime):
                 + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
                 + tr.stats.channel[-1].lower()
             tr.write(outfnam, format='SAC')
-            
+
         try:
             print('--> Rotating ENZ to RTZ')
             substr.rotate('NE->RT')
