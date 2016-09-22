@@ -171,9 +171,17 @@ def run_get_waveform(c, event,
         location = tmp[2]
         chan = tmp[3] + '*'
         # Get 3 traces (subset based on matching station name and location code)
-        substr = stream.select(network=netw,station=station,location=location,channel=chan)        
-        max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime,substr[2].stats.starttime)
-        min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)       
+        substr = stream.select(network=netw,station=station,location=location,channel=chan)
+        # Find max startime and min end time for stations with number of channels = 1 or 2 or 3
+        if len(substr) == 1:
+            max_starttime = substr[0].stats.starttime
+            min_endtime = substr[0].stats.endtime
+        if len(substr) == 2:
+            max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime)
+            min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime)
+        if len(substr) == 3:
+            max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime,substr[2].stats.starttime)
+            min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)    
         substr.trim(starttime=max_starttime, endtime=min_endtime, pad=False, nearest_sample=True, fill_value=0)
         for tr in substr.traces:
             st3 = st3.append(tr)
