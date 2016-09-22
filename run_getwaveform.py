@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 9
+iex = 8
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -161,6 +161,22 @@ if iex == 7:
     tafter_sec = 600
     network = '*'
     channel = 'BH*,LH*' 
+
+# problem 1: some stations return only vertical component. our tools crash in this case.
+# problem 2: short waveforms. padding by zeros adds sharp changes in the data
+# problem 3: waveform contains NAN or INF. this crashes detrend
+# solution 1: (ongoing)
+# solution 2: disable zero-padding
+# solution 3: (ongoing) print error (consider removing trace?)
+if iex==8:
+    idb = 1            # IRIS database
+    otime = obspy.UTCDateTime("1982-08-05T14:00:00.000000Z")
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'
+    channel = 'BH*,LH*,EH*' 
 
 # 1. Waveform extraction for user defined event info
 # 2. Subset of stations for quickly testing data gaps and padding tests
