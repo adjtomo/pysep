@@ -141,9 +141,9 @@ def run_get_waveform(c, event,
 
     # fill gaps with 0
     # print(st2)    # code for debugging.
-    st2.merge(method=0,fill_value=0)
+    #st2.merge(method=0,fill_value=0)
+    st2.merge(fill_value='interpolate')
     # print(st2)    # code for debugging.
-
 
     fid.write("\n--------After filling the gaps------------")
     for tr in st2:
