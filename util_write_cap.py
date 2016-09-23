@@ -587,3 +587,50 @@ def resample_cut(st, freq, evtime, before, after):
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                        window="blackman", starttime = starttime, npts = npts)
 
+def trim_maxstart_minend(stalist, st2):
+    """
+    Function to cut the start and end points of a stream.
+    The starttime and endtime are set to the latest starttime and earliest
+    endtime from all channels (up to 3 channels).
+    """
+    print("---> trimming end points")
+    temp_stream = obspy.Stream()
+
+    # Trim the edges in case 3 channels have different lengths
+    for stn in stalist:
+        # split station codes
+        split_stream = stn.split('.')
+        netw = split_stream[0]
+        station = split_stream[1]
+        location = split_stream[2]
+        chan = split_stream[3] + '*'
+
+        # Get 3 traces (subset based on matching station name and location code)
+        #temp_stream = stream.select(network=netw,station=station,location=location,channel=chan)
+        select_st = st2.select(network = netw, station = station, \
+                location = location, channel = chan)
+
+        # Find max startime, min endtime for stations with 1 or 2 or 3 channels
+        if len(select_st) == 1:
+            max_starttime = select_st[0].stats.starttime
+            min_endtime = select_st[0].stats.endtime
+        if len(select_st) == 2:
+            max_starttime = max(select_st[0].stats.starttime,\
+                    select_st[1].stats.starttime)
+            min_endtime = min(select_st[0].stats.endtime,\
+                    select_st[1].stats.endtime)
+        if len(select_st) == 3:
+            max_starttime = max(select_st[0].stats.starttime,\
+                    select_st[1].stats.starttime,\
+                    select_st[2].stats.starttime)
+            min_endtime = min(select_st[0].stats.endtime,\
+                    select_st[1].stats.endtime,\
+                    select_st[2].stats.endtime)    
+
+        select_st.trim(starttime=max_starttime,\
+                endtime = min_endtime, pad = False, nearest_sample = True,\
+                fill_value=0)
+        for tr in select_st.traces:
+            temp_stream = temp_stream.append(tr)
+
+    return temp_stream
