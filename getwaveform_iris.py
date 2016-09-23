@@ -181,8 +181,13 @@ def run_get_waveform(c, event,
             min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime)
         if len(substr) == 3:
             max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime,substr[2].stats.starttime)
-            min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)    
-        substr.trim(starttime=max_starttime, endtime=min_endtime, pad=False, nearest_sample=True, fill_value=0)
+            min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)
+        print(substr[0].stats.station, max_starttime, min_endtime)
+        try:
+            substr.trim(starttime=max_starttime, endtime=min_endtime, pad=False, nearest_sample=True, fill_value=0)
+        except:
+            print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
+            continue
         for tr in substr.traces:
             st3 = st3.append(tr)
         

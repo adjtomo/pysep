@@ -89,13 +89,17 @@ def rotate_and_write_stream(stream, reftime):
                 print('One or more components missing: removing ',
                       subtr.stats.station, ' ', subtr.stats.channel,
                       ' Number of traces: ', len(substr))
-                stream.remove(subtr)
+                #stream.remove(subtr)
 
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
     for tr in stream.traces:
         #stalist.append(tr.stats.station)
         stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+        
+    # Initialize stream object
+    # For storing extra traces in case there are less than 3 compnents   
+    st_new = obspy.Stream()
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
@@ -110,15 +114,27 @@ def rotate_and_write_stream(stream, reftime):
         # Get 3 traces (subset based on matching station name and location code)
         substr = stream.select(network=netw,station=station,location=location,channel=chan)
         #print(substr)   # code for debugging. print stream information
-        if len(substr) != 3:
-            print('Warning. Cannot perform rotation: More than 3 traces for', 
-                    netw + '.' + station + '.' + location, \
-                            'This could be due to gappy data.')
-            continue # XXX remove this trace? continue?
+        if len(substr) < 3:
+            print('WARNING:', len(substr), 'traces available for rotation. Adding NULL traces - ', \
+                      netw + '.' + station + '.' + location + '.' + chan)
+            d1 = substr[0].data
+            dip1 = substr[0].stats.sac['cmpinc']
+            az1 = substr[0].stats.sac['cmpaz']
+            for itr in range(len(substr),3):
+                tmp = substr[0].copy()
+                #print(tmp.data)
+                substr.append(tmp)
+                substr[itr].data = np.zeros(substr[0].stats.npts)
+                substr[itr].stats.sac['cmpinc'] = dip1 + 90.0
+                tmp = None
+                if itr == 1:
+                    substr[itr].stats.sac['cmpaz'] = az1
+                if itr == 2:
+                    substr[itr].stats.sac['cmpaz'] = az1 + 90.0
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
-        # Run iex = 5 (run_getwaveform.py) for one such case
+        # Run iex = 5 (run_getwaveform.py) for one such case       
         d1 = substr[0].data
         d2 = substr[1].data
         d3 = substr[2].data
@@ -128,14 +144,18 @@ def rotate_and_write_stream(stream, reftime):
         dip1 = substr[0].stats.sac['cmpinc']
         dip2 = substr[1].stats.sac['cmpinc']
         dip3 = substr[2].stats.sac['cmpinc']
+        #print('=R==>',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
+        #          substr[1].stats.channel, substr[1].stats.sac['cmpinc'],substr[1].stats.sac['cmpaz'], \
+        #          substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
         print('--> Station ' + netw + '.' + station + '.' + location + \
-            ' Rotating random orientation to NEZ.')
+                  ' Rotating random orientation to NEZ.')
         data_array = rt.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
         # Rotates an arbitrarily oriented three-component vector to ZNE( [0]-Z, [1]-N, [2]-E)
         # XXX: Check 012 in correct order? 
         substr[0].data =  data_array[2]  # E
         substr[1].data =  data_array[1]  # N
         substr[2].data =  data_array[0]  # Z
+
         # Fix the channel names in the traces.stats
         substr[0].stats.channel = substr[0].stats.channel[0:2] + 'E'
         substr[1].stats.channel = substr[0].stats.channel[0:2] + 'N'
@@ -156,6 +176,7 @@ def rotate_and_write_stream(stream, reftime):
         
         # save NEZ waveforms
         for tr in substr:
+            #print(tr.data)
             outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
@@ -164,12 +185,21 @@ def rotate_and_write_stream(stream, reftime):
 
         try:
             print('--> Station ' + netw + '.' + station + '.' + location + \
-                ' Rotating ENZ to RTZ.')
+                      ' Rotating ENZ to RTZ.')
             substr.rotate('NE->RT')
+            #print('=R==>',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
+            #      substr[1].stats.channel, substr[1].stats.sac['cmpinc'],substr[1].stats.sac['cmpaz'], \
+            #      substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
         except:
             "Rotation failed, skipping..."
             continue
+        
+        # append substream to the main stream
+        st_new = st_new + substr
 
+    # replace stream object
+    stream = st_new
+    
     # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
     # Fix cmpaz metadata for Radial and Transverse components
     for tr in stream.traces:
