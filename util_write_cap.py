@@ -302,6 +302,8 @@ def add_sac_metadata(st, ev=[], stalist=[]):
     """
     Add event and station metadata to an Obspy stream
     """
+    fid = open('traces_inventory_log', "w")
+    out_form = ('%s %s %s %s %s %s %s %s %s')
     # Loop over each trace
     for tr in st.traces:
         # Write each one
@@ -355,12 +357,15 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         for net in stalist:
             for sta in net.stations:
                 for ch in sta.channels:
-                    if tr.stats.channel == ch.code and \
+                    # code for debugging. print stations names from traces and inventory
+                    # fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, sta.code, tr.stats.network, net.code))
+                    if tr.stats.channel == ch.code.upper() and \
                             tr.stats.location == ch.location_code and \
                             tr.stats.station == sta.code and \
                             tr.stats.network == net.code:
+                        # fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, sta.code, tr.stats.network, net.code))
                         # code for debugging. print azimuth and dip
-                        #print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
+                        # print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
                 
