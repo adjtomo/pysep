@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 9
+iex = 8
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -25,7 +25,7 @@ pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)
 #pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
 # for CAP all waveforms need to have the same sample rate
 resample_freq = 20.0         # =0 for no resampling
-scale_factor = 0             # 10**2 to convert m/s to cm/s
+scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 # event parameters
 use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
 sec_before_after_event = 10  # time window to search for a target event in a catalog
@@ -162,6 +162,22 @@ if iex == 7:
     network = '*'
     channel = 'BH*,LH*' 
 
+# problem 1: some stations return only vertical component. our tools crash in this case.
+# problem 2: short waveforms. padding by zeros adds sharp changes in the data
+# problem 3: waveform contains NAN or INF. this crashes detrend
+# solution 1: (ongoing)
+# solution 2: disable zero-padding
+# solution 3: (ongoing) print error (consider removing trace?)
+if iex==8:
+    idb = 1            # IRIS database
+    otime = obspy.UTCDateTime("1982-08-05T14:00:00.000000Z")
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'
+    channel = 'BH*,LH*,EH*' 
+
 # 1. Waveform extraction for user defined event info
 # 2. Subset of stations for quickly testing data gaps and padding tests
 if iex == 9:
@@ -176,7 +192,8 @@ if iex == 9:
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
-    # station = 'FIB,SAW'                      # For testing data gaps 
+    network = 'AV'
+    station = 'SPBG,KABU'                      # For testing data gaps 
     use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
 
 # fetch and process waveforms

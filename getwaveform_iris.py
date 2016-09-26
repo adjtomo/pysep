@@ -78,7 +78,7 @@ def run_get_waveform(c, event,
     bulk_list = make_bulk_list_from_stalist(
         stations, evtime - before, evtime + after, channel=channel)
     _stream = c.get_waveforms_bulk(bulk_list)
-    print(_stream)
+    #print(_stream)  # code for debugging. partial print stations
 
     # set reftime
     stream = obspy.Stream()
@@ -129,8 +129,8 @@ def run_get_waveform(c, event,
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
                 float(tr.stats.npts / tr.stats.sampling_rate)))
         if tr.stats.npts < tr.stats.sampling_rate * (before + after):
-            print("WARNING. Missing data for station %s" % tr.stats.station)
-            print("WARNING. consider removing this station")
+            print("WARNING. data available < (before + after) for station " + \
+                    tr.stats.station + " -- consider removing this station")
             fid.write(" -- data missing.")
             # 20160912 cralvizuri@alaska.edu --
             # the original code removes waveforms that do not have the same
@@ -140,14 +140,62 @@ def run_get_waveform(c, event,
             # st2.remove(tr)
 
     # fill gaps with 0
-    print(st2)
-    st2.merge(method=0,fill_value=0)
-    print(st2)
-    # Pad with zero
-    st2.trim(starttime=evtime-before, endtime=evtime+after,pad=True, nearest_sample=False,fill_value=0)
-    print(st2)
+    # print(st2)    # code for debugging.
+    #st2.merge(method=0,fill_value=0)
+    st2.merge(fill_value='interpolate')
+    # print(st2)    # code for debugging.
 
     fid.write("\n--------After filling the gaps------------")
+    for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
+
+    # Get list of unique stations + locaiton (example: 'KDAK.00')
+    stalist = []
+    for tr in st2.traces:
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+
+    # Crazy way of getting a unique list of stations
+    stalist = list(set(stalist))
+    # print(stalist)    # for debugging.
+    st2 = trim_maxstart_minend(stalist, st2)
+
+    #st3 = obspy.Stream()
+    ## Trim the edges in case 3 channels have different lengths
+    #for stn in stalist:
+    #    # split STNM.LOC
+    #    tmp = stn.split('.')
+    #    netw = tmp[0]
+    #    station = tmp[1]
+    #    location = tmp[2]
+    #    chan = tmp[3] + '*'
+    #    # Get 3 traces (subset based on matching station name and location code)
+    #    substr = stream.select(network=netw,station=station,location=location,channel=chan)
+    #    # Find max startime and min end time for stations with number of channels = 1 or 2 or 3
+    #    if len(substr) == 1:
+    #        max_starttime = substr[0].stats.starttime
+    #        min_endtime = substr[0].stats.endtime
+    #    if len(substr) == 2:
+    #        max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime)
+    #        min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime)
+    #    if len(substr) == 3:
+    #        max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime,substr[2].stats.starttime)
+    #        min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)
+    #    print(substr[0].stats.station, max_starttime, min_endtime)
+    #    try:
+    #        substr.trim(starttime=max_starttime, endtime=min_endtime, pad=False, nearest_sample=True, fill_value=0)
+    #    except:
+    #        print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
+    #        continue
+    #    for tr in substr.traces:
+    #        st3 = st3.append(tr)
+    #    
+    #st2=st3
+
+    fid.write("\n--------After trimming the edges (in case the 3 channels have different lengths)------------")
     for tr in st2:
         fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
                 tr.stats.network, tr.stats.station, tr.stats.channel, \
