@@ -36,8 +36,8 @@ fmaxc = 10
 pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)    
 #pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
 # for CAP all waveforms need to have the same sample rate
-resample_freq = 20.0         # =0 for no resampling
-scale_factor = 0             # 10**2 to convert m/s to cm/s
+resample_freq = 50.0         # =0 for no resampling
+scale_factor = 10**2             # 10**2 to convert m/s to cm/s
 # event parameters
 sec_before_after_event = 10  # time window to search for a target event in a catalog
 
