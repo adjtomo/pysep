@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 8
+iex = 6
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -250,10 +250,11 @@ if idb == 3:
     print(mintime_str, maxtime_str)
     cat0 = cat.filter(mintime_str, maxtime_str)[0]
     print(cat0)
-    evid = int(cat0.event_descriptions[0].text)
+    #evid = int(cat0.event_descriptions[0].text)
+    #print(cat0.picks[:2])
 
     # Extract waveforms, LLNL
-    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
+    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = cat0, 
             network = network, channel = channel, 
             min_dist = min_dist, max_dist = max_dist, 
             before = tbefore_sec, after = tafter_sec, 
