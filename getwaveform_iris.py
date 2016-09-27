@@ -208,7 +208,7 @@ def run_get_waveform(c, event,
         rotate_and_write_stream(st2, evtime)
 
     if ifCapInp:
-        write_cap_weights(st2, evtime, client_name)
+        write_cap_weights(st2, evtime, client_name, event)
 
     if ifEvInfo:
         write_ev_info(event, evtime)
