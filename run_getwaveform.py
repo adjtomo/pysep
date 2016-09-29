@@ -4,7 +4,7 @@ import obspy
 import copy
 
 # EXAMPLES (choose one)
-iex = 6
+iex = 7
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -159,7 +159,9 @@ if iex == 7:
     max_dist = 1200
     tbefore_sec = 100
     tafter_sec = 600
-    network = '*'
+    # needs to be run TWICE to get BK stations and IRIS stations
+    #network = 'BK'       # BK will go to NCEDC
+    network = '*'        # * will give all at IRIS DMC
     channel = 'BH*,LH*' 
 
 # problem 1: some stations return only vertical component. our tools crash in this case.
