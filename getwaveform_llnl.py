@@ -14,7 +14,7 @@ from util_write_cap import *
 
 def run_get_waveform(llnl_db_client, event, 
                      min_dist=20, max_dist=300, before=100, after=300, 
-                     network='*', channel='BH*', resample_freq=20.0,
+                     network='*', station = '*', channel='BH*', resample_freq=20.0,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2,

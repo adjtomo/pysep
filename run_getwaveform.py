@@ -27,7 +27,7 @@ fmaxc = 10
 pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)    
 #pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
 # for CAP all waveforms need to have the same sample rate
-resample_freq = 20.0         # =0 for no resampling
+resample_freq = 50.0         # =0 for no resampling
 scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 # event parameters
 use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
@@ -151,6 +151,7 @@ if iex == 6:
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
     overwrite_ddir = 0
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # same as iex=6 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
@@ -251,7 +252,6 @@ if idb == 1:
             ifEvInfo = output_event_info, 
             scale_factor = scale_factor, pre_filt = pre_filt)
 
-
 if idb == 3:
     import llnl_db_client
     import getwaveform_llnl
@@ -263,22 +263,23 @@ if idb == 3:
     mintime_str = "time > %s" % (otime - sec_before_after_event)
     maxtime_str = "time < %s" % (otime + sec_before_after_event)
     print(mintime_str, maxtime_str)
-    cat0 = cat.filter(mintime_str, maxtime_str)[0]
-    print(cat0)
+    ev = cat.filter(mintime_str, maxtime_str)[0]
+    print(ev)
 
     # Delete existing data directory 
-    eid = util_helpers.otime2eid(cat0.origins[0].time)
+    eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
     if overwrite_ddir and os.path.exists(ddir):
         shutil.rmtree(ddir)
 
     # Extract waveforms, LLNL
-    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = cat0, 
-            network = network, channel = channel, 
-            min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, 
-            resample_freq = resample_freq,
-            ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
-            ifDetrend=True, ifDemean=True, ifEvInfo=True,
-            scale_factor = scale_factor,
-            pre_filt=(0.005, 0.006, 10.0, 15.0))
+    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = ev, 
+                                      min_dist = min_dist, max_dist = max_dist, 
+                                      before = tbefore_sec, after = tafter_sec, 
+                                      network = network, station = station, channel = channel, 
+                                      resample_freq = resample_freq, ifrotate = rotate,
+                                      ifCapInp = output_cap_weight_file, 
+                                      ifRemoveResponse = remove_response,
+                                      ifDetrend = detrend, ifDemean = demean, 
+                                      ifEvInfo = output_event_info, 
+                                      scale_factor = scale_factor, pre_filt = pre_filt)
