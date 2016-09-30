@@ -225,7 +225,7 @@ def rotate_and_write_stream(stream, reftime):
                 + tr.stats.channel[-1].lower()
         tr.write(outfnam, format='SAC')
 
-def write_cap_weights(stream, reftime='', client_name=''):
+def write_cap_weights(stream, reftime='', client_name='', event=''):
     """
     Write CAP weight files from an Obspy stream
 
@@ -233,11 +233,17 @@ def write_cap_weights(stream, reftime='', client_name=''):
 
     reftime - a UTCDateTime Object
     """
+    # For debugging LLNL example
+    # if event != '':
+    #    for pick in event.picks:
+    #        print(pick.waveform_id.network_code, pick.waveform_id.station_code, pick.waveform_id.channel_code, \
+    #                  pick.waveform_id.location_code, pick.time, pick.phase_hint)
+
     if reftime == '':
         outdir = './'
     else:
         outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
-    outform = ('%35s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f '
+    outform = ('%35s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.3f %4.0f %4.0f '
                '%4.0f %4.0f\n')
     laststa = ''
     lastloc = ''
@@ -267,20 +273,29 @@ def write_cap_weights(stream, reftime='', client_name=''):
         if (current_sta.station == laststa) and (current_sta.channel[:-1] == lastcha) and (current_sta.location == lastloc):
             continue
 
+        Ptime = 0
+        for pick in event.picks:
+            if (pick.waveform_id.network_code == tr.stats.network and pick.waveform_id.station_code == tr.stats.station \
+                    and pick.waveform_id.channel_code[2].upper() == 'Z' and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
+                # For debugging
+                # print(pick.waveform_id.network_code, pick.waveform_id.station_code, pick.waveform_id.channel_code, \
+                #          pick.waveform_id.location_code, pick.time, pick.phase_hint,tr.stats.channel, tr.stats.location )
+                Ptime = pick.time - event.origins[0].time
+        
         outfnam = reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1]
 
         f.write(outform % (outfnam, current_sta.sac['dist'], 
-            1, 1, 1, 1, 1, 0, 0, 0, 0, 0))
+            1, 1, 1, 1, 1, Ptime, 0, 0, 0, 0))
         fb.write(outform % (outfnam, current_sta.sac['dist'], 
-            1, 1, 0, 0, 0, 0, 0, 0, 0, 0))
+            1, 1, 0, 0, 0, Ptime, 0, 0, 0, 0))
         fs.write(outform % (outfnam, current_sta.sac['dist'], 
-            0, 0, 1, 1, 1, 0, 0, 0, 0, 0))
+            0, 0, 1, 1, 1, Ptime, 0, 0, 0, 0))
         fbc.write(outform % (outfnam, current_sta.sac['dist'], 
-            1, 1, 0, 0, 0, 0, 0, 0, 0, 0))
+            1, 1, 0, 0, 0, Ptime, 0, 0, 0, 0))
         fsc.write(outform % (outfnam, current_sta.sac['dist'], 
-            0, 0, 1, 1, 1, 0, 0, 0, 0, 0))
+            0, 0, 1, 1, 1, Ptime, 0, 0, 0, 0))
 
         laststa = current_sta.station
         lastloc = current_sta.location
@@ -331,6 +346,13 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         tr.stats.sac['evdp'] = ev.origins[0].depth/1000
         m = ev.preferred_magnitude() or ev.magnitudes[0]
         tr.stats.sac['mag'] = m.mag
+
+        # Add P arrival time
+        for pick in ev.picks:
+            if (pick.waveform_id.network_code == tr.stats.network and pick.waveform_id.station_code == tr.stats.station \
+                    and pick.waveform_id.channel_code[2].upper() == 'Z' and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
+                Ptime = pick.time - ev.origins[0].time
+                tr.stats.sac['a'] = Ptime
 
         # !!!!Weird!!!
         tr.stats.sac['kevnm'] = \

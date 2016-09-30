@@ -52,8 +52,8 @@ def run_get_waveform(llnl_db_client, event,
     print("Preparing request for LLNL ...")
 
     # Get event an inventory from the LLNL DB.
-    event_number = event
-    event = llnl_db_client.get_obspy_event(event)
+    event_number = int(event.event_descriptions[0].text)
+    #event = llnl_db_client.get_obspy_event(event)
     inventory = llnl_db_client.get_inventory()
 
     evtime = event.origins[0].time
@@ -180,7 +180,7 @@ def run_get_waveform(llnl_db_client, event,
         rotate_and_write_stream(st2, evtime)
 
     if ifCapInp:
-        write_cap_weights(st2, evtime, client_name)
+        write_cap_weights(st2, evtime, client_name, event)
 
     if ifEvInfo:
         write_ev_info(event, evtime)

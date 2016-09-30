@@ -24,7 +24,7 @@ def otime2eid(otime):
     hh = UTCDateTime(otime).hour
     mm = UTCDateTime(otime).minute
     ss = UTCDateTime(otime).second
-    ms = UTCDateTime(otime).microsecond # mili?
+    ms = int(UTCDateTime(otime).microsecond / 1000.0) # mili?
     eid = '%04d%02d%02d%02d%02d%02d%03d' % (yy, mo, dd, hh, mm, ss, ms)
     return eid
 

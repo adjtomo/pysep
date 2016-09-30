@@ -2,9 +2,12 @@
 # > python run_getwaveform.py
 import obspy
 import copy
+import util_helpers
+import shutil
+import os
 
 # EXAMPLES (choose one)
-iex = 8
+iex = 6
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -34,6 +37,7 @@ max_dist = 20000
 # station parameters
 network = '*'                # all networks
 station = '*'                # all stations
+overwrite_ddir = 0
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -146,6 +150,7 @@ if iex == 6:
     channel = 'BH*'      # ALL channels from LLNL are returned
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
+    overwrite_ddir = 0
 
 # same as iex=6 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
@@ -159,8 +164,11 @@ if iex == 7:
     max_dist = 1200
     tbefore_sec = 100
     tafter_sec = 600
-    network = '*'
+    # needs to be run TWICE to get BK stations and IRIS stations
+    #network = 'BK'        # BK will go to NCEDC
+    network = '*'         # * will give all at IRIS DMC
     channel = 'BH*,LH*' 
+    overwrite_ddir = 0
 
 # problem 1: some stations return only vertical component. our tools crash in this case.
 # problem 2: short waveforms. padding by zeros adds sharp changes in the data
@@ -224,6 +232,13 @@ if idb == 1:
         mag.magnitude_type = "Mw"
         ev.origins.append(org)
         ev.magnitudes.append(mag)
+
+    # Delete existing data directory
+    eid = util_helpers.otime2eid(ev.origins[0].time)
+    ddir = './'+ eid
+    if overwrite_ddir and os.path.exists(ddir):
+        shutil.rmtree(ddir)
+
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = ev, 
             min_dist = min_dist, max_dist = max_dist, 
@@ -250,10 +265,15 @@ if idb == 3:
     print(mintime_str, maxtime_str)
     cat0 = cat.filter(mintime_str, maxtime_str)[0]
     print(cat0)
-    evid = int(cat0.event_descriptions[0].text)
+
+    # Delete existing data directory 
+    eid = util_helpers.otime2eid(cat0.origins[0].time)
+    ddir = './'+ eid
+    if overwrite_ddir and os.path.exists(ddir):
+        shutil.rmtree(ddir)
 
     # Extract waveforms, LLNL
-    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
+    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = cat0, 
             network = network, channel = channel, 
             min_dist = min_dist, max_dist = max_dist, 
             before = tbefore_sec, after = tafter_sec, 
