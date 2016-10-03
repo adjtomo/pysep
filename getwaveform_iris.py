@@ -104,6 +104,10 @@ def run_get_waveform(c, event,
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(stream, ev=event, stalist=stations)
 
+    # Set the sac header KEVNM with event name
+    # This applies to the events from the LLNL database
+    st2 = rename_if_LLNL_event(st2, evtime)
+
     # 20160902 cralvizuri@alaska.edu -- 
     # see also correct_sac_tshift
     # This command overwrites SAC headers "b" and "e" with a timeshift. But
