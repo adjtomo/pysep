@@ -127,7 +127,7 @@ def run_get_waveform(llnl_db_client, event,
     # This applies to the events from the LLNL database
     # NOTE this command is needed at the time of writing files, so it has to
     # be set early
-    st2 = rename_if_LLNL_event(st2, evtime)
+    st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
     # 20160902 cralvizuri@alaska.edu -- 
     # see also correct_sac_tshift
