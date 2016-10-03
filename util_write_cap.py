@@ -549,8 +549,9 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                 print(sta.code, elon, elat, sta.longitude, sta.latitude,
                       dist / 1000)
                 f.write(outform % (sta.code, net.code, sta.latitude, sta.longitude, dist / 1000, az))
-                                       
-def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
+
+#def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
+def write_stream_sac(st, reftime=''):
     """
     Writes out all of the traces in a stream to sac files
 
@@ -558,23 +559,25 @@ def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
     """
 
     # get name key for output directory and files
-    if reftime == '':
-        usetime = st[0].stats.starttime
-    else:
-        usetime = reftime
+    #if reftime == '':
+    #    usetime = st[0].stats.starttime
+    #else:
+    #    usetime = reftime
 
-    outdir = odir+usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+    evname_key = st[0].stats.sac['kevnm']
+    outdir = evname_key
 
-    if use_sta_as_dirname:
-        outdir = odir + tr.stats.station + '/'
-
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-        print(outdir, tr.stats.station)
+    # this smells like debug code. disabling for now.
+    #if use_sta_as_dirname:
+    #    outdir = odir + tr.stats.station + '/'
+    #if not os.path.exists(outdir):
+    #    os.makedirs(outdir)
+    #    print(outdir, tr.stats.station)
 
     # write sac waveforms
     for tr in st.traces:
-        outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+        #outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+        outfnam = outdir + "/" + evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel + '.sac'
         tr.write(outfnam, format='SAC')
