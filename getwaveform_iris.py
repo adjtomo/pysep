@@ -215,7 +215,7 @@ def run_get_waveform(c, event,
         write_cap_weights(st2, evtime, client_name, event)
 
     if ifEvInfo:
-        write_ev_info(event, evtime)
+        write_ev_info(event, st2[0].stats.sac['kevnm'])
 
     # 20160902 cralvizuri@alaska.edu -- 
     # see also time_shift_sac

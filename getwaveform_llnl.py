@@ -125,6 +125,8 @@ def run_get_waveform(llnl_db_client, event,
 
     # Set the sac header KEVNM with event name
     # This applies to the events from the LLNL database
+    # NOTE this command is needed at the time of writing files, so it has to
+    # be set early
     st2 = rename_if_LLNL_event(st2, evtime)
 
     # 20160902 cralvizuri@alaska.edu -- 
@@ -187,7 +189,7 @@ def run_get_waveform(llnl_db_client, event,
         write_cap_weights(st2, evtime, client_name, event)
 
     if ifEvInfo:
-        write_ev_info(event, evtime)
+        write_ev_info(event, evtime, st2[0].stats.sac['kevnm'])
 
     if decon is False:
         print("WARNING waveforms NOT corrected for instrument response")
