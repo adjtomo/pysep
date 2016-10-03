@@ -54,14 +54,20 @@ def rotate_and_write_stream(stream, reftime):
     reftime- UTCDateTime() object; this will be the output directory
         (default to current directory)
     """
-    if reftime == '':
-        outdir = './'
-    else:
-        outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
-    print(outdir)
+
+    # pending removing
+    #if reftime == '':
+    #    outdir = './'
+    #else:
+    #    outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+    #print(outdir)
+    #
+
+    evname_key = stream[0].stats.sac['kevnm']
+    outdir = evname_key                  
 
     if not os.path.exists(outdir):
-        os.makedirs(outdir)
+       os.makedirs(outdir)
 
     # Directory is made, now rotate
     # Sorted stream makes for structured loop
@@ -173,11 +179,11 @@ def rotate_and_write_stream(stream, reftime):
         substr[0].stats.sac['kcmpnm'] = substr[0].stats.channel
         substr[1].stats.sac['kcmpnm'] = substr[1].stats.channel
         substr[2].stats.sac['kcmpnm'] = substr[2].stats.channel
-        
+ 
         # save NEZ waveforms
         for tr in substr:
-            #print(tr.data)
-            outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+            #outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+            outfnam = outdir + '/' + evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
                 + tr.stats.channel[-1].lower()
@@ -193,13 +199,13 @@ def rotate_and_write_stream(stream, reftime):
         except:
             "Rotation failed, skipping..."
             continue
-        
+
         # append substream to the main stream
         st_new = st_new + substr
 
     # replace stream object
     stream = st_new
-    
+
     # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
     # Fix cmpaz metadata for Radial and Transverse components
     for tr in stream.traces:
@@ -219,7 +225,8 @@ def rotate_and_write_stream(stream, reftime):
         # as KNB_[component], so one is lost. this change fixes that.
         #outfnam = outdir + tr.stats.station + '_' + tr.stats.network + '.' + \
         #    tr.stats.channel[-1].lower()
-        outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+        #outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+        outfnam = outdir + '/' + evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
                 + tr.stats.channel[-1].lower()
@@ -570,9 +577,9 @@ def write_stream_sac(st, reftime=''):
     # this smells like debug code. disabling for now.
     #if use_sta_as_dirname:
     #    outdir = odir + tr.stats.station + '/'
-    #if not os.path.exists(outdir):
-    #    os.makedirs(outdir)
-    #    print(outdir, tr.stats.station)
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+        #print(outdir, tr.stats.station)
 
     # write sac waveforms
     for tr in st.traces:
