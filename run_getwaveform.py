@@ -3,7 +3,7 @@
 import obspy
 import copy
 import util_helpers
-import shutil
+import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
@@ -37,7 +37,7 @@ max_dist = 20000
 # station parameters
 network = '*'                # all networks
 station = '*'                # all stations
-overwrite_ddir = 0
+overwrite_ddir = 0          # 1 = delete data directory if it already exists
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -270,6 +270,7 @@ if idb == 3:
     eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
     if overwrite_ddir and os.path.exists(ddir):
+        print("WARNING. Deleting data directory! (already exists)")
         shutil.rmtree(ddir)
 
     # Extract waveforms, LLNL
