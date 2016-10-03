@@ -467,14 +467,16 @@ def rename_if_LLNL_event(st, event_time):
         }
 
     event_time=obspy.UTCDateTime(event_time)
+    evname_key=""
     for llnl_evtime, evname in event_time_name_LLNL.items():
         if abs(event_time - obspy.UTCDateTime(llnl_evtime)) <= sec_threshold:
+            evname_key = evname
             print("--> WARNING. This is an LLNL explosion. " +\
-                    "New event name: " + evname)
+                    "New event name: " + evname_key)
             for tr in st.traces:
-                tr.stats.sac['kevnm'] = evname
+                tr.stats.sac['kevnm'] = evname_key
 
-    return st
+    return st, evname_key
 
 def time_shift_sac(st, tshift=0):
     """
