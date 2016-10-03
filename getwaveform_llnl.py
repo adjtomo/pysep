@@ -180,16 +180,16 @@ def run_get_waveform(llnl_db_client, event,
         print("--> New sample rate = %5.1f" % resample_freq)
         resample_cut(st2, resample_freq, evtime, before, after)
 
-    write_stream_sac(st2, evtime)
+    write_stream_sac(st2, evname_key)
 
     if ifrotate:
-        rotate_and_write_stream(st2, evtime)
+        rotate_and_write_stream(st2, evname_key)
 
     if ifCapInp:
-        write_cap_weights(st2, evtime, client_name, event)
+        write_cap_weights(st2, evname_key, client_name, event)
 
     if ifEvInfo:
-        write_ev_info(event, evtime, st2[0].stats.sac['kevnm'])
+        write_ev_info(event, evname_key)
 
     if decon is False:
         print("WARNING waveforms NOT corrected for instrument response")

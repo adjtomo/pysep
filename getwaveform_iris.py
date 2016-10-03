@@ -106,6 +106,8 @@ def run_get_waveform(c, event,
 
     # Set the sac header KEVNM with event name
     # This applies to the events from the LLNL database
+    # NOTE this command is needed at the time of writing files, so it has to
+    # be set early
     st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
     # 20160902 cralvizuri@alaska.edu -- 
@@ -206,16 +208,16 @@ def run_get_waveform(c, event,
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
                 float(tr.stats.npts / tr.stats.sampling_rate)))
 
-    write_stream_sac(st2, evtime)
+    write_stream_sac(st2, evname_key)
 
     if ifrotate:
-        rotate_and_write_stream(st2, evtime)
+        rotate_and_write_stream(st2, evname_key)
 
     if ifCapInp:
-        write_cap_weights(st2, evtime, client_name, event)
+        write_cap_weights(st2, evname_key, client_name, event)
 
     if ifEvInfo:
-        write_ev_info(event, st2[0].stats.sac['kevnm'])
+        write_ev_info(event, evname_key)
 
     # 20160902 cralvizuri@alaska.edu -- 
     # see also time_shift_sac

@@ -43,7 +43,7 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, reftime):
+def rotate_and_write_stream(stream, evname_key):
     """
     Rotate an obspy stream to backazimuth
 
@@ -64,7 +64,6 @@ def rotate_and_write_stream(stream, reftime):
     #
 
     # get name key for output directory and files
-    evname_key = stream[0].stats.sac['kevnm']
     outdir = evname_key                  
 
     if not os.path.exists(outdir):
@@ -233,7 +232,7 @@ def rotate_and_write_stream(stream, reftime):
                 + tr.stats.channel[-1].lower()
         tr.write(outfnam, format='SAC')
 
-def write_cap_weights(stream, reftime='', client_name='', event=''):
+def write_cap_weights(stream, evname_key, client_name='', event=''):
     """
     Write CAP weight files from an Obspy stream
 
@@ -248,7 +247,6 @@ def write_cap_weights(stream, reftime='', client_name='', event=''):
     #                  pick.waveform_id.location_code, pick.time, pick.phase_hint)
 
     # get name key for output directory and files
-    evname_key = stream[0].stats.sac['kevnm']
     outdir = evname_key
 
     #if reftime == '':
@@ -318,7 +316,7 @@ def write_cap_weights(stream, reftime='', client_name='', event=''):
         lastloc = current_sta.location
         lastcha = current_sta.channel[:-1]
 
-def write_ev_info(ev, reftime, evname_key):
+def write_ev_info(ev, evname_key):
     outdir = evname_key
     #if reftime == '':
     #    outdir = './'
@@ -469,12 +467,15 @@ def rename_if_LLNL_event(st, event_time):
     event_time=obspy.UTCDateTime(event_time)
     evname_key=""
     for llnl_evtime, evname in event_time_name_LLNL.items():
+        # update all headers kevnm if this is an LLNL event
         if abs(event_time - obspy.UTCDateTime(llnl_evtime)) <= sec_threshold:
             evname_key = evname
             print("--> WARNING. This is an LLNL explosion. " +\
                     "New event name: " + evname_key)
             for tr in st.traces:
                 tr.stats.sac['kevnm'] = evname_key
+        else:
+            evname_key = st[0].stats.sac['kevnm']
 
     return st, evname_key
 
@@ -574,7 +575,7 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                 f.write(outform % (sta.code, net.code, sta.latitude, sta.longitude, dist / 1000, az))
 
 #def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
-def write_stream_sac(st, reftime=''):
+def write_stream_sac(st, evname_key):
     """
     Writes out all of the traces in a stream to sac files
 
@@ -587,7 +588,6 @@ def write_stream_sac(st, reftime=''):
     #    usetime = reftime
 
     # get name key for output directory and files
-    evname_key = st[0].stats.sac['kevnm']
     outdir = evname_key
 
     # this smells like debug code. disabling for now.
