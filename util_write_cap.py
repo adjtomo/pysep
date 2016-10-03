@@ -550,30 +550,30 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                       dist / 1000)
                 f.write(outform % (sta.code, net.code, sta.latitude, sta.longitude, dist / 1000, az))
                                        
-
 def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
     """
     Writes out all of the traces in a stream to sac files
 
     Naming convention - DATE.NET.STA.CMP.SAC
     """
+
+    # get name key for output directory and files
+    if reftime == '':
+        usetime = st[0].stats.starttime
+    else:
+        usetime = reftime
+
+    outdir = odir+usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+
+    if use_sta_as_dirname:
+        outdir = odir + tr.stats.station + '/'
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+        print(outdir, tr.stats.station)
+
+    # write sac waveforms
     for tr in st.traces:
-        if reftime == '':
-            usetime = tr.stats.starttime
-        else:
-            usetime = reftime
-        outdir = odir+usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
-
-        if use_sta_as_dirname:
-            outdir = odir + tr.stats.station + '/'
-
-        # code for debugging. print the output directory for waveforms.
-        #print(outdir)
-
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-            print(outdir, tr.stats.station)
-
         outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel + '.sac'
