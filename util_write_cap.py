@@ -418,6 +418,43 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         #      tr.stats.sac['stlo'], tr.stats.sac['stla'], tr.stats.sac['dist'])
     return st
 
+def rename_if_LLNL_event(st, event_time):
+    """
+    Update SAC header kevnm if current event is in the Ford paper
+    """
+    sec_threshold = 10
+
+    # event times and names are from the LLNL database
+    event_time_name_LLNL = {
+        "1988-02-15T18:10:00.090":"KERNVILLE", 
+        "1989-06-27T15:30:00.020":"AMARILLO", 
+        "1989-09-14T15:00:00.100":"DISKO_ELM", 
+        "1989-10-31T15:30:00.090":"HORNITOS", 
+        "1989-12-08T15:00:00.090":"BARNWELL", 
+        "1990-03-10T16:00:00.080":"METROPOLIS", 
+        "1990-06-13T16:00:00.010":"BULLION", 
+        "1990-06-21T18:15:00.040":"AUSTIN", 
+        "1990-11-14T19:17:00.710":"HOUSTON", 
+        "1991-03-08T21:02:45.080":"COSO_SILVER", 
+        "1991-04-04T19:00:00.000":"BEXAR", 
+        "1991-09-14T19:00:00.050":"HOYA", 
+        "1991-10-18T19:12:00.000":"LUBBOCK", 
+        "1991-11-26T18:34:59.670":"BRISTOL", 
+        "1992-03-26T16:30:00.000":"JUNCTION", 
+        "1992-09-18T17:00:00.010":"HUNTERS_TROPHY", 
+        "1992-09-23T15:04:00.000":"DIVIDER"
+        }
+
+    event_time=obspy.UTCDateTime(event_time)
+    for llnl_evtime, evname in event_time_name_LLNL.items():
+        if abs(event_time - obspy.UTCDateTime(llnl_evtime)) <= sec_threshold:
+            print("--> WARNING. This is an LLNL explosion. " +\
+                    "New event name: " + evname)
+            for tr in st.traces:
+                tr.stats.sac['kevnm'] = evname
+
+    return st
+
 def time_shift_sac(st, tshift=0):
     """
     Shift the b and e values in the sac header
