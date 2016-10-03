@@ -63,6 +63,7 @@ def rotate_and_write_stream(stream, reftime):
     #print(outdir)
     #
 
+    # get name key for output directory and files
     evname_key = stream[0].stats.sac['kevnm']
     outdir = evname_key                  
 
@@ -246,26 +247,34 @@ def write_cap_weights(stream, reftime='', client_name='', event=''):
     #        print(pick.waveform_id.network_code, pick.waveform_id.station_code, pick.waveform_id.channel_code, \
     #                  pick.waveform_id.location_code, pick.time, pick.phase_hint)
 
-    if reftime == '':
-        outdir = './'
-    else:
-        outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+    # get name key for output directory and files
+    evname_key = stream[0].stats.sac['kevnm']
+    outdir = evname_key
+
+    #if reftime == '':
+    #    outdir = './'
+    #else:
+    #    outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+
+
     outform = ('%35s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.3f %4.0f %4.0f '
                '%4.0f %4.0f\n')
+
     laststa = ''
     lastloc = ''
     lastcha = ''
+
     #f = open(outdir + 'weight.dat', 'w')   # original (overwrites weightfile)
     # append instead of overwrite. This is needed when fetching data from
     # multiple sources (IRIS, NCEDC). Else weight files are overwritten.
     # weight.dat    - append. includes all stations from all clients
     # weight_body_XX.dat  - write a weight (body waves) file for client XX
     # weight_surf_XX.dat  - write a weight (surf waves) file for client XX
-    wfile = outdir + "weight.dat"
-    wfile_body = outdir + "weight_body" + ".dat"
-    wfile_surf = outdir + "weight_surf" + ".dat"
-    wfile_body_client = outdir + "weight_body" + "_" + client_name + ".dat"
-    wfile_surf_client = outdir + "weight_surf" + "_" + client_name + ".dat"
+    wfile = outdir + '/' + "weight.dat"
+    wfile_body = outdir + '/' + "weight_body" + ".dat"
+    wfile_surf = outdir + '/' + "weight_surf" + ".dat"
+    wfile_body_client = outdir + '/' + "weight_body" + "_" + client_name + ".dat"
+    wfile_surf_client = outdir + '/' + "weight_surf" + "_" + client_name + ".dat"
     f =  open(wfile, 'a') 
     fb = open(wfile_body, 'a') 
     fs = open(wfile_surf, 'a') 
@@ -289,7 +298,8 @@ def write_cap_weights(stream, reftime='', client_name='', event=''):
                 #          pick.waveform_id.location_code, pick.time, pick.phase_hint,tr.stats.channel, tr.stats.location )
                 Ptime = pick.time - event.origins[0].time
         
-        outfnam = reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+        #outfnam = reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
+        outfnam = outdir + '/' + evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1]
 
@@ -308,13 +318,17 @@ def write_cap_weights(stream, reftime='', client_name='', event=''):
         lastloc = current_sta.location
         lastcha = current_sta.channel[:-1]
 
-def write_ev_info(ev, reftime):
-    if reftime == '':
-        outdir = './'
-    else:
-        outdir = './'+reftime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/'
+def write_ev_info(ev, reftime, evname_key):
+    outdir = evname_key
+    #if reftime == '':
+    #    outdir = './'
+    #else:
+    #    outdir = './'+reftime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/'
+
+    fout_event_info = outdir + '/' + evname_key + "_event_info.dat"
     outform = '%s %f %f %f %f'
-    f = open(outdir + 'ev_info.dat', 'w')
+
+    f = open(fout_event_info, 'w')
     f.write(outform % (
         ev.origins[0].time, ev.origins[0].longitude,
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
@@ -565,12 +579,12 @@ def write_stream_sac(st, reftime=''):
     Naming convention - DATE.NET.STA.CMP.SAC
     """
 
-    # get name key for output directory and files
     #if reftime == '':
     #    usetime = st[0].stats.starttime
     #else:
     #    usetime = reftime
 
+    # get name key for output directory and files
     evname_key = st[0].stats.sac['kevnm']
     outdir = evname_key
 
