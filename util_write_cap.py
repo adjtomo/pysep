@@ -15,6 +15,7 @@ import obspy.signal.rotate as rt
 import os
 from scipy import signal
 import numpy as np
+import util_helpers
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -464,18 +465,31 @@ def rename_if_LLNL_event(st, event_time):
         "1992-09-23T15:04:00.000":"DIVIDER"
         }
 
-    event_time=obspy.UTCDateTime(event_time)
-    evname_key=""
+    _event_time = obspy.UTCDateTime(event_time)
+    evname_key = util_helpers.otime2eid(event_time)     # object
+    is_an_llnl_event = False
     for llnl_evtime, evname in event_time_name_LLNL.items():
         # update all headers kevnm if this is an LLNL event
-        if abs(event_time - obspy.UTCDateTime(llnl_evtime)) <= sec_threshold:
-            evname_key = evname
-            print("--> WARNING. This is an LLNL explosion. " +\
-                    "New event name: " + evname_key)
-            for tr in st.traces:
-                tr.stats.sac['kevnm'] = evname_key
-        else:
-            evname_key = st[0].stats.sac['kevnm']
+        if abs(_event_time - obspy.UTCDateTime(llnl_evtime)) <= sec_threshold:
+            evname_key = evname         # string
+            is_an_llnl_event = True
+            break
+
+    return evname_key, is_an_llnl_event
+
+def rename_if_LLNL_event(st, event_time):
+    """
+    Update SAC header kevnm if current event is in the Ford paper
+    """
+    evname_key, is_an_llnl_event = check_if_LLNL_event(event_time)
+
+    if(is_an_llnl_event):
+        print("--> WARNING. This is an LLNL event. " +\
+                "New event name: " + evname_key)
+        for tr in st.traces:
+            tr.stats.sac['kevnm'] = evname_key
+    else:
+        evname_key = st[0].stats.sac['kevnm']
 
     return st, evname_key
 
