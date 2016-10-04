@@ -442,28 +442,47 @@ def check_if_LLNL_event(event_time):
     """
     Update SAC header kevnm if current event is in the Ford paper
     """
-    sec_threshold = 10
+    sec_threshold = 5
 
     # event times and names are from the LLNL database
     event_time_name_LLNL = {
-        "1988-02-15T18:10:00.090":"KERNVILLE", 
-        "1989-06-27T15:30:00.020":"AMARILLO", 
-        "1989-09-14T15:00:00.100":"DISKO_ELM", 
-        "1989-10-31T15:30:00.090":"HORNITOS", 
-        "1989-12-08T15:00:00.090":"BARNWELL", 
-        "1990-03-10T16:00:00.080":"METROPOLIS", 
-        "1990-06-13T16:00:00.010":"BULLION", 
-        "1990-06-21T18:15:00.040":"AUSTIN", 
-        "1990-11-14T19:17:00.710":"HOUSTON", 
-        "1991-03-08T21:02:45.080":"COSO_SILVER", 
-        "1991-04-04T19:00:00.000":"BEXAR", 
-        "1991-09-14T19:00:00.050":"HOYA", 
-        "1991-10-18T19:12:00.000":"LUBBOCK", 
-        "1991-11-26T18:34:59.670":"BRISTOL", 
-        "1992-03-26T16:30:00.000":"JUNCTION", 
-        "1992-09-18T17:00:00.010":"HUNTERS_TROPHY", 
-        "1992-09-23T15:04:00.000":"DIVIDER"
-        }
+            # nuclear tests
+            "1988-02-15T18:10:00.090": "KERNVILLE", 
+            "1989-06-27T15:30:00.020": "AMARILLO", 
+            "1989-09-14T15:00:00.100": "DISKO_ELM", 
+            "1989-10-31T15:30:00.090": "HORNITOS", 
+            "1989-12-08T15:00:00.090": "BARNWELL", 
+            "1990-03-10T16:00:00.080": "METROPOLIS", 
+            "1990-06-13T16:00:00.010": "BULLION", 
+            "1990-06-21T18:15:00.040": "AUSTIN", 
+            "1990-11-14T19:17:00.710": "HOUSTON", 
+            "1991-03-08T21:02:45.080": "COSO_SILVER", 
+            "1991-04-04T19:00:00.000": "BEXAR", 
+            "1991-09-14T19:00:00.050": "HOYA", 
+            "1991-10-18T19:12:00.000": "LUBBOCK", 
+            "1991-11-26T18:34:59.670": "BRISTOL", 
+            "1992-03-26T16:30:00.000": "JUNCTION", 
+            "1992-09-18T17:00:00.010": "HUNTERS_TROPHY", 
+            "1992-09-23T15:04:00.000": "DIVIDER",
+            # mine collapses
+            "1982-08-05T14:00:00.090": "ATRISCO_Hole",
+            "1995-02-03T15:26:12.870": "Trona_Mine_1",
+            "2000-01-30T14:46:53.330": "Trona_Mine_2",
+            # earthquakes
+            "1992-06-29T10:14:20.060": "Little_Skull_Main",
+            "1992-07-05T06:54:13.080": "Little_Skull_Aftershock",
+            "1995-07-31T12:34:47.050": "Timber_Mountain",
+            "1997-04-26T01:49:35.440": "Groom_Pass",
+            "1997-09-12T13:36:54.650": "Calico_Fan",
+            "1998-12-12T01:41:31.980": "Warm_Springs",
+            "1999-01-23T03:00:32.370": "Frenchman_Flat1",
+            "1999-01-27T10:44:23.300": "Frenchman_Flat2",
+            "2002-06-14T12:40:44.450": "Little_Skull",
+            # earthquakes in Ford but not in the LLNL database
+            "1996-09-05T08:16:56.09": "Amargosa",
+            "1997-06-14T19:48:19.93": "Indian_Springs",
+            "2007-01-24T11:30:16.10": "Raslton"
+            }
 
     _event_time = obspy.UTCDateTime(event_time)
     evname_key = util_helpers.otime2eid(event_time)     # object
