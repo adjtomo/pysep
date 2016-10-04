@@ -438,7 +438,7 @@ def add_sac_metadata(st, ev=[], stalist=[]):
         #      tr.stats.sac['stlo'], tr.stats.sac['stla'], tr.stats.sac['dist'])
     return st
 
-def rename_if_LLNL_event(st, event_time):
+def check_if_LLNL_event(event_time):
     """
     Update SAC header kevnm if current event is in the Ford paper
     """
@@ -556,12 +556,16 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
     elon = ev.origins[0].longitude
     reftime = ev.origins[0].time
     remlist = []
-    
-    outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+    rename_if_LLNL_event
+
+    #outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
+    evname_key, is_an_llnl_event = check_if_LLNL_event(reftime)
+    outdir = evname_key
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    f = open(outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '_station.dat', 'w') 
+    outfile = outdir + '/' + evname_key + "_station_list_ALL.dat"
+    f = open(outfile, 'w') 
     outform = '%s %s %f %f %f %f\n'
 
     # Loop over network and stations
@@ -579,6 +583,8 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
             # Not sure why this is needed, but it is.
             if sta in net.stations:
                 net.stations.remove(sta)
+
+    # write the full list of stations to file
     if ifverbose:
         for net in stations:
             for sta in net:
