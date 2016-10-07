@@ -42,8 +42,10 @@ def get_data_iris_ncedc(cat0):
     max_dist = 1200
     before = 100
     after = 1200
-    channel = 'EH*'
-    resample_freq = 0.0                      # 0 for no resampling
+    network = '*'
+    station = '*'
+    channel = 'BH*,LH*'
+    resample_freq = 20      # 0 for no resampling
 
     # parameters for CAP
     rotate = True
@@ -57,7 +59,6 @@ def get_data_iris_ncedc(cat0):
 
     # BK data has to be requested through NCEDC
     clients = ["IRIS", "NCEDC"]
-    #clients = ["IRIS"]
     for thisclient in clients:
         if thisclient is "IRIS":
             network='*'
@@ -69,20 +70,21 @@ def get_data_iris_ncedc(cat0):
 
         client = Client(thisclient)
         try:
-            getwaveform_iris.run_get_waveform(c = client, event = cat0, 
-                    min_dist = min_dist, max_dist = max_dist, 
-                    before = before, after = after, 
-                    network = network, channel = channel, 
-                    resample_freq = resample_freq, 
-                    ifrotate = rotate, ifCapInp = output_cap_weight_file, 
-                    ifRemoveResponse = remove_response, ifDetrend = detrend, 
-                    ifDemean = demean, ifEvInfo = output_event_info, 
-                    scale_factor = scale_factor, pre_filt = pre_filt)
+           getwaveform_iris.run_get_waveform(c = client, event = cat0, 
+                   min_dist = min_dist, max_dist = max_dist, 
+                   before = before, after = after, 
+                   network = network, station = station, channel = channel,
+                   resample_freq = resample_freq, 
+                   ifrotate = rotate, ifCapInp = output_cap_weight_file, 
+                   ifRemoveResponse = remove_response, ifDetrend = detrend, 
+                   ifDemean = demean, ifEvInfo = output_event_info, 
+                   scale_factor = scale_factor, pre_filt = pre_filt)
         except Exception as msg:
             print("WARNING. There was a problem with client %s" % thisclient)
-            raise(msg)
-            print("Continuing with next client\n")
+            print(msg)
+            print("Continuing ... \n")
             pass
+    print("Done")
 
 def get_data_llnl(evid):
     client = llnl_db_client.LLNLDBClient(
@@ -93,9 +95,9 @@ def get_data_llnl(evid):
     max_dist = 1200
     before = 100
     after = 600
-    network = '' 
-    channel = 'BH*'
-    resample_freq = 0
+    network = '*' 
+    station = '*' 
+    channel = 'BH*,LH*,EH*'
     resample_freq = 20
 
     # parameters for CAP
@@ -106,13 +108,26 @@ def get_data_llnl(evid):
     demean = True
     output_event_info = True
     pre_filt = (0.005, 0.006, 5.0, 10.0)
-    #scale_factor = 10.0**2  # original
-    scale_factor = 2e-1     # Hoya. CHECK VALUES FOR ALL OTHERS
+    scale_factor = 10**2    # for CAP use 10**2 (to convert m/s to cm/s)
 
-    evid = int(evid)
+    # HOYA amplitude rescaling
+    #scale_factor = scale_factor * 1.0
+
+    #evid = int(evid)
+    sec_before_after_event = 10  # time window to search for a target event in a catalog
+    otime = obspy.UTCDateTime(evid)
+    # get event time and event ID
+
+    cat = client.get_catalog()
+    mintime_str = "time > %s" % (otime - sec_before_after_event)
+    maxtime_str = "time < %s" % (otime + sec_before_after_event)
+    print(mintime_str, maxtime_str)
+    cat0 = cat.filter(mintime_str, maxtime_str)[0]
+    print(cat0)
+
     try:
-        getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = evid, 
-                network = network, channel = channel, 
+        getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = cat0, 
+                network = network, station = station, channel = channel, 
                 min_dist = min_dist, max_dist = max_dist, 
                 before = before, after = after, 
                 resample_freq = resample_freq,
@@ -120,10 +135,12 @@ def get_data_llnl(evid):
                 ifRemoveResponse = remove_response, ifDetrend = detrend, 
                 ifDemean = demean, ifEvInfo = output_event_info, 
                 scale_factor = scale_factor, pre_filt = pre_filt)
-    except:
-        print("WARNING. No waveforms returned with LLNL client")
-        print("Continuing\n")
+    except Exception as msg:
+        print("WARNING. There was a problem with LLNL client:")
+        print(msg)
+        print("Continuing ... \n")
         pass
+    print("Done")
 
 # List of events and their EVIDs from Ford (2009).
 # First I matched event times in Ford to those in the LLNL database. 
@@ -164,18 +181,19 @@ evids_times_quakes = {
 evids_times_collapses = {
         "522227": "1982-08-05T14:00:00.000000Z",
         "697661": "1995-02-03T15:26:10.660000Z",
-       "1324942": "2000-01-30T14:46:51.310000Z"
+        "1324942": "2000-01-30T14:46:51.310000Z" # takes lots of memory
         }
 
 event_list = [evids_times_explosions, evids_times_quakes,
         evids_times_collapses]
 
-for evid, otime in evids_times_collapses.items():
+for evid, otime in evids_times_explosions.items():
     # get catalog data
     t0 = obspy.UTCDateTime(otime)
     cat0 = get_iris_evcat(t0)
     print(cat0)
 
     # download waveforms
+    get_data_llnl(otime)    # LLNL database
     get_data_iris_ncedc(cat0)
-    #get_data_llnl(evid)    # LLNL data. currently broken ...
+
