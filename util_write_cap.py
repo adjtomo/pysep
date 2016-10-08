@@ -766,3 +766,29 @@ def trim_maxstart_minend(stalist, st2):
             print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
         
     return temp_stream
+
+def amp_rescale_llnl(st, scale_factor):
+    """
+    Rescale amplitudes for LLNL data. The scales are different for the 
+    BB and HF channels
+    """
+    # scales based on tests with hoya event
+    scale_factor_BB = 4.0e-4 
+    scale_factor_HF = 1.8e-2
+
+    for tr in st.traces:
+        if ('BB' in tr.stats.channel):
+            tr.data = tr.data * scale_factor * scale_factor_BB
+            print("--> WARNING -- " + tr.stats.station + '.' + \
+                    tr.stats.channel + " rescaling by " + "%f" % scale_factor_BB)
+        elif ('HF' in tr.stats.channel):
+            tr.data = tr.data * scale_factor * scale_factor_HF
+            print("--> WARNING -- " + tr.stats.station + '.' + \
+                    tr.stats.channel + " rescaling by " + "%f" % scale_factor_HF)
+        else:
+            # original -- apply a single factor to all
+            tr.data = tr.data * scale_factor
+            print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
+
+    return st
+
