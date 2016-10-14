@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 6
+iex = 10
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -204,6 +204,25 @@ if iex == 9:
     network = 'AV'
     station = 'SPBG,KABU'                      # For testing data gaps 
     use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
+
+# Error from util_write_cap.py
+#   unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+# QUESTION Why the error? both are UTCDateTime
+#  evtime = UTCDateTime("1992-06-29T10:14:22.280000Z"), 
+#  tr.stats.edntime = UTCDateTime("1992-06-29T10:17:49.103995Z")
+if iex == 10:
+    idb = 3              # LLNL database
+    otime = obspy.UTCDateTime("1992-06-29T10:14:22.480000")
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # fetch and process waveforms
 if idb == 1:
