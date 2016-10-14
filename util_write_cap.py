@@ -696,7 +696,7 @@ def resample_cut(st, freq, evtime, before, after):
         except:
             print("WARNING. Rejecting station %s. Unable to detrend. " % \
                     tr.stats.station)
-            print("This may be to NaN and Inf values in the data.")
+            print("This may be due to NaN and Inf values in the data.")
             # XXX REMOVE TRACE? TR.REMOVE(...
             continue
         tr.taper(max_percentage=0.02, type="hann")
@@ -709,8 +709,17 @@ def resample_cut(st, freq, evtime, before, after):
         if (tr.stats.endtime < evtime + after):
             print("WARNING. trace endtime < otime+after for station %s" % \
                     tr.stats.station)
-            after = evtime + tr.stats.endtime
             print("Setting after = evtime + endtime = %f" % after)
+
+            # Needed (eg LLNL station KNB). see iex=10 in run_getwaveform.py
+            try:
+                after = evtime + tr.stats.endtime
+            except:
+                print("Removing %s: Unable to calculate endtime. Continuing"\
+                        % tr.stats.station)
+                st.remove(tr)
+                continue
+
         starttime = evtime - before
         npts = (before + after) * freq
         tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
