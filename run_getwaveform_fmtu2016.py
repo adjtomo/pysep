@@ -110,9 +110,6 @@ def get_data_llnl(evid):
     pre_filt = (0.005, 0.006, 5.0, 10.0)
     scale_factor = 10**2    # for CAP use 10**2 (to convert m/s to cm/s)
 
-    # HOYA amplitude rescaling
-    #scale_factor = scale_factor * 1.0
-
     #evid = int(evid)
     sec_before_after_event = 10  # time window to search for a target event in a catalog
     otime = obspy.UTCDateTime(evid)
@@ -142,58 +139,64 @@ def get_data_llnl(evid):
         pass
     print("Done")
 
+def getdata_iris_llnl(dataset, llnl=False, iris=False):
+    """
+    get data from LLNL and IRIS + NCEDC
+    """
+    for evid, otime in dataset.items():
+        # get catalog data
+        t0 = obspy.UTCDateTime(otime)
+        cat0 = get_iris_evcat(t0)
+        print(cat0)
+
+        # download waveforms
+        if(llnl): get_data_llnl(otime)
+        if(iris): get_data_iris_ncedc(cat0)
+
 # List of events and their EVIDs from Ford (2009).
 # First I matched event times in Ford to those in the LLNL database. 
 # Then wrote their matching EVID.
 # Using EVIDs I wrote a script to output event times from the LLNL database.
 evids_times_explosions = {
-        "584497":  "1988-02-15T18:10:00.000000Z", 
-        "602554":  "1989-06-27T15:30:00.000000Z", 
-        "605660":  "1989-09-14T15:00:00.100000Z", 
-        "607806":  "1989-10-31T15:30:00.000000Z", 
+        "584497":  "1988-02-15T18:10:00.000000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "602554":  "1989-06-27T15:30:00.000000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "605660":  "1989-09-14T15:00:00.100000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "607806":  "1989-10-31T15:30:00.000000Z",
         "609251":  "1989-12-08T15:00:00.000000Z",
-        "612817":  "1990-03-10T16:00:00.000000Z", 
-        "616762":  "1990-06-13T16:00:00.000000Z", 
-        "617078":  "1990-06-21T18:15:00.000000Z", 
-        "623055":  "1990-11-14T19:17:00.700000Z", 
-        "627879":  "1991-03-08T21:02:45.000000Z",
-        "628994":  "1991-04-04T19:00:00.000000Z", # no waveforms for NCEDC
-        "635527":  "1991-09-14T19:00:00.000000Z", # Hoya
+        "612817":  "1990-03-10T16:00:00.000000Z",
+        "616762":  "1990-06-13T16:00:00.000000Z",
+        "617078":  "1990-06-21T18:15:00.000000Z",
+        "623055":  "1990-11-14T19:17:00.700000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "627879":  "1991-03-08T21:02:45.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "628994":  "1991-04-04T19:00:00.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime' -- no waveforms from NCEDC.
+        "635527":  "1991-09-14T19:00:00.000000Z", # ok (Hoya)
         "636899":  "1991-10-18T19:12:00.000000Z",
-        "638595":  "1991-11-26T18:35:00.000000Z",
-        "643767":  "1992-03-26T16:30:00.000000Z", 
-        "653134":  "1992-09-18T17:00:00.000000Z", 
-        "653332":  "1992-09-23T15:04:00.000000Z", 
+        "638595":  "1991-11-26T18:35:00.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "643767":  "1992-03-26T16:30:00.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "653134":  "1992-09-18T17:00:00.000000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "653332":  "1992-09-23T15:04:00.000000Z"  # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
         }
 
 evids_times_quakes = {
-        "648766": "1992-06-29T10:14:22.480000Z", 
-        "649220": "1992-07-05T06:54:13.560000Z", 
-        "706312": "1995-07-31T12:34:46.860000Z", 
-        "737983": "1997-04-26T01:49:35.410000Z", 
-        "743984": "1997-09-12T13:36:55.420000Z", 
+        "648766": "1992-06-29T10:14:22.480000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "649220": "1992-07-05T06:54:13.560000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "706312": "1995-07-31T12:34:46.860000Z", # No waveform managed to get instrument corrected (LLNL)
+        "737983": "1997-04-26T01:49:35.410000Z", # BTWNV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "743984": "1997-09-12T13:36:55.420000Z", # KNB -- The new array must be fully contained in the old array. No extrapolation can be performed.
         "768593": "1998-12-12T01:41:31.370000Z", 
-        "770646": "1999-01-23T03:00:33.200000Z", 
-        "770868": "1999-01-27T10:44:23.310000Z", 
-        "1592802":"2002-06-14T12:40:44.450000Z" 
+        "770646": "1999-01-23T03:00:33.200000Z", # AL5NV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "770868": "1999-01-27T10:44:23.310000Z", # A5NENV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "1592802":"2002-06-14T12:40:44.450000Z"  # AL5NV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
         }
 
 evids_times_collapses = {
-        "522227": "1982-08-05T14:00:00.000000Z",
-        "697661": "1995-02-03T15:26:10.660000Z",
-        "1324942": "2000-01-30T14:46:51.310000Z" # takes lots of memory
+        "522227": "1982-08-05T14:00:00.000000Z", # No waveform managed to get instrument corrected (LLNL)
+        "697661": "1995-02-03T15:26:10.660000Z", # ELK -- The new array must be fully contained in the old array. No extrapolation can be performed.
+        "1324942": "2000-01-30T14:46:51.310000Z" # No waveform managed to get instrument corrected (LLNL)
         }
 
-event_list = [evids_times_explosions, evids_times_quakes,
-        evids_times_collapses]
-
-for evid, otime in evids_times_explosions.items():
-    # get catalog data
-    t0 = obspy.UTCDateTime(otime)
-    cat0 = get_iris_evcat(t0)
-    print(cat0)
-
-    # download waveforms
-    get_data_llnl(otime)    # LLNL database
-    get_data_iris_ncedc(cat0)
+# get the waveforms
+getdata_iris_llnl(evids_times_explosions)
+#getdata_iris_llnl(evids_times_quakes)
+#getdata_iris_llnl(evids_times_collapses)
 
