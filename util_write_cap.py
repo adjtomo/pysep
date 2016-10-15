@@ -16,6 +16,7 @@ import os
 from scipy import signal
 import numpy as np
 import util_helpers
+import json
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -250,72 +251,129 @@ def write_cap_weights(stream, evname_key, client_name='', event=''):
     # get name key for output directory and files
     outdir = evname_key
 
-    #if reftime == '':
-    #    outdir = './'
-    #else:
-    #    outdir = './' + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '/'
-
-
-    outform = ('%35s %4.0f %4.0f %4.0f %4.0f %4.0f %4.0f %4.3f %4.0f %4.0f '
-               '%4.0f %4.0f\n')
 
     laststa = ''
     lastloc = ''
     lastcha = ''
 
-    #f = open(outdir + 'weight.dat', 'w')   # original (overwrites weightfile)
-    # append instead of overwrite. This is needed when fetching data from
-    # multiple sources (IRIS, NCEDC). Else weight files are overwritten.
-    # weight.dat    - append. includes all stations from all clients
-    # weight_body_XX.dat  - write a weight (body waves) file for client XX
-    # weight_surf_XX.dat  - write a weight (surf waves) file for client XX
-    wfile = outdir + '/' + "weight.dat"
-    wfile_body = outdir + '/' + "weight_body" + ".dat"
-    wfile_surf = outdir + '/' + "weight_surf" + ".dat"
-    wfile_body_client = outdir + '/' + "weight_body" + "_" + client_name + ".dat"
-    wfile_surf_client = outdir + '/' + "weight_surf" + "_" + client_name + ".dat"
-    f =  open(wfile, 'a') 
-    fb = open(wfile_body, 'a') 
-    fs = open(wfile_surf, 'a') 
-    fbc = open(wfile_body_client, 'w') 
-    fsc = open(wfile_surf_client, 'w') 
+    wdata = {}
 
-    # Sort the traces by distance
-    sorted_traces = sorted(stream.traces, key=lambda k: k.stats.sac['dist'])
-    for tr in sorted_traces:
+    # for each station get and store arrival times, distance, azim
+    for tr in stream:
         current_sta = tr.stats
         # Only write once per 3 components
-        if (current_sta.station == laststa) and (current_sta.channel[:-1] == lastcha) and (current_sta.location == lastloc):
+        if (current_sta.station == laststa) \
+                and (current_sta.channel[:-1] == lastcha) \
+                and (current_sta.location == lastloc):
             continue
 
         Ptime = 0
         for pick in event.picks:
-            if (pick.waveform_id.network_code == tr.stats.network and pick.waveform_id.station_code == tr.stats.station \
-                    and pick.waveform_id.channel_code[2].upper() == 'Z' and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
+            if (pick.waveform_id.network_code == tr.stats.network \
+                    and pick.waveform_id.station_code == tr.stats.station \
+                    and pick.waveform_id.channel_code[2].upper() == 'Z' \
+                    and pick.waveform_id.location_code == tr.stats.location \
+                    and pick.phase_hint == 'Pn'):
                 # For debugging
                 # print(pick.waveform_id.network_code, pick.waveform_id.station_code, pick.waveform_id.channel_code, \
                 #          pick.waveform_id.location_code, pick.time, pick.phase_hint,tr.stats.channel, tr.stats.location )
                 Ptime = pick.time - event.origins[0].time
-        
+ 
         #outfnam = reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
-        outfnam = outdir + '/' + evname_key + '.' \
+        outfnam = evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel[:-1]
 
-        f.write(outform % (outfnam, current_sta.sac['dist'], 
-            1, 1, 1, 1, 1, Ptime, 0, 0, 0, 0))
-        fb.write(outform % (outfnam, current_sta.sac['dist'], 
-            1, 1, 0, 0, 0, Ptime, 0, 0, 0, 0))
-        fs.write(outform % (outfnam, current_sta.sac['dist'], 
-            0, 0, 1, 1, 1, Ptime, 0, 0, 0, 0))
-        fbc.write(outform % (outfnam, current_sta.sac['dist'], 
-            1, 1, 0, 0, 0, Ptime, 0, 0, 0, 0))
-        fsc.write(outform % (outfnam, current_sta.sac['dist'], 
-            0, 0, 1, 1, 1, Ptime, 0, 0, 0, 0))
+        wdata[outfnam] = Ptime, current_sta.sac['dist'], current_sta.sac['az']
 
         laststa = current_sta.station
         lastloc = current_sta.location
         lastcha = current_sta.channel[:-1]
+
+    infile = outdir + "/" + "staweights.tmp"
+    if not os.path.isfile(infile):
+        fidw = open(infile, "w")
+        json.dump(wdata, fidw)
+    else:
+        fidw = open(infile, "r")
+        newdata = json.load(fidw)
+        fidw.close()
+        newdata.update(wdata)
+        fidw = open(infile, "w")
+        json.dump(newdata, fidw)
+    fidw.close()
+    with open(infile, "r") as fidw:
+        data = json.load(fidw)
+
+    # weight values
+    wbody = ("1 1   0 0 0")
+    wsurf = ("0 0   1 1 1")
+    wall  = ("1 1   1 1 1")
+    wtimes = (" 0  0  0  0")
+    outform2 = ('%35s %5.0f %12s %10.5f %10s\n')
+
+    # output sorted data
+    # Write files sorted by distance. 
+    # (There are cleaner ways to do this, including combining with azim sort 
+    # below...but this will do for now)
+    wfile = "%s/weight.dat" % outdir
+    wfile_body = "%s/weight_body.dat" % outdir
+    wfile_surf = "%s/weight_surf.dat" % outdir
+    wfile_body_client = "%s/weight_body_%s.dat" % (outdir, client_name)
+    wfile_surf_client = "%s/weight_surf_%s.dat" % (outdir, client_name)
+    f =  open(wfile, 'w')
+    fb = open(wfile_body, 'w')
+    fs = open(wfile_surf, 'w')
+    fbc = open(wfile_body_client, 'w')
+    fsc = open(wfile_surf_client, 'w')
+
+    # sort by distance
+    for w in sorted(data.items(), key = lambda k: k[1][1]):
+        keys_body = ((w[0]), data[w[0]][1], wbody, data[w[0]][0], wtimes)
+        keys_surf = ((w[0]), data[w[0]][1], wsurf, data[w[0]][0], wtimes)
+        keys_all = ((w[0]), data[w[0]][1], wall, data[w[0]][0], wtimes)
+
+        fb.write(outform2 % keys_body)
+        fbc.write(outform2 % keys_body)
+        fs.write(outform2 % keys_surf)
+        fsc.write(outform2 % keys_surf)
+        f.write(outform2 % keys_all)
+
+    fb.close()
+    fbc.close()
+    fs.close()
+    fsc.close()
+    f.close()
+
+    # Write files sorted by azimuth.
+    # (There are cleaner ways to do this but this will do for now)
+    wfile = "%s/weight_azim.dat" % outdir
+    wfile_body = "%s/weight_body_azim.dat" % outdir
+    wfile_surf = "%s/weight_surf_azim.dat" % outdir
+    wfile_body_client = "%s/weight_body_%s_azim.dat" % (outdir, client_name)
+    wfile_surf_client = "%s/weight_surf_%s_azim.dat" % (outdir, client_name)
+    f =  open(wfile, 'w')
+    fb = open(wfile_body, 'w')
+    fs = open(wfile_surf, 'w')
+    fbc = open(wfile_body_client, 'w')
+    fsc = open(wfile_surf_client, 'w')
+
+    for w in sorted(data.items(), key = lambda k: k[1][2]):
+        keys_body = ((w[0]), data[w[0]][1], wbody, data[w[0]][0], wtimes)
+        keys_surf = ((w[0]), data[w[0]][1], wsurf, data[w[0]][0], wtimes)
+        keys_all = ((w[0]), data[w[0]][1], wall, data[w[0]][0], wtimes)
+
+        fb.write(outform2 % keys_body)
+        fbc.write(outform2 % keys_body)
+        fs.write(outform2 % keys_surf)
+        fsc.write(outform2 % keys_surf)
+        f.write(outform2 % keys_all)
+
+    fb.close()
+    fbc.close()
+    fs.close()
+    fsc.close()
+    f.close()
 
 def write_ev_info(ev, evname_key):
     outdir = evname_key
@@ -710,12 +768,10 @@ def resample_cut(st, freq, evtime, before, after):
             print("WARNING. trace endtime < otime+after for station %s" % \
                     tr.stats.station)
             print("Setting after = evtime + endtime = %f" % after)
-
-            # Needed (eg LLNL station KNB). see iex=10 in run_getwaveform.py
             try:
                 after = evtime + tr.stats.endtime
             except:
-                print("Removing %s: Unable to calculate endtime. Continuing"\
+                print("Removing %s: Unable to calculate endtime. Continuing" \
                         % tr.stats.station)
                 st.remove(tr)
                 continue
