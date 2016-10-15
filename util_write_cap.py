@@ -770,13 +770,14 @@ def resample_cut(st, freq, evtime, before, after):
             print("Setting after = evtime + endtime = %f" % after)
             # handle problem when evtime and tr.stats.endtime can't be added:
             # "unsupported operand type(s) for +: 'float' and 'UTCDateTime'"
-            try:
-                after = evtime + tr.stats.endtime
-            except:
-                print("Removing %s: Unable to calculate endtime. Continuing" \
-                        % tr.stats.station)
-                st.remove(tr)
-                continue
+            after = evtime + tr.stats.endtime
+            #try:
+            #    after = evtime + tr.stats.endtime
+            #except:
+            #    print("Removing %s: Unable to calculate endtime. Continuing" \
+            #            % tr.stats.station)
+            #    st.remove(tr)
+            #    continue
 
         starttime = evtime - before
         npts = (before + after) * freq
