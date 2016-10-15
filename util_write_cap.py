@@ -768,6 +768,8 @@ def resample_cut(st, freq, evtime, before, after):
             print("WARNING. trace endtime < otime+after for station %s" % \
                     tr.stats.station)
             print("Setting after = evtime + endtime = %f" % after)
+            # handle problem when evtime and tr.stats.endtime can't be added:
+            # "unsupported operand type(s) for +: 'float' and 'UTCDateTime'"
             try:
                 after = evtime + tr.stats.endtime
             except:
