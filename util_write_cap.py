@@ -768,7 +768,7 @@ def resample_cut(st, freq, evtime, before, after):
             print("WARNING. trace endtime < otime+after for station %s" % \
                     tr.stats.station)
             print("Setting after = evtime + endtime = %f" % after)
-            after = evtime + tr.stats.endtime
+            after = tr.stats.endtime - evtime
 
         starttime = evtime - before
         npts = (before + after) * freq
