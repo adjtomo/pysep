@@ -768,16 +768,7 @@ def resample_cut(st, freq, evtime, before, after):
             print("WARNING. trace endtime < otime+after for station %s" % \
                     tr.stats.station)
             print("Setting after = evtime + endtime = %f" % after)
-            # handle problem when evtime and tr.stats.endtime can't be added:
-            # "unsupported operand type(s) for +: 'float' and 'UTCDateTime'"
             after = evtime + tr.stats.endtime
-            #try:
-            #    after = evtime + tr.stats.endtime
-            #except:
-            #    print("Removing %s: Unable to calculate endtime. Continuing" \
-            #            % tr.stats.station)
-            #    st.remove(tr)
-            #    continue
 
         starttime = evtime - before
         npts = (before + after) * freq
@@ -856,7 +847,7 @@ def amp_rescale_llnl(st, scale_factor):
         else:
             # original -- apply a single factor to all
             tr.data = tr.data * scale_factor
-            print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
+            print("--> WARNING -- rescaling amplitudes by %f" % scale_factor)
 
     return st
 
