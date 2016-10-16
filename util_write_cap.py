@@ -11,7 +11,7 @@ For reference see versions prior to Aug 25, 2016 for:
 
 import obspy
 from obspy.io.sac import SACTrace
-import obspy.signal.rotate as rt
+import obspy.signal.rotate as rotate
 import os
 from scipy import signal
 import numpy as np
@@ -157,7 +157,13 @@ def rotate_and_write_stream(stream, evname_key):
         #          substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
         print('--> Station ' + netw + '.' + station + '.' + location + \
                   ' Rotating random orientation to NEZ.')
-        data_array = rt.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+        try:
+            data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+        except:
+            print("WARNING -- check station " + station + ". " +\
+                    "There was a problem applying rotate2zne. Continuing...")
+            continue
+
         # Rotates an arbitrarily oriented three-component vector to ZNE( [0]-Z, [1]-N, [2]-E)
         # XXX: Check 012 in correct order? 
         substr[0].data =  data_array[2]  # E
