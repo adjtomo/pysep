@@ -70,15 +70,15 @@ def get_data_iris_ncedc(cat0):
 
         client = Client(thisclient)
         try:
-           getwaveform_iris.run_get_waveform(c = client, event = cat0, 
-                   min_dist = min_dist, max_dist = max_dist, 
-                   before = before, after = after, 
-                   network = network, station = station, channel = channel,
-                   resample_freq = resample_freq, 
-                   ifrotate = rotate, ifCapInp = output_cap_weight_file, 
-                   ifRemoveResponse = remove_response, ifDetrend = detrend, 
-                   ifDemean = demean, ifEvInfo = output_event_info, 
-                   scale_factor = scale_factor, pre_filt = pre_filt)
+            getwaveform_iris.run_get_waveform(c = client, event = cat0, 
+                    min_dist = min_dist, max_dist = max_dist, 
+                    before = before, after = after, 
+                    network = network, station = station, channel = channel,
+                    resample_freq = resample_freq, 
+                    ifrotate = rotate, ifCapInp = output_cap_weight_file, 
+                    ifRemoveResponse = remove_response, ifDetrend = detrend, 
+                    ifDemean = demean, ifEvInfo = output_event_info, 
+                    scale_factor = scale_factor, pre_filt = pre_filt)
         except Exception as msg:
             print("WARNING. There was a problem with client %s" % thisclient)
             print(msg)
@@ -133,9 +133,12 @@ def get_data_llnl(evid):
                 ifDemean = demean, ifEvInfo = output_event_info, 
                 scale_factor = scale_factor, pre_filt = pre_filt)
     except Exception as msg:
-        print("WARNING. There was a problem with LLNL client:")
+        print("\n==========================================================\n")
+        print("WARNING. Event " % cat0)
+        print("There was a problem with LLNL client:")
         print(msg)
-        print("Continuing ... \n")
+        print("Continuing to next event...")
+        print("\n==========================================================\n")
         pass
     print("Done")
 
@@ -197,6 +200,6 @@ evids_times_collapses = {
 
 # get the waveforms
 getdata_iris_llnl(evids_times_explosions)
-#getdata_iris_llnl(evids_times_quakes)
-#getdata_iris_llnl(evids_times_collapses)
+getdata_iris_llnl(evids_times_quakes)
+getdata_iris_llnl(evids_times_collapses)
 
