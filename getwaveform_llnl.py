@@ -91,7 +91,7 @@ def run_get_waveform(llnl_db_client, event,
         for tr in st:
             if tr.stats.channel[-1] not in ["Z", "N", "E"]:
                 print("%s is not vertical, north, or east. Skipped." % tr.id)
-                continue
+                #continue
             try:
                 llnl_db_client.remove_response(
                         tr=tr, pre_filt=pre_filt, output="VEL")
