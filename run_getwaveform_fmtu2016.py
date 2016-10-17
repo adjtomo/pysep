@@ -30,7 +30,10 @@ from obspy.clients.fdsn import Client
 # get event data from iris catalogs
 def get_iris_evcat(t0):
     c = Client("IRIS")  # also can use NCEDC
-    cat = c.get_events(starttime = t0-10, endtime = t0+10)
+    sec_before_after = 2
+    cat = c.get_events(starttime = t0-sec_before_after, endtime = t0+sec_before_after)
+    if(len(cat) > 1):
+        print("WARNING -- multiple events found. Using the first in the list.")
     return cat[0]
 
 # get data  
@@ -189,7 +192,10 @@ evids_times_quakes = {
         "768593": "1998-12-12T01:41:31.370000Z", 
         "770646": "1999-01-23T03:00:33.200000Z",
         "770868": "1999-01-27T10:44:23.310000Z", 
-        "1592802":"2002-06-14T12:40:44.450000Z"  
+        "1592802":"2002-06-14T12:40:44.450000Z",  
+        #"-99999":  "1996-09-05T08:16:56.090000Z",# IRIS returns deeper event (7.5km, not 5km) 1996-09-05T08:16:55.780000Z | +36.745, -116.282 | 3.2 mL
+        #"-99999": "1997-06-14T19:48:19.930000Z", # IRIS returns shallower event (5km, not 7km) 1997-06-14T19:48:21.200000Z | +36.806, -115.847 | 3.4 mL
+        #"-99999": "2007-01-24T11:30:16.100000Z"  # IRIS returns smaller event (not 4.09) 2007-01-24T11:30:16.650000Z | +37.424, -117.064 | 2.9 mb
         }
 
 evids_times_collapses = {
@@ -199,7 +205,7 @@ evids_times_collapses = {
         }
 
 # get the waveforms
-getdata_iris_llnl(evids_times_explosions, llnl=True)
-getdata_iris_llnl(evids_times_quakes, llnl=True)
-getdata_iris_llnl(evids_times_collapses, llnl=True)
+getdata_iris_llnl(evids_times_explosions, llnl=True, iris=True)
+getdata_iris_llnl(evids_times_quakes, llnl=True, iris=True)
+getdata_iris_llnl(evids_times_collapses, llnl=True, iris=True)
 
