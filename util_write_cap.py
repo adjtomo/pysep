@@ -566,7 +566,7 @@ def check_if_LLNL_event(event_time):
             # earthquakes in Ford but not in the LLNL database
             "1996-09-05T08:16:56.09": "Amargosa",
             "1997-06-14T19:48:19.93": "Indian_Springs",
-            "2007-01-24T11:30:16.10": "Raslton"
+            "2007-01-24T11:30:16.10": "Ralston"
             }
 
     _event_time = obspy.UTCDateTime(event_time)
