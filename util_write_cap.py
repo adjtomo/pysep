@@ -778,8 +778,17 @@ def resample_cut(st, freq, evtime, before, after):
 
         starttime = evtime - before
         npts = (before + after) * freq
-        tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                       window="blackman", starttime = starttime, npts = npts)
+        try:
+            tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+                    window="blackman", starttime = starttime, npts = npts)
+        except:
+            # XXX handle errors. this is a common error with very short traces:
+            # The new array must be fully contained in the old array. 
+            # No extrapolation can be performed. 
+            print("WARNING -- station " + tr.stats.station + ". " + \
+                    "there was a problem applying interpolation. Skipping...")
+            st.remove(tr)
+            continue
 
 def trim_maxstart_minend(stalist, st2):
     """
