@@ -173,9 +173,15 @@ def rotate_and_write_stream(stream, evname_key):
 
         # Fix the channel names in the traces.stats
         #print(substr[0].stats.channel,substr[1].stats.channel,substr[2].stats.channel)
-        substr[0].stats.channel = substr[0].stats.channel[0:2] + 'E'
-        substr[1].stats.channel = substr[0].stats.channel[0:2] + 'N'
-        substr[2].stats.channel = substr[0].stats.channel[0:2] + 'Z'
+        if len(substr[0].stats.channel)==3:
+            substr[0].stats.channel = substr[0].stats.channel[0:2] + 'E'
+            substr[1].stats.channel = substr[0].stats.channel[0:2] + 'N'
+            substr[2].stats.channel = substr[0].stats.channel[0:2] + 'Z'
+        else: # sometimes channel code are R,T,V instead of BHE,BHN,BHZ (or HFE,HFN,HFZ).
+            # This needs to be done so that rotation can happen
+            substr[0].stats.channel = 'XXE'
+            substr[1].stats.channel = 'XXN'
+            substr[2].stats.channel = 'XXZ'
         #print(substr[0].stats.channel,substr[1].stats.channel,substr[2].stats.channel)
         # Fix the sac headers since the traces have been rotated now
         substr[0].stats.sac['cmpaz'] = 90.0
