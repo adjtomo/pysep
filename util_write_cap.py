@@ -94,7 +94,7 @@ def rotate_and_write_stream(stream, evname_key):
 #        #if len(substr) != 3:
         if len(substr) < 3:
             for subtr in substr:
-                print('One or more components missing: removing ',
+                print('One or more components missing: consider removing ',
                       subtr.stats.station, ' ', subtr.stats.channel,
                       ' Number of traces: ', len(substr))
                 #stream.remove(subtr)
@@ -158,6 +158,7 @@ def rotate_and_write_stream(stream, evname_key):
         print('--> Station ' + netw + '.' + station + '.' + location + \
                   ' Rotating random orientation to NEZ.')
         #try:
+        #print(len(d1),len(d2),len(d3))
         data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
         #except:
         #    print("WARNING -- check station " + station + ". " +\
@@ -171,9 +172,11 @@ def rotate_and_write_stream(stream, evname_key):
         substr[2].data =  data_array[0]  # Z
 
         # Fix the channel names in the traces.stats
+        #print(substr[0].stats.channel,substr[1].stats.channel,substr[2].stats.channel)
         substr[0].stats.channel = substr[0].stats.channel[0:2] + 'E'
         substr[1].stats.channel = substr[0].stats.channel[0:2] + 'N'
         substr[2].stats.channel = substr[0].stats.channel[0:2] + 'Z'
+        #print(substr[0].stats.channel,substr[1].stats.channel,substr[2].stats.channel)
         # Fix the sac headers since the traces have been rotated now
         substr[0].stats.sac['cmpaz'] = 90.0
         substr[1].stats.sac['cmpaz'] = 0.0
@@ -196,6 +199,7 @@ def rotate_and_write_stream(stream, evname_key):
                 + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
                 + tr.stats.channel[-1].lower()
             tr.write(outfnam, format='SAC')
+            #print(tr.stats.channel)
 
         try:
             print('--> Station ' + netw + '.' + station + '.' + location + \
@@ -275,9 +279,13 @@ def write_cap_weights(stream, evname_key, client_name='', event=''):
 
         Ptime = 0
         for pick in event.picks:
+            if len(pick.waveform_id.channel_code) == 3:
+                chan_code = pick.waveform_id.channel_code[2].upper()
+            else: # assuming component information is the channel code. Sometimes stations are named R,T,V!
+                chan_code = pick.waveform_id.channel_code.upper()
             if (pick.waveform_id.network_code == tr.stats.network \
                     and pick.waveform_id.station_code == tr.stats.station \
-                    and pick.waveform_id.channel_code[2].upper() == 'Z' \
+                    and (chan_code == 'Z' or chan_code == 'V') \
                     and pick.waveform_id.location_code == tr.stats.location \
                     and pick.phase_hint == 'Pn'):
                 # For debugging
@@ -433,8 +441,15 @@ def add_sac_metadata(st, ev=[], stalist=[]):
 
         # Add P arrival time
         for pick in ev.picks:
+            if len(pick.waveform_id.channel_code) == 3:
+                chan_code = pick.waveform_id.channel_code[2].upper()
+            else: # assuming component information is the channel code. Sometimes stations are named R,T,V!
+                chan_code = pick.waveform_id.channel_code.upper()
+            #print(pick.waveform_id.channel_code)
             if (pick.waveform_id.network_code == tr.stats.network and pick.waveform_id.station_code == tr.stats.station \
-                    and pick.waveform_id.channel_code[2].upper() == 'Z' and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
+                    and (chan_code == 'Z' or chan_code == 'V') \
+                    #and pick.waveform_id.channel_code.upper() == 'V' \
+                    and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
                 Ptime = pick.time - ev.origins[0].time
                 tr.stats.sac['a'] = Ptime
 

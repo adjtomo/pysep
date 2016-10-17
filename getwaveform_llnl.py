@@ -170,6 +170,30 @@ def run_get_waveform(llnl_db_client, event,
 
     print("--> %i waveforms left." % len(st2))
 
+    # fill gaps with 0
+    # print(st2)    # code for debugging.
+    #st2.merge(method=0,fill_value=0)
+    st2.merge(fill_value='interpolate')
+    # print(st2)    # code for debugging.
+
+    fid.write("\n--------After filling the gaps------------")
+    for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
+
+    # Get list of unique stations + locaiton (example: 'KDAK.00')
+    stalist = []
+    for tr in st2.traces:
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+
+    # Crazy way of getting a unique list of stations
+    stalist = list(set(stalist))
+    # print(stalist)    # for debugging.
+    st2 = trim_maxstart_minend(stalist, st2)
+
     if not st2:
         raise Exception("No waveforms left")
 
