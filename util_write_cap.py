@@ -862,7 +862,8 @@ def amp_rescale_llnl(st, scale_factor):
         else:
             # original -- apply a single factor to all
             tr.data = tr.data * scale_factor
-            print("--> WARNING -- rescaling amplitudes by %f" % scale_factor)
+            print("--> WARNING -- " + tr.stats.station + '.' + \
+                    tr.stats.channel + " rescaling by " + "%f" % scale_factor)
 
     return st
 
