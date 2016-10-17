@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 10
+iex = 11
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -214,6 +214,26 @@ if iex == 9:
 if iex == 10:
     idb = 3              # LLNL database
     otime = obspy.UTCDateTime("1982-08-05T14:00:00.000000Z")
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# error applying rotation to station LL.KNB. See util_write_cap.py Line 161
+# (Disable the try block and only allow Line 161 to create this problem)
+# 
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
+#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
+#    ValueError: setting an array element with a sequence.
+if iex == 11:
+    idb = 3              # LLNL database
+    otime = obspy.UTCDateTime("1989-09-14T15:00:00.100000Z")
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
