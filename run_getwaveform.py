@@ -232,8 +232,8 @@ if iex == 10:
 #    x, y, z = np.dot(_t, [data_1, data_2, data_3])
 #    ValueError: setting an array element with a sequence.
 if iex == 11:
-    idb = 3              # LLNL database
-    otime = obspy.UTCDateTime("1989-09-14T15:00:00.100000Z")
+    idb = 1 
+    otime = obspy.UTCDateTime("1995-07-31T12:34:46.860000Z")
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
