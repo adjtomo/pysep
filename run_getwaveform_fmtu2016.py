@@ -134,7 +134,7 @@ def get_data_llnl(evid):
                 scale_factor = scale_factor, pre_filt = pre_filt)
     except Exception as msg:
         print("\n==========================================================\n")
-        print("WARNING. Event " % cat0)
+        print("WARNING. Event ", cat0)
         print("There was a problem with LLNL client:")
         print(msg)
         print("Continuing to next event...")
@@ -161,45 +161,45 @@ def getdata_iris_llnl(dataset, llnl=False, iris=False):
 # Then wrote their matching EVID.
 # Using EVIDs I wrote a script to output event times from the LLNL database.
 evids_times_explosions = {
-        "584497":  "1988-02-15T18:10:00.000000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "602554":  "1989-06-27T15:30:00.000000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "605660":  "1989-09-14T15:00:00.100000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "584497":  "1988-02-15T18:10:00.000000Z",
+        "602554":  "1989-06-27T15:30:00.000000Z",
+        "605660":  "1989-09-14T15:00:00.100000Z",  # KNB, MNV. problem applying rotate2zne
         "607806":  "1989-10-31T15:30:00.000000Z",
         "609251":  "1989-12-08T15:00:00.000000Z",
         "612817":  "1990-03-10T16:00:00.000000Z",
         "616762":  "1990-06-13T16:00:00.000000Z",
         "617078":  "1990-06-21T18:15:00.000000Z",
-        "623055":  "1990-11-14T19:17:00.700000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "627879":  "1991-03-08T21:02:45.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "628994":  "1991-04-04T19:00:00.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime' -- no waveforms from NCEDC.
+        "623055":  "1990-11-14T19:17:00.700000Z", 
+        "627879":  "1991-03-08T21:02:45.000000Z", 
+        "628994":  "1991-04-04T19:00:00.000000Z", # no waveforms from NCEDC.
         "635527":  "1991-09-14T19:00:00.000000Z", # ok (Hoya)
         "636899":  "1991-10-18T19:12:00.000000Z",
-        "638595":  "1991-11-26T18:35:00.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "643767":  "1992-03-26T16:30:00.000000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "653134":  "1992-09-18T17:00:00.000000Z", # ELK -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "653332":  "1992-09-23T15:04:00.000000Z"  # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "638595":  "1991-11-26T18:35:00.000000Z", 
+        "643767":  "1992-03-26T16:30:00.000000Z", 
+        "653134":  "1992-09-18T17:00:00.000000Z",  # KNB, LAC, MNV are very short traces (useless)
+        "653332":  "1992-09-23T15:04:00.000000Z"  
         }
 
 evids_times_quakes = {
-        "648766": "1992-06-29T10:14:22.480000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "649220": "1992-07-05T06:54:13.560000Z", # KNB -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "648766": "1992-06-29T10:14:22.480000Z", 
+        "649220": "1992-07-05T06:54:13.560000Z", 
         "706312": "1995-07-31T12:34:46.860000Z", # No waveform managed to get instrument corrected (LLNL)
-        "737983": "1997-04-26T01:49:35.410000Z", # BTWNV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "743984": "1997-09-12T13:36:55.420000Z", # KNB -- The new array must be fully contained in the old array. No extrapolation can be performed.
+        "737983": "1997-04-26T01:49:35.410000Z",
+        "743984": "1997-09-12T13:36:55.420000Z", 
         "768593": "1998-12-12T01:41:31.370000Z", 
-        "770646": "1999-01-23T03:00:33.200000Z", # AL5NV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "770868": "1999-01-27T10:44:23.310000Z", # A5NENV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-        "1592802":"2002-06-14T12:40:44.450000Z"  # AL5NV -- unsupported operand type(s) for +: 'float' and 'UTCDateTime'
+        "770646": "1999-01-23T03:00:33.200000Z",
+        "770868": "1999-01-27T10:44:23.310000Z", 
+        "1592802":"2002-06-14T12:40:44.450000Z"  
         }
 
 evids_times_collapses = {
         "522227": "1982-08-05T14:00:00.000000Z", # No waveform managed to get instrument corrected (LLNL)
-        "697661": "1995-02-03T15:26:10.660000Z", # ELK -- The new array must be fully contained in the old array. No extrapolation can be performed.
+        "697661": "1995-02-03T15:26:10.660000Z",
         "1324942": "2000-01-30T14:46:51.310000Z" # No waveform managed to get instrument corrected (LLNL)
         }
 
 # get the waveforms
-getdata_iris_llnl(evids_times_explosions)
-getdata_iris_llnl(evids_times_quakes)
-getdata_iris_llnl(evids_times_collapses)
+getdata_iris_llnl(evids_times_explosions, llnl=True)
+getdata_iris_llnl(evids_times_quakes, llnl=True)
+getdata_iris_llnl(evids_times_collapses, llnl=True)
 
