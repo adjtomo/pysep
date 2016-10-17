@@ -206,13 +206,14 @@ if iex == 9:
     use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
 
 # Error from util_write_cap.py
-#   unsupported operand type(s) for +: 'float' and 'UTCDateTime'
-# QUESTION Why the error? both are UTCDateTime
-#  evtime = UTCDateTime("1992-06-29T10:14:22.280000Z"), 
-#  tr.stats.edntime = UTCDateTime("1992-06-29T10:17:49.103995Z")
+#   util_write_cap.py, line 437, in add_sac_metadata
+#    and pick.waveform_id.channel_code[2].upper() == 'Z' and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
+#        IndexError: string index out of range
+#
+# This error happens when allowing data already rotated (VRT). see getwaveform_llnl.py Line 94
 if iex == 10:
     idb = 3              # LLNL database
-    otime = obspy.UTCDateTime("1992-06-29T10:14:22.480000")
+    otime = obspy.UTCDateTime("1982-08-05T14:00:00.000000Z")
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
