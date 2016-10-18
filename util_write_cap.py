@@ -865,11 +865,13 @@ def trim_maxstart_minend(stalist, st2):
                     select_st[1].stats.endtime,\
                     select_st[2].stats.endtime)    
 
+        #print('Start Time: ',max_starttime, 'End Time: ',min_endtime)
         try:
             select_st.trim(starttime=max_starttime,\
-                               endtime = min_endtime, pad = False, nearest_sample = True,\
+                               endtime = min_endtime, pad = True, nearest_sample = True,\
                                fill_value=0)
             for tr in select_st.traces:
+                #print(len(tr.data))
                 temp_stream = temp_stream.append(tr)
         except:
             print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
