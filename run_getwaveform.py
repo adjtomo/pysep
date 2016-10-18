@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 11
+iex = 19
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -234,6 +234,178 @@ if iex == 10:
 if iex == 11:
     idb = 1 
     otime = obspy.UTCDateTime("1995-07-31T12:34:46.860000Z")
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# PROBLEM: 
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_iris.py", line 71, in run_get_waveform
+#    level="response")
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/clients/fdsn/client.py", line 620, in get_stations
+#    inventory = read_inventory(data_stream)
+#  File "<decorator-gen-81>", line 2, in read_inventory
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/util/decorator.py", line 289, in _map_example_filename
+#    return func(*args, **kwargs)
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/inventory/inventory.py", line 72, in read_inventory
+#    format=format)[0]
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/util/base.py", line 459, in _read_from_plugin
+#    list_obj = read_format(filename, **kwargs)
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/io/stationxml/core.py", line 154, in _read_stationxml
+#    networks.append(_read_network(network, _ns))
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/io/stationxml/core.py", line 200, in _read_network
+#    stations.append(_read_station(station, _ns))
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/io/stationxml/core.py", line 236, in _read_station
+#    channels.append(_read_channel(channel, _ns))
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/io/stationxml/core.py", line 356, in _read_channel
+#    channel.response = _read_response(response, _ns)
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/io/stationxml/core.py", line 377, in _read_response
+#    response.response_stages.append(_read_response_stage(stage, _ns))
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/io/stationxml/core.py", line 441, in _read_response_stage
+#    raise ValueError(msg)
+#ValueError: Could not find a valid Response Stage Type.
+if iex == 12:
+    idb = 1 
+    otime = obspy.UTCDateTime("1999-01-23T03:00:33.200000Z") # frenchman flat 1
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# same as #12
+# ValueError: Could not find a valid Response Stage Type.
+if iex == 13:
+    idb = 1 
+    otime = obspy.UTCDateTime("1999-01-27T10:44:23.310000Z") # frenchman flat 2
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# same as #12
+# ValueError: Could not find a valid Response Stage Type.
+if iex == 14:
+    idb = 1 
+    otime = obspy.UTCDateTime("2002-06-14T12:40:44.450000Z") # little skull
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# Traceback (most recent call last):
+#   File "run_getwaveform.py", line 380, in <module>
+#     scale_factor = scale_factor, pre_filt = pre_filt)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_iris.py", line 95, in run_get_waveform
+#     output="VEL")
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/stream.py", line 3030, in remove_response
+#     tr.remove_response(*args, **kwargs)
+#   File "<decorator-gen-39>", line 2, in remove_response
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/trace.py", line 231, in _add_processing_info
+#     result = func(*args, **kwargs)
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/trace.py", line 2701, in remove_response
+#     output=output, **kwargs)
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/inventory/response.py", line 762, in get_evalresp_response
+#     raise ObsPyException(msg)
+# obspy.core.util.obspy_types.ObsPyException: Can not use evalresp on response with no response stages.
+if iex == 15:
+    idb = 1 
+    otime = obspy.UTCDateTime("1997-06-14T19:48:19.930000Z") # indian springs
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# same as #12
+# ValueError: Could not find a valid Response Stage Type.
+if iex == 16:
+    idb = 1 
+    otime = obspy.UTCDateTime("2007-01-24T11:30:16.100000Z") # ralston
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# same as #12
+# ValueError: Could not find a valid Response Stage Type.
+if iex == 17:
+    idb = 1 
+    otime = obspy.UTCDateTime("2000-01-30T14:46:51.310000Z") # trona mine 2
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+#Traceback (most recent call last):
+#  File "run_getwaveform.py", line 455, in <module>
+#    scale_factor = scale_factor, pre_filt = pre_filt)
+#  File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_iris.py", line 214, in run_get_waveform
+#    rotate_and_write_stream(st2, evname_key)
+#  File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 162, in rotate_and_write_stream
+#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
+#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
+#ValueError: setting an array element with a sequence.
+if iex == 18:
+    idb = 1 
+    otime = obspy.UTCDateTime("1995-07-31T12:34:46.860000Z") # timber mountain
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'        # note that the client will look for BK stations in the list
+    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# same as # 15
+# obspy.core.util.obspy_types.ObsPyException: Can not use evalresp on response with no response stages.
+if iex == 19:
+    idb = 1 
+    otime = obspy.UTCDateTime("1996-09-05T08:16:56.090000Z") # amargosa
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
