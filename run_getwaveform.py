@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 12
+iex = 16
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -345,10 +345,15 @@ if iex == 15:
     resample_freq = 20.0 
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
-# same as #12
-# ValueError: Could not find a valid Response Stage Type.
+# time > 2007-01-24T11:30:06.100000Z time < 2007-01-24T11:30:26.100000Z
+#Traceback (most recent call last):
+#  File "run_getwaveform.py", line 478, in <module>
+#    ev = cat.filter(mintime_str, maxtime_str)[0]
+#  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/event/catalog.py", line 162, in __getitem__
+#    return self.events.__getitem__(index)
+#IndexError: list index out of range
 if iex == 16:
-    idb = 1 
+    idb = 3 
     otime = obspy.UTCDateTime("2007-01-24T11:30:16.100000Z") # ralston
     min_dist = 0 
     max_dist = 1200
