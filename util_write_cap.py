@@ -752,7 +752,13 @@ def resample(st, freq):
         current_nyquist = 0.5 * tr.stats.sampling_rate
         # Filter if necessary.
         if new_nyquist < current_nyquist:
-            zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
+            try:
+                zerophase_chebychev_lowpass_filter(trace=tr, freqmax=new_nyquist)
+            except Exception as e:
+                print("WARNING. Unable to low pass filter " + tr.stats.network\
+                        + '.' + tr.stats.station + '.' + tr.stats.channel)
+                print("Removing this station")
+                st.remove(tr)
         try:
             tr.detrend("linear")
         except:
@@ -763,8 +769,16 @@ def resample(st, freq):
             continue
         tr.taper(max_percentage=0.02, type="hann")
         tr.data = np.require(tr.data, requirements=["C"])
-        tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                       window="blackman")
+        try:
+            tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+                    window="blackman")
+        except Exception as e:
+            print("WARNING. Unable to interpolate" + tr.stats.network \
+                    + '.' + tr.stats.station + '.' + tr.stats.channel)
+            print("Removing this station")
+            print(e)
+            st.remove(tr)
+            continue
 
 def resample_cut(st, freq, evtime, before, after):
     """
