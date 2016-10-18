@@ -36,7 +36,7 @@ min_dist = 0
 max_dist = 20000
 # station parameters
 network = '*'                # all networks
-station = '*'                # all stations
+station = '*,-PURD,-NV33,-GPO'  # all stations
 overwrite_ddir = 0          # 1 = delete data directory if it already exists
 
 # username and password for accessing embargoed data from IRIS

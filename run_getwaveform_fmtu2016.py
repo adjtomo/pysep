@@ -46,7 +46,8 @@ def get_data_iris_ncedc(cat0):
     before = 100
     after = 1200
     network = '*'
-    station = '*'
+    #station = '*'
+    station = '*,-PURD,-NV33,-GPO'
     channel = 'BH*,LH*'
     resample_freq = 20      # 0 for no resampling
 
