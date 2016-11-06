@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 16
+iex = 20
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -420,6 +420,21 @@ if iex == 19:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# Iniskin earthquake
+if iex == 20:
+    idb = 1
+    otime = obspy.UTCDateTime("2016-1-24T10:30:29")
+    min_dist = 0
+    max_dist = 800
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = 'AV,CN,ZE,AT,TA,AK,XV'
+    channel = 'BH*,HH*'
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 0
+    resample_freq = 0 
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # fetch and process waveforms
