@@ -42,8 +42,8 @@ overwrite_ddir = 0          # 1 = delete data directory if it already exists
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
 # Run example iex = 4 to check
-user = ""
-password = ""
+user = ''
+password = ''
 
 # (Do not use)
 # This is a template for testing before creating an example.
@@ -64,7 +64,7 @@ if iex == 1:
     max_dist = 500
     tbefore_sec = 100
     tafter_sec = 300
-    network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
 
 # ERROR EXAMPLE [obspy]
@@ -96,6 +96,7 @@ if iex == 3:
     tafter_sec = 300
     #network = '*'       # crashes
     #network = 'AK,IM'   # crashes (Error because of the IM network)
+    #network = '*,-IM'   # stalls indefinitely (syntax works for stations but not networks)
     network = 'AK'       # works fine 
     channel = 'BH*'
 
@@ -103,10 +104,11 @@ if iex == 3:
 if iex == 4:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
-    max_dist = 700
+    max_dist = 300
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
+    network = '*,-IM' 
     channel = 'BH*,HH*'
 
 # ROTATION example for components 1,2,Z
@@ -199,7 +201,7 @@ if iex == 9:
     max_dist = 500
     tbefore_sec = 100
     tafter_sec = 300
-    network = 'AK,AT,AV,CN,II,IU,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH*'
     network = 'AV'
     station = 'SPBG,KABU'                      # For testing data gaps 
@@ -423,18 +425,27 @@ if iex == 19:
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # Iniskin earthquake
+# NOTE: must enter username and password above to get SALMON (ZE) stations
 if iex == 20:
     idb = 1
-    otime = obspy.UTCDateTime("2016-1-24T10:30:29")
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
+    elat = 59.75
+    elon = -153.27
+    edep = 110700  # in meters
+    emag = 7.1
+    # subset of stations
     min_dist = 0
-    max_dist = 800
+    max_dist = 200
     tbefore_sec = 100
     tafter_sec = 600
-    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU'
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
     channel = 'BH*,HH*'
-    scale_factor = 10.0**2  # original
-    overwrite_ddir = 1
-    resample_freq = 0 
+    resample_freq = 0        # no resampling
+    scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # fetch and process waveforms
