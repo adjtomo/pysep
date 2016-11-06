@@ -430,10 +430,10 @@ if iex == 20:
     max_dist = 800
     tbefore_sec = 100
     tafter_sec = 600
-    network = 'AV,CN,ZE,AT,TA,AK,XV'
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU'
     channel = 'BH*,HH*'
     scale_factor = 10.0**2  # original
-    overwrite_ddir = 0
+    overwrite_ddir = 1
     resample_freq = 0 
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
