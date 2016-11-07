@@ -448,6 +448,21 @@ if iex == 20:
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
+# Minto earthquake (Clear) - Mw 4.1 
+if iex == 21:
+    idb = 1
+    otime = obspy.UTCDateTime("2016-11-06T9:29:10")
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 300
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'
+    channel = 'BH*,HH*'
+    scale_factor = 10.0**2  # original
+    overwrite_ddir = 1
+    resample_freq = 50 
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
 # fetch and process waveforms
 if idb == 1:
     # import functions to access waveforms
