@@ -45,7 +45,7 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, evname_key):
+def rotate_and_write_stream(stream, evname_key, icreateNull=1):
     """
     Rotate an obspy stream to backazimuth
 
@@ -94,10 +94,15 @@ def rotate_and_write_stream(stream, evname_key):
 #        #if len(substr) != 3:
         if len(substr) < 3:
             for subtr in substr:
-                print('One or more components missing: consider removing ',
+                if icreateNull == 1:
+                    print('One or more components missing: consider removing ',
+                          subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
+                          ' Number of traces: ', len(substr))
+                if icreateNull == 0:
+                    stream.remove(subtr)
+                    print('One or more components missing: Removing ',
                       subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
                       ' Number of traces: ', len(substr))
-                #stream.remove(subtr)
 
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []

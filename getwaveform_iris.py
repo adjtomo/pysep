@@ -20,7 +20,7 @@ def run_get_waveform(c, event,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2,
-                     pre_filt=(0.005, 0.006, 10.0, 15.0)):
+                     pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1):
     """
     Get SAC waveforms for an event
 
@@ -211,7 +211,7 @@ def run_get_waveform(c, event,
     write_stream_sac(st2, evname_key)
 
     if ifrotate:
-        rotate_and_write_stream(st2, evname_key)
+        rotate_and_write_stream(st2, evname_key, icreateNull)
 
     if ifCapInp:
         write_cap_weights(st2, evname_key, client_name, event)

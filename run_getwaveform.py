@@ -38,6 +38,7 @@ max_dist = 20000
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
 overwrite_ddir = 0          # 1 = delete data directory if it already exists
+icreateNull = 1
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -508,7 +509,7 @@ if idb == 1:
             ifRemoveResponse = remove_response,
             ifDetrend = detrend, ifDemean = demean, 
             ifEvInfo = output_event_info, 
-            scale_factor = scale_factor, pre_filt = pre_filt)
+            scale_factor = scale_factor, pre_filt = pre_filt, icreateNull=icreateNull)
 
 if idb == 3:
     import llnl_db_client
