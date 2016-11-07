@@ -95,7 +95,7 @@ def rotate_and_write_stream(stream, evname_key):
         if len(substr) < 3:
             for subtr in substr:
                 print('One or more components missing: consider removing ',
-                      subtr.stats.station, ' ', subtr.stats.channel,
+                      subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
                       ' Number of traces: ', len(substr))
                 #stream.remove(subtr)
 

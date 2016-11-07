@@ -128,15 +128,15 @@ def run_get_waveform(c, event,
     output_log = "data_processing_status" + "_" + client_name + ".log"
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
-    fid.write("evtime net sta cha starttime endtime npts length (sec)\n")
+    fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
     for tr in st2:
-        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
-                tr.stats.network, tr.stats.station, tr.stats.channel, \
+        fid.write("\n%s %s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.location, tr.stats.channel, \
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
                 float(tr.stats.npts / tr.stats.sampling_rate)))
         if tr.stats.npts < tr.stats.sampling_rate * (before + after):
             print("WARNING. data available < (before + after) for station " + \
-                    tr.stats.station + " -- consider removing this station")
+                    tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel + " -- consider removing this station")
             fid.write(" -- data missing.")
             # 20160912 cralvizuri@alaska.edu --
             # the original code removes waveforms that do not have the same
