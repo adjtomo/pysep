@@ -209,6 +209,9 @@ def run_get_waveform(c, event,
                 float(tr.stats.npts / tr.stats.sampling_rate)))
 
     write_stream_sac(st2, evname_key)
+    # Save raw waveforms
+    write_stream_sac(_stream, evname_key='RAW')
+
 
     if ifrotate:
         rotate_and_write_stream(st2, evname_key, icreateNull)
