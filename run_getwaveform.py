@@ -440,7 +440,7 @@ if iex == 20:
     emag = 7.1
     # subset of stations
     min_dist = 0
-    max_dist = 200
+    max_dist = 800
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
@@ -449,8 +449,78 @@ if iex == 20:
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
-# Minto earthquake (Clear) - Mw 4.1 
+# Iniskin earthquake
+# NOTE: must enter username and password above to get SALMON (ZE) stations
+if iex == 20:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
+    elat = 59.75
+    elon = -153.27
+    edep = 110700  # in meters
+    emag = 7.1
+    # subset of stations
+    min_dist = 0
+    max_dist = 800
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
+    channel = 'BH*,HH*'
+    resample_freq = 0        # no resampling
+    scale_factor = 1         # no scale factor
+    pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# Iniskin earthquake - all strong motion
 if iex == 21:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
+    elat = 59.75
+    elon = -153.27
+    edep = 110700  # in meters
+    emag = 7.1
+    # subset of stations
+    min_dist = 0
+    max_dist = 800
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'
+    channel = 'HN*'
+    resample_freq = 0        # no resampling
+    scale_factor = 1         # no scale factor
+    pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
+
+# Iniskin earthquake - strong motion at COLA
+if iex == 22:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
+    elat = 59.75
+    elon = -153.27
+    edep = 110700  # in meters
+    emag = 7.1
+    # subset of stations
+    min_dist = 0
+    max_dist = 800
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = 'IU'
+    channel = 'BH*,HH*,HN*'
+    resample_freq = 0        # no resampling
+    scale_factor = 1         # no scale factor
+    pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
+
+# MFFZ earthquake near Clear - Mw 4.1 
+if iex == 30:
     idb = 1
     otime = obspy.UTCDateTime("2016-11-06T9:29:10")
     min_dist = 0
