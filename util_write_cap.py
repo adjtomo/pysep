@@ -501,17 +501,18 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
                         tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
-                        sensor = ch.sensor.description.split()
-                        #  add sensor information
-                        #print('-->', ch.sensor.description)
-                        if len(sensor) == 1:
-                            tr.stats.sac['kuser1'] = sensor[0]
-                        elif len(sensor) == 2:
-                            tr.stats.sac['kuser1'] = sensor[0]
-                            tr.stats.sac['kuser2'] = sensor[1]
-                        else:
-                            tr.stats.sac['kuser1'] = sensor[1]
-                            tr.stats.sac['kuser2'] = sensor[2]
+                        sensor = ch.sensor.description
+                        # add sensor information
+                        # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
+                        # CAUTION: Using KT* instead to store instrument info (KT actually is for time pick identification)
+                        # Keep KT0, KT1, KT2 for picks
+                        # print('-->', ch.sensor.description)
+                        for indx in range(0,5):
+                            indx_start = indx*8
+                            indx_end = (indx+1)*8
+                            header_tag = indx+3
+                            # print('-->', sensor[indx_start:indx_end])
+                            tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end] 
                 
         # obspy has cmpinc for Z component as -90
         #if tmp == 'Z':
