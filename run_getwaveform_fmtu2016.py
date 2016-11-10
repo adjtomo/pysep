@@ -165,44 +165,44 @@ def getdata_iris_llnl(dataset, llnl=False, iris=False):
 # Then wrote their matching EVID.
 # Using EVIDs I wrote a script to output event times from the LLNL database.
 evids_times_explosions = {
-        "584497":  "1988-02-15T18:10:00.000000Z",
-        "602554":  "1989-06-27T15:30:00.000000Z",
-        "605660":  "1989-09-14T15:00:00.100000Z",  # KNB, MNV. problem applying rotate2zne
-        "607806":  "1989-10-31T15:30:00.000000Z",
-        "609251":  "1989-12-08T15:00:00.000000Z",
-        "612817":  "1990-03-10T16:00:00.000000Z",
-        "616762":  "1990-06-13T16:00:00.000000Z",
-        "617078":  "1990-06-21T18:15:00.000000Z",
-        "623055":  "1990-11-14T19:17:00.700000Z", 
-        "627879":  "1991-03-08T21:02:45.000000Z", 
-        "628994":  "1991-04-04T19:00:00.000000Z", # no waveforms from NCEDC.
-        "635527":  "1991-09-14T19:00:00.000000Z", # ok (Hoya)
-        "636899":  "1991-10-18T19:12:00.000000Z",
-        "638595":  "1991-11-26T18:35:00.000000Z", 
-        "643767":  "1992-03-26T16:30:00.000000Z", 
-        "653134":  "1992-09-18T17:00:00.000000Z",  # KNB, LAC, MNV are very short traces (useless)
-        "653332":  "1992-09-23T15:04:00.000000Z"  
+        "584497":  "1988-02-15T18:10:00.09",
+        "602554":  "1989-06-27T15:30:00.02",
+        "605660":  "1989-09-14T15:00:00.10",  # KNB, MNV. problem applying rotate2zne
+        "607806":  "1989-10-31T15:30:00.09",
+        "609251":  "1989-12-08T15:00:00.09",
+        "612817":  "1990-03-10T16:00:00.08",
+        "616762":  "1990-06-13T16:00:00.09",
+        "617078":  "1990-06-21T18:15:00.00",
+        "623055":  "1990-11-14T19:17:00.07", 
+        "627879":  "1991-03-08T21:02:45.08", 
+        "628994":  "1991-04-04T19:00:00.00", # no waveforms from NCEDC.
+        "635527":  "1991-09-14T19:00:00.08", # ok (Hoya)
+        "636899":  "1991-10-18T19:12:00.00",
+        "638595":  "1991-11-26T18:35:00.07", 
+        "643767":  "1992-03-26T16:30:00.00", 
+        "653134":  "1992-09-18T17:00:00.08",  # KNB, LAC, MNV are very short traces (useless)
+        "653332":  "1992-09-23T15:04:00.00"  
         }
 
 evids_times_quakes = {
-        "648766": "1992-06-29T10:14:22.480000Z", 
-        "649220": "1992-07-05T06:54:13.560000Z", 
-        "706312": "1995-07-31T12:34:46.860000Z", # ERROR. ValueError: setting an array element with a sequence. |  No waveform managed to get instrument corrected (LLNL)
-        "737983": "1997-04-26T01:49:35.410000Z", # NO IRIS data available.
-        "743984": "1997-09-12T13:36:55.420000Z", 
-        "768593": "1998-12-12T01:41:31.370000Z", 
-        "770646": "1999-01-23T03:00:33.200000Z", # ERROR. ValueError: Could not find a valid Response Stage Type.
-        "770868": "1999-01-27T10:44:23.310000Z", # ERROR. ValueError: Could not find a valid Response Stage Type.
-        "1592802":"2002-06-14T12:40:44.450000Z", # ERROR. ValueError: Could not find a valid Response Stage Type.
-        "-99999": "1996-09-05T08:16:56.090000Z", # ERROR. Can not use evalresp on response with no response stages. | IRIS returns deeper event (7.5km, not 5km) 1996-09-05T08:16:55.780000Z | +36.745, -116.282 | 3.2 mL
-        "-99999": "1997-06-14T19:48:19.930000Z", # ERROR. Can not use evalresp on response with no response stages. | IRIS returns shallower event (5km, not 7km) 1997-06-14T19:48:21.200000Z | +36.806, -115.847 | 3.4 mL
-        "-99999": "2007-01-24T11:30:16.100000Z"  # ERROR. ValueError: Could not find a valid Response Stage Type. | IRIS returns smaller event (not 4.09) 2007-01-24T11:30:16.650000Z | +37.424, -117.064 | 2.9 mb
+        "648766": "1992-06-29T10:14:21.89", 
+        "649220": "1992-07-05T06:54:10.72", 
+        "706312": "1995-07-31T12:34:45.03", # ERROR. ValueError: setting an array element with a sequence. |  No waveform managed to get instrument corrected (LLNL)
+        "737983": "1997-04-26T01:49:35.58", # NO IRIS data available.
+        "743984": "1997-09-12T13:36:54.20", 
+        "768593": "1998-12-12T01:41:30.33", 
+        "770646": "1999-01-23T03:00:34.82", # ERROR. ValueError: Could not find a valid Response Stage Type.
+        "770868": "1999-01-27T10:44:17.80", # ERROR. ValueError: Could not find a valid Response Stage Type.
+        "1592802":"2002-06-14T12:40:45.82", # ERROR. ValueError: Could not find a valid Response Stage Type.
+        "-99999": "1996-09-05T08:16:56.09", # ERROR. Can not use evalresp on response with no response stages. | IRIS returns deeper event (7.5km, not 5km) 1996-09-05T08:16:55.780000Z | +36.745, -116.282 | 3.2 mL
+        "-99999": "1997-06-14T19:48:19.93", # ERROR. Can not use evalresp on response with no response stages. | IRIS returns shallower event (5km, not 7km) 1997-06-14T19:48:21.200000Z | +36.806, -115.847 | 3.4 mL
+        "-99999": "2007-01-24T11:30:16.10"  # ERROR. ValueError: Could not find a valid Response Stage Type. | IRIS returns smaller event (not 4.09) 2007-01-24T11:30:16.650000Z | +37.424, -117.064 | 2.9 mb
         }
 
 evids_times_collapses = {
-        "522227": "1982-08-05T14:00:00.000000Z", # No waveform managed to get instrument corrected (LLNL)
-        "697661": "1995-02-03T15:26:10.660000Z",
-        "1324942": "2000-01-30T14:46:51.310000Z" # ERROR. ValueError: Could not find a valid Response Stage Type. | No waveform managed to get instrument corrected (LLNL)
+        "522227": "1982-08-05T14:21:00", # No waveform managed to get instrument corrected (LLNL)
+        "697661": "1995-02-03T15:26:10.69",
+        "1324942": "2000-01-30T14:46:51.31" # ERROR. ValueError: Could not find a valid Response Stage Type. | No waveform managed to get instrument corrected (LLNL)
         }
 
 # get the waveforms
