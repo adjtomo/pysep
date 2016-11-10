@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 20
+iex = 1
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -496,7 +496,12 @@ if iex == 21:
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
 
-# Iniskin earthquake - strong motion at COLA
+# Iniskin earthquake - all channels at IU.COLA and II.KDAK
+# note: strong motion at COLA is IU.COLA.20.HNZ.sac
+#       strong motion at KDAK is II.KDAK.00.ENZ.sac
+# question: why is IU.COLA.50.LRH.sac returned with the channel request below?
+# http://ds.iris.edu/mda/II/KDAK
+# http://ds.iris.edu/mda/IU/COLA
 if iex == 22:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
@@ -513,8 +518,8 @@ if iex == 22:
     max_dist = 800
     tbefore_sec = 100
     tafter_sec = 600
-    network = 'IU'
-    channel = 'BH*,HH*,HN*'
+    network = 'IU,II'
+    channel = '*H*,*N*'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
