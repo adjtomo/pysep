@@ -500,6 +500,8 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                         # print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
+                        tr.stats.sac['kinst'] = ch.sensor.description
+                        tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
                 
         # obspy has cmpinc for Z component as -90
         #if tmp == 'Z':
