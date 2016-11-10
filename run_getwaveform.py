@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 1
+iex = 0
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -39,6 +39,13 @@ network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
 overwrite_ddir = 0          # 1 = delete data directory if it already exists
 icreateNull = 1
+#------Filter--------------
+ifFilter = True
+filt_type = 'bandpass'
+fmin = .02
+fmax = .1
+zerophase = False     # = False (causal); = True (acausal); 
+corners = 4    # Is corner in Obspy same as Pole in SAC?
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -55,8 +62,8 @@ if iex == 0:
     max_dist = 500
     tbefore_sec = 100
     tafter_sec = 300
-    network = 'XP'
-    channel = '??Z'
+    network = 'II,IU'
+    channel = '*'
 
 # SilwalTape2016 example event (Anchorage)
 if iex == 1:
@@ -569,20 +576,24 @@ if idb == 1:
     # Delete existing data directory
     eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
+    if os.path.exists('RAW'):
+        shutil.rmtree('RAW')
     if overwrite_ddir and os.path.exists(ddir):
         shutil.rmtree(ddir)
 
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = ev, 
-            min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, 
-            network = network, station = station, channel = channel, 
-            resample_freq = resample_freq, ifrotate = rotate,
-            ifCapInp = output_cap_weight_file, 
-            ifRemoveResponse = remove_response,
-            ifDetrend = detrend, ifDemean = demean, 
-            ifEvInfo = output_event_info, 
-            scale_factor = scale_factor, pre_filt = pre_filt, icreateNull=icreateNull)
+                                      min_dist = min_dist, max_dist = max_dist, 
+                                      before = tbefore_sec, after = tafter_sec, 
+                                      network = network, station = station, channel = channel, 
+                                      resample_freq = resample_freq, ifrotate = rotate,
+                                      ifCapInp = output_cap_weight_file, 
+                                      ifRemoveResponse = remove_response,
+                                      ifDetrend = detrend, ifDemean = demean, 
+                                      ifEvInfo = output_event_info, 
+                                      scale_factor = scale_factor, pre_filt = pre_filt, icreateNull=icreateNull,
+                                      ifFilter = ifFilter, fmin = fmin, fmax = fmax, filt_type = filt_type, 
+                                      zerophase = zerophase, corners = corners)
 
 if idb == 3:
     import llnl_db_client

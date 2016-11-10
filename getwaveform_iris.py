@@ -20,7 +20,9 @@ def run_get_waveform(c, event,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2,
-                     pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1):
+                     pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
+                     ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
+                     zerophase=False, corners=4):
     """
     Get SAC waveforms for an event
 
@@ -97,8 +99,15 @@ def run_get_waveform(c, event,
     if ifDetrend:
         stream.detrend('linear')
 
+    if ifFilter:
+        for tr in stream:
+            print('Filtering ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
+            tr.filter('bandpass',freqmin=fmin,freqmax=fmax,zerophase=False,corners=corners)
+
     if ifRemoveResponse:
-        stream.remove_response(inventory=stations, pre_filt=pre_filt,
+        for tr in stream:
+            print('Removing instrument response from ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
+            tr.remove_response(inventory=stations, pre_filt=pre_filt,
                                output="VEL")
 
     if scale_factor > 0:
@@ -213,7 +222,7 @@ def run_get_waveform(c, event,
         fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
                 tr.stats.network, tr.stats.station, tr.stats.channel, \
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
+                float(tr.stats.npts / tr.stats.sampling_rate))) 
 
     write_stream_sac(st2, evname_key)
     # Move raw waveforms inside this directory
