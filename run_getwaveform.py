@@ -524,7 +524,7 @@ if iex == 30:
     idb = 1
     otime = obspy.UTCDateTime("2016-11-06T9:29:10")
     min_dist = 0
-    max_dist = 500
+    max_dist = 300
     tbefore_sec = 100
     tafter_sec = 300
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'
