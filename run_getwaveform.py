@@ -56,7 +56,7 @@ if iex == 0:
     tbefore_sec = 100
     tafter_sec = 300
     network = 'XP'
-    channel = '*Z'
+    channel = '??Z'
 
 # SilwalTape2016 example event (Anchorage)
 if iex == 1:
@@ -66,7 +66,7 @@ if iex == 1:
     tbefore_sec = 100
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
-    channel = 'BH*'
+    channel = 'BH?'
 
 # ERROR EXAMPLE [obspy]
 # PROBLEM: No waveforms are returned -- perhaps related to the tbefore_sec request
@@ -80,7 +80,7 @@ if iex == 2:
     tbefore_sec = 41         # works fine
     tafter_sec = 600
     network = 'AV'       # Crashes when -  tbefore_sec = 42; Works fine when - tbefore_sec = 41
-    channel = 'BH*'
+    channel = 'BH?'
 
 # ERROR EXAMPLE [obspy]
 # PROBLEM: If a particular network is requested (either explicitly or within *), no waveforms are returned.
@@ -99,7 +99,7 @@ if iex == 3:
     #network = 'AK,IM'   # crashes (Error because of the IM network)
     #network = '*,-IM'   # stalls indefinitely (syntax works for stations but not networks)
     network = 'AK'       # works fine 
-    channel = 'BH*'
+    channel = 'BH?'
 
 # SALMON example (restricted data from IRIS)
 if iex == 4:
@@ -109,8 +109,7 @@ if iex == 4:
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
-    network = '*,-IM' 
-    channel = 'BH*,HH*'
+    channel = 'BH?,HH?'
 
 # ROTATION example for components 1,2,Z
 #    All rotations should be based on the azimuth of the sensor
@@ -124,7 +123,7 @@ if iex == 5:
     tafter_sec = 600
     #network = 'II,AK'
     station = 'KDAK,SWD'
-    channel = 'BH*'
+    channel = 'BH?'
 
 # nuclear event: LLNL (see also iex = 7)
 # GOAL: To find events in the LLNL database based on a target origin time, rather than an eid.
@@ -150,7 +149,7 @@ if iex == 6:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned
+    channel = 'BH?'      # ALL channels from LLNL are returned
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
     overwrite_ddir = 0
@@ -171,7 +170,7 @@ if iex == 7:
     # needs to be run TWICE to get BK stations and IRIS stations
     #network = 'BK'        # BK will go to NCEDC
     network = '*'         # * will give all at IRIS DMC
-    channel = 'BH*,LH*' 
+    channel = 'BH?,LH*' 
     overwrite_ddir = 0
 
 # problem 1: some stations return only vertical component. our tools crash in this case.
@@ -188,7 +187,7 @@ if iex==8:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'
-    channel = 'BH*,LH*,EH*' 
+    channel = 'BH?,LH*,EH*' 
 
 # 1. Waveform extraction for user defined event info
 # 2. Subset of stations for quickly testing data gaps and padding tests
@@ -203,7 +202,7 @@ if iex == 9:
     tbefore_sec = 100
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
-    channel = 'BH*'
+    channel = 'BH?'
     network = 'AV'
     station = 'SPBG,KABU'                      # For testing data gaps 
     use_catalog = 0                            # To get (lat,lon, etime, dep, mag) from some catalog = 1 OR use defined = 0 (see iex=9)
@@ -222,7 +221,7 @@ if iex == 10:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -242,7 +241,7 @@ if iex == 11:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -281,7 +280,7 @@ if iex == 12:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -297,7 +296,7 @@ if iex == 13:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -313,7 +312,7 @@ if iex == 14:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -342,7 +341,7 @@ if iex == 15:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -363,7 +362,7 @@ if iex == 16:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -379,7 +378,7 @@ if iex == 17:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -403,7 +402,7 @@ if iex == 18:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -419,7 +418,7 @@ if iex == 19:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH*'      # ALL channels from LLNL are returned regardless
+    channel = 'BH?'      # ALL channels from LLNL are returned regardless
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
@@ -444,7 +443,7 @@ if iex == 20:
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
-    channel = 'BH*,HH*'
+    channel = 'BH?,HH?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)
@@ -468,7 +467,7 @@ if iex == 20:
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
-    channel = 'BH*,HH*'
+    channel = 'BH?,HH?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)
@@ -499,7 +498,6 @@ if iex == 21:
 # Iniskin earthquake - all channels at IU.COLA and II.KDAK
 # note: strong motion at COLA is IU.COLA.20.HNZ.sac
 #       strong motion at KDAK is II.KDAK.00.ENZ.sac
-# question: why is IU.COLA.50.LRH.sac returned with the channel request below?
 # http://ds.iris.edu/mda/II/KDAK
 # http://ds.iris.edu/mda/IU/COLA
 if iex == 22:
@@ -519,7 +517,7 @@ if iex == 22:
     tbefore_sec = 100
     tafter_sec = 600
     network = 'IU,II'
-    channel = '*H*,*N*'
+    channel = '?H?,?N?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
@@ -533,7 +531,7 @@ if iex == 30:
     tbefore_sec = 100
     tafter_sec = 300
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'
-    channel = 'BH*,HH*'
+    channel = 'BH?,HH?'
     scale_factor = 10.0**2  # original
     overwrite_ddir = 1
     resample_freq = 50 
