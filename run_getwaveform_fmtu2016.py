@@ -200,7 +200,8 @@ evids_times_quakes = {
         }
 
 evids_times_collapses = {
-        "522227": "1982-08-05T14:21:00", # No waveform managed to get instrument corrected (LLNL)
+        #"522227": "1982-08-05T14:21:00", # Does not return data when using event time in Ford2009
+        "522227": "1982-08-05T14:00:00", # Event time from LLNL database
         "697661": "1995-02-03T15:26:10.69",
         "1324942": "2000-01-30T14:46:51.31" # ERROR. ValueError: Could not find a valid Response Stage Type. | No waveform managed to get instrument corrected (LLNL)
         }
