@@ -19,7 +19,7 @@ def run_get_waveform(c, event,
                      resample_freq=20, 
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
-                     scale_factor=10.0**2,
+                     scale_factor=10.0**2, ipre_filt = 1,
                      pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
                      ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
                      zerophase=False, corners=4):
@@ -101,11 +101,23 @@ def run_get_waveform(c, event,
 
     if ifFilter:
         for tr in stream:
-            print('Filtering ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
-            tr.filter('bandpass',freqmin=fmin,freqmax=fmax,zerophase=False,corners=corners)
+            print('Applying',filt_type,'Filter ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
+            tr.filter('bandpass',freqmin=fmin,freqmax=fmax,zerophase=zerophase,corners=corners)
 
     if ifRemoveResponse:
         for tr in stream:
+            if ipre_filt == 0:
+                pre_filt = None
+            elif ipre_filt == 1:
+                FCUT1_PAR = 4.0
+                FCUT2_PAR = 0.5
+                fnyq = tr.stats.sampling_rate/2
+                f2 = fnyq * FCUT2_PAR
+                f1 = FCUT1_PAR/(tr.stats.endtime - tr.stats.starttime)
+                f0 = 0.5*f1
+                f3 = 2.0*f2
+                pre_filt = (f0, f1, f2, f3)
+            print(pre_filt)
             print('Removing instrument response from ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
             tr.remove_response(inventory=stations, pre_filt=pre_filt,
                                output="VEL")

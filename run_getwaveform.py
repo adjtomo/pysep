@@ -30,19 +30,15 @@ max_dist = 20000
 # station parameters
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
-overwrite_ddir = 0          # 1 = delete data directory if it already exists
+overwrite_ddir = 0           # 1 = delete data directory if it already exists
 icreateNull = 1
 
 # pre-filter for deconvolution
 # https://ds.iris.edu/files/sac-manual/commands/transfer.html
 # fmaxc should be based on sampling rate (desired channels)
 # fminc should be based on the request length of the time series
-f1 = 1/200
-f2 = 10
-f0 = 0.5*f1
-f3 = 2.0*f2
-pre_filt=(f0, f1, f2, f3)
-#pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
+ipre_filt = 1                # =0 No pre_filter; =1 Use default pre_filter (see getwaveform_iris.py); =2 User defined pre_filter
+pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
 #------Filter--------------
 # for 'bandpass' both fmin and fmax are used
 # for 'lowpass' only fmin is used
@@ -51,8 +47,8 @@ ifFilter = False
 filt_type = 'bandpass'
 fmin = .02
 fmax = .1
-zerophase = False     # = False (causal); = True (acausal); 
-corners = 4    # Is corner in Obspy same as Pole in SAC?
+zerophase = False            # = False (causal); = True (acausal); 
+corners = 4                  # Is corner in Obspy same as Pole in SAC?
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -462,30 +458,6 @@ if iex == 20:
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)
 
-# Iniskin earthquake
-# NOTE: must enter username and password above to get SALMON (ZE) stations
-if iex == 20:
-    idb = 1
-    overwrite_ddir = 1       # delete data dir if it exists
-    use_catalog = 0          # do not use event catalog for source parameters
-    # GCMT source parameters
-    # the otime is the centroid time and accounts for tshift
-    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
-    elat = 59.75
-    elon = -153.27
-    edep = 110700  # in meters
-    emag = 7.1
-    # subset of stations
-    min_dist = 0
-    max_dist = 800
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
-    channel = 'BH?,HH?'
-    resample_freq = 0        # no resampling
-    scale_factor = 1         # no scale factor
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
-
 # Iniskin earthquake - all strong motion
 if iex == 21:
     idb = 1
@@ -597,8 +569,8 @@ if idb == 1:
                                       ifCapInp = output_cap_weight_file, 
                                       ifRemoveResponse = remove_response,
                                       ifDetrend = detrend, ifDemean = demean, 
-                                      ifEvInfo = output_event_info, 
-                                      scale_factor = scale_factor, pre_filt = pre_filt, icreateNull=icreateNull,
+                                      ifEvInfo = output_event_info, scale_factor = scale_factor, 
+                                      ipre_filt = ipre_filt, pre_filt = pre_filt, icreateNull=icreateNull,
                                       ifFilter = ifFilter, fmin = fmin, fmax = fmax, filt_type = filt_type, 
                                       zerophase = zerophase, corners = corners)
 
