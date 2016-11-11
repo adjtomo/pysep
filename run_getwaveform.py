@@ -177,7 +177,7 @@ if iex == 7:
     # needs to be run TWICE to get BK stations and IRIS stations
     #network = 'BK'        # BK will go to NCEDC
     network = '*'         # * will give all at IRIS DMC
-    channel = 'BH?,LH*' 
+    channel = 'BH?,LH?' 
     overwrite_ddir = 0
 
 # problem 1: some stations return only vertical component. our tools crash in this case.
@@ -194,7 +194,7 @@ if iex==8:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'
-    channel = 'BH?,LH*,EH*' 
+    channel = 'BH?,LH?,EH?' 
 
 # 1. Waveform extraction for user defined event info
 # 2. Subset of stations for quickly testing data gaps and padding tests
@@ -497,7 +497,7 @@ if iex == 21:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'
-    channel = 'HN*'
+    channel = '?N?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
