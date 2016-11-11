@@ -114,6 +114,7 @@ def run_get_waveform(c, event,
         print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
         for tr in stream.traces:
             tr.data = tr.data * scale_factor
+            tr.stats.sac['scale'] = scale_factor
 
     stream.detrend('demean')
 
