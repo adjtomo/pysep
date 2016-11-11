@@ -14,7 +14,6 @@ idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 # Pre-processing (manily for CAP)
 rotate = True
 output_cap_weight_file = True
-remove_response = True
 detrend = True
 demean = True
 output_event_info = True
@@ -31,24 +30,30 @@ max_dist = 20000
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
 overwrite_ddir = 0           # 1 = delete data directory if it already exists
-icreateNull = 1
+icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
 
-# pre-filter for deconvolution
-# https://ds.iris.edu/files/sac-manual/commands/transfer.html
-# fmaxc should be based on sampling rate (desired channels)
-# fminc should be based on the request length of the time series
-ipre_filt = 1                # =0 No pre_filter; =1 Use default pre_filter (see getwaveform_iris.py); =2 User defined pre_filter
-pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
 #------Filter--------------
-# for 'bandpass' both fmin and fmax are used
-# for 'lowpass' only fmin is used
-# for 'highpass' only fmax is used
+# for 'bandpass' both f1 and f2 are used
+# for 'lowpass' only f1 is used
+# for 'highpass' only f2 is used
+# Perhaps you want to set ipre_filt = 0 to prevent extra filtering
 ifFilter = False
 filt_type = 'bandpass'
-fmin = .02
-fmax = .1
-zerophase = False            # = False (causal); = True (acausal); 
+f1 = 1/50
+f2 = 1/10
+zerophase = True            # = False (causal); = True (acausal); 
 corners = 4                  # Is corner in Obspy same as Pole in SAC?
+# pre-filter for deconvolution
+# https://ds.iris.edu/files/sac-manual/commands/transfer.html
+# f2 should be based on sampling rate (desired channels)
+# f1 should be based on the request length of the time series
+# Pre-filter will not be applied if remove_response = False 
+remove_response = True
+ipre_filt = 1                # =0 No pre_filter; =1 Use default pre_filter (see getwaveform_iris.py); =2 User defined pre_filter
+f0 = 0.5*f1
+f3 = 2.0*f2
+pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
+#pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -571,7 +576,7 @@ if idb == 1:
                                       ifDetrend = detrend, ifDemean = demean, 
                                       ifEvInfo = output_event_info, scale_factor = scale_factor, 
                                       ipre_filt = ipre_filt, pre_filt = pre_filt, icreateNull=icreateNull,
-                                      ifFilter = ifFilter, fmin = fmin, fmax = fmax, filt_type = filt_type, 
+                                      ifFilter = ifFilter, fmin = f1, fmax = f2, filt_type = filt_type, 
                                       zerophase = zerophase, corners = corners)
 
 if idb == 3:

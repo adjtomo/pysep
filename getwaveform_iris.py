@@ -102,8 +102,13 @@ def run_get_waveform(c, event,
     if ifFilter:
         for tr in stream:
             print('Applying',filt_type,'Filter ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
-            tr.filter('bandpass',freqmin=fmin,freqmax=fmax,zerophase=zerophase,corners=corners)
-
+            if filt_type=='bandpass':
+                tr.filter(filt_type,freqmin=fmin,freqmax=fmax,zerophase=zerophase,corners=corners)
+            elif filt_type=='lowpass':
+                tr.filter(filt_type,freq=fmin,zerophase=zerophase,corners=corners)
+            elif filt_type=='highpass':
+                tr.filter(filt_type,freq=fmax,zerophase=zerophase,corners=corners)
+            
     if ifRemoveResponse:
         for tr in stream:
             if ipre_filt == 0:
@@ -117,7 +122,7 @@ def run_get_waveform(c, event,
                 f0 = 0.5*f1
                 f3 = 2.0*f2
                 pre_filt = (f0, f1, f2, f3)
-            print(pre_filt)
+            #print(pre_filt)
             print('Removing instrument response from ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
             tr.remove_response(inventory=stations, pre_filt=pre_filt,
                                output="VEL")
