@@ -507,7 +507,7 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                         # CAUTION: Using KT* instead to store instrument info (KT actually is for time pick identification)
                         # Keep KT0, KT1, KT2 for picks
                         # print('-->', ch.sensor.description)
-                        for indx in range(0,5):
+                        for indx in range(0,6):
                             indx_start = indx*8
                             indx_end = (indx+1)*8
                             header_tag = indx+3
