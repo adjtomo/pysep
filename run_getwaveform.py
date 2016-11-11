@@ -18,14 +18,7 @@ remove_response = True
 detrend = True
 demean = True
 output_event_info = True
-# pre-filter for deconvolution
-# https://ds.iris.edu/files/sac-manual/commands/transfer.html
-# fmaxc should be based on sampling rate (desired channels)
-# fminc should be based on the request length of the time series
-fminc = 1/200
-fmaxc = 10
-pre_filt=(0.5*fminc, fminc, fmaxc, 2.0*fmaxc)    
-#pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
+
 # for CAP all waveforms need to have the same sample rate
 resample_freq = 50.0         # =0 for no resampling
 scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
@@ -39,8 +32,22 @@ network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
 overwrite_ddir = 0          # 1 = delete data directory if it already exists
 icreateNull = 1
+
+# pre-filter for deconvolution
+# https://ds.iris.edu/files/sac-manual/commands/transfer.html
+# fmaxc should be based on sampling rate (desired channels)
+# fminc should be based on the request length of the time series
+f1 = 1/200
+f2 = 10
+f0 = 0.5*f1
+f3 = 2.0*f2
+pre_filt=(f0, f1, f2, f3)
+#pre_filt=(0.005, 0.006, 10.0, 15.0) # BH default
 #------Filter--------------
-ifFilter = True
+# for 'bandpass' both fmin and fmax are used
+# for 'lowpass' only fmin is used
+# for 'highpass' only fmax is used
+ifFilter = False
 filt_type = 'bandpass'
 fmin = .02
 fmax = .1
