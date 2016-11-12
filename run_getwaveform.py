@@ -7,7 +7,7 @@ import shutil   # only used for deleting data directory
 import os
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 31
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -37,9 +37,9 @@ icreateNull = 1              # create Null traces so that rotation can work (obs
 # for 'lowpass' only f1 is used
 # for 'highpass' only f2 is used
 # Perhaps you want to set ipre_filt = 0 to prevent extra filtering
-ifFilter = False
+ifFilter = False 
 filt_type = 'bandpass'
-f1 = 1/50
+f1 = 1/40
 f2 = 1/10
 zerophase = True            # = False (causal); = True (acausal); 
 corners = 4                  # Is corner in Obspy same as Pole in SAC?
@@ -527,6 +527,28 @@ if iex == 30:
     overwrite_ddir = 1
     resample_freq = 50 
     pre_filt = (0.005, 0.006, 10.0, 15.0)
+
+# NENNUC event (from Steve)
+if iex == 31:
+    idb = 1
+    otime = obspy.UTCDateTime("2016-01-14T19:04:11")
+    elat = 64.6840
+    elon = -149.2696
+    edep = 18400             # in meters
+    emag = 3.8
+    use_catalog = 0          # do not use event catalog for source parameters
+    min_dist = 0
+    max_dist = 200
+    tbefore_sec = 2000
+    tafter_sec = 2000
+    network = 'XV,TA,AK,IU'
+    channel = 'BH?,HH?'
+    resample_freq = 0 
+    scale_factor = 1
+    ifFilter = True
+    zerophase = False
+    ipre_filt = 0
+    
 
 # fetch and process waveforms
 if idb == 1:
