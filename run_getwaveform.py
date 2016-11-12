@@ -6,6 +6,11 @@ import util_helpers
 import shutil   # only used for deleting data directory
 import os
 
+# TO DO
+# + filetags for the case iFilter = True (like lp10, bp10_40, etc)
+# + output three sets of seismograms for remove_response = True: raw, ZNE, ZRT
+# + update units for sac header KUSER0
+
 # EXAMPLES (choose one)
 iex = 31
 
@@ -36,20 +41,30 @@ icreateNull = 1              # create Null traces so that rotation can work (obs
 # for 'bandpass' both f1 and f2 are used
 # for 'lowpass' only f1 is used
 # for 'highpass' only f2 is used
+#
+# EXAMPLES
+#                                   ifFilter  zerophase  remove_response  ipre_filt
+# A. CAP-ready waveforms [DEFAULT]: False     NA         True             1
+# B. plot-ready waveforms:          True      True       True             2
+# C. plot-ready, causal waveforms:  True      False      True             0
+# D. possible sensor issues:        True      False      False            NA
+#
 # Perhaps you want to set ipre_filt = 0 to prevent extra filtering
 ifFilter = False 
 filt_type = 'bandpass'
+# f1 should consider the requested length of the time series
+# f2 should consider the sampling rate for the desired channels
 f1 = 1/40
 f2 = 1/10
-zerophase = True            # = False (causal); = True (acausal); 
+zerophase = True             # = False (causal), = True (acausal)
 corners = 4                  # Is corner in Obspy same as Pole in SAC?
 # pre-filter for deconvolution
 # https://ds.iris.edu/files/sac-manual/commands/transfer.html
-# f2 should be based on sampling rate (desired channels)
-# f1 should be based on the request length of the time series
 # Pre-filter will not be applied if remove_response = False 
 remove_response = True
-ipre_filt = 1                # =0 No pre_filter; =1 Use default pre_filter (see getwaveform_iris.py); =2 User defined pre_filter
+ipre_filt = 1                # =0 No pre_filter
+                             # =1 default pre_filter (see getwaveform_iris.py)
+                             # =2 user-defined pre_filter
 f0 = 0.5*f1
 f3 = 2.0*f2
 pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
@@ -450,7 +465,7 @@ if iex == 20:
     otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
     elat = 59.75
     elon = -153.27
-    edep = 110700  # in meters
+    edep = 110700
     emag = 7.1
     # subset of stations
     min_dist = 0
@@ -473,7 +488,7 @@ if iex == 21:
     otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
     elat = 59.75
     elon = -153.27
-    edep = 110700  # in meters
+    edep = 110700
     emag = 7.1
     # subset of stations
     min_dist = 0
@@ -487,10 +502,9 @@ if iex == 21:
     pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
 
 # Iniskin earthquake - all channels at IU.COLA and II.KDAK
-# note: strong motion at COLA is IU.COLA.20.HNZ.sac
-#       strong motion at KDAK is II.KDAK.00.ENZ.sac
-# http://ds.iris.edu/mda/II/KDAK
-# http://ds.iris.edu/mda/IU/COLA
+# note different channels and location codes for strong motion:
+#       IU.COLA.20.HNZ.sac       http://ds.iris.edu/mda/IU/COLA
+#       II.KDAK.00.ENZ.sac       http://ds.iris.edu/mda/II/KDAK
 if iex == 22:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
@@ -500,7 +514,7 @@ if iex == 22:
     otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
     elat = 59.75
     elon = -153.27
-    edep = 110700  # in meters
+    edep = 110700
     emag = 7.1
     # subset of stations
     min_dist = 0
@@ -511,7 +525,6 @@ if iex == 22:
     channel = '?H?,?N?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
-    pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
 
 # MFFZ earthquake near Clear - Mw 4.1 
 if iex == 30:
@@ -526,17 +539,17 @@ if iex == 30:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 1
     resample_freq = 50 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # NENNUC event (from Steve)
 if iex == 31:
     idb = 1
-    otime = obspy.UTCDateTime("2016-01-14T19:04:11")
-    elat = 64.6840
-    elon = -149.2696
-    edep = 18400             # in meters
+    use_catalog = 0          # manually enter AEC catalog parameters
+    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
+    elat = 64.6827
+    elon = -149.2479
+    edep = 22663.7
     emag = 3.8
-    use_catalog = 0          # do not use event catalog for source parameters
+
     min_dist = 0
     max_dist = 200
     tbefore_sec = 2000
@@ -545,10 +558,15 @@ if iex == 31:
     channel = 'BH?,HH?'
     resample_freq = 0 
     scale_factor = 1
+
     ifFilter = True
     zerophase = False
+    filt_type = 'bandpass'
+    f1 = 1/100
+    f2 = 1/20
     ipre_filt = 0
-    
+
+#=================================================================================
 
 # fetch and process waveforms
 if idb == 1:
