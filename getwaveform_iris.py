@@ -82,7 +82,15 @@ def run_get_waveform(c, event,
     _stream = c.get_waveforms_bulk(bulk_list)
     #print(_stream)  # code for debugging. partial print stations
 
-    # Add headers to the raw waveforms
+    # Create SAC objects and add headers    
+    for tr in _stream:
+        # This is the best way to make sac objects
+        tr.write('tmppp.sac', format='SAC')
+        tmptr = obspy.read('tmppp.sac').traces[0]
+        tr.stats.sac = tmptr.stats.sac
+        # Add units to the sac header (it should be in COUNTS before response is removed)
+        tr.stats.sac['kuser0'] = 'RAW'
+
     # Save raw waveforms
     _stream = add_sac_metadata(_stream,ev=event, stalist=stations) 
     evname_key=_stream[0].stats.sac['kevnm']
@@ -124,9 +132,10 @@ def run_get_waveform(c, event,
                 pre_filt = (f0, f1, f2, f3)
             #print(pre_filt)
             print('Removing instrument response from ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
-            tr.remove_response(inventory=stations, pre_filt=pre_filt,
-                               output="VEL")
-
+            tr.remove_response(inventory=stations, pre_filt=pre_filt, output="VEL")
+            # Change the units if instruement response is removed
+            tr.stats.sac['kuser0'] = str(scale_factor)
+                        
     if scale_factor > 0:
         print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
         for tr in stream.traces:

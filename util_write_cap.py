@@ -425,9 +425,9 @@ def add_sac_metadata(st, ev=[], stalist=[]):
     # Loop over each trace
     for tr in st.traces:
         # Write each one
-        tr.write('tmppp.sac', format='SAC')
-        # This is the best way to make sac objects
-        tmptr = obspy.read('tmppp.sac').traces[0]
+        # tr.write('tmppp.sac', format='SAC')
+        # This is the best way to make sac objects (this is now done in getwaveform_iris.py)
+        # tmptr = obspy.read('tmppp.sac').traces[0]
         # Loop over all the networks
         for net in stalist:
             # Find the right station
@@ -435,7 +435,7 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                 # Hopefully there isn't more than one
                 if tr.stats.station == stan.code:
                     sta = stan
-        tr.stats.sac = tmptr.stats.sac
+        # tr.stats.sac = tmptr.stats.sac
 
         # Station info
         tr.stats.sac['stla'] = sta.latitude
@@ -500,7 +500,14 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                         # print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
-                        tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
+                        # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
+                        if tr.stats.sac['kuser0'] == 'RAW':
+                            tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
+                            tr.stats.sac['kuser1'] = '1' # Raw waveforms are not scale; Scaling is done after instrument response is deconvolved
+                        else:
+                            scale_factor = tr.stats.sac['kuser0']
+                            tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.input_units
+                            tr.stats.sac['kuser1'] = scale_factor 
                         sensor = ch.sensor.description
                         # add sensor information
                         # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
