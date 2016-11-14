@@ -12,7 +12,7 @@ import os
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 31
+iex = 0
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -34,7 +34,7 @@ max_dist = 20000
 # station parameters
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
-overwrite_ddir = 0           # 1 = delete data directory if it already exists
+overwrite_ddir = 1           # 1 = delete data directory if it already exists
 icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
 
 #------Filter--------------
@@ -62,6 +62,7 @@ corners = 4                  # Is corner in Obspy same as Pole in SAC?
 # https://ds.iris.edu/files/sac-manual/commands/transfer.html
 # Pre-filter will not be applied if remove_response = False 
 remove_response = True
+iplot_response = False
 ipre_filt = 1                # =0 No pre_filter
                              # =1 default pre_filter (see getwaveform_iris.py)
                              # =2 user-defined pre_filter
@@ -617,7 +618,7 @@ if idb == 1:
                                       ifEvInfo = output_event_info, scale_factor = scale_factor, 
                                       ipre_filt = ipre_filt, pre_filt = pre_filt, icreateNull=icreateNull,
                                       ifFilter = ifFilter, fmin = f1, fmax = f2, filt_type = filt_type, 
-                                      zerophase = zerophase, corners = corners)
+                                      zerophase = zerophase, corners = corners, iplot_response = iplot_response)
 
 if idb == 3:
     import llnl_db_client

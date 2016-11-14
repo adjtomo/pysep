@@ -22,7 +22,7 @@ def run_get_waveform(c, event,
                      scale_factor=10.0**2, ipre_filt = 1,
                      pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
                      ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
-                     zerophase=False, corners=4):
+                     zerophase=False, corners=4, iplot_response = False):
     """
     Get SAC waveforms for an event
 
@@ -132,7 +132,20 @@ def run_get_waveform(c, event,
                 pre_filt = (f0, f1, f2, f3)
             #print(pre_filt)
             print('Removing instrument response from ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
-            tr.remove_response(inventory=stations, pre_filt=pre_filt, output="VEL")
+            # Output is going to be in velocity
+            if iplot_response == True:
+                resp_plot_dir = evname_key + '/' + 'resp_plots'
+                if not os.path.exists(resp_plot_dir):
+                    os.makedirs(evname_key + '/' + 'resp_plots')
+                resp_plot = resp_plot_dir +'/'+ tr.stats.network +'.'+ \
+                    tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel + '_resp.eps'
+                try:
+                    tr.remove_response(inventory=stations, pre_filt=pre_filt, output="VEL", plot = resp_plot)
+                    continue
+                except:
+                    print('Could not generate response plot for ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
+            else :
+                tr.remove_response(inventory=stations, pre_filt=pre_filt, output="VEL")
             # Change the units if instruement response is removed
             tr.stats.sac['kuser0'] = str(scale_factor)
                         
