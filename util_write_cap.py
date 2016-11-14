@@ -506,7 +506,7 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                             tr.stats.sac['kuser1'] = '1' # Raw waveforms are not scale; Scaling is done after instrument response is deconvolved
                         else:
                             scale_factor = tr.stats.sac['kuser0']
-                            tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.input_units
+                            tr.stats.sac['kuser0'] = 'M/S'
                             tr.stats.sac['kuser1'] = scale_factor 
                         sensor = ch.sensor.description
                         # add sensor information
