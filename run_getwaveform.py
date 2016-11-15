@@ -12,7 +12,7 @@ import os
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 22
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -497,7 +497,7 @@ if iex == 21:
     tbefore_sec = 100
     tafter_sec = 600
     network = '*'
-    channel = '?N?'
+    channel = 'BN?,HN?,EN?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
     pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
@@ -523,7 +523,8 @@ if iex == 22:
     tbefore_sec = 100
     tafter_sec = 600
     network = 'IU,II'
-    channel = '?H?,?N?'
+    #channel = '?H?,?N?'
+    channel = 'HH?,BH?,BN?,HN?,EN?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
 
