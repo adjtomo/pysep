@@ -503,11 +503,9 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
                         if tr.stats.sac['kuser0'] == 'RAW':
                             tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
-                            tr.stats.sac['kuser1'] = '1' # Raw waveforms are not scale; Scaling is done after instrument response is deconvolved
                         else:
                             scale_factor = tr.stats.sac['kuser0']
                             tr.stats.sac['kuser0'] = 'M/S'
-                            tr.stats.sac['kuser1'] = scale_factor 
                         sensor = ch.sensor.description
                         # add sensor information
                         # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
