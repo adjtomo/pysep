@@ -477,6 +477,8 @@ if iex == 20:
     zerophase = False
     remove_response = False
     ipre_filt = 0
+    demean = False
+    detrend = False
 
 # Iniskin earthquake - all strong motion
 if iex == 21:
