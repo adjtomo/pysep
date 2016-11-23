@@ -915,15 +915,18 @@ def amp_rescale_llnl(st, scale_factor):
             tr.data = tr.data * scale_factor * scale_factor_BB
             print("--> WARNING -- " + tr.stats.station + '.' + \
                     tr.stats.channel + " rescaling by " + "%f" % scale_factor_BB)
+            tr.stats.sac['scale'] = scale_factor_BB
         elif ('HF' in tr.stats.channel):
             tr.data = tr.data * scale_factor * scale_factor_HF
             print("--> WARNING -- " + tr.stats.station + '.' + \
                     tr.stats.channel + " rescaling by " + "%f" % scale_factor_HF)
+            tr.stats.sac['scale'] = scale_factor_HF
         else:
             # original -- apply a single factor to all
             tr.data = tr.data * scale_factor
             print("--> WARNING -- " + tr.stats.station + '.' + \
                     tr.stats.channel + " rescaling by " + "%f" % scale_factor)
+            tr.stats.sac['scale'] = scale_factor
 
     return st
 

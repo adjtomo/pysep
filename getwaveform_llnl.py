@@ -17,8 +17,10 @@ def run_get_waveform(llnl_db_client, event,
                      network='*', station = '*', channel='BH*', resample_freq=20.0,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
-                     scale_factor=10.0**2,
-                     pre_filt=(0.005, 0.006, 10.0, 15.0)):
+                     scale_factor=10.0**2, ipre_filt = 1,
+                     pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
+                     ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
+                     zerophase=False, corners=4, iplot_response = False)):
     """
     Get SAC waveforms for an event
 
@@ -67,34 +69,71 @@ def run_get_waveform(llnl_db_client, event,
     stations = set([sta.code for net in inventory for sta in net])
 
     _st = llnl_db_client.get_waveforms_for_event(event_number)
-    _st2 = obspy.Stream()
+    _stream = obspy.Stream()
     for tr in _st:
         if tr.stats.station in stations:
-            _st2.append(tr)
+            _stream.append(tr)
+
+    # Create SAC objects and add headers    
+    for tr in _stream:
+        # This is the best way to make sac objects
+        tr.write('tmppp.sac', format='SAC')
+        tmptr = obspy.read('tmppp.sac').traces[0]
+        tr.stats.sac = tmptr.stats.sac
+        # Add units to the sac header (it should be in COUNTS before response is removed)
+        tr.stats.sac['kuser0'] = 'RAW'
+
+    # Save raw waveforms
+    _stream = add_sac_metadata(_stream,ev=event, stalist=stations) 
+    evname_key=_stream[0].stats.sac['kevnm']
+    write_stream_sac(_stream, evname_key=evname_key)
+    os.rename(evname_key,'RAW')
 
     # set reftime
-    st = obspy.Stream()
-    st = set_reftime(_st2, evtime)
+    stream = obspy.Stream()
+    stream = set_reftime(_stream, evtime)
 
     print("--> Extracted %i waveforms from the LLNL db database." % len(st))
 
     if ifDemean:
-        st.detrend('demean')
+        stream.detrend('demean')
 
     if ifDetrend:
-        st.detrend('linear')
+        stream.detrend('linear')
+
+    if ifFilter:
+        for tr in stream:
+            print('Applying',filt_type,'Filter ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
+            if filt_type=='bandpass':
+                tr.filter(filt_type,freqmin=fmin,freqmax=fmax,zerophase=zerophase,corners=corners)
+            elif filt_type=='lowpass':
+                tr.filter(filt_type,freq=fmin,zerophase=zerophase,corners=corners)
+            elif filt_type=='highpass':
+                tr.filter(filt_type,freq=fmax,zerophase=zerophase,corners=corners)
 
     if ifRemoveResponse:
         decon=True
         passed_st = obspy.Stream()
         failed_st = []
-        for tr in st:
+        for tr in stream:
+            if ipre_filt == 0:
+                pre_filt = None
+            elif ipre_filt == 1:
+                FCUT1_PAR = 4.0
+                FCUT2_PAR = 0.5
+                fnyq = tr.stats.sampling_rate/2
+                f2 = fnyq * FCUT2_PAR
+                f1 = FCUT1_PAR/(tr.stats.endtime - tr.stats.starttime)
+                f0 = 0.5*f1
+                f3 = 2.0*f2
+                pre_filt = (f0, f1, f2, f3)
             if tr.stats.channel[-1] not in ["Z", "N", "E"]:
                 print("%s is not vertical, north, or east. Skipped." % tr.id)
                 #continue
             try:
-                llnl_db_client.remove_response(
-                        tr=tr, pre_filt=pre_filt, output="VEL")
+                llnl_db_client.remove_response(tr=tr, pre_filt=pre_filt, output="VEL")
+                # Change the units if instruement response is removed
+                tr.stats.sac['kuser0'] = str(scale_factor)            
             except Exception as e:
                 print("Failed to correct %s due to: %s" % (tr.id, str(e)))
                 failed_st.append(tr)
@@ -104,7 +143,6 @@ def run_get_waveform(llnl_db_client, event,
         st = passed_st
         if not st:
             raise Exception("No waveform managed to get instrument corrected")
-
         print("--> %i waveforms failed to instrument correct" % len(failed_st))
         print("--> %i waveforms managed to instrument correct" % len(passed_st))
 
@@ -114,12 +152,13 @@ def run_get_waveform(llnl_db_client, event,
         print("WARNING -- NOT correcting for instrument response")
 
     if scale_factor > 0:
-        st = amp_rescale_llnl(st, scale_factor)
+        print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
+        stream = amp_rescale_llnl(stream, scale_factor)
 
     st.detrend('demean')
 
     print("--> Adding SAC metadata...")
-    st2 = add_sac_metadata(st, ev=event, stalist=inventory)
+    st2 = add_sac_metadata(stream, ev=event, stalist=inventory)
 
     # Set the sac header KEVNM with event name
     # This applies to the events from the LLNL database
@@ -183,7 +222,7 @@ def run_get_waveform(llnl_db_client, event,
                 tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
                 float(tr.stats.npts / tr.stats.sampling_rate)))
 
-    # Get list of unique stations + locaiton (example: 'KDAK.00')
+    # Get list of unique stations + location (example: 'KDAK.00')
     stalist = []
     for tr in st2.traces:
         #stalist.append(tr.stats.station)
@@ -205,7 +244,7 @@ def run_get_waveform(llnl_db_client, event,
     write_stream_sac(st2, evname_key)
 
     if ifrotate:
-        rotate_and_write_stream(st2, evname_key)
+        rotate_and_write_stream(st2, evname_key, icreateNull)
 
     if ifCapInp:
         write_cap_weights(st2, evname_key, client_name, event)

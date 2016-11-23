@@ -475,7 +475,7 @@ if iex == 20:
     filt_type = 'lowpass'
     f1 = 1/4
     zerophase = False
-    remove_response = False
+    remove_response = True
     ipre_filt = 0
     demean = False
     detrend = False

@@ -145,7 +145,10 @@ def run_get_waveform(c, event,
                 except:
                     print('Could not generate response plot for ' + tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
             else :
-                tr.remove_response(inventory=stations, pre_filt=pre_filt, output="VEL")
+                try:
+                    tr.remove_response(inventory=stations, pre_filt=pre_filt, output="VEL")
+                except Exception as e:
+                    print("Failed to correct %s due to: %s" % (tr.id, str(e)))
             # Change the units if instruement response is removed
             tr.stats.sac['kuser0'] = str(scale_factor)
                         
