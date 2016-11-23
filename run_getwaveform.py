@@ -184,7 +184,6 @@ if iex == 6:
     #scale_factor = 10.0**2  # original
     scale_factor = 2e-1     # Hoya  
     overwrite_ddir = 0
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # same as iex=6 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
@@ -256,7 +255,6 @@ if iex == 10:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # error applying rotation to station LL.KNB. See util_write_cap.py Line 161
 # (Disable the try block and only allow Line 161 to create this problem)
@@ -276,7 +274,6 @@ if iex == 11:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # PROBLEM: 
 #   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_iris.py", line 71, in run_get_waveform
@@ -315,7 +312,6 @@ if iex == 12:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # same as #12
 # ValueError: Could not find a valid Response Stage Type.
@@ -331,7 +327,6 @@ if iex == 13:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # same as #12
 # ValueError: Could not find a valid Response Stage Type.
@@ -347,7 +342,6 @@ if iex == 14:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # Traceback (most recent call last):
 #   File "run_getwaveform.py", line 380, in <module>
@@ -376,7 +370,6 @@ if iex == 15:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # time > 2007-01-24T11:30:06.100000Z time < 2007-01-24T11:30:26.100000Z
 #Traceback (most recent call last):
@@ -397,7 +390,6 @@ if iex == 16:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # same as #12
 # ValueError: Could not find a valid Response Stage Type.
@@ -413,7 +405,6 @@ if iex == 17:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 #Traceback (most recent call last):
 #  File "run_getwaveform.py", line 455, in <module>
@@ -437,7 +428,6 @@ if iex == 18:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # same as # 15
 # obspy.core.util.obspy_types.ObsPyException: Can not use evalresp on response with no response stages.
@@ -453,7 +443,6 @@ if iex == 19:
     scale_factor = 10.0**2  # original
     overwrite_ddir = 0
     resample_freq = 20.0 
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations
@@ -477,7 +466,6 @@ if iex == 20:
     channel = 'BH?,HH?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
-    pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # Iniskin earthquake - all strong motion
 if iex == 21:
@@ -500,7 +488,6 @@ if iex == 21:
     channel = 'BN?,HN?,EN?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
-    pre_filt = (0.005, 0.006, 10.0, 15.0)   # WHAT SHOULD THIS BE?
 
 # Iniskin earthquake - all channels at IU.COLA and II.KDAK
 # note different channels and location codes for strong motion:
