@@ -12,7 +12,7 @@ import os
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 22
+iex = 20
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -76,6 +76,8 @@ pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
 # Run example iex = 4 to check
 user = ''
 password = ''
+user = "ctape@alaska.edu"
+password = "dln3mjKtap3m9"
 
 # (Do not use)
 # This is a template for testing before creating an example.
@@ -459,13 +461,22 @@ if iex == 20:
     emag = 7.1
     # subset of stations
     min_dist = 0
-    max_dist = 800
+    max_dist = 100     # 800
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
     channel = 'BH?,HH?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
+
+    # parameters for examining clipping
+    rotate = False
+    ifFilter = True
+    filt_type = 'lowpass'
+    f1 = 1/4
+    zerophase = False
+    remove_response = False
+    ipre_filt = 0
 
 # Iniskin earthquake - all strong motion
 if iex == 21:
