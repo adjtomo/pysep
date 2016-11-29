@@ -20,7 +20,7 @@ def run_get_waveform(llnl_db_client, event,
                      scale_factor=10.0**2, ipre_filt = 1,
                      pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
                      ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
-                     zerophase=False, corners=4, iplot_response = False)):
+                     zerophase=False, corners=4, iplot_response = False):
     """
     Get SAC waveforms for an event
 
