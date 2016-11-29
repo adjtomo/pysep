@@ -76,8 +76,6 @@ pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
 # Run example iex = 4 to check
 user = ''
 password = ''
-user = "ctape@alaska.edu"
-password = "dln3mjKtap3m9"
 
 # (Do not use)
 # This is a template for testing before creating an example.
@@ -461,7 +459,7 @@ if iex == 20:
     emag = 7.1
     # subset of stations
     min_dist = 0
-    max_dist = 100     # 800
+    max_dist = 800
     tbefore_sec = 100
     tafter_sec = 600
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
@@ -469,13 +467,14 @@ if iex == 20:
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
 
-    # parameters for examining clipping
+    # parameters for examining clipping (causal low-pass filter on raw waveforms)
+    # delete AUQ, SPCP, SPBG
     rotate = False
     ifFilter = True
     filt_type = 'lowpass'
     f1 = 1/4
     zerophase = False
-    remove_response = True
+    remove_response = False
     ipre_filt = 0
     demean = False
     detrend = False
@@ -536,7 +535,7 @@ if iex == 30:
     max_dist = 300
     tbefore_sec = 100
     tafter_sec = 300
-    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'
+    network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     channel = 'BH?,HH?'
     scale_factor = 10.0**2  # original
     overwrite_ddir = 1
@@ -556,7 +555,7 @@ if iex == 31:
     max_dist = 200
     tbefore_sec = 2000
     tafter_sec = 2000
-    network = 'XV,TA,AK,IU'
+    network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     channel = 'BH?,HH?'
     resample_freq = 0 
     scale_factor = 1
@@ -566,7 +565,10 @@ if iex == 31:
     filt_type = 'bandpass'
     f1 = 1/100
     f2 = 1/20
+    remove_response = True
     ipre_filt = 0
+    demean = True
+    detrend = True
 
 #=================================================================================
 
