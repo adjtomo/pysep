@@ -416,7 +416,7 @@ def write_ev_info(ev, evname_key):
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
-def add_sac_metadata(st, ev=[], stalist=[]):
+def add_sac_metadata(st,idb=3, ev=[], stalist=[]):
     """
     Add event and station metadata to an Obspy stream
     """
@@ -500,24 +500,26 @@ def add_sac_metadata(st, ev=[], stalist=[]):
                         # print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
+                        # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
                         if tr.stats.sac['kuser0'] == 'RAW':
                             tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
                         else:
                             scale_factor = tr.stats.sac['kuser0']
                             tr.stats.sac['kuser0'] = 'M/S'
-                        sensor = ch.sensor.description
-                        # add sensor information
-                        # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
-                        # CAUTION: Using KT* instead to store instrument info (KT actually is for time pick identification)
-                        # Keep KT0, KT1, KT2 for picks
-                        # print('-->', ch.sensor.description)
-                        for indx in range(0,6):
-                            indx_start = indx*8
-                            indx_end = (indx+1)*8
-                            header_tag = indx+3
-                            # print('-->', sensor[indx_start:indx_end])
-                            tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end] 
+                        if idb==1:
+                            sensor = ch.sensor.description
+                            # add sensor information
+                            # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
+                            # CAUTION: Using KT* instead to store instrument info (KT actually is for time pick identification)
+                            # Keep KT0, KT1, KT2 for picks
+                            # print('-->', ch.sensor.description)
+                            for indx in range(0,6):
+                                indx_start = indx*8
+                                indx_end = (indx+1)*8
+                                header_tag = indx+3
+                                # print('-->', sensor[indx_start:indx_end])
+                                tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end]
                 
         # obspy has cmpinc for Z component as -90
         #if tmp == 'Z':

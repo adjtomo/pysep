@@ -54,6 +54,9 @@ def run_get_waveform(c, event,
     """
     print("Preparing request for IRIS ...")
 
+    # Database
+    idb = 1
+
     # BK network doesn't return data when using the IRIS client.
     # this option switches to NCEDC if BK is 
     if "BK" in network:
@@ -92,7 +95,7 @@ def run_get_waveform(c, event,
         tr.stats.sac['kuser0'] = 'RAW'
 
     # Save raw waveforms
-    _stream = add_sac_metadata(_stream,ev=event, stalist=stations) 
+    _stream = add_sac_metadata(_stream,idb=idb,ev=event, stalist=stations) 
     evname_key=_stream[0].stats.sac['kevnm']
     write_stream_sac(_stream, evname_key=evname_key)
     os.rename(evname_key,'RAW')
@@ -161,7 +164,7 @@ def run_get_waveform(c, event,
     stream.detrend('demean')
 
     print("--> Adding SAC metadata...")
-    st2 = add_sac_metadata(stream, ev=event, stalist=stations)
+    st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=stations)
 
     # Set the sac header KEVNM with event name
     # This applies to the events from the LLNL database

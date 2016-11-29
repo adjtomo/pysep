@@ -12,7 +12,7 @@ import os
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 20
+iex = 6
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -640,6 +640,8 @@ if idb == 3:
     # Delete existing data directory 
     eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
+    if os.path.exists('RAW'):
+        shutil.rmtree('RAW')
     if overwrite_ddir and os.path.exists(ddir):
         print("WARNING. Deleting data directory! (already exists)")
         shutil.rmtree(ddir)

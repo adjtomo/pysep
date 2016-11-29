@@ -53,6 +53,9 @@ def run_get_waveform(llnl_db_client, event,
     client_name = "LLNL"
     print("Preparing request for LLNL ...")
 
+    # Database
+    idb = 3
+
     # Get event an inventory from the LLNL DB.
     event_number = int(event.event_descriptions[0].text)
     #event = llnl_db_client.get_obspy_event(event)
@@ -81,10 +84,10 @@ def run_get_waveform(llnl_db_client, event,
         tmptr = obspy.read('tmppp.sac').traces[0]
         tr.stats.sac = tmptr.stats.sac
         # Add units to the sac header (it should be in COUNTS before response is removed)
-        tr.stats.sac['kuser0'] = 'RAW'
+        tr.stats.sac['kuser0'] = 'llnl'
 
     # Save raw waveforms
-    _stream = add_sac_metadata(_stream,ev=event, stalist=stations) 
+    _stream = add_sac_metadata(_stream,idb=idb,ev=event, stalist=inventory) 
     evname_key=_stream[0].stats.sac['kevnm']
     write_stream_sac(_stream, evname_key=evname_key)
     os.rename(evname_key,'RAW')
@@ -93,7 +96,7 @@ def run_get_waveform(llnl_db_client, event,
     stream = obspy.Stream()
     stream = set_reftime(_stream, evtime)
 
-    print("--> Extracted %i waveforms from the LLNL db database." % len(st))
+    #print("--> Extracted %i waveforms from the LLNL db database." % len(st))
 
     if ifDemean:
         stream.detrend('demean')
@@ -158,7 +161,7 @@ def run_get_waveform(llnl_db_client, event,
     st.detrend('demean')
 
     print("--> Adding SAC metadata...")
-    st2 = add_sac_metadata(stream, ev=event, stalist=inventory)
+    st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=inventory)
 
     # Set the sac header KEVNM with event name
     # This applies to the events from the LLNL database
@@ -242,6 +245,8 @@ def run_get_waveform(llnl_db_client, event,
         resample_cut(st2, resample_freq, evtime, before, after)
 
     write_stream_sac(st2, evname_key)
+    # Move raw waveforms inside this directory
+    os.rename('RAW',evname_key+'/RAW')
 
     if ifrotate:
         rotate_and_write_stream(st2, evname_key, icreateNull)
