@@ -5,6 +5,7 @@ import copy
 import util_helpers
 import shutil   # only used for deleting data directory
 import os
+import sys
 
 # TO DO
 # + filetags for the case iFilter = True (like lp10, bp10_40, etc)
@@ -12,7 +13,7 @@ import os
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 6
+iex = 16
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -585,10 +586,12 @@ if idb == 1:
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
     if use_catalog==1:
+        print("NOTE using event data from the IRIS catalog")
         cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
         ev = cat[0]
     else:
+        print("NOTE using event data from user-defined catalog")
         ev = Event()
         org = Origin()
         org.latitude = elat
@@ -605,8 +608,10 @@ if idb == 1:
     eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
     if os.path.exists('RAW'):
+        print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree('RAW')
     if overwrite_ddir and os.path.exists(ddir):
+        print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
 
     # Extract waveforms, IRIS
@@ -633,9 +638,15 @@ if idb == 3:
     cat = client.get_catalog()
     mintime_str = "time > %s" % (otime - sec_before_after_event)
     maxtime_str = "time < %s" % (otime + sec_before_after_event)
-    print(mintime_str, maxtime_str)
-    ev = cat.filter(mintime_str, maxtime_str)[0]
-    print(ev)
+    print(mintime_str + "\n" + maxtime_str)
+    #ev = cat.filter(mintime_str, maxtime_str)[0]
+    ev = cat.filter(mintime_str, maxtime_str)
+    if len(ev) > 0:
+        ev = ev[0]
+        print(len(ev))
+    else:
+        print("No events in the catalog for the given time period. Stop.")
+        sys.exit(0)
 
     # Delete existing data directory 
     eid = util_helpers.otime2eid(ev.origins[0].time)
@@ -643,7 +654,7 @@ if idb == 3:
     if os.path.exists('RAW'):
         shutil.rmtree('RAW')
     if overwrite_ddir and os.path.exists(ddir):
-        print("WARNING. Deleting data directory! (already exists)")
+        print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
 
     # Extract waveforms, LLNL
