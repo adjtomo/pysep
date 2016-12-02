@@ -219,9 +219,6 @@ def run_get_waveform(llnl_db_client, event,
     if ifEvInfo:
         write_ev_info(event, evname_key)
 
-    if decon is False:
-        print("WARNING waveforms NOT corrected for instrument response")
-
     # 20160902 cralvizuri@alaska.edu -- 
     # see also time_shift_sac
     # This command overwrites SAC headers "b" and "e" with a timeshift. But
