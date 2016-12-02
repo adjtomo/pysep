@@ -120,7 +120,10 @@ def run_get_waveform(llnl_db_client, event,
 
     if scale_factor > 0:
         amp_rescale(stream, scale_factor)
-        stream = amp_rescale_llnl(stream, scale_factor)
+
+        # The response information in the LLNL database seems to have wrong
+        # amplitude calibration. This correction rescales amplitudes by channel
+        amp_rescale_llnl(stream, scale_factor)
 
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=inventory)

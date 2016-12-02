@@ -927,24 +927,20 @@ def amp_rescale_llnl(st, scale_factor):
     scale_factor_HF = 1.8e-2
 
     for tr in st.traces:
+        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+                tr.stats.location +'.'+ tr.stats.channel
         if ('BB' in tr.stats.channel):
-            tr.data = tr.data * scale_factor * scale_factor_BB
-            print("--> WARNING -- " + tr.stats.station + '.' + \
-                    tr.stats.channel + " rescaling by " + "%f" % scale_factor_BB)
-            tr.stats.sac['scale'] = scale_factor_BB
+            print("--> WARNING LLNL station %14s Rescaling by %f" % \
+                    (station_key, scale_factor_BB))
+            tr.data = tr.data * scale_factor_BB
+            # combine scale_factor with scale_factor_XX
+            tr.stats.sac['scale'] = scale_factor_BB * scale_factor
         elif ('HF' in tr.stats.channel):
-            tr.data = tr.data * scale_factor * scale_factor_HF
-            print("--> WARNING -- " + tr.stats.station + '.' + \
-                    tr.stats.channel + " rescaling by " + "%f" % scale_factor_HF)
-            tr.stats.sac['scale'] = scale_factor_HF
-        else:
-            # original -- apply a single factor to all
-            tr.data = tr.data * scale_factor
-            print("--> WARNING -- " + tr.stats.station + '.' + \
-                    tr.stats.channel + " rescaling by " + "%f" % scale_factor)
-            tr.stats.sac['scale'] = scale_factor
-
-    return st
+            print("--> WARNING LLNL station %14s Rescaling by %f" % \
+                    (station_key, scale_factor_HF))
+            tr.data = tr.data * scale_factor_HF
+            # combine scale_factor with scale_factor_XX
+            tr.stats.sac['scale'] = scale_factor_HF * scale_factor
 
 def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
     """
