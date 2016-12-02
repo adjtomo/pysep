@@ -134,61 +134,11 @@ def run_get_waveform(llnl_db_client, event,
     # be set early
     st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
-    # 20160902 cralvizuri@alaska.edu -- 
-    # see also correct_sac_tshift
-    # This command overwrites SAC headers "b" and "e" with a timeshift. But
-    # this is not neeeded since obspy handles this internally.
-    # This command is now disabled.
-    #time_shift_sac(st2, -1 * before)
-
-    # Now do some QA: throw out traces with missing data
-    # keep a log with status of trace extraction
-    # this is mirrored in llnl_tool.py and iris_tools.py
-    output_log = "data_processing_status" + "_" + client_name + ".log"
-    fid = open(output_log, "w")
-    fid.write("\n--------------------\n%s\n" % event.short_str())
-
-    for tr in st2:
-        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
-                tr.stats.network, tr.stats.station, tr.stats.channel, \
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
-        if (tr.stats.starttime > evtime - before) or \
-                (tr.stats.endtime < evtime + after):
-            print("===========")
-            print("Event time:", evtime)
-            print("Trace starttime:", tr.stats.starttime,
-                  "Minimum required starttime:", evtime - before, "Pass:",
-                  tr.stats.starttime > evtime - before)
-            print("Trace endtime:", tr.stats.endtime,
-                  "Maximum required endtime:", evtime + before,
-                  "Pass:", tr.stats.endtime < evtime + after)
-            print("Removing %s. Not in requested temporal range." % tr.id)
-            print("===========")
-            print("WARNING. Missing data for station %s" % tr.stats.station)
-            print("WARNING. consider removing this station")
-            fid.write(" -- data missing.")
-            # 20160912 cralvizuri@alaska.edu --
-            # the original code removes waveforms that do not have the same
-            # length as the requested window. 
-            # Rejection is now disabled per discussion today.
-            # This is also mirrored in getwaveform_iris.py
-            #st2.remove(tr)
-
-    print("--> %i waveforms left." % len(st2))
-
-    # fill gaps with 0
-    # print(st2)    # code for debugging.
-    #st2.merge(method=0,fill_value=0)
-    st2.merge(fill_value='interpolate')
-    # print(st2)    # code for debugging.
-
-    fid.write("\n--------After filling the gaps------------")
-    for tr in st2:
-        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
-                tr.stats.network, tr.stats.station, tr.stats.channel, \
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
+    # Do some waveform QA
+    # - (disabled) Throw out traces with missing data
+    # - log waveform lengths and discrepancies
+    # - Fill-in missing data -- Carl request
+    do_waveform_QA(st2, client_name, event, evtime, before, after)
 
     # Get list of unique stations + location (example: 'KDAK.00')
     stalist = []

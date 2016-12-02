@@ -146,41 +146,12 @@ def run_get_waveform(c, event,
         print("--> New sample rate = %5.1f\n" % resample_freq)
         resample(st2, freq=resample_freq)
 
-    # Now do some QA: throw out traces with missing data
-    # keep a log with status of trace extraction
-    # this is mirrored in llnl_tool.py and iris_tools.py
-    output_log = "data_processing_status" + "_" + client_name + ".log"
-    fid = open(output_log, "w")
-    fid.write("\n--------------------\n%s\n" % event.short_str())
-    fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
-    for tr in st2:
-        fid.write("\n%s %s %s %s %s %s %s %6s %.2f sec" % (evtime, \
-                tr.stats.network, tr.stats.station, tr.stats.location, tr.stats.channel, \
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
-        if tr.stats.npts < tr.stats.sampling_rate * (before + after):
-            print("WARNING. data available < (before + after) for station " + \
-                    tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel + " -- consider removing this station")
-            fid.write(" -- data missing.")
-            # 20160912 cralvizuri@alaska.edu --
-            # the original code removes waveforms that do not have the same
-            # length as the requested window. 
-            # Rejection is now disabled per discussion today.
-            # This is also mirrored in getwaveform_llnl.py
-            # st2.remove(tr)
+    # Do some waveform QA
+    # - (disabled) Throw out traces with missing data
+    # - log waveform lengths and discrepancies
+    # - Fill-in missing data -- Carl request
+    do_waveform_QA(st2, client_name, event, evtime, before, after)
 
-    # fill gaps with 0
-    # print(st2)    # code for debugging.
-    #st2.merge(method=0,fill_value=0)
-    st2.merge(fill_value='interpolate')
-    # print(st2)    # code for debugging.
-
-    fid.write("\n--------After filling the gaps------------")
-    for tr in st2:
-        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
-                tr.stats.network, tr.stats.station, tr.stats.channel, \
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
 
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
