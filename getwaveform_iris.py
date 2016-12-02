@@ -121,12 +121,9 @@ def run_get_waveform(c, event,
         # output RAW waveforms
         decon=False
         print("WARNING -- NOT correcting for instrument response")
-                        
+
     if scale_factor > 0:
-        print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
-        for tr in stream.traces:
-            tr.data = tr.data * scale_factor
-            tr.stats.sac['scale'] = scale_factor
+        amp_rescale(stream, scale_factor)
 
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=stations)
