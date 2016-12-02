@@ -551,7 +551,7 @@ if iex == 30:
     #resample_freq = 50 
 
     # to investigate clipping
-    irotate = False    # why do we get .r and .t sac files?
+    rotate = False
     ifFilter = True
     zerophase = False
     filt_type = 'bandpass'
@@ -561,16 +561,13 @@ if iex == 30:
     demean = True
     detrend = True
     # this creates some pre-origin signal/artifact
+    ipre_filt = 0
+    # this does not seem to make a difference
     #ipre_filt = 1
     # this creates some very long-period signal/artifact
     #ipre_filt = 0
     #f1 = 1/10
     #filt_type = 'lowpass' 
-    # this seems to give the best results
-    ipre_filt = 2
-    f0 = 0.5*f1
-    f3 = 2.0*f2
-    pre_filt=(f0, f1, f2, f3) 
 
 # NENNUC event (from Steve)
 if iex == 31:
