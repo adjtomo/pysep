@@ -153,17 +153,12 @@ def run_get_waveform(c, event,
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
-    # print(stalist)    # for debugging.
-    st2 = trim_maxstart_minend(stalist, st2)
 
-    fid.write("\n--------After trimming the edges (in case the 3 channels have different lengths)------------")
-    for tr in st2:
-        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
-                tr.stats.network, tr.stats.station, tr.stats.channel, \
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate))) 
+    # match start and end points for all traces
+    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime)
 
     write_stream_sac(st2, evname_key)
+
     # Move raw waveforms inside this directory
     os.rename('RAW',evname_key+'/RAW')
 

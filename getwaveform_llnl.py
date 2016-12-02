@@ -148,8 +148,9 @@ def run_get_waveform(llnl_db_client, event,
 
     # Crazy way of getting a unique list of stations
     stalist = list(set(stalist))
-    # print(stalist)    # for debugging.
-    st2 = trim_maxstart_minend(stalist, st2)
+
+    # match start and end points for all traces
+    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime)
 
     if not st2:
         raise Exception("No waveforms left")
