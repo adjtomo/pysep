@@ -122,8 +122,6 @@ def run_get_waveform(llnl_db_client, event,
         print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
         stream = amp_rescale_llnl(stream, scale_factor)
 
-    st.detrend('demean')
-
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=inventory)
 

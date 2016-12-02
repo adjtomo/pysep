@@ -128,8 +128,6 @@ def run_get_waveform(c, event,
             tr.data = tr.data * scale_factor
             tr.stats.sac['scale'] = scale_factor
 
-    stream.detrend('demean')
-
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=stations)
 
