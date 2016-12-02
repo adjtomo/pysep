@@ -112,40 +112,7 @@ def run_get_waveform(llnl_db_client, event,
         prefilter(stream, fmin, fmax, zerophase, corners, filter_type)
 
     if ifRemoveResponse:
-        decon=True
-        passed_st = obspy.Stream()
-        failed_st = []
-        for tr in stream:
-            if ipre_filt == 0:
-                pre_filt = None
-            elif ipre_filt == 1:
-                FCUT1_PAR = 4.0
-                FCUT2_PAR = 0.5
-                fnyq = tr.stats.sampling_rate/2
-                f2 = fnyq * FCUT2_PAR
-                f1 = FCUT1_PAR/(tr.stats.endtime - tr.stats.starttime)
-                f0 = 0.5*f1
-                f3 = 2.0*f2
-                pre_filt = (f0, f1, f2, f3)
-            if tr.stats.channel[-1] not in ["Z", "N", "E"]:
-                print("%s is not vertical, north, or east. Skipped." % tr.id)
-                #continue
-            try:
-                llnl_db_client.remove_response(tr=tr, pre_filt=pre_filt, output="VEL")
-                # Change the units if instruement response is removed
-                tr.stats.sac['kuser0'] = str(scale_factor)            
-            except Exception as e:
-                print("Failed to correct %s due to: %s" % (tr.id, str(e)))
-                failed_st.append(tr)
-                continue
-            else:
-                passed_st.append(tr)
-        st = passed_st
-        if not st:
-            raise Exception("No waveform managed to get instrument corrected")
-        print("--> %i waveforms failed to instrument correct" % len(failed_st))
-        print("--> %i waveforms managed to instrument correct" % len(passed_st))
-
+        resp_plot_remove(stream, ipre_filt, iplot_response, scale_factor, stations)
     else:
         # output RAW waveforms
         decon=False
