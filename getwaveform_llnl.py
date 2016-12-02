@@ -14,13 +14,17 @@ from util_write_cap import *
 
 def run_get_waveform(llnl_db_client, event, 
                      min_dist=20, max_dist=300, before=100, after=300, 
-                     network='*', station = '*', channel='BH*', resample_freq=20.0,
+                     network='*', station = '*', channel='BH*',
+                     resample_freq=20.0,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
-                     scale_factor=10.0**2, ipre_filt = 1,
-                     pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
-                     ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
-                     zerophase=False, corners=4, iplot_response = False):
+                     scale_factor=10.0**2,
+                     ipre_filt = 1,
+                     pre_filt=(0.005, 0.006, 10.0, 15.0), 
+                     icreateNull=1,
+                     ifFilter=False, fmin=0.02, fmax=1, filter_type='bandpass', 
+                     zerophase=False, corners=4, 
+                     iplot_response = False):
     """
     Get SAC waveforms for an event
 

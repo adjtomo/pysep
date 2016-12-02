@@ -13,7 +13,7 @@ import sys
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 30
+iex = 6
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -52,7 +52,7 @@ icreateNull = 1              # create Null traces so that rotation can work (obs
 #
 # Perhaps you want to set ipre_filt = 0 to prevent extra filtering
 ifFilter = False 
-filt_type = 'bandpass'
+filter_type = 'bandpass'
 # f1 should consider the requested length of the time series
 # f2 should consider the sampling rate for the desired channels
 f1 = 1/40
@@ -78,6 +78,9 @@ pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
 user = ''
 password = ''
 
+#=================================================================================
+# Examples with issues
+#=================================================================================
 # (Do not use)
 # This is a template for testing before creating an example.
 # We can delete this if it creates more issues.
@@ -472,7 +475,7 @@ if iex == 20:
     # delete AUQ, SPCP, SPBG
     rotate = False
     ifFilter = True
-    filt_type = 'lowpass'
+    filter_type = 'lowpass'
     f1 = 1/4
     zerophase = False
     remove_response = False
@@ -554,7 +557,7 @@ if iex == 30:
     irotate = False    # why do we get .r and .t sac files?
     ifFilter = True
     zerophase = False
-    filt_type = 'bandpass'
+    filter_type = 'bandpass'
     f1 = 1/100
     f2 = 1/10
     remove_response = True
@@ -565,7 +568,7 @@ if iex == 30:
     # this creates some very long-period signal/artifact
     #ipre_filt = 0
     #f1 = 1/10
-    #filt_type = 'lowpass' 
+    #filter_type = 'lowpass' 
     # this seems to give the best results
     ipre_filt = 2
     f0 = 0.5*f1
@@ -594,7 +597,7 @@ if iex == 31:
     # to investigate clipping
     ifFilter = True
     zerophase = False
-    filt_type = 'bandpass'
+    filter_type = 'bandpass'
     f1 = 1/100
     f2 = 1/20
     remove_response = True
@@ -603,8 +606,11 @@ if iex == 31:
     detrend = True
 
 #=================================================================================
+# End examples with issues
+#=================================================================================
 
 # fetch and process waveforms
+# IRIS
 if idb == 1:
     # import functions to access waveforms
     import getwaveform_iris
@@ -617,12 +623,12 @@ if idb == 1:
     # will only work for events in the 'IRIS' catalog
     # (future: for Alaska events, read the AEC catalog)
     if use_catalog==1:
-        print("NOTE using event data from the IRIS catalog")
+        print("WARNING using event data from the IRIS catalog")
         cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
         ev = cat[0]
     else:
-        print("NOTE using event data from user-defined catalog")
+        print("WARNING using event data from user-defined catalog")
         ev = Event()
         org = Origin()
         org.latitude = elat
@@ -647,18 +653,22 @@ if idb == 1:
 
     # Extract waveforms, IRIS
     getwaveform_iris.run_get_waveform(c = client, event = ev, 
-                                      min_dist = min_dist, max_dist = max_dist, 
-                                      before = tbefore_sec, after = tafter_sec, 
-                                      network = network, station = station, channel = channel, 
-                                      resample_freq = resample_freq, ifrotate = rotate,
-                                      ifCapInp = output_cap_weight_file, 
-                                      ifRemoveResponse = remove_response,
-                                      ifDetrend = detrend, ifDemean = demean, 
-                                      ifEvInfo = output_event_info, scale_factor = scale_factor, 
-                                      ipre_filt = ipre_filt, pre_filt = pre_filt, icreateNull=icreateNull,
-                                      ifFilter = ifFilter, fmin = f1, fmax = f2, filt_type = filt_type, 
-                                      zerophase = zerophase, corners = corners, iplot_response = iplot_response)
+            min_dist = min_dist, max_dist = max_dist, 
+            before = tbefore_sec, after = tafter_sec, 
+            network = network, station = station, channel = channel, 
+            resample_freq = resample_freq, ifrotate = rotate,
+            ifCapInp = output_cap_weight_file, 
+            ifRemoveResponse = remove_response,
+            ifDetrend = detrend, ifDemean = demean, 
+            ifEvInfo = output_event_info,
+            scale_factor = scale_factor,
+            ipre_filt = ipre_filt, pre_filt = pre_filt, 
+            icreateNull=icreateNull,
+            ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+            zerophase = zerophase, corners = corners, 
+            iplot_response = iplot_response)
 
+# LLNL
 if idb == 3:
     import llnl_db_client
     import getwaveform_llnl
@@ -690,12 +700,17 @@ if idb == 3:
 
     # Extract waveforms, LLNL
     getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = ev, 
-                                      min_dist = min_dist, max_dist = max_dist, 
-                                      before = tbefore_sec, after = tafter_sec, 
-                                      network = network, station = station, channel = channel, 
-                                      resample_freq = resample_freq, ifrotate = rotate,
-                                      ifCapInp = output_cap_weight_file, 
-                                      ifRemoveResponse = remove_response,
-                                      ifDetrend = detrend, ifDemean = demean, 
-                                      ifEvInfo = output_event_info, 
-                                      scale_factor = scale_factor, pre_filt = pre_filt)
+            min_dist = min_dist, max_dist = max_dist, 
+            before = tbefore_sec, after = tafter_sec, 
+            network = network, station = station, channel = channel, 
+            resample_freq = resample_freq, ifrotate = rotate,
+            ifCapInp = output_cap_weight_file, 
+            ifRemoveResponse = remove_response,
+            ifDetrend = detrend, ifDemean = demean, 
+            ifEvInfo = output_event_info, 
+            scale_factor = scale_factor, 
+            ipre_filt = ipre_filt, pre_filt = pre_filt, 
+            icreateNull=icreateNull,
+            ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+            zerophase = zerophase, corners = corners, 
+            iplot_response = iplot_response)
