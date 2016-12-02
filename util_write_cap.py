@@ -903,10 +903,24 @@ def trim_maxstart_minend(stalist, st2):
         
     return temp_stream
 
+def amp_rescale(stream, scale_factor):
+    """
+    Rescale amplitudes by scale_factor for all waveforms.
+    For CAP a scale_factor = 10.0**2 changes units from m/s to cm/s
+    """
+
+    print("\n--> WARNING -- rescaling amplitudes by %f" % scale_factor)
+    for tr in stream.traces:
+        tr.data = tr.data * scale_factor
+        tr.stats.sac['scale'] = scale_factor
+
 def amp_rescale_llnl(st, scale_factor):
     """
-    Rescale amplitudes for LLNL data. The scales are different for the 
-    BB and HF channels
+    Rescale amplitudes for LLNL data. The scales are different for different 
+    channels. Current factors
+    BB = 4.0e-4 
+    HF = 1.8e-2
+
     """
     # scales based on tests with hoya event
     scale_factor_BB = 4.0e-4 
