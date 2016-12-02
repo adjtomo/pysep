@@ -134,13 +134,6 @@ def run_get_waveform(c, event,
     # be set early
     st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
-    # 20160902 cralvizuri@alaska.edu -- 
-    # see also correct_sac_tshift
-    # This command overwrites SAC headers "b" and "e" with a timeshift. But
-    # this is not neeeded since obspy handles this internally.
-    # This command is now disabled.
-    #time_shift_sac(st2, -1 * before)
-
     if resample_freq != 0:
         print("\n--> WARNING -- RESAMPLING")
         print("--> New sample rate = %5.1f\n" % resample_freq)
@@ -152,7 +145,6 @@ def run_get_waveform(c, event,
     # - Fill-in missing data -- Carl request
     do_waveform_QA(st2, client_name, event, evtime, before, after)
 
-
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
     for tr in st2.traces:
@@ -163,38 +155,6 @@ def run_get_waveform(c, event,
     stalist = list(set(stalist))
     # print(stalist)    # for debugging.
     st2 = trim_maxstart_minend(stalist, st2)
-
-    #st3 = obspy.Stream()
-    ## Trim the edges in case 3 channels have different lengths
-    #for stn in stalist:
-    #    # split STNM.LOC
-    #    tmp = stn.split('.')
-    #    netw = tmp[0]
-    #    station = tmp[1]
-    #    location = tmp[2]
-    #    chan = tmp[3] + '*'
-    #    # Get 3 traces (subset based on matching station name and location code)
-    #    substr = stream.select(network=netw,station=station,location=location,channel=chan)
-    #    # Find max startime and min end time for stations with number of channels = 1 or 2 or 3
-    #    if len(substr) == 1:
-    #        max_starttime = substr[0].stats.starttime
-    #        min_endtime = substr[0].stats.endtime
-    #    if len(substr) == 2:
-    #        max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime)
-    #        min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime)
-    #    if len(substr) == 3:
-    #        max_starttime = max(substr[0].stats.starttime,substr[1].stats.starttime,substr[2].stats.starttime)
-    #        min_endtime = min(substr[0].stats.endtime,substr[1].stats.endtime,substr[2].stats.endtime)
-    #    print(substr[0].stats.station, max_starttime, min_endtime)
-    #    try:
-    #        substr.trim(starttime=max_starttime, endtime=min_endtime, pad=False, nearest_sample=True, fill_value=0)
-    #    except:
-    #        print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
-    #        continue
-    #    for tr in substr.traces:
-    #        st3 = st3.append(tr)
-    #    
-    #st2=st3
 
     fid.write("\n--------After trimming the edges (in case the 3 channels have different lengths)------------")
     for tr in st2:
@@ -215,13 +175,4 @@ def run_get_waveform(c, event,
 
     if ifEvInfo:
         write_ev_info(event, evname_key)
-
-    # 20160902 cralvizuri@alaska.edu -- 
-    # see also time_shift_sac
-    # This command overwrites SAC headers "b" and "e" with a timeshift. But
-    # this is not neeeded since obspy handles this internally.
-    # This command is now disabled.
-    #Fix b and e sac headers
-    #correct_sac_tshift(evtime.strftime('%Y%m%d%H%M%S%f')[:-3]+'/', \
-    #        before, after)
 
