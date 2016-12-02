@@ -164,50 +164,49 @@ def getdata_iris_llnl(dataset, llnl=False, iris=False):
 # First I matched event times in Ford to those in the LLNL database. 
 # Then wrote their matching EVID.
 # Using EVIDs I wrote a script to output event times from the LLNL database.
-evids_times_explosions = {
-        "584497":  "1988-02-15T18:10:00.09",
-        "602554":  "1989-06-27T15:30:00.02",
-        "605660":  "1989-09-14T15:00:00.10",  # KNB, MNV. problem applying rotate2zne
-        "607806":  "1989-10-31T15:30:00.09",
-        "609251":  "1989-12-08T15:00:00.09",
-        "612817":  "1990-03-10T16:00:00.08",
-        "616762":  "1990-06-13T16:00:00.09",
-        "617078":  "1990-06-21T18:15:00.00",
-        "623055":  "1990-11-14T19:17:00.07", 
-        "627879":  "1991-03-08T21:02:45.08", 
-        "628994":  "1991-04-04T19:00:00.00", # no waveforms from NCEDC.
-        "635527":  "1991-09-14T19:00:00.08", # ok (Hoya)
-        "636899":  "1991-10-18T19:12:00.00",
-        "638595":  "1991-11-26T18:35:00.07", 
-        "643767":  "1992-03-26T16:30:00.00", 
-        "653134":  "1992-09-18T17:00:00.08",  # KNB, LAC, MNV are very short traces (useless)
-        "653332":  "1992-09-23T15:04:00.00"  
+origins_explosions = {
+        "KERNVILLE     ": ["1988-02-15T18:10:00.09", "-116.472", "37.314", "542", "Ford2009", "5.30", "ml", "NCSN"], 
+        "AMARILLO      ": ["1989-06-27T15:30:00.02", "-116.354", "37.275", "640", "Ford2009", "4.90", "ml", "NCSN"], 
+        "DISKO_ELM     ": ["1989-09-14T15:00:00.10", "-116.164", "37.236", "261", "Ford2009", "4.40", "ml", "NCSN"], 
+        "HORNITOS      ": ["1989-10-31T15:30:00.09", "-116.492", "37.263", "564", "Ford2009", "5.40", "ml", "NCSN"], 
+        "BARNWELL      ": ["1989-12-08T15:00:00.09", "-116.410", "37.231", "601", "Ford2009", "5.30", "ml", "NCSN"], 
+        "METROPOLIS    ": ["1990-03-10T16:00:00.08", "-116.056", "37.112", "469", "Ford2009", "4.94", "md", "NCSN"], 
+        "BULLION       ": ["1990-06-13T16:00:00.09", "-116.421", "37.262", "674", "Ford2009", "5.34", "md", "NCSN"], 
+        "AUSTIN        ": ["1990-06-21T18:15:00.00", "-116.005", "36.993", "350", "Ford2009", "4.11", "md", "NCSN"], 
+        "HOUSTON       ": ["1990-11-14T19:17:00.07", "-116.372", "37.227", "594", "Ford2009", "4.86", "md", "NCSN"], 
+        "COSO          ": ["1991-03-08T21:02:45.08", "-116.075", "37.104", "417", "Ford2009", "4.50", "ml", "NCSN"], 
+        "BEXAR         ": ["1991-04-04T19:00:00.00", "-116.314", "37.296", "629", "Ford2009", "5.08", "md", "NCSN"], 
+        "HOYA          ": ["1991-09-14T19:00:00.08", "-116.429", "37.226", "658", "Ford2009", "5.40", "ml", "NCSN"], 
+        "LUBBOCK       ": ["1991-10-18T19:12:00.00", "-116.046", "37.063", "457", "Ford2009", "4.75", "md", "NCSN"], 
+        "BRISTOL       ": ["1991-11-26T18:35:00.07", "-116.070", "37.096", "457", "Ford2009", "4.80", "ml", "NCSN"], 
+        "JUNCTION      ": ["1992-03-26T16:30:00.00", "-116.361", "37.272", "622", "Ford2009", "4.82", "ml", "NCSN"], 
+        "HUNTERS_TROPHY": ["1992-09-18T17:00:00.08", "-116.211", "37.207", "385", "Ford2009", "3.87", "md", "NCSN"], 
+        "DIVIDER       ": ["1992-09-23T15:04:00.00", "-115.989", "37.021", "340", "Ford2009", "4.13", "md", "NCSN"] 
         }
 
-evids_times_quakes = {
-        "648766": "1992-06-29T10:14:21.89", 
-        "649220": "1992-07-05T06:54:10.72", 
-        "706312": "1995-07-31T12:34:45.03", # ERROR. ValueError: setting an array element with a sequence. |  No waveform managed to get instrument corrected (LLNL)
-        "737983": "1997-04-26T01:49:35.58", # NO IRIS data available.
-        "743984": "1997-09-12T13:36:54.20", 
-        "768593": "1998-12-12T01:41:30.33", 
-        "770646": "1999-01-23T03:00:34.82", # ERROR. ValueError: Could not find a valid Response Stage Type.
-        "770868": "1999-01-27T10:44:17.80", # ERROR. ValueError: Could not find a valid Response Stage Type.
-        "1592802":"2002-06-14T12:40:45.82", # ERROR. ValueError: Could not find a valid Response Stage Type.
-        "-99999": "1996-09-05T08:16:56.09", # ERROR. Can not use evalresp on response with no response stages. | IRIS returns deeper event (7.5km, not 5km) 1996-09-05T08:16:55.780000Z | +36.745, -116.282 | 3.2 mL
-        "-99999": "1997-06-14T19:48:19.93", # ERROR. Can not use evalresp on response with no response stages. | IRIS returns shallower event (5km, not 7km) 1997-06-14T19:48:21.200000Z | +36.806, -115.847 | 3.4 mL
-        "-99999": "2007-01-24T11:30:16.10"  # ERROR. ValueError: Could not find a valid Response Stage Type. | IRIS returns smaller event (not 4.09) 2007-01-24T11:30:16.650000Z | +37.424, -117.064 | 2.9 mb
-        }
+origins_quakes = {
+"      Little_Skull_Main": ["1992-06-29T10:14:23.18 ", "-116.289 ", "36.698  ", "9070.0", " CI", "5.4 ", "ms ", "CI "], 
+"Little_Skull_Aftershock": ["1992-07-05T06:54:13.52 ", "-116.276 ", "36.685  ", "5070.0", " CI", "4.44", "ml ", "CI "], 
+"        Timber_Mountain": ["1995-07-31T12:34:47.35 ", "-116.415 ", "37.107  ", "4487.0", " CI", "4.0 ", "ml ", "CI "], 
+"               Amargosa": ["1996-09-05T08:16:55.40 ", "-116.266 ", "36.729  ", "9070.0", " CI", "3.7 ", "ml ", "CI "], 
+"             Groom_Pass": ["1997-04-26T01:49:35.20 ", "-115.937 ", "37.16   ", "5000.0", " US", "4.3 ", "ml ", "US "], 
+"         Indian_Springs": ["1997-06-14T19:48:19.45 ", "-115.801 ", "36.648  ", "5793.0", " CI", "3.81", "ml ", "CI "], 
+"             Calico_Fan": ["1997-09-12T13:36:54.94 ", "-116.277 ", "36.887  ", "6037.0", " CI", "4.05", "ml ", "CI "], 
+"           Warm_Springs": ["1998-12-12T01:41:32.00 ", "-116.29  ", "37.51   ", "0.0   ", "REN", "4.1 ", "mb ", "US "], 
+"       Frenchman_Flat_1": ["1999-01-23T03:00:32.00 ", "-115.92  ", "36.82   ", "0.0   ", "REN", "3.7 ", "ml ", "US "], 
+"       Frenchman_Flat_2": ["1999-01-27T10:44:23.30 ", "-115.989 ", "36.816  ", "5000.0", "US ", "4.8 ", "mwr", "BRK"], 
+"           Little_Skull": ["2002-06-14T12:40:45.36 ", "-116.293 ", "36.7163333", "9653.0", "CI ", "4.58", "mw ", "CI "], 
+"                Ralston": ["2007-01-24T11:30:16.099", "-117.0986", "37.4133 ", "6100.0", "NN ", "4.1 ", "ml ", "NN "] 
+}
 
-evids_times_collapses = {
-        #"522227": "1982-08-05T14:21:00", # Does not return data when using event time in Ford2009
-        "522227": "1982-08-05T14:00:00", # Event time from LLNL database
-        "697661": "1995-02-03T15:26:10.69",
-        "1324942": "2000-01-30T14:46:51.31" # ERROR. ValueError: Could not find a valid Response Stage Type. | No waveform managed to get instrument corrected (LLNL)
+origins_collapses = {
+        "ATRISCO_Hole": ["1982-08-05T14:21:38.000", "-116.0065", "37.0842", " 320.0", "Walter2009", "3.5", "ms", "Walter2009"], 
+        "Trona_Mine_1": ["1995-02-03T15:26:10.690", "-109.640 ", "41.529 ", "1000.0", "  US      ", "5.3", "mb", "US"], 
+        "Trona_Mine_2": ["2000-01-30T14:46:51.310", "-109.679 ", "41.464 ", "1000.0", "  US      ", "4.4", "mb", "US"] 
         }
 
 # get the waveforms
-getdata_iris_llnl(evids_times_explosions, llnl=True, iris=True)
-getdata_iris_llnl(evids_times_quakes, llnl=True, iris=True)
-getdata_iris_llnl(evids_times_collapses, llnl=True, iris=True)
+getdata_iris_llnl(origins_explosions, llnl=True, iris=True)
+getdata_iris_llnl(origins_quakes, llnl=True, iris=True)
+getdata_iris_llnl(origins_collapses, llnl=True, iris=True)
 
