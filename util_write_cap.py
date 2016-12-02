@@ -575,24 +575,24 @@ def check_if_LLNL_event(event_time):
             "1992-09-18T17:00:00.08": "HUNTERS_TROPHY", 
             "1992-09-23T15:04:00.00": "DIVIDER",
             # earthquakes
-            "1992-06-29T10:14:21.89": "Little_Skull_Main",
-            "1992-07-05T06:54:10.72": "Little_Skull_Aftershock",
-            "1995-07-31T12:34:45.03": "Timber_Mountain",
-            "1997-04-26T01:49:35.58": "Groom_Pass",
-            "1997-09-12T13:36:54.20": "Calico_Fan",
-            "1998-12-12T01:41:30.33": "Warm_Springs",
-            "1999-01-23T03:00:34.82": "Frenchman_Flat_1",
-            "1999-01-27T10:44:17.80": "Frenchman_Flat_2",
-            "2002-06-14T12:40:45.82": "Little_Skull",
+            "1992-06-29T10:14:23.18": "Little_Skull_Main",
+            "1992-07-05T06:54:13.52": "Little_Skull_Aftershock",
+            "1995-07-31T12:34:47.35": "Timber_Mountain",
+            "1997-04-26T01:49:35.20": "Groom_Pass",
+            "1997-09-12T13:36:54.94": "Calico_Fan",
+            "1998-12-12T01:41:32.00": "Warm_Springs",
+            "1999-01-23T03:00:32.00": "Frenchman_Flat_1",
+            "1999-01-27T10:44:23.30": "Frenchman_Flat_2",
+            "2002-06-14T12:40:45.36": "Little_Skull",
             # earthquakes in Ford but not in the LLNL database
-            "1996-09-05T08:16:56.09": "Amargosa",
-            "1997-06-14T19:48:19.93": "Indian_Springs",
-            "2007-01-24T11:30:16.10": "Ralston",
+            "1996-09-05T08:16:55.40": "Amargosa",
+            "1997-06-14T19:48:19.45": "Indian_Springs",
+            "2007-01-24T11:30:16.099": "Ralston",
             # mine collapses
             #"1982-08-05T14:00:00"   : "ATRISCO",       # Explosion (not in Ford2009)
-            "1982-08-05T14:21:00"   : "ATRISCO_Hole",  # Collapse
-            "1995-02-03T15:26:10.69": "Trona_Mine_1",
-            "2000-01-30T14:46:51.31": "Trona_Mine_2"
+            "1982-08-05T14:21:38.000": "ATRISCO_Hole",  # Collapse
+            "1995-02-03T15:26:10.690": "Trona_Mine_1",
+            "2000-01-30T14:46:51.310": "Trona_Mine_2"
             } 
     _event_time = obspy.UTCDateTime(event_time)
     evname_key = util_helpers.otime2eid(event_time)     # object
