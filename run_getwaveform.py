@@ -13,7 +13,7 @@ import sys
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 16
+iex = 30
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -531,16 +531,46 @@ if iex == 22:
 # MFFZ earthquake near Clear - Mw 4.1 
 if iex == 30:
     idb = 1
-    otime = obspy.UTCDateTime("2016-11-06T9:29:10")
+    use_catalog = 0  
+    otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
+    elat = 64.1639
+    elon = -150.0626
+    edep = 23190
+    emag = 4.10
+
     min_dist = 0
     max_dist = 300
-    tbefore_sec = 100
-    tafter_sec = 300
+    tbefore_sec = 200
+    tafter_sec = 400
     network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     channel = 'BH?,HH?'
-    scale_factor = 10.0**2  # original
-    overwrite_ddir = 1
-    resample_freq = 50 
+    scale_factor = 1
+    resample_freq = 0
+    # for CAP
+    #scale_factor = 10.0**2
+    #resample_freq = 50 
+
+    # to investigate clipping
+    irotate = False    # why do we get .r and .t sac files?
+    ifFilter = True
+    zerophase = False
+    filt_type = 'bandpass'
+    f1 = 1/100
+    f2 = 1/10
+    remove_response = True
+    demean = True
+    detrend = True
+    # this creates some pre-origin signal/artifact
+    #ipre_filt = 1
+    # this creates some very long-period signal/artifact
+    #ipre_filt = 0
+    #f1 = 1/10
+    #filt_type = 'lowpass' 
+    # this seems to give the best results
+    ipre_filt = 2
+    f0 = 0.5*f1
+    f3 = 2.0*f2
+    pre_filt=(f0, f1, f2, f3) 
 
 # NENNUC event (from Steve)
 if iex == 31:
@@ -561,6 +591,7 @@ if iex == 31:
     resample_freq = 0 
     scale_factor = 1
 
+    # to investigate clipping
     ifFilter = True
     zerophase = False
     filt_type = 'bandpass'
