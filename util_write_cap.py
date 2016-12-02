@@ -589,8 +589,8 @@ def check_if_LLNL_event(event_time):
             "1997-06-14T19:48:19.93": "Indian_Springs",
             "2007-01-24T11:30:16.10": "Ralston",
             # mine collapses
-            #"1982-08-05T14:21:00"   : "ATRISCO_Hole", # not in LLNL database
-            "1982-08-05T14:00:00"   : "ATRISCO_Hole",   # Event time from LLNL database
+            #"1982-08-05T14:00:00"   : "ATRISCO",       # Explosion (not in Ford2009)
+            "1982-08-05T14:21:00"   : "ATRISCO_Hole",  # Collapse
             "1995-02-03T15:26:10.69": "Trona_Mine_1",
             "2000-01-30T14:46:51.31": "Trona_Mine_2"
             } 
