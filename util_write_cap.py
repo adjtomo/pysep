@@ -951,3 +951,56 @@ def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
             tr.filter(filter_type, freq=fmax, zerophase=zerophase, \
                     corners=corners)
 
+def resp_plot_remove(st, ipre_filt, iplot_response, scale_factor, stations):
+    """
+    Remove instrument response. Or plot (but not both)
+    TODO consider separating the remove and plot functions
+    """
+    for tr in st:
+        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+                tr.stats.location + '.' + tr.stats.channel
+
+        if ipre_filt == 0:
+            pre_filt = None
+        elif ipre_filt == 1:
+
+            # ADD COMMENTS
+            # ADD COMMENTS
+            FCUT1_PAR = 4.0 # comments
+            FCUT2_PAR = 0.5
+            fnyq = tr.stats.sampling_rate/2
+            f2 = fnyq * FCUT2_PAR
+            # f1 = 4.0 / trace_length ?
+            f1 = FCUT1_PAR/(tr.stats.endtime - tr.stats.starttime)
+            f0 = 0.5*f1
+            f3 = 2.0*f2
+            pre_filt = (f0, f1, f2, f3)
+
+        print('--> station %14s Correcting instrument response' %\
+                station_key)
+
+        # Plot or remove instrument response but not both.
+        # (It seems this should be a separate function)
+        if iplot_response == True:
+            # out directory and filename
+            resp_plot_dir = evname_key + '/' + 'resp_plots'
+            if not os.path.exists(resp_plot_dir):
+                os.makedirs(evname_key + '/' + 'resp_plots')
+            resp_plot = resp_plot_dir + '/' + station_key + '_resp.eps'
+
+            try:
+                tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                        output="VEL", plot = resp_plot)
+                continue
+            except:
+                print('Could not generate response plot for %s' % station_key)
+        else:
+            try:
+                tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                        output="VEL")
+            except Exception as e:
+                print("Failed to correct %s due to: %s" % (tr.id, str(e)))
+
+        # Change the units if instrument response is removed
+        tr.stats.sac['kuser0'] = str(scale_factor)
+
