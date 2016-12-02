@@ -932,3 +932,22 @@ def amp_rescale_llnl(st, scale_factor):
 
     return st
 
+def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
+    """
+    pre-filter traces. Filter options: bandpass, lowpass, highpass
+    """
+
+    for tr in st:
+        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+                tr.stats.location +'.'+ tr.stats.channel
+        print("--> station %14s Applying %s filter" % (station_key, filter_type))
+        if filter_type=='bandpass':
+            tr.filter(filter_type, freqmin=fmin, freqmax=fmax, \
+                    zerophase=zerophase, corners=corners)
+        elif filter_type=='lowpass':
+            tr.filter(filter_type, freq=fmin, zerophase=zerophase, \
+                    corners=corners)
+        elif filter_type=='highpass':
+            tr.filter(filter_type, freq=fmax, zerophase=zerophase, \
+                    corners=corners)
+
