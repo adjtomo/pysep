@@ -20,9 +20,11 @@ def run_get_waveform(c, event,
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifEvInfo=True,
                      scale_factor=10.0**2, ipre_filt = 1,
-                     pre_filt=(0.005, 0.006, 10.0, 15.0), icreateNull=1,
-                     ifFilter=False, fmin=.02, fmax=1, filt_type='bandpass', 
-                     zerophase=False, corners=4, iplot_response = False):
+                     pre_filt=(0.005, 0.006, 10.0, 15.0),
+                     icreateNull = 1,
+                     ifFilter=False, fmin=.02, fmax=1, filter_type='bandpass', 
+                     zerophase=False, corners=4, 
+                     iplot_response = False):
     """
     Get SAC waveforms for an event
 
@@ -111,15 +113,8 @@ def run_get_waveform(c, event,
         stream.detrend('linear')
 
     if ifFilter:
-        for tr in stream:
-            print('Applying',filt_type,'Filter ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
-            if filt_type=='bandpass':
-                tr.filter(filt_type,freqmin=fmin,freqmax=fmax,zerophase=zerophase,corners=corners)
-            elif filt_type=='lowpass':
-                tr.filter(filt_type,freq=fmin,zerophase=zerophase,corners=corners)
-            elif filt_type=='highpass':
-                tr.filter(filt_type,freq=fmax,zerophase=zerophase,corners=corners)
-            
+        prefilter(stream, fmin, fmax, zerophase, corners, filter_type)
+
     if ifRemoveResponse:
         for tr in stream:
             if ipre_filt == 0:

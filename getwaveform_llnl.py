@@ -109,14 +109,7 @@ def run_get_waveform(llnl_db_client, event,
         stream.detrend('linear')
 
     if ifFilter:
-        for tr in stream:
-            print('Applying',filt_type,'Filter ', tr.stats.network +'.'+ tr.stats.station +'.'+ tr.stats.location +'.'+ tr.stats.channel)
-            if filt_type=='bandpass':
-                tr.filter(filt_type,freqmin=fmin,freqmax=fmax,zerophase=zerophase,corners=corners)
-            elif filt_type=='lowpass':
-                tr.filter(filt_type,freq=fmin,zerophase=zerophase,corners=corners)
-            elif filt_type=='highpass':
-                tr.filter(filt_type,freq=fmax,zerophase=zerophase,corners=corners)
+        prefilter(stream, fmin, fmax, zerophase, corners, filter_type)
 
     if ifRemoveResponse:
         decon=True
