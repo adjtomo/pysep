@@ -850,7 +850,7 @@ def resample_cut(st, freq, evtime, before, after):
             st.remove(tr)
             continue
 
-def trim_maxstart_minend(stalist, st2):
+def trim_maxstart_minend(stalist, st2, client_name, event, evtime):
     """
     Function to cut the start and end points of a stream.
     The starttime and endtime are set to the latest starttime and earliest
@@ -892,15 +892,25 @@ def trim_maxstart_minend(stalist, st2):
 
         #print('Start Time: ',max_starttime, 'End Time: ',min_endtime)
         try:
-            select_st.trim(starttime=max_starttime,\
-                               endtime = min_endtime, pad = True, nearest_sample = True,\
-                               fill_value=0)
+            select_st.trim(starttime=max_starttime, endtime = min_endtime, \
+                    pad = True, nearest_sample = True, fill_value=0)
             for tr in select_st.traces:
                 #print(len(tr.data))
                 temp_stream = temp_stream.append(tr)
         except:
             print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
         
+    output_log = ("data_processing_status_%s.log" % client_name)
+    fid = open(output_log, "w")
+    fid.write("\n--------------------\n%s\n" % event.short_str())
+    fid.write("\nAfter trimming the edges (in case 3 channels have different lengths)")
+    for tr in st2:
+        fid.write("\n%s %s %s %s %s %s %6s %.2f sec" % (evtime, \
+                tr.stats.network, tr.stats.station, tr.stats.channel, \
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate))) 
+    fid.close
+
     return temp_stream
 
 def amp_rescale(stream, scale_factor):
