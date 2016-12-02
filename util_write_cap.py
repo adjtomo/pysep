@@ -1014,3 +1014,49 @@ def resp_plot_remove(st, ipre_filt, iplot_response, scale_factor, stations):
         # Change the units if instrument response is removed
         tr.stats.sac['kuser0'] = str(scale_factor)
 
+def do_waveform_QA(stream, client_name, event, evtime, before, after):
+    """
+    Some QA options for dealing with bad data
+    - remove traces with missing data (currently disabled)
+    - log waveform lengths and discrepancies
+    - fill in missing data
+    """
+
+    output_log = ("data_processing_status_%s.log" % client_name)
+    fid = open(output_log, "w")
+    fid.write("\n--------------------\n%s\n" % event.short_str())
+    fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
+
+    # compare requested with available times. log discrepancies.
+    for tr in stream:
+        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+                tr.stats.location +'.'+ tr.stats.channel
+        fid.write("\nt0 %s %s t1 %s t2 %s npts %6s T %.2f sec" % \
+                (evtime, station_key,\
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
+        if tr.stats.npts < (tr.stats.sampling_rate * (before + after)):
+            print("WARNING station %14s Data available < (before + after). Consider removing this station" 
+                    % station_key)
+            fid.write(" -- data missing")
+
+            ## remove waveforms with missing data
+            #stream.remove(tr)
+
+    # Fill in missing data -- Carl request
+    # OPTION 1 fill gaps with 0
+    #stream.merge(method=0,fill_value=0)
+
+    # OPTION 2 interpolate
+    stream.merge(fill_value='interpolate')
+
+    fid.write("\n\nAfter filling values (fill_value = interpolate)")
+    for tr in stream:
+        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+                tr.stats.location +'.'+ tr.stats.channel
+        fid.write("\nt0 %s %s t1 %s t2 %s npts %6s T %.2f sec" % \
+                (evtime, station_key,\
+                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+                float(tr.stats.npts / tr.stats.sampling_rate)))
+
+    fid.close
