@@ -693,6 +693,7 @@ if idb == 3:
     eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
     if os.path.exists('RAW'):
+        print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree('RAW')
     if overwrite_ddir and os.path.exists(ddir):
         print("WARNING. %s already exists. Deleting ..." % ddir)
