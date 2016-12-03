@@ -84,27 +84,11 @@ def run_get_waveform(c, event,
     print("Downloading waveforms...")
     bulk_list = make_bulk_list_from_stalist(
         stations, evtime - before, evtime + after, channel=channel)
-    _stream = c.get_waveforms_bulk(bulk_list)
-    #print(_stream)  # code for debugging. partial print stations
-
-    # Create SAC objects and add headers    
-    for tr in _stream:
-        # This is the best way to make sac objects
-        tr.write('tmppp.sac', format='SAC')
-        tmptr = obspy.read('tmppp.sac').traces[0]
-        tr.stats.sac = tmptr.stats.sac
-        # Add units to the sac header (it should be in COUNTS before response is removed)
-        tr.stats.sac['kuser0'] = 'RAW'
-
-    # Save raw waveforms
-    _stream = add_sac_metadata(_stream,idb=idb,ev=event, stalist=stations) 
-    evname_key=_stream[0].stats.sac['kevnm']
-    write_stream_sac(_stream, evname_key=evname_key)
-    os.rename(evname_key,'RAW')
+    stream_raw = c.get_waveforms_bulk(bulk_list)
 
     # set reftime
     stream = obspy.Stream()
-    stream = set_reftime(_stream, evtime)
+    stream = set_reftime(stream_raw, evtime)
 
     if ifDemean:
         stream.detrend('demean')
@@ -157,10 +141,13 @@ def run_get_waveform(c, event,
     # match start and end points for all traces
     st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime)
 
-    write_stream_sac(st2, evname_key)
+    # save raw waveforms in SAC format
+    path_to_waveforms = "./RAW"
+    write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations)
 
-    # Move raw waveforms inside this directory
-    os.rename('RAW',evname_key+'/RAW')
+    # save processed waveforms in SAC format
+    path_to_waveforms = "."
+    write_stream_sac(st2, path_to_waveforms, evname_key)
 
     if ifrotate:
         rotate_and_write_stream(st2, evname_key, icreateNull)

@@ -76,29 +76,17 @@ def run_get_waveform(llnl_db_client, event,
     stations = set([sta.code for net in inventory for sta in net])
 
     _st = llnl_db_client.get_waveforms_for_event(event_number)
-    _stream = obspy.Stream()
+    stream_raw = obspy.Stream()
     for tr in _st:
         if tr.stats.station in stations:
-            _stream.append(tr)
+            stream_raw.append(tr)
 
-    # Create SAC objects and add headers    
-    for tr in _stream:
-        # This is the best way to make sac objects
-        tr.write('tmppp.sac', format='SAC')
-        tmptr = obspy.read('tmppp.sac').traces[0]
-        tr.stats.sac = tmptr.stats.sac
-        # Add units to the sac header (it should be in COUNTS before response is removed)
-        tr.stats.sac['kuser0'] = 'llnl'
-
-    # Save raw waveforms
-    _stream = add_sac_metadata(_stream,idb=idb,ev=event, stalist=inventory) 
-    evname_key=_stream[0].stats.sac['kevnm']
-    write_stream_sac(_stream, evname_key=evname_key)
-    os.rename(evname_key,'RAW')
+    # save raw waveforms
+    #write_stream_sac_raw(stream_raw, idb, event, stations)
 
     # set reftime
     stream = obspy.Stream()
-    stream = set_reftime(_stream, evtime)
+    stream = set_reftime(stream_raw, evtime)
 
     #print("--> Extracted %i waveforms from the LLNL db database." % len(st))
 
@@ -160,9 +148,19 @@ def run_get_waveform(llnl_db_client, event,
         print("--> New sample rate = %5.1f" % resample_freq)
         resample_cut(st2, resample_freq, evtime, before, after)
 
-    write_stream_sac(st2, evname_key)
-    # Move raw waveforms inside this directory
-    os.rename('RAW',evname_key+'/RAW')
+    #   # write processed SAC files
+    #   write_stream_sac(st2, evname_key)
+
+    #   # Move raw waveforms inside this directory
+    #   #os.rename('RAW', evname_key + '/RAW')
+
+    # save raw waveforms in SAC format
+    path_to_waveforms = "./RAW"
+    write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations)
+
+    # save processed waveforms in SAC format
+    path_to_waveforms = "."
+    write_stream_sac(st2, path_to_waveforms, evname_key)
 
     if ifrotate:
         rotate_and_write_stream(st2, evname_key, icreateNull)
