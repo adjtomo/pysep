@@ -416,7 +416,7 @@ def write_ev_info(ev, evname_key):
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
-def add_sac_metadata(st,idb=3, ev=[], stalist=[]):
+def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
     """
     Add event and station metadata to an Obspy stream
     """
@@ -723,21 +723,14 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                       dist / 1000)
                 f.write(outform % (sta.code, net.code, sta.latitude, sta.longitude, dist / 1000, az))
 
-#def write_stream_sac(st, reftime='', odir='./', use_sta_as_dirname=False):
-def write_stream_sac(st, evname_key):
+def write_stream_sac(st, path_to_waveforms, evname_key):
     """
     Writes out all of the traces in a stream to sac files
 
     Naming convention - DATE.NET.STA.CMP.SAC
     """
 
-    #if reftime == '':
-    #    usetime = st[0].stats.starttime
-    #else:
-    #    usetime = reftime
-
-    # get name key for output directory and files
-    outdir = evname_key
+    outdir = path_to_waveforms + '/' + evname_key
 
     # this smells like debug code. disabling for now.
     #if use_sta_as_dirname:
@@ -747,12 +740,32 @@ def write_stream_sac(st, evname_key):
         #print(outdir, tr.stats.station)
 
     # write sac waveforms
+    print("Saving waveforms in %s" % outdir)
     for tr in st.traces:
         #outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
         outfnam = outdir + "/" + evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel + '.sac'
         tr.write(outfnam, format='SAC')
+
+def write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations):
+    """
+    write unprocessed (raw) waveforms in SAC format
+    """
+
+    # Create SAC objects and add headers    
+    for tr in stream_raw:
+        # This is the best way to make sac objects
+        tr.write('tmppp.sac', format='SAC')
+        tmptr = obspy.read('tmppp.sac').traces[0]
+        tr.stats.sac = tmptr.stats.sac
+        # Add units to the sac header (it should be in COUNTS before response is removed)
+        tr.stats.sac['kuser0'] = 'RAW'
+
+    # write raw waveforms
+    stream_raw = add_sac_metadata(stream_raw, idb=idb, ev=event, stalist=stations) 
+    evname_key = stream_raw[0].stats.sac['kevnm']
+    write_stream_sac(stream_raw, path_to_waveforms, evname_key)
 
 def set_reftime(stream, evtime):
     """
@@ -809,6 +822,8 @@ def resample_cut(st, freq, evtime, before, after):
     """
     Custom resampling with a very sharp zerophase filter.
     """
+    print("\n--> WARNING Resampling. New sample rate %5.1f" % freq)
+
     new_nyquist = 0.5 * freq
     for tr in st:
         current_nyquist = 0.5 * tr.stats.sampling_rate
