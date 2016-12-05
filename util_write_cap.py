@@ -502,12 +502,12 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                         tr.stats.sac['cmpaz'] = ch.azimuth
                         # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
-                        if tr.stats.sac['kuser0'] == 'RAW':
-                            tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
-                        else:
-                            scale_factor = tr.stats.sac['kuser0']
-                            tr.stats.sac['kuser0'] = 'M/S'
                         if idb==1:
+                            if tr.stats.sac['kuser0'] == 'RAW':
+                                tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
+                            else:
+                                scale_factor = tr.stats.sac['kuser0']
+                                tr.stats.sac['kuser0'] = 'M/S'
                             sensor = ch.sensor.description
                             # add sensor information
                             # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)

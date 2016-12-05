@@ -156,7 +156,7 @@ def run_get_waveform(llnl_db_client, event,
 
     # save raw waveforms in SAC format
     path_to_waveforms = "./RAW"
-    write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations)
+    write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations=inventory)
 
     # save processed waveforms in SAC format
     path_to_waveforms = "."
