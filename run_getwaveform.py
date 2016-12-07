@@ -602,6 +602,33 @@ if iex == 31:
     demean = True
     detrend = True
 
+
+# PROBLEM data arrays not of the same length
+# Traceback (most recent call last):
+#   File "run_getwaveform.py", line 736, in <module>
+#     iplot_response = iplot_response)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_llnl.py", line 166, in run_get_waveform
+#     rotate_and_write_stream(st2, evname_key, icreateNull)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
+#     data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 247, in rotate2zne
+#     raise ValueError(msg)
+# ValueError: All three data arrays must be of same length.
+if iex == 32:
+    idb = 3            # LLNL
+    otime = obspy.UTCDateTime("1989-06-27T15:30:00.02")
+    elat = 37.275
+    elon = -116.354
+    edep = 640
+    emag = 4.90
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*' 
+    channel = 'BH?,LH?' 
+    overwrite_ddir = 0
+
 #=================================================================================
 # End examples with issues
 #=================================================================================
