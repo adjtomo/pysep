@@ -100,7 +100,7 @@ def run_get_waveform(c, event,
         prefilter(stream, fmin, fmax, zerophase, corners, filter_type)
 
     if ifRemoveResponse:
-        resp_plot_remove(stream, ipre_filt, iplot_response, scale_factor, stations)
+        resp_plot_remove(stream, ipre_filt, pre_filt, iplot_response, scale_factor, stations)
     else:
         # output RAW waveforms
         decon=False

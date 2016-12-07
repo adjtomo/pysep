@@ -986,7 +986,7 @@ def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
             tr.filter(filter_type, freq=fmax, zerophase=zerophase, \
                     corners=corners)
 
-def resp_plot_remove(st, ipre_filt, iplot_response, scale_factor, stations):
+def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stations):
     """
     Remove instrument response. Or plot (but not both)
     TODO consider separating the remove and plot functions
