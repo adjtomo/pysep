@@ -26,139 +26,263 @@ import getwaveform_iris
 import getwaveform_llnl
 import llnl_db_client
 from obspy.clients.fdsn import Client
+from obspy import UTCDateTime
+from obspy.core.event import Event, Origin, Magnitude
+import util_helpers
+import os
+import shutil
 
-# get event data from iris catalogs
-def get_iris_evcat(t0):
-    c = Client("IRIS")  # also can use NCEDC
-    sec_before_after = 2
-    cat = c.get_events(starttime = t0-sec_before_after, endtime = t0+sec_before_after)
-    if(len(cat) > 1):
-        print("WARNING -- multiple events found. Using the first in the list.")
-    return cat[0]
-
-# get data  
 def get_data_iris_ncedc(cat0):
     print("Calling getwaveform_iris")
 
     # parameters for waveform request
-    min_dist = 0 
-    max_dist = 1200
-    before = 100
-    after = 1200
-    network = '*'
-    #station = '*'
-    station = '*,-PURD,-NV33,-GPO'
-    channel = 'BH*,LH*'
-    resample_freq = 20      # 0 for no resampling
+    sec_before_t0 = 100
+    sec_after_t0 = 600
 
-    # parameters for CAP
+    # DEFAULT SETTINGS (see getwaveform_iris.py)
     rotate = True
     output_cap_weight_file = True
-    remove_response = True
     detrend = True
     demean = True
     output_event_info = True
-    pre_filt = (0.005, 0.006, 5.0, 10.0)
-    scale_factor = 10**2    # for CAP use 10**2 (to convert m/s to cm/s)
+
+    # for CAP all waveforms need to have the same sample rate
+    resample_freq = 50.0         # 0 for no resampling
+    scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
+
+    # event parameters
+    sec_before_after_event = 10  # time window to search for a target event in a catalog
+    min_dist = 0 
+    max_dist = 1200
+
+    # station parameters
+    network = '*'                # all networks
+    station = '*,-PURD,-NV33,-GPO'  # all stations
+    channel = 'BH?,LH?'
+
+    overwrite_ddir = 1           # 1 = delete data directory if it already exists
+    icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
+
+    # filter
+    # set ipre_filt = 0 to prevent extra filtering
+    ifFilter = False 
+    filter_type = 'bandpass'
+    # LLNL filter 10-50 sec is most stable. Some waveforms >= 100 sec show
+    # oscillations. Use factor of 2 limit = 200 sec for prefilter
+    f1 = 1/200
+    f2 = 1/10
+    zerophase = True             # False = causal, True = acausal
+    corners = 4                  # Is corner in Obspy same as Pole in SAC?
+    remove_response = True
+    iplot_response = False
+    ipre_filt = 2                # 0 No pre_filter
+                                 # 1 default pre_filter (see getwaveform_iris.py)
+                                 # 2 user-defined pre_filter
+    f0 = 0.5 * f1
+    f3 = 2.0 * f2
+    pre_filt = (f0, f1, f2, f3)  # applies for ipre_filt = 2 only
+
+    # NOTE event data from user-defined catalog!
+    # initialize objects
+    ev = Event()
+    org = Origin()
+    mag = Magnitude()
+
+    # build objects
+    org.time        = UTCDateTime(cat0[0])
+    org.longitude   = cat0[1]
+    org.latitude    = cat0[2]
+    org.depth       = cat0[3]
+    mag.mag         = cat0[5]
+    mag.magnitude_type = cat0[6]    # Mw, ml, mb, ...
+
+    ev.origins.append(org)
+    ev.magnitudes.append(mag)
+
+    # Delete existing data directory
+    eid = util_helpers.otime2eid(ev.origins[0].time)
+    ddir = './'+ eid
+    if os.path.exists('RAW'):
+        print("WARNING. %s already exists. Deleting ..." % ddir)
+        shutil.rmtree('RAW')
+    if overwrite_ddir and os.path.exists(ddir):
+        print("WARNING. %s already exists. Deleting ..." % ddir)
+        shutil.rmtree(ddir)
 
     # BK data has to be requested through NCEDC
     clients = ["IRIS", "NCEDC"]
     for thisclient in clients:
         if thisclient is "IRIS":
-            network='*'
-            # network = 'CI,TS,II,IM,IU' 
+            # do nothing
+            network = network
+            #network = 'CI,TS,II,IM,IU' 
         elif thisclient is "NCEDC":
             network = 'BK'
+            station = '*'   # doesn't like "-staX"
         else:
             print("error. client not recognized")
 
         client = Client(thisclient)
         try:
-            getwaveform_iris.run_get_waveform(c = client, event = cat0, 
+            getwaveform_iris.run_get_waveform(c = client, event = ev, 
                     min_dist = min_dist, max_dist = max_dist, 
-                    before = before, after = after, 
-                    network = network, station = station, channel = channel,
-                    resample_freq = resample_freq, 
-                    ifrotate = rotate, ifCapInp = output_cap_weight_file, 
-                    ifRemoveResponse = remove_response, ifDetrend = detrend, 
-                    ifDemean = demean, ifEvInfo = output_event_info, 
-                    scale_factor = scale_factor, pre_filt = pre_filt)
+                    before = sec_before_t0, after = sec_after_t0, 
+                    network = network, station = station, channel = channel, 
+                    resample_freq = resample_freq, ifrotate = rotate,
+                    ifCapInp = output_cap_weight_file, 
+                    ifRemoveResponse = remove_response,
+                    ifDetrend = detrend, ifDemean = demean, 
+                    ifEvInfo = output_event_info,
+                    scale_factor = scale_factor,
+                    ipre_filt = ipre_filt, pre_filt = pre_filt, 
+                    icreateNull = icreateNull,
+                    ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+                    zerophase = zerophase, corners = corners, 
+                    iplot_response = iplot_response)
         except Exception as msg:
+            print("\n==========================================================\n")
             print("WARNING. There was a problem with client %s" % thisclient)
             print(msg)
             print("Continuing ... \n")
+            print("\n==========================================================\n")
             pass
     print("Done")
 
-def get_data_llnl(evid):
+def get_data_llnl(cat0):
+    """
+    get waveforms from LLNL database. This function is very similar to
+    get_data_iris_ncedc except the event origin is already built.
+    """
+    
+    print("Reading LLNL database ...")
     client = llnl_db_client.LLNLDBClient(
             "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
     # parameters for waveform request
-    min_dist = 0 
-    max_dist = 1200
-    before = 100
-    after = 600
-    network = '*' 
-    station = '*' 
-    channel = 'BH*,LH*,EH*'
-    resample_freq = 20
+    sec_before_t0 = 100
+    sec_after_t0 = 600
 
-    # parameters for CAP
+    # DEFAULT SETTINGS (see getwaveform_iris.py)
     rotate = True
     output_cap_weight_file = True
-    remove_response = True
     detrend = True
     demean = True
     output_event_info = True
-    pre_filt = (0.005, 0.006, 5.0, 10.0)
-    scale_factor = 10**2    # for CAP use 10**2 (to convert m/s to cm/s)
 
-    #evid = int(evid)
+    # for CAP all waveforms need to have the same sample rate
+    resample_freq = 50.0         # 0 for no resampling
+    scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
+
+    # event parameters
     sec_before_after_event = 10  # time window to search for a target event in a catalog
-    otime = obspy.UTCDateTime(evid)
-    # get event time and event ID
+    min_dist = 0 
+    max_dist = 1200
 
+    # station parameters
+    network = '*'                # all networks
+    station = '*,-PURD,-NV33,-GPO'  # all stations
+    channel = 'BH?,LH?'
+
+    overwrite_ddir = 1           # 1 = delete data directory if it already exists
+    icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
+
+    # filter
+    # set ipre_filt = 0 to prevent extra filtering
+    ifFilter = False 
+    filter_type = 'bandpass'
+    # LLNL filter 10-50 sec is most stable. Some waveforms >= 100 sec show
+    # oscillations. Use factor of 2 limit = 200 sec for prefilter
+    f1 = 1/200
+    f2 = 1/10
+    zerophase = True             # False = causal, True = acausal
+    corners = 4                  # Is corner in Obspy same as Pole in SAC?
+    remove_response = True
+    iplot_response = False
+    ipre_filt = 2                # 0 No pre_filter
+                                 # 1 default pre_filter (see getwaveform_iris.py)
+                                 # 2 user-defined pre_filter
+    f0 = 0.5 * f1
+    f3 = 2.0 * f2
+    pre_filt = (f0, f1, f2, f3)  # applies for ipre_filt = 2 only
+
+    # NOTE event data from user-defined catalog!
+    # initialize objects
+    # ev = Event()
+    # org = Origin()
+    # mag = Magnitude()
+
+    # build objects
+    #org.time        = UTCDateTime(cat0[0])
+    # org.longitude   = cat0[1]
+    # org.latitude    = cat0[2]
+    # org.depth       = cat0[3]
+    # mag.mag         = cat0[5]
+    # mag.magnitude_type = cat0[6]    # Mw, ml, mb, ...
+
+    # ev.origins.append(org)
+    # ev.magnitudes.append(mag)
+
+    otime = obspy.UTCDateTime(cat0[0])
     cat = client.get_catalog()
     mintime_str = "time > %s" % (otime - sec_before_after_event)
     maxtime_str = "time < %s" % (otime + sec_before_after_event)
     print(mintime_str, maxtime_str)
-    cat0 = cat.filter(mintime_str, maxtime_str)[0]
-    print(cat0)
-
     try:
-        getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = cat0, 
-                network = network, station = station, channel = channel, 
-                min_dist = min_dist, max_dist = max_dist, 
-                before = before, after = after, 
-                resample_freq = resample_freq,
-                ifrotate = rotate, ifCapInp = output_cap_weight_file, 
-                ifRemoveResponse = remove_response, ifDetrend = detrend, 
-                ifDemean = demean, ifEvInfo = output_event_info, 
-                scale_factor = scale_factor, pre_filt = pre_filt)
+        ev = cat.filter(mintime_str, maxtime_str)[0]
+        print(ev)
+
+        # Delete existing data directory
+        eid = util_helpers.otime2eid(ev.origins[0].time)
+        ddir = './'+ eid
+        if os.path.exists('RAW'):
+            print("WARNING. %s already exists. Deleting ..." % ddir)
+            shutil.rmtree('RAW')
+        if overwrite_ddir and os.path.exists(ddir):
+            print("WARNING. %s already exists. Deleting ..." % ddir)
+            shutil.rmtree(ddir)
+
+        try:
+            getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = ev, 
+                    min_dist = min_dist, max_dist = max_dist, 
+                    before = sec_before_t0, after = sec_after_t0, 
+                    network = network, station = station, channel = channel, 
+                    resample_freq = resample_freq, ifrotate = rotate,
+                    ifCapInp = output_cap_weight_file, 
+                    ifRemoveResponse = remove_response,
+                    ifDetrend = detrend, ifDemean = demean, 
+                    ifEvInfo = output_event_info, 
+                    scale_factor = scale_factor, 
+                    ipre_filt = ipre_filt, pre_filt = pre_filt, 
+                    icreateNull=icreateNull,
+                    ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+                    zerophase = zerophase, corners = corners, 
+                    iplot_response = iplot_response)
+        except Exception as msg:
+            print("\n==========================================================\n")
+            print("WARNING There was a problem with the LLNL client:")
+            print(msg)
+            print("Continuing ... \n")
+            print("\n==========================================================\n")
+            pass
+
     except Exception as msg:
         print("\n==========================================================\n")
-        print("WARNING. Event ", cat0)
-        print("There was a problem with LLNL client:")
+        print("WARNING There was a problem with the LLNL client:")
         print(msg)
-        print("Continuing to next event...")
+        print("Continuing ... \n")
         print("\n==========================================================\n")
         pass
+
     print("Done")
 
 def getdata_iris_llnl(dataset, llnl=False, iris=False):
     """
     get data from LLNL and IRIS + NCEDC
     """
-    for evid, otime in dataset.items():
-        # get catalog data
-        t0 = obspy.UTCDateTime(otime)
-        cat0 = get_iris_evcat(t0)
-        print(cat0)
-
+    for evname, origin in dataset.items():
         # download waveforms
-        if(llnl): get_data_llnl(otime)
-        if(iris): get_data_iris_ncedc(cat0)
+        if(llnl): get_data_llnl(origin)
+        if(iris): get_data_iris_ncedc(origin)
 
 # List of events and their EVIDs from Ford (2009).
 # First I matched event times in Ford to those in the LLNL database. 
