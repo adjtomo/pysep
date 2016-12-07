@@ -142,11 +142,11 @@ def run_get_waveform(c, event,
     st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime)
 
     # save raw waveforms in SAC format
-    path_to_waveforms = "./RAW"
+    path_to_waveforms = evname_key + "/RAW"
     write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations)
 
     # save processed waveforms in SAC format
-    path_to_waveforms = "."
+    path_to_waveforms = evname_key 
     write_stream_sac(st2, path_to_waveforms, evname_key)
 
     if ifrotate:

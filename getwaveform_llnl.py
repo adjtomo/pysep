@@ -81,9 +81,6 @@ def run_get_waveform(llnl_db_client, event,
         if tr.stats.station in stations:
             stream_raw.append(tr)
 
-    # save raw waveforms
-    #write_stream_sac_raw(stream_raw, idb, event, stations)
-
     # set reftime
     stream = obspy.Stream()
     stream = set_reftime(stream_raw, evtime)
@@ -148,18 +145,12 @@ def run_get_waveform(llnl_db_client, event,
         print("--> New sample rate = %5.1f" % resample_freq)
         resample_cut(st2, resample_freq, evtime, before, after)
 
-    #   # write processed SAC files
-    #   write_stream_sac(st2, evname_key)
-
-    #   # Move raw waveforms inside this directory
-    #   #os.rename('RAW', evname_key + '/RAW')
-
     # save raw waveforms in SAC format
-    path_to_waveforms = "./RAW"
+    path_to_waveforms = evname_key + "/RAW"
     write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations=inventory)
 
     # save processed waveforms in SAC format
-    path_to_waveforms = "."
+    path_to_waveforms = evname_key
     write_stream_sac(st2, path_to_waveforms, evname_key)
 
     if ifrotate:

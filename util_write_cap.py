@@ -730,41 +730,37 @@ def write_stream_sac(st, path_to_waveforms, evname_key):
     Naming convention - DATE.NET.STA.CMP.SAC
     """
 
-    outdir = path_to_waveforms + '/' + evname_key
-
-    # this smells like debug code. disabling for now.
-    #if use_sta_as_dirname:
-    #    outdir = odir + tr.stats.station + '/'
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-        #print(outdir, tr.stats.station)
+    if not os.path.exists(path_to_waveforms):
+        os.makedirs(path_to_waveforms)
 
     # write sac waveforms
-    print("Saving waveforms in %s" % outdir)
+    print("Saving waveforms in %s" % path_to_waveforms)
     for tr in st.traces:
-        #outfnam = outdir + usetime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
-        outfnam = outdir + "/" + evname_key + '.' \
+        filename = evname_key + '.' \
                 + tr.stats.network + '.' + tr.stats.station + '.' \
                 + tr.stats.location + '.' + tr.stats.channel + '.sac'
-        tr.write(outfnam, format='SAC')
+        outfile = path_to_waveforms + "/" + filename 
+        tr.write(outfile, format='SAC')
 
 def write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations):
     """
     write unprocessed (raw) waveforms in SAC format
     """
 
+    #evname_key = stream_raw[0].stats.sac['kevnm']
     # Create SAC objects and add headers    
     for tr in stream_raw:
-        # This is the best way to make sac objects
+        # create sac object before adding sac headers
+        # (there may be a better way)
         tr.write('tmppp.sac', format='SAC')
         tmptr = obspy.read('tmppp.sac').traces[0]
         tr.stats.sac = tmptr.stats.sac
-        # Add units to the sac header (it should be in COUNTS before response is removed)
+        # sac header is COUNTS when response is not removed
         tr.stats.sac['kuser0'] = 'RAW'
 
-    # write raw waveforms
     stream_raw = add_sac_metadata(stream_raw, idb=idb, ev=event, stalist=stations) 
-    evname_key = stream_raw[0].stats.sac['kevnm']
+
+    # write raw waveforms
     write_stream_sac(stream_raw, path_to_waveforms, evname_key)
 
 def set_reftime(stream, evtime):
