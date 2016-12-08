@@ -13,7 +13,7 @@ import sys
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 6
+iex = 30
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -540,6 +540,12 @@ if iex == 30:
     elon = -150.0626
     edep = 23190
     emag = 4.10
+
+    otime = obspy.UTCDateTime("2016-12-08T10:18:13.000")
+    elat = 64.2380
+    elon = -150.0581
+    edep = 18507
+    emag = 4.60
 
     min_dist = 0
     max_dist = 300
