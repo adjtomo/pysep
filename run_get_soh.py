@@ -37,10 +37,10 @@ print(sys.version)
 
 # Set parameters
 net = "XV"
-sta = "FTGH"
+sta = "F2TN"
 
-time1 = UTCDateTime(2015,8,1,0,0,0)
-time2 = UTCDateTime(2016,9,3,0,0,0)
+time1 = UTCDateTime(2016,11,6,9,0,0)
+time2 = UTCDateTime(2016,11,6,10,0,0)
 
 
 # get data
@@ -93,7 +93,7 @@ plt.legend(loc=2,fontsize = 10)
 #plt.ylim(-ymax,ymax)
 
 fig.autofmt_xdate()
-fig.savefig(sta + "soh.pdf", dpi=200)
+fig.savefig("/home/ksmith/" + sta + "soh.pdf", dpi=200)
 
 plt.show()
 
