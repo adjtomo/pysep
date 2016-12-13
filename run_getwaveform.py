@@ -13,7 +13,7 @@ import sys
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 30
+iex = 33
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -634,6 +634,36 @@ if iex == 32:
     network = '*' 
     channel = 'BH?,LH?' 
     overwrite_ddir = 0
+
+# Occasional error
+# Similar as iex=32 but for the IRIS database
+#   File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
+#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
+#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
+# ValueError: setting an array element with a sequence
+#
+# NOTE: Rerunning the same script (without any changes) solves the error sometimes!
+if iex == 33:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2015-12-02T10:05:25.798") 
+    elat = 61.70
+    elon = -147.26
+    edep = 36590
+    emag = 4.50
+    # subset of stations
+    min_dist = 300
+    max_dist = 400
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    channel = 'HH?,BH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
 
 #=================================================================================
 # End examples with issues
