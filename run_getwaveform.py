@@ -660,7 +660,8 @@ if iex == 33:
     max_dist = 400
     tbefore_sec = 100
     tafter_sec = 600
-    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    #network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    network = 'IU'
     channel = 'HH?,BH?'
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
