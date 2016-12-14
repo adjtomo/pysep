@@ -6,6 +6,7 @@ import util_helpers
 import shutil   # only used for deleting data directory
 import os
 import sys
+import getwaveform
 
 # TO DO
 # + filetags for the case iFilter = True (like lp10, bp10_40, etc)
@@ -674,7 +675,7 @@ if iex == 33:
 # IRIS
 if idb == 1:
     # import functions to access waveforms
-    import getwaveform_iris
+    #import getwaveform_iris
     from obspy.clients.fdsn import Client
     from obspy.core.event import Event, Origin, Magnitude
     if not user and not password:
@@ -702,37 +703,10 @@ if idb == 1:
         ev.origins.append(org)
         ev.magnitudes.append(mag)
 
-    # Delete existing data directory
-    eid = util_helpers.otime2eid(ev.origins[0].time)
-    ddir = './'+ eid
-    if os.path.exists('RAW'):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree('RAW')
-    if overwrite_ddir and os.path.exists(ddir):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree(ddir)
-
-    # Extract waveforms, IRIS
-    getwaveform_iris.run_get_waveform(c = client, event = ev, 
-            min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, 
-            network = network, station = station, channel = channel, 
-            resample_freq = resample_freq, ifrotate = rotate,
-            ifCapInp = output_cap_weight_file, 
-            ifRemoveResponse = remove_response,
-            ifDetrend = detrend, ifDemean = demean, 
-            ifEvInfo = output_event_info,
-            scale_factor = scale_factor,
-            ipre_filt = ipre_filt, pre_filt = pre_filt, 
-            icreateNull=icreateNull,
-            ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
-            zerophase = zerophase, corners = corners, 
-            iplot_response = iplot_response)
-
 # LLNL
 if idb == 3:
     import llnl_db_client
-    import getwaveform_llnl
+    #import getwaveform_llnl
     client = llnl_db_client.LLNLDBClient(
             "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
@@ -750,29 +724,29 @@ if idb == 3:
         print("No events in the catalog for the given time period. Stop.")
         sys.exit(0)
 
-    # Delete existing data directory 
-    eid = util_helpers.otime2eid(ev.origins[0].time)
-    ddir = './'+ eid
-    if os.path.exists('RAW'):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree('RAW')
-    if overwrite_ddir and os.path.exists(ddir):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree(ddir)
+# Delete existing data directory
+eid = util_helpers.otime2eid(ev.origins[0].time)
+ddir = './'+ eid
+if os.path.exists('RAW'):
+    print("WARNING. %s already exists. Deleting ..." % ddir)
+    shutil.rmtree('RAW')
+if overwrite_ddir and os.path.exists(ddir):
+    print("WARNING. %s already exists. Deleting ..." % ddir)
+    shutil.rmtree(ddir)
 
-    # Extract waveforms, LLNL
-    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = ev, 
-            min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, 
-            network = network, station = station, channel = channel, 
-            resample_freq = resample_freq, ifrotate = rotate,
-            ifCapInp = output_cap_weight_file, 
-            ifRemoveResponse = remove_response,
-            ifDetrend = detrend, ifDemean = demean, 
-            ifEvInfo = output_event_info, 
-            scale_factor = scale_factor, 
-            ipre_filt = ipre_filt, pre_filt = pre_filt, 
-            icreateNull=icreateNull,
-            ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
-            zerophase = zerophase, corners = corners, 
-            iplot_response = iplot_response)
+# Extract waveforms, IRIS
+getwaveform.run_get_waveform(c = client, event = ev, idb = idb, 
+                                  min_dist = min_dist, max_dist = max_dist, 
+                                  before = tbefore_sec, after = tafter_sec, 
+                                  network = network, station = station, channel = channel, 
+                                  resample_freq = resample_freq, ifrotate = rotate,
+                                  ifCapInp = output_cap_weight_file, 
+                                  ifRemoveResponse = remove_response,
+                                  ifDetrend = detrend, ifDemean = demean, 
+                                  ifEvInfo = output_event_info,
+                                  scale_factor = scale_factor,
+                                  ipre_filt = ipre_filt, pre_filt = pre_filt, 
+                                  icreateNull=icreateNull,
+                                  ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+                                  zerophase = zerophase, corners = corners, 
+                                  iplot_response = iplot_response)
