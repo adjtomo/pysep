@@ -14,7 +14,7 @@ import getwaveform
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 33
+iex = 31
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -588,26 +588,34 @@ if iex == 31:
     elon = -149.2479
     edep = 22663.7
     emag = 3.8
+    otime = obspy.UTCDateTime("2015-09-12T03:25:12.711")
+    elat = 65.1207
+    elon = -148.6646
+    edep = 15556.8
+    emag = 2.6
 
+    # For CAP
     min_dist = 0
     max_dist = 200
-    tbefore_sec = 2000
-    tafter_sec = 2000
+    tbefore_sec = -100
+    tafter_sec = 300
     network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     channel = 'BH?,HH?'
-    resample_freq = 0 
-    scale_factor = 1
 
     # to investigate clipping
-    ifFilter = True
-    zerophase = False
-    filter_type = 'bandpass'
-    f1 = 1/100
-    f2 = 1/20
-    remove_response = True
-    ipre_filt = 0
-    demean = True
-    detrend = True
+    #tbefore_sec = 2000
+    #tafter_sec = 2000
+    #resample_freq = 0 
+    #scale_factor = 1
+    #ifFilter = True
+    #zerophase = False
+    #filter_type = 'bandpass'
+    #f1 = 1/100
+    #f2 = 1/20
+    #remove_response = True
+    #ipre_filt = 0
+    #demean = True
+    #detrend = True
 
 
 # PROBLEM data arrays not of the same length
@@ -666,6 +674,30 @@ if iex == 33:
     channel = 'HH?,BH?'
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
+
+# Event from HutchisonGhosh2016
+if iex == 34:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2014-12-12T00:13:17") 
+    elat = 49.10
+    elon = -124.05
+    edep = 60000
+    emag = 4.10
+    # subset of stations
+    min_dist = 0
+    max_dist = 200
+    tbefore_sec = 100
+    tafter_sec = 300
+    #network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    network = 'TA,UW,CN'
+    channel = '?H?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
 
 #=================================================================================
 # End examples with issues
