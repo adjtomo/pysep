@@ -14,7 +14,7 @@ import getwaveform
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 31
+iex = 33
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -644,6 +644,10 @@ if iex == 32:
     channel = 'BH?,LH?' 
     overwrite_ddir = 0
 
+# for debugging:
+# python -m pdb run_getwaveform.py
+# Keep pressing `c` when prompted. It will drop you into the debugger as soon as it encounters an error. At that point you can hop up and down the stack with "u" and "d" and print the variables to see where it goes wrong. We can also get together quickly today and find the source of the issue.
+#
 # Occasional error
 # Similar as iex=32 but for the IRIS database
 #   File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
