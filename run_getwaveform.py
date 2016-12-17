@@ -67,7 +67,7 @@ remove_response = True
 iplot_response = False
 ipre_filt = 1                # =0 No pre_filter
                              # =1 default pre_filter (see getwaveform_iris.py)
-                             # =2 user-defined pre_filter
+                             # =2 user-defined pre_filter (use this if you are using bandpass filter)
 f0 = 0.5*f1
 f3 = 2.0*f2
 pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
@@ -697,7 +697,7 @@ if iex == 34:
     max_dist = 250
     tbefore_sec = 100
     tafter_sec = 300
-    network = 'TA,CN,UW'
+    network = '*'
     channel = 'LH?,BH?'
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
@@ -713,7 +713,7 @@ if iex == 34:
     f1 = 1/50
     f2 = 1/20
     remove_response = True
-    ipre_filt = 1
+    ipre_filt = 2
     demean = True
     detrend = True
 
