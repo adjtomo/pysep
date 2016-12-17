@@ -680,6 +680,7 @@ if iex == 33:
     scale_factor = 100         # no scale factor
 
 # Event from HutchisonGhosh2016
+# Crashes when using all networks [i.e. network = '*']
 if iex == 34:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
@@ -693,15 +694,28 @@ if iex == 34:
     emag = 4.10
     # subset of stations
     min_dist = 0
-    max_dist = 200
+    max_dist = 250
     tbefore_sec = 100
     tafter_sec = 300
-    #network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
-    network = 'TA,UW,CN'
-    channel = '?H?'
+    network = 'TA,CN,UW'
+    channel = 'LH?,BH?'
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
+    # For plotting filtered waveforms
+    tbefore_sec = 500
+    tafter_sec = 500
+    resample_freq = 0 
+    scale_factor = 1
+    ifFilter = True
+    zerophase = True
+    filter_type = 'bandpass'
+    f1 = 1/50
+    f2 = 1/20
+    remove_response = True
+    ipre_filt = 1
+    demean = True
+    detrend = True
 
 #=================================================================================
 # End examples with issues
