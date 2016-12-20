@@ -18,7 +18,7 @@ def run_get_waveform(c, event, idb,
                      network='*', station = '*', channel='BH*', 
                      resample_freq=20, 
                      ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
-                     ifDetrend=True, ifDemean=True, ifEvInfo=True,
+                     ifDetrend=True, ifDemean=True, ifTaper=False, ifEvInfo=True,
                      scale_factor=10.0**2, ipre_filt = 1,
                      pre_filt=(0.005, 0.006, 10.0, 15.0),
                      icreateNull = 1,
@@ -165,6 +165,12 @@ def run_get_waveform(c, event, idb,
     # save raw waveforms in SAC format
     path_to_waveforms = evname_key + "/RAW"
     write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations=inventory)
+
+    # Taper waveforms (optional; Generally used when data is noisy- example: HutchisonGhosh2016)
+    # https://docs.obspy.org/master/packages/autogen/obspy.core.trace.Trace.taper.html
+    # To get the same results as the default taper in SAC, use max_percentage=0.05 and leave type as hann.
+    if ifTaper:
+        st2.taper(max_percentage=0.5, type='hann',max_length=None, side='both')
 
     # save processed waveforms in SAC format
     path_to_waveforms = evname_key 

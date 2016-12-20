@@ -23,6 +23,7 @@ rotate = True
 output_cap_weight_file = True
 detrend = True
 demean = True
+taper = False
 output_event_info = True
 
 # for CAP all waveforms need to have the same sample rate
@@ -716,6 +717,7 @@ if iex == 34:
     ipre_filt = 2
     demean = True
     detrend = True
+    taper = True
 
 #=================================================================================
 # End examples with issues
@@ -792,7 +794,7 @@ getwaveform.run_get_waveform(c = client, event = ev, idb = idb,
                                   resample_freq = resample_freq, ifrotate = rotate,
                                   ifCapInp = output_cap_weight_file, 
                                   ifRemoveResponse = remove_response,
-                                  ifDetrend = detrend, ifDemean = demean, 
+                                  ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
                                   ifEvInfo = output_event_info,
                                   scale_factor = scale_factor,
                                   ipre_filt = ipre_filt, pre_filt = pre_filt, 
