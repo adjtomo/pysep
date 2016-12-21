@@ -1123,9 +1123,9 @@ def rotate2UVW(st,evname_key):
     st[1].stats.sac['cmpaz'] = st[0].stats.sac['cmpaz'] + 120.0
     st[2].stats.sac['cmpaz'] = st[0].stats.sac['cmpaz'] + 240.0 
     theta = (np.arcsin(1/np.sqrt(3)))*(180.0/np.pi)  # The angle between the axis and the horizontal plane
-    st[0].stats.sac['cmpinc'] = theta
-    st[1].stats.sac['cmpinc'] = theta
-    st[2].stats.sac['cmpinc'] = theta
+    st[0].stats.sac['cmpinc'] = st[0].stats.sac['cmpinc'] - theta
+    st[1].stats.sac['cmpinc'] = st[1].stats.sac['cmpinc'] - theta
+    st[2].stats.sac['cmpinc'] = st[2].stats.sac['cmpinc'] + 90.0 - theta 
     st[0].stats.sac['kcmpnm'] = st[0].stats.channel
     st[1].stats.sac['kcmpnm'] = st[1].stats.channel
     st[2].stats.sac['kcmpnm'] = st[2].stats.channel

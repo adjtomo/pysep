@@ -741,7 +741,7 @@ if iex == 35:
     detrend = False
     demean = False
     taper = False
-    ipre_filt = 0
+    ipre_filt = 1
 
 #=================================================================================
 # End examples with issues
