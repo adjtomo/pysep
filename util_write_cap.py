@@ -145,6 +145,10 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1):
                 if itr == 2:
                     substr[itr].stats.sac['cmpaz'] = az1 + 90.0
 
+        # Rotate to UVW
+        substr2 = substr.copy()
+        rotate2UVW(substr2,evname_key)
+
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
         # Run iex = 5 (run_getwaveform.py) for one such case       
@@ -1081,3 +1085,58 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
                 float(tr.stats.npts / tr.stats.sampling_rate)))
 
     fid.close
+
+
+def rotate2UVW(st,evname_key):
+    outdir = evname_key
+    d1 = st[0].data
+    d2 = st[1].data
+    d3 = st[2].data
+    XYZ = np.array([[d1],[d2],[d3]])
+    # convert array to matrix
+    XYZ = np.asmatrix(XYZ)
+
+    # Rotation matrix 
+    # http://link.springer.com/referenceworkentry/10.1007/978-3-642-36197-5_194-1#page-1
+    rotmat = (1/np.sqrt(6))*np.matrix([[2,0,np.sqrt(2)],[-1,np.sqrt(3),np.sqrt(2)],[-1,-np.sqrt(3),np.sqrt(2)]])
+    
+    # Rotate from XYZ to UVW
+    UVW = rotmat*XYZ
+    
+    # Replace data vectors 
+    a = UVW.shape
+    l = a[1]
+    st[0].data = np.reshape(np.asarray(UVW[0]),l)
+    st[1].data = np.reshape(np.asarray(UVW[1]),l)
+    st[2].data = np.reshape(np.asarray(UVW[2]),l)
+
+    a = UVW.shape
+    # Update the channel names
+    # TO DO : What should be the CMPAZ and CMPINC for these? (not updated yet!)
+    if len(st[0].stats.channel)==3:
+        st[0].stats.channel = st[0].stats.channel[0:2] + 'U'
+        st[1].stats.channel = st[0].stats.channel[0:2] + 'V'
+        st[2].stats.channel = st[0].stats.channel[0:2] + 'W'
+      
+    # Fix the sac headers since the traces have been rotated now
+    st[0].stats.sac['cmpaz'] = st[0].stats.sac['cmpaz']
+    st[1].stats.sac['cmpaz'] = st[0].stats.sac['cmpaz'] + 120.0
+    st[2].stats.sac['cmpaz'] = st[0].stats.sac['cmpaz'] + 240.0 
+    theta = (np.arcsin(1/np.sqrt(3)))*(180.0/np.pi)  # The angle between the axis and the horizontal plane
+    st[0].stats.sac['cmpinc'] = theta
+    st[1].stats.sac['cmpinc'] = theta
+    st[2].stats.sac['cmpinc'] = theta
+    st[0].stats.sac['kcmpnm'] = st[0].stats.channel
+    st[1].stats.sac['kcmpnm'] = st[1].stats.channel
+    st[2].stats.sac['kcmpnm'] = st[2].stats.channel
+ 
+    # save NEZ waveforms
+    for tr in st:
+        outfnam = outdir + '/' + evname_key + '.' \
+            + tr.stats.network + '.' + tr.stats.station + '.' \
+            + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+            + tr.stats.channel[-1].lower()
+        tr.write(outfnam, format='SAC')
+
+    
+    

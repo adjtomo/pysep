@@ -719,6 +719,30 @@ if iex == 34:
     detrend = True
     taper = True
 
+# Test case for UVW
+if iex == 35:
+    idb = 1
+    use_catalog = 0  
+    otime = obspy.UTCDateTime("2016-12-08T10:16:00")
+    elat = 64.2380
+    elon = -150.0581
+    edep = 18507
+    emag = 4.60
+    station = 'F3TN'
+
+    min_dist = 0
+    max_dist = 300
+    tbefore_sec = 0
+    tafter_sec = 600
+    network = 'XV'
+    channel = 'HH?'
+    scale_factor = 1
+    resample_freq = 0
+    detrend = False
+    demean = False
+    taper = False
+    ipre_filt = 0
+
 #=================================================================================
 # End examples with issues
 #=================================================================================
