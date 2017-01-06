@@ -14,7 +14,7 @@ import getwaveform
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 33
+iex = 36
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -742,6 +742,38 @@ if iex == 35:
     demean = False
     taper = False
     ipre_filt = 1
+
+# PROBLEM run_getwaveform crashes when processing LLNL data for event BULLION
+#
+# WARNING: 0 traces available for rotation. Adding NULL traces -  LL.TPH..SHR*
+# Traceback (most recent call last):
+#   File "run_getwaveform.py", line 858, in <module>
+#     iplot_response = iplot_response)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 180, in run_get_waveform
+#     rotate_and_write_stream(st2, evname_key, icreateNull)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 133, in rotate_and_write_stream
+#     d1 = substr[0].data
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/stream.py", line 656, in __getitem__
+#     return self.traces.__getitem__(index)
+# IndexError: list index out of range
+if iex == 36:
+    idb = 3            # LLNL
+    otime = obspy.UTCDateTime("1990-06-13T16:00:00.09")
+    elat = 37.262
+    elon = -116.421
+    edep = 674
+    emag = 5.34
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*' 
+    channel = 'BH?,LH?' 
+    overwrite_ddir = 0
+
+
+
+
 
 #=================================================================================
 # End examples with issues
