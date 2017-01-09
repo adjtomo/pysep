@@ -6,6 +6,7 @@ import util_helpers
 import shutil   # only used for deleting data directory
 import os
 import sys
+import getwaveform
 
 # TO DO
 # + filetags for the case iFilter = True (like lp10, bp10_40, etc)
@@ -13,15 +14,17 @@ import sys
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 30
+iex = 33
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 # Pre-processing (manily for CAP)
-rotate = True
+rotateRTZ = True
+rotateUVW = False   # This option works only if 'rotateRTZ = True'
 output_cap_weight_file = True
 detrend = True
 demean = True
+taper = False
 output_event_info = True
 
 # for CAP all waveforms need to have the same sample rate
@@ -66,7 +69,7 @@ remove_response = True
 iplot_response = False
 ipre_filt = 1                # =0 No pre_filter
                              # =1 default pre_filter (see getwaveform_iris.py)
-                             # =2 user-defined pre_filter
+                             # =2 user-defined pre_filter (use this if you are using bandpass filter)
 f0 = 0.5*f1
 f3 = 2.0*f2
 pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
@@ -587,26 +590,34 @@ if iex == 31:
     elon = -149.2479
     edep = 22663.7
     emag = 3.8
+    otime = obspy.UTCDateTime("2015-09-12T03:25:12.711")
+    elat = 65.1207
+    elon = -148.6646
+    edep = 15556.8
+    emag = 2.6
 
+    # For CAP
     min_dist = 0
     max_dist = 200
-    tbefore_sec = 2000
-    tafter_sec = 2000
+    tbefore_sec = -100
+    tafter_sec = 300
     network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     channel = 'BH?,HH?'
-    resample_freq = 0 
-    scale_factor = 1
 
     # to investigate clipping
-    ifFilter = True
-    zerophase = False
-    filter_type = 'bandpass'
-    f1 = 1/100
-    f2 = 1/20
-    remove_response = True
-    ipre_filt = 0
-    demean = True
-    detrend = True
+    #tbefore_sec = 2000
+    #tafter_sec = 2000
+    #resample_freq = 0 
+    #scale_factor = 1
+    #ifFilter = True
+    #zerophase = False
+    #filter_type = 'bandpass'
+    #f1 = 1/100
+    #f2 = 1/20
+    #remove_response = True
+    #ipre_filt = 0
+    #demean = True
+    #detrend = True
 
 
 # PROBLEM data arrays not of the same length
@@ -635,6 +646,136 @@ if iex == 32:
     channel = 'BH?,LH?' 
     overwrite_ddir = 0
 
+# for debugging:
+# python -m pdb run_getwaveform.py
+# Keep pressing `c` when prompted. It will drop you into the debugger as soon as it encounters an error. At that point you can hop up and down the stack with "u" and "d" and print the variables to see where it goes wrong. We can also get together quickly today and find the source of the issue.
+#
+# Occasional error
+# Similar as iex=32 but for the IRIS database
+#   File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
+#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
+#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
+# ValueError: setting an array element with a sequence
+#
+# NOTE: Rerunning the same script (without any changes) solves the error sometimes!
+if iex == 33:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2015-12-02T10:05:25.798") 
+    elat = 61.70
+    elon = -147.26
+    edep = 36590
+    emag = 4.50
+    # subset of stations
+    min_dist = 300
+    max_dist = 400
+    tbefore_sec = 100
+    tafter_sec = 600
+    #network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    network = 'IU'
+    channel = 'HH?,BH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
+# Event from HutchisonGhosh2016
+# Crashes when using all networks [i.e. network = '*']
+if iex == 34:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2014-12-12T00:13:17") 
+    elat = 49.10
+    elon = -124.05
+    edep = 60000
+    emag = 4.10
+    # subset of stations
+    min_dist = 0
+    max_dist = 250
+    tbefore_sec = 100
+    tafter_sec = 300
+    network = '*'
+    channel = 'LH?,BH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
+    # For plotting filtered waveforms
+    tbefore_sec = 500
+    tafter_sec = 500
+    resample_freq = 0 
+    scale_factor = 1
+    ifFilter = True
+    zerophase = True
+    filter_type = 'bandpass'
+    f1 = 1/50
+    f2 = 1/20
+    remove_response = True
+    ipre_filt = 2
+    demean = True
+    detrend = True
+    taper = True
+
+# Test case for UVW
+if iex == 35:
+    idb = 1
+    use_catalog = 0  
+    otime = obspy.UTCDateTime("2016-12-08T10:16:00")
+    elat = 64.2380
+    elon = -150.0581
+    edep = 18507
+    emag = 4.60
+    station = 'F3TN'
+
+    min_dist = 0
+    max_dist = 300
+    tbefore_sec = 0
+    tafter_sec = 600
+    network = 'XV'
+    channel = 'HH?'
+    scale_factor = 1
+    resample_freq = 0
+    detrend = False
+    demean = False
+    taper = False
+    ipre_filt = 1
+
+# PROBLEM run_getwaveform crashes when processing LLNL data for event BULLION
+#
+# WARNING: 0 traces available for rotation. Adding NULL traces -  LL.TPH..SHR*
+# Traceback (most recent call last):
+#   File "run_getwaveform.py", line 858, in <module>
+#     iplot_response = iplot_response)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 180, in run_get_waveform
+#     rotate_and_write_stream(st2, evname_key, icreateNull)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 133, in rotate_and_write_stream
+#     d1 = substr[0].data
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/stream.py", line 656, in __getitem__
+#     return self.traces.__getitem__(index)
+# IndexError: list index out of range
+if iex == 36:
+    idb = 3            # LLNL
+    otime = obspy.UTCDateTime("1990-06-13T16:00:00.09")
+    elat = 37.262
+    elon = -116.421
+    edep = 674
+    emag = 5.34
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*' 
+    channel = 'BH?,LH?' 
+    overwrite_ddir = 0
+
+
+
+
+
 #=================================================================================
 # End examples with issues
 #=================================================================================
@@ -643,7 +784,7 @@ if iex == 32:
 # IRIS
 if idb == 1:
     # import functions to access waveforms
-    import getwaveform_iris
+    #import getwaveform_iris
     from obspy.clients.fdsn import Client
     from obspy.core.event import Event, Origin, Magnitude
     if not user and not password:
@@ -671,37 +812,10 @@ if idb == 1:
         ev.origins.append(org)
         ev.magnitudes.append(mag)
 
-    # Delete existing data directory
-    eid = util_helpers.otime2eid(ev.origins[0].time)
-    ddir = './'+ eid
-    if os.path.exists('RAW'):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree('RAW')
-    if overwrite_ddir and os.path.exists(ddir):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree(ddir)
-
-    # Extract waveforms, IRIS
-    getwaveform_iris.run_get_waveform(c = client, event = ev, 
-            min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, 
-            network = network, station = station, channel = channel, 
-            resample_freq = resample_freq, ifrotate = rotate,
-            ifCapInp = output_cap_weight_file, 
-            ifRemoveResponse = remove_response,
-            ifDetrend = detrend, ifDemean = demean, 
-            ifEvInfo = output_event_info,
-            scale_factor = scale_factor,
-            ipre_filt = ipre_filt, pre_filt = pre_filt, 
-            icreateNull=icreateNull,
-            ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
-            zerophase = zerophase, corners = corners, 
-            iplot_response = iplot_response)
-
 # LLNL
 if idb == 3:
     import llnl_db_client
-    import getwaveform_llnl
+    #import getwaveform_llnl
     client = llnl_db_client.LLNLDBClient(
             "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
@@ -719,29 +833,29 @@ if idb == 3:
         print("No events in the catalog for the given time period. Stop.")
         sys.exit(0)
 
-    # Delete existing data directory 
-    eid = util_helpers.otime2eid(ev.origins[0].time)
-    ddir = './'+ eid
-    if os.path.exists('RAW'):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree('RAW')
-    if overwrite_ddir and os.path.exists(ddir):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree(ddir)
+# Delete existing data directory
+eid = util_helpers.otime2eid(ev.origins[0].time)
+ddir = './'+ eid
+if os.path.exists('RAW'):
+    print("WARNING. %s already exists. Deleting ..." % ddir)
+    shutil.rmtree('RAW')
+if overwrite_ddir and os.path.exists(ddir):
+    print("WARNING. %s already exists. Deleting ..." % ddir)
+    shutil.rmtree(ddir)
 
-    # Extract waveforms, LLNL
-    getwaveform_llnl.run_get_waveform(llnl_db_client = client, event = ev, 
-            min_dist = min_dist, max_dist = max_dist, 
-            before = tbefore_sec, after = tafter_sec, 
-            network = network, station = station, channel = channel, 
-            resample_freq = resample_freq, ifrotate = rotate,
-            ifCapInp = output_cap_weight_file, 
-            ifRemoveResponse = remove_response,
-            ifDetrend = detrend, ifDemean = demean, 
-            ifEvInfo = output_event_info, 
-            scale_factor = scale_factor, 
-            ipre_filt = ipre_filt, pre_filt = pre_filt, 
-            icreateNull=icreateNull,
-            ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
-            zerophase = zerophase, corners = corners, 
-            iplot_response = iplot_response)
+# Extract waveforms, IRIS
+getwaveform.run_get_waveform(c = client, event = ev, idb = idb, 
+                                  min_dist = min_dist, max_dist = max_dist, 
+                                  before = tbefore_sec, after = tafter_sec, 
+                                  network = network, station = station, channel = channel, 
+                                  resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
+                                  ifCapInp = output_cap_weight_file, 
+                                  ifRemoveResponse = remove_response,
+                                  ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                                  ifEvInfo = output_event_info,
+                                  scale_factor = scale_factor,
+                                  ipre_filt = ipre_filt, pre_filt = pre_filt, 
+                                  icreateNull=icreateNull,
+                                  ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+                                  zerophase = zerophase, corners = corners, 
+                                  iplot_response = iplot_response)
