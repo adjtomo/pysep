@@ -1,5 +1,26 @@
+#=============================================================
+# run_getwaveform.py
+# 
+# This script will fetch seismic waveforms, then process them, then write sac files.
+# Used heavily within the UAF seismology group.
+#
+# This script contains a large number of examples in two categories:
+# A. examples that target a current or previous bug
+# B. examples of important events for modeling efforts that others may want to reproduce
+#
+# In the future, we will try to automatically run these examples for each code update.
+# For now, we will simply try to regularly re-run the examples.
+#
+# contributors: Celso Alvizuri, Lion Krischer, Vipul Silwal, Carl Tape
+# 
 # To run this script:
-# > python run_getwaveform.py
+# python run_getwaveform.py
+#
+# TO DO
+# + filetags for the case iFilter = True (like lp10, bp10_40, etc)
+#
+#=============================================================
+
 import obspy
 import copy
 import util_helpers
@@ -8,13 +29,8 @@ import os
 import sys
 import getwaveform
 
-# TO DO
-# + filetags for the case iFilter = True (like lp10, bp10_40, etc)
-# + output three sets of seismograms for remove_response = True: raw, ZNE, ZRT
-# + update units for sac header KUSER0
-
 # EXAMPLES (choose one)
-iex = 33
+iex = 18
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -81,10 +97,7 @@ pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
 user = ''
 password = ''
 
-#=================================================================================
-# Examples with issues
-#=================================================================================
-# (Do not use)
+# EXAMPLE TEMPLATE -- DO NOT USE
 # This is a template for testing before creating an example.
 # We can delete this if it creates more issues.
 if iex == 0:
@@ -96,21 +109,15 @@ if iex == 0:
     network = 'II,IU'
     channel = '*'
 
-# SilwalTape2016 example event (Anchorage)
-if iex == 1:
-    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
-    min_dist = 0 
-    max_dist = 500
-    tbefore_sec = 100
-    tafter_sec = 300
-    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
-    channel = 'BH?'
+#=================================================================================
+# CATEGORY A EXAMPLES: simple test cases (including current and previous bugs)
+#=================================================================================
 
 # ERROR EXAMPLE [obspy]
 # PROBLEM: No waveforms are returned -- perhaps related to the tbefore_sec request
 # ERROR MESSAGE: ValueError: The length of the input vector x must be at least padlen, which is 39.
 # SOLUTION: iex = 2 fails because the input data is much to short. The input is a trace with 38 sample but sampled at 50 Hz and you want to resample to 10 Hz. The IIR filter coefficients it calculates are just too long. I'm working on getting such a filter into ObsPy which should then have nicer error messages. I doubt its possible to meaningfully filter such short data with a very sharpy filter. For now: Just add a QA step that makes sure that at least a certain number of samples enter the decimation routine.
-if iex == 2:
+if iex == 1:
     otime = obspy.UTCDateTime("2016-01-24T10:30:29.557")
     min_dist = 0 
     max_dist = 500
@@ -127,7 +134,7 @@ if iex == 2:
 # SOLUTION: https://github.com/obspy/obspy/issues/1514
 #           If you want to use it right now you'd have to use that branch 
 #           - it will be a while before we release a new ObsPy version.
-if iex == 3:
+if iex == 2:
     otime = obspy.UTCDateTime("2009-04-07T20:12:55")
     min_dist = 300 
     max_dist = 500
@@ -310,36 +317,9 @@ if iex == 11:
 if iex == 12:
     idb = 1 
     otime = obspy.UTCDateTime("1999-01-23T03:00:33.200000Z") # frenchman flat 1
-    min_dist = 0 
-    max_dist = 1200
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH?'      # ALL channels from LLNL are returned regardless
-    scale_factor = 10.0**2  # original
-    overwrite_ddir = 0
-    resample_freq = 20.0 
-
-# same as #12
-# ValueError: Could not find a valid Response Stage Type.
-if iex == 13:
-    idb = 1 
-    otime = obspy.UTCDateTime("1999-01-27T10:44:23.310000Z") # frenchman flat 2
-    min_dist = 0 
-    max_dist = 1200
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH?'      # ALL channels from LLNL are returned regardless
-    scale_factor = 10.0**2  # original
-    overwrite_ddir = 0
-    resample_freq = 20.0 
-
-# same as #12
-# ValueError: Could not find a valid Response Stage Type.
-if iex == 14:
-    idb = 1 
-    otime = obspy.UTCDateTime("2002-06-14T12:40:44.450000Z") # little skull
+    #otime = obspy.UTCDateTime("1999-01-27T10:44:23.310000Z") # frenchman flat 2
+    #otime = obspy.UTCDateTime("2000-01-30T14:46:51.310000Z") # trona mine 2
+    #otime = obspy.UTCDateTime("2002-06-14T12:40:44.450000Z") # little skull
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
@@ -365,9 +345,10 @@ if iex == 14:
 #   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/inventory/response.py", line 762, in get_evalresp_response
 #     raise ObsPyException(msg)
 # obspy.core.util.obspy_types.ObsPyException: Can not use evalresp on response with no response stages.
-if iex == 15:
+if iex == 13:
     idb = 1 
     otime = obspy.UTCDateTime("1997-06-14T19:48:19.930000Z") # indian springs
+    #otime = obspy.UTCDateTime("1996-09-05T08:16:56.090000Z") # amargosa
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
@@ -385,24 +366,9 @@ if iex == 15:
 #  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/event/catalog.py", line 162, in __getitem__
 #    return self.events.__getitem__(index)
 #IndexError: list index out of range
-if iex == 16:
+if iex == 14:
     idb = 3 
     otime = obspy.UTCDateTime("2007-01-24T11:30:16.100000Z") # ralston
-    min_dist = 0 
-    max_dist = 1200
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH?'      # ALL channels from LLNL are returned regardless
-    scale_factor = 10.0**2  # original
-    overwrite_ddir = 0
-    resample_freq = 20.0 
-
-# same as #12
-# ValueError: Could not find a valid Response Stage Type.
-if iex == 17:
-    idb = 1 
-    otime = obspy.UTCDateTime("2000-01-30T14:46:51.310000Z") # trona mine 2
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
@@ -423,7 +389,7 @@ if iex == 17:
 #  File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
 #    x, y, z = np.dot(_t, [data_1, data_2, data_3])
 #ValueError: setting an array element with a sequence.
-if iex == 18:
+if iex == 15:
     idb = 1 
     otime = obspy.UTCDateTime("1995-07-31T12:34:46.860000Z") # timber mountain
     min_dist = 0 
@@ -436,24 +402,166 @@ if iex == 18:
     overwrite_ddir = 0
     resample_freq = 20.0 
 
-# same as # 15
-# obspy.core.util.obspy_types.ObsPyException: Can not use evalresp on response with no response stages.
-if iex == 19:
-    idb = 1 
-    otime = obspy.UTCDateTime("1996-09-05T08:16:56.090000Z") # amargosa
+# Iniskin earthquake - all channels at IU.COLA and II.KDAK
+# note different channels and location codes for strong motion:
+#       IU.COLA.20.HNZ.sac       http://ds.iris.edu/mda/IU/COLA
+#       II.KDAK.00.ENZ.sac       http://ds.iris.edu/mda/II/KDAK
+if iex == 16:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
+    elat = 59.75
+    elon = -153.27
+    edep = 110700
+    emag = 7.1
+    # subset of stations
+    min_dist = 0
+    max_dist = 800
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = 'IU,II'
+    #channel = '?H?,?N?'
+    channel = 'HH?,BH?,BN?,HN?,EN?'
+    resample_freq = 0        # no resampling
+    scale_factor = 1         # no scale factor
+
+# PROBLEM data arrays not of the same length
+# Traceback (most recent call last):
+#   File "run_getwaveform.py", line 736, in <module>
+#     iplot_response = iplot_response)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_llnl.py", line 166, in run_get_waveform
+#     rotate_and_write_stream(st2, evname_key, icreateNull)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
+#     data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 247, in rotate2zne
+#     raise ValueError(msg)
+# ValueError: All three data arrays must be of same length.
+if iex == 17:
+    idb = 3            # LLNL
+    otime = obspy.UTCDateTime("1989-06-27T15:30:00.02")
+    elat = 37.275
+    elon = -116.354
+    edep = 640
+    emag = 4.90
     min_dist = 0 
     max_dist = 1200
     tbefore_sec = 100
     tafter_sec = 600
-    network = '*'        # note that the client will look for BK stations in the list
-    channel = 'BH?'      # ALL channels from LLNL are returned regardless
-    scale_factor = 10.0**2  # original
+    network = '*' 
+    channel = 'BH?,LH?' 
     overwrite_ddir = 0
-    resample_freq = 20.0 
+
+# for debugging:
+# python -m pdb run_getwaveform.py
+# Keep pressing `c` when prompted. It will drop you into the debugger as soon as it encounters an error. At that point you can hop up and down the stack with "u" and "d" and print the variables to see where it goes wrong. We can also get together quickly today and find the source of the issue.
+#
+# Occasional error
+# Similar as iex=32 but for the IRIS database
+#   File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
+#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
+#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
+# ValueError: setting an array element with a sequence
+#
+# NOTE: Rerunning the same script (without any changes) solves the error sometimes!
+if iex == 18:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2015-12-02T10:05:25.798") 
+    elat = 61.70
+    elon = -147.26
+    edep = 36590
+    emag = 4.50
+    # subset of stations
+    min_dist = 300
+    max_dist = 400
+    tbefore_sec = 100
+    tafter_sec = 600
+    #network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    network = 'IU'
+    channel = 'HH?,BH?'
+    #resample_freq = 0        # no resampling -- THIS WORKS
+    resample_freq = 50       # no resampling -- THIS FAILS BUT ONLY AFTER REPEATING
+    scale_factor = 1         # no scale factor
+
+# Test case for UVW
+if iex == 19:
+    idb = 1
+    use_catalog = 0  
+    otime = obspy.UTCDateTime("2016-12-08T10:16:00")
+    elat = 64.2380
+    elon = -150.0581
+    edep = 18507
+    emag = 4.60
+    station = 'F3TN'
+
+    min_dist = 0
+    max_dist = 300
+    tbefore_sec = 0
+    tafter_sec = 600
+    network = 'XV'
+    channel = 'HH?'
+    scale_factor = 1
+    resample_freq = 0
+    detrend = False
+    demean = False
+    taper = False
+    ipre_filt = 1
+
+# PROBLEM run_getwaveform crashes when processing LLNL data for event BULLION
+#
+# WARNING: 0 traces available for rotation. Adding NULL traces -  LL.TPH..SHR*
+# Traceback (most recent call last):
+#   File "run_getwaveform.py", line 858, in <module>
+#     iplot_response = iplot_response)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 180, in run_get_waveform
+#     rotate_and_write_stream(st2, evname_key, icreateNull)
+#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 133, in rotate_and_write_stream
+#     d1 = substr[0].data
+#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/stream.py", line 656, in __getitem__
+#     return self.traces.__getitem__(index)
+# IndexError: list index out of range
+if iex == 20:
+    idb = 3            # LLNL
+    otime = obspy.UTCDateTime("1990-06-13T16:00:00.09")
+    elat = 37.262
+    elon = -116.421
+    edep = 674
+    emag = 5.34
+    min_dist = 0 
+    max_dist = 1200
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*' 
+    channel = 'BH?,LH?' 
+    overwrite_ddir = 0
+
+#=================================================================================
+# CATEGORY B EXAMPLES: important events
+# 1XX: southern Alaska
+# 2XX: central Alaska
+# 9XX: other
+#=================================================================================
+
+# SilwalTape2016 example event (Anchorage)
+if iex == 100:
+    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
+    min_dist = 0 
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 300
+    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+    channel = 'BH?'
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations
-if iex == 20:
+if iex == 101:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
     use_catalog = 0          # do not use event catalog for source parameters
@@ -487,7 +595,7 @@ if iex == 20:
     detrend = False
 
 # Iniskin earthquake - all strong motion
-if iex == 21:
+if iex == 103:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
     use_catalog = 0          # do not use event catalog for source parameters
@@ -508,34 +616,8 @@ if iex == 21:
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
 
-# Iniskin earthquake - all channels at IU.COLA and II.KDAK
-# note different channels and location codes for strong motion:
-#       IU.COLA.20.HNZ.sac       http://ds.iris.edu/mda/IU/COLA
-#       II.KDAK.00.ENZ.sac       http://ds.iris.edu/mda/II/KDAK
-if iex == 22:
-    idb = 1
-    overwrite_ddir = 1       # delete data dir if it exists
-    use_catalog = 0          # do not use event catalog for source parameters
-    # GCMT source parameters
-    # the otime is the centroid time and accounts for tshift
-    otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
-    elat = 59.75
-    elon = -153.27
-    edep = 110700
-    emag = 7.1
-    # subset of stations
-    min_dist = 0
-    max_dist = 800
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = 'IU,II'
-    #channel = '?H?,?N?'
-    channel = 'HH?,BH?,BN?,HN?,EN?'
-    resample_freq = 0        # no resampling
-    scale_factor = 1         # no scale factor
-
 # MFFZ earthquake near Clear - Mw 4.1 
-if iex == 30:
+if iex == 200:
     idb = 1
     use_catalog = 0  
     otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
@@ -582,7 +664,7 @@ if iex == 30:
     #filt_type = 'lowpass' 
 
 # NENNUC event (from Steve)
-if iex == 31:
+if iex == 201:
     idb = 1
     use_catalog = 0          # manually enter AEC catalog parameters
     otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
@@ -619,71 +701,9 @@ if iex == 31:
     #demean = True
     #detrend = True
 
-
-# PROBLEM data arrays not of the same length
-# Traceback (most recent call last):
-#   File "run_getwaveform.py", line 736, in <module>
-#     iplot_response = iplot_response)
-#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_llnl.py", line 166, in run_get_waveform
-#     rotate_and_write_stream(st2, evname_key, icreateNull)
-#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
-#     data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
-#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 247, in rotate2zne
-#     raise ValueError(msg)
-# ValueError: All three data arrays must be of same length.
-if iex == 32:
-    idb = 3            # LLNL
-    otime = obspy.UTCDateTime("1989-06-27T15:30:00.02")
-    elat = 37.275
-    elon = -116.354
-    edep = 640
-    emag = 4.90
-    min_dist = 0 
-    max_dist = 1200
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = '*' 
-    channel = 'BH?,LH?' 
-    overwrite_ddir = 0
-
-# for debugging:
-# python -m pdb run_getwaveform.py
-# Keep pressing `c` when prompted. It will drop you into the debugger as soon as it encounters an error. At that point you can hop up and down the stack with "u" and "d" and print the variables to see where it goes wrong. We can also get together quickly today and find the source of the issue.
-#
-# Occasional error
-# Similar as iex=32 but for the IRIS database
-#   File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 167, in rotate_and_write_stream
-#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
-#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
-#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
-# ValueError: setting an array element with a sequence
-#
-# NOTE: Rerunning the same script (without any changes) solves the error sometimes!
-if iex == 33:
-    idb = 1
-    overwrite_ddir = 1       # delete data dir if it exists
-    use_catalog = 0          # do not use event catalog for source parameters
-    # GCMT source parameters
-    # the otime is the centroid time and accounts for tshift
-    otime = obspy.UTCDateTime("2015-12-02T10:05:25.798") 
-    elat = 61.70
-    elon = -147.26
-    edep = 36590
-    emag = 4.50
-    # subset of stations
-    min_dist = 300
-    max_dist = 400
-    tbefore_sec = 100
-    tafter_sec = 600
-    #network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
-    network = 'IU'
-    channel = 'HH?,BH?'
-    resample_freq = 50        # no resampling
-    scale_factor = 100         # no scale factor
-
 # Event from HutchisonGhosh2016
 # Crashes when using all networks [i.e. network = '*']
-if iex == 34:
+if iex == 900:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
     use_catalog = 0          # do not use event catalog for source parameters
@@ -720,64 +740,8 @@ if iex == 34:
     detrend = True
     taper = True
 
-# Test case for UVW
-if iex == 35:
-    idb = 1
-    use_catalog = 0  
-    otime = obspy.UTCDateTime("2016-12-08T10:16:00")
-    elat = 64.2380
-    elon = -150.0581
-    edep = 18507
-    emag = 4.60
-    station = 'F3TN'
-
-    min_dist = 0
-    max_dist = 300
-    tbefore_sec = 0
-    tafter_sec = 600
-    network = 'XV'
-    channel = 'HH?'
-    scale_factor = 1
-    resample_freq = 0
-    detrend = False
-    demean = False
-    taper = False
-    ipre_filt = 1
-
-# PROBLEM run_getwaveform crashes when processing LLNL data for event BULLION
-#
-# WARNING: 0 traces available for rotation. Adding NULL traces -  LL.TPH..SHR*
-# Traceback (most recent call last):
-#   File "run_getwaveform.py", line 858, in <module>
-#     iplot_response = iplot_response)
-#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 180, in run_get_waveform
-#     rotate_and_write_stream(st2, evname_key, icreateNull)
-#   File "/home/alvizuri/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 133, in rotate_and_write_stream
-#     d1 = substr[0].data
-#   File "/home/alvizuri/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/stream.py", line 656, in __getitem__
-#     return self.traces.__getitem__(index)
-# IndexError: list index out of range
-if iex == 36:
-    idb = 3            # LLNL
-    otime = obspy.UTCDateTime("1990-06-13T16:00:00.09")
-    elat = 37.262
-    elon = -116.421
-    edep = 674
-    emag = 5.34
-    min_dist = 0 
-    max_dist = 1200
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = '*' 
-    channel = 'BH?,LH?' 
-    overwrite_ddir = 0
-
-
-
-
-
 #=================================================================================
-# End examples with issues
+# END EXAMPLES
 #=================================================================================
 
 # fetch and process waveforms
