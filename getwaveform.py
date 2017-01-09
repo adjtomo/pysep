@@ -17,7 +17,7 @@ def run_get_waveform(c, event, idb,
                      min_dist=20, max_dist=300, before=100, after=300,
                      network='*', station = '*', channel='BH*', 
                      resample_freq=20, 
-                     ifrotate=True, ifCapInp=True, ifRemoveResponse=True,
+                     ifrotateRTZ=True, ifrotateUVW=False, ifCapInp=True, ifRemoveResponse=True,
                      ifDetrend=True, ifDemean=True, ifTaper=False, ifEvInfo=True,
                      scale_factor=10.0**2, ipre_filt = 1,
                      pre_filt=(0.005, 0.006, 10.0, 15.0),
@@ -176,8 +176,8 @@ def run_get_waveform(c, event, idb,
     path_to_waveforms = evname_key 
     write_stream_sac(st2, path_to_waveforms, evname_key)
 
-    if ifrotate:
-        rotate_and_write_stream(st2, evname_key, icreateNull)
+    if ifrotateRTZ:
+        rotate_and_write_stream(st2, evname_key, icreateNull, ifrotateUVW)
 
     if ifCapInp:
         write_cap_weights(st2, evname_key, client_name, event)

@@ -14,12 +14,13 @@ import getwaveform
 # + update units for sac header KUSER0
 
 # EXAMPLES (choose one)
-iex = 36
+iex = 33
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 # Pre-processing (manily for CAP)
-rotate = True
+rotateRTZ = True
+rotateUVW = False   # This option works only if 'rotateRTZ = True'
 output_cap_weight_file = True
 detrend = True
 demean = True
@@ -847,7 +848,7 @@ getwaveform.run_get_waveform(c = client, event = ev, idb = idb,
                                   min_dist = min_dist, max_dist = max_dist, 
                                   before = tbefore_sec, after = tafter_sec, 
                                   network = network, station = station, channel = channel, 
-                                  resample_freq = resample_freq, ifrotate = rotate,
+                                  resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                                   ifCapInp = output_cap_weight_file, 
                                   ifRemoveResponse = remove_response,
                                   ifDetrend = detrend, ifDemean = demean, ifTaper = taper,

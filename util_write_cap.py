@@ -45,7 +45,7 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, evname_key, icreateNull=1):
+def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = False):
     """
     Rotate an obspy stream to backazimuth
 
@@ -146,8 +146,9 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1):
                     substr[itr].stats.sac['cmpaz'] = az1 + 90.0
 
         # Rotate to UVW
-        substr2 = substr.copy()
-        rotate2UVW(substr2,evname_key)
+        if ifrotateUVW:
+            substr2 = substr.copy()
+            rotate2UVW(substr2,evname_key)
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
