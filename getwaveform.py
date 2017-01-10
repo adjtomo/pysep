@@ -142,7 +142,8 @@ def run_get_waveform(c, event, idb,
     if resample_freq != 0:
         print("\n--> WARNING -- RESAMPLING")
         print("--> New sample rate = %5.1f\n" % resample_freq)
-        resample(st2, freq=resample_freq)
+        #resample(st2, freq=resample_freq)
+        resample_cut(st2, resample_freq,evtime, before, after)
 
     # Do some waveform QA
     # - (disabled) Throw out traces with missing data
