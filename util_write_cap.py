@@ -787,6 +787,7 @@ def resample(st, freq):
     Custom resampling with a very sharp zerophase filter.
     """
     new_nyquist = 0.5 * freq
+    new_npts = (st[0].stats.endtime - st[0].stats.starttime)*freq
     for tr in st:
         current_nyquist = 0.5 * tr.stats.sampling_rate
         # Filter if necessary.
@@ -810,7 +811,7 @@ def resample(st, freq):
         tr.data = np.require(tr.data, requirements=["C"])
         try:
             tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                    window="blackman")
+                    window="blackman", npts=new_npts)
         except Exception as e:
             print("WARNING. Unable to interpolate" + tr.stats.network \
                     + '.' + tr.stats.station + '.' + tr.stats.channel)
