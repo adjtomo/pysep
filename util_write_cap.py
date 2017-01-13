@@ -813,7 +813,7 @@ def resample(st, freq):
             tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
                     window="blackman", npts=new_npts)
         except Exception as e:
-            print("WARNING. Unable to interpolate" + tr.stats.network \
+            print("WARNING. Unable to interpolate " + tr.stats.network \
                     + '.' + tr.stats.station + '.' + tr.stats.channel)
             print("Removing this station")
             print(e)
