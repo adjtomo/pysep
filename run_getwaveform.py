@@ -467,6 +467,10 @@ if iex == 17:
 # ValueError: setting an array element with a sequence
 #
 # NOTE: Rerunning the same script (without any changes) solves the error sometimes!
+#
+# KEY:
+# The problem arises from calling resample within util_write_cap.py.
+# (If we do not call resample at all, or if we use resample_cut [util_write_cap.py], it works.)
 if iex == 18:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
@@ -487,7 +491,7 @@ if iex == 18:
     network = 'IU'
     channel = 'HH?,BH?'
     #resample_freq = 0        # no resampling -- THIS WORKS
-    resample_freq = 50       # no resampling -- THIS FAILS BUT ONLY AFTER REPEATING
+    resample_freq = 50       # THIS FAILS BUT ONLY AFTER REPEATING
     scale_factor = 1         # no scale factor
 
 # Test case for UVW
