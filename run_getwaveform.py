@@ -685,7 +685,7 @@ if iex == 201:
     # For CAP
     min_dist = 0
     max_dist = 200
-    tbefore_sec = -100
+    tbefore_sec = 100
     tafter_sec = 300
     network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     channel = 'BH?,HH?'
