@@ -129,6 +129,8 @@ def run_get_waveform(c, event, idb,
 
     if scale_factor > 0:
         amp_rescale(stream, scale_factor)
+        if idb ==3:
+            amp_rescale_llnl(stream, scale_factor)
 
     print("--> Adding SAC metadata...")
     st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=inventory)
