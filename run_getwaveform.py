@@ -555,13 +555,20 @@ if iex == 20:
 
 # SilwalTape2016 example event (Anchorage)
 if iex == 100:
-    otime = obspy.UTCDateTime("2009-04-07T20:12:55")
+    otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
     min_dist = 0 
     max_dist = 500
     tbefore_sec = 100
     tafter_sec = 300
     network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
     channel = 'BH?'
+    use_catalog = 0 
+    elat = 61.45420
+    elon = -149.7428
+    edep = 33033.60
+    emag = 4.6
+    #ipre_filt = 2
+    #pre_filt = (0.005, 0.006, 10.0, 15.0)
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations
