@@ -75,8 +75,10 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
     # Sorted stream makes for structured loop
     stream.sort()
 
+    print(stream)
     # Add backazimuth to metadata in a particular way...
     for tr in stream.traces:
+        print('I am HERE')
         tr.stats.back_azimuth = tr.stats.sac['baz']
         # code for debugging. print station and backazimuth
         #print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
@@ -871,7 +873,7 @@ def resample_cut(st, freq, evtime, before, after):
             st.remove(tr)
             continue
 
-def trim_maxstart_minend(stalist, st2, client_name, event, evtime):
+def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq):
     """
     Function to cut the start and end points of a stream.
     The starttime and endtime are set to the latest starttime and earliest
@@ -912,15 +914,20 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime):
                     select_st[2].stats.endtime)    
 
         #print('Start Time: ',max_starttime, 'End Time: ',min_endtime)
-        try:
-            select_st.trim(starttime=max_starttime, endtime = min_endtime, \
-                    pad = True, nearest_sample = True, fill_value=0)
-            for tr in select_st.traces:
-                #print(len(tr.data))
-                temp_stream = temp_stream.append(tr)
-        except:
-            print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
-        
+        #try:
+        #    select_st.trim(starttime=max_starttime, endtime = min_endtime, \
+        #            pad = True, nearest_sample = True, fill_value=0)
+        #    for tr in select_st.traces:
+        #        #print(len(tr.data))
+        #        temp_stream = temp_stream.append(tr)
+        #except:
+        #    print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
+        resample(select_st, freq=resample_freq)
+        npts = int((min_endtime - max_starttime) // (1.0 / resample_freq))
+        select_st.interpolate(sampling_rate=resample_freq,
+                              method="lanczos",
+                              starttime=max_starttime,
+                              npts=npts, a=8)  
     output_log = ("data_processing_status_%s.log" % client_name)
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())

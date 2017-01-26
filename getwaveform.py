@@ -141,13 +141,13 @@ def run_get_waveform(c, event, idb,
     # be set early
     st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
-    if resample_freq != 0:
-        print("\n--> WARNING -- RESAMPLING")
-        print("--> New sample rate = %5.1f\n" % resample_freq)
+    #if resample_freq != 0:
+    #    print("\n--> WARNING -- RESAMPLING")
+    #    print("--> New sample rate = %5.1f\n" % resample_freq)
         # sporadical crashes (see iex = 18)
-        resample(st2, freq=resample_freq)
+    #    resample(st2, freq=resample_freq)
         # appears to be stable
-        #resample_cut(st2, resample_freq,evtime, before, after)
+    #    resample_cut(st2, resample_freq,evtime, before, after)
 
     # Do some waveform QA
     # - (disabled) Throw out traces with missing data
@@ -165,7 +165,7 @@ def run_get_waveform(c, event, idb,
     stalist = list(set(stalist))
 
     # match start and end points for all traces
-    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime)
+    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, resample_freq)
 
     # save raw waveforms in SAC format
     path_to_waveforms = evname_key + "/RAW"

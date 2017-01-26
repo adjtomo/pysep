@@ -471,6 +471,8 @@ if iex == 17:
 # KEY:
 # The problem arises from calling resample within util_write_cap.py.
 # (If we do not call resample at all, or if we use resample_cut [util_write_cap.py], it works.)
+#
+# Not generating RTZ and NEZ waveforms after implementing Lion's suggestions
 if iex == 18:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
@@ -545,6 +547,59 @@ if iex == 20:
     network = '*' 
     channel = 'BH?,LH?' 
     overwrite_ddir = 0
+
+#----- After implementing Lion's changes ------
+#
+# Does not produces any RTZ waveforms, however, RAW waveforms are still generated.
+if iex == 21:
+    use_catalog = 1
+    # subset of stations
+    min_dist = 0
+    max_dist = 200
+    tbefore_sec = 100
+    tafter_sec = 300
+    network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+    channel = 'BH?,HH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
+    otime = util_helpers.eid2otime("20081122053047880")
+    elat = 60.99
+    elon = -151.16
+    edep = 99200
+    emag = 2.92
+
+#----- After implementing Lion's changes ------
+#
+#Traceback (most recent call last):
+#  File "run_getwaveform.py", line 855, in <module>
+#    iplot_response = iplot_response)
+#  File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 168, in run_get_waveform
+#    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, resample_freq)
+#  File "/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 928, in trim_maxstart_minend
+#    npts=npts, a=8)  
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/stream.py", line 2468, in interpolate
+#    tr.interpolate(*args, **kwargs)
+#  File "<decorator-gen-38>", line 2, in interpolate
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/util/decorator.py", line 234, in skip_if_no_data
+#    return func(*args, **kwargs)
+#  File "<decorator-gen-37>", line 2, in interpolate
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/util/decorator.py", line 223, in raise_if_masked
+#    return func(*args, **kwargs)
+#  File "<decorator-gen-36>", line 2, in interpolate
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/trace.py", line 231, in _add_processing_info
+#    result = func(*args, **kwargs)
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/core/trace.py", line 2349, in interpolate
+#    starttime, dt, npts, type=method, *args, **kwargs))
+#  File "/home/vipul/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/interpolation.py", line 306, in lanczos_interpolation
+#    return_data = np.zeros(new_npts, dtype=np.float64)
+# ValueError: negative dimensions are not allowed
+
+
+# Same as iex = 100
+# 
+if iex == 22:
+    iex = 100
 
 #=================================================================================
 # CATEGORY B EXAMPLES: important events
