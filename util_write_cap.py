@@ -78,7 +78,6 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
     print(stream)
     # Add backazimuth to metadata in a particular way...
     for tr in stream.traces:
-        print('I am HERE')
         tr.stats.back_azimuth = tr.stats.sac['baz']
         # code for debugging. print station and backazimuth
         #print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
@@ -812,19 +811,22 @@ def resample(st, freq):
             continue
         tr.taper(max_percentage=0.02, type="hann")
         tr.data = np.require(tr.data, requirements=["C"])
-        try:
-            tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                    window="blackman")
+        
+        # Interpolation is now happening inside the trim_maxstart_minend function
+        #
+        #try:
+            #tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+            #               window="blackman")
             # will cut seismograms to be the same length (they SHOULD already be the same)
             #tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
             #        window="blackman", npts=new_npts)
-        except Exception as e:
-            print("WARNING. Unable to interpolate " + tr.stats.network \
-                    + '.' + tr.stats.station + '.' + tr.stats.channel)
-            print("Removing this station")
-            print(e)
-            st.remove(tr)
-            continue
+        #except Exception as e:
+        #    print("WARNING. Unable to interpolate " + tr.stats.network \
+        #            + '.' + tr.stats.station + '.' + tr.stats.channel)
+        #    print("Removing this station")
+        #    print(e)
+        #    st.remove(tr)
+        #    continue
 
 def resample_cut(st, freq, evtime, before, after):
     """
@@ -911,9 +913,12 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq)
                     select_st[2].stats.starttime)
             min_endtime = min(select_st[0].stats.endtime,\
                     select_st[1].stats.endtime,\
-                    select_st[2].stats.endtime)    
+                    select_st[2].stats.endtime) 
 
-        #print('Start Time: ',max_starttime, 'End Time: ',min_endtime)
+        if max_starttime > min_endtime:
+            continue
+
+        print(netw + '.' + station + '.' + location,'| Start Time: ',max_starttime, 'End Time: ',min_endtime)
         #try:
         #    select_st.trim(starttime=max_starttime, endtime = min_endtime, \
         #            pad = True, nearest_sample = True, fill_value=0)
@@ -921,13 +926,15 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq)
         #        #print(len(tr.data))
         #        temp_stream = temp_stream.append(tr)
         #except:
-        #    print('WARNING: stattime larger than endtime for channels of', netw, '.', station, '.', location)
+        #    print('WARNING: starttime larger than endtime for channels of', netw, '.', station, '.', location)
         resample(select_st, freq=resample_freq)
         npts = int((min_endtime - max_starttime) // (1.0 / resample_freq))
         select_st.interpolate(sampling_rate=resample_freq,
                               method="lanczos",
                               starttime=max_starttime,
-                              npts=npts, a=8)  
+                              npts=npts, a=8)
+        for tr in select_st.traces:
+            temp_stream = temp_stream.append(tr)
     output_log = ("data_processing_status_%s.log" % client_name)
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
