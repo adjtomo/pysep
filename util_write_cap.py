@@ -863,19 +863,19 @@ def resample_cut(st, freq, evtime, before, after):
 
         starttime = evtime - before
         npts = (before + after) * freq
-        try:
-            tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
-                    window="blackman", starttime = starttime, npts = npts)
-        except:
+        #try:
+        #    tr.interpolate(sampling_rate=freq, method="lanczos", a=8,
+        #            window="blackman", starttime = starttime, npts = npts)
+        #except:
             # XXX handle errors. this is a common error with very short traces:
             # The new array must be fully contained in the old array. 
             # No extrapolation can be performed. 
-            print("WARNING -- station " + tr.stats.station + ". " + \
-                    "there was a problem applying interpolation. Skipping...")
-            st.remove(tr)
-            continue
+        #    print("WARNING -- station " + tr.stats.station + ". " + \
+        #            "there was a problem applying interpolation. Skipping...")
+        #    st.remove(tr)
+        #    continue
 
-def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq):
+def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq, before, after):
     """
     Function to cut the start and end points of a stream.
     The starttime and endtime are set to the latest starttime and earliest
@@ -897,6 +897,7 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq)
         #temp_stream = stream.select(network=netw,station=station,location=location,channel=chan)
         select_st = st2.select(network = netw, station = station, \
                 location = location, channel = chan)
+        print(select_st)
 
         # Find max startime, min endtime for stations with 1 or 2 or 3 channels
         if len(select_st) == 1:
@@ -916,9 +917,10 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq)
                     select_st[2].stats.endtime) 
 
         if max_starttime > min_endtime:
+            print('WARNING: starttime larger than endtime for channels of', netw + '.' + station + '.' + location)
             continue
 
-        print(netw + '.' + station + '.' + location,'| Start Time: ',max_starttime, 'End Time: ',min_endtime)
+        print(netw + '.' + station + '.' + chan +'.'+ location,'| Start Time: ',max_starttime, 'End Time: ',min_endtime)
         #try:
         #    select_st.trim(starttime=max_starttime, endtime = min_endtime, \
         #            pad = True, nearest_sample = True, fill_value=0)
@@ -927,12 +929,24 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq)
         #        temp_stream = temp_stream.append(tr)
         #except:
         #    print('WARNING: starttime larger than endtime for channels of', netw, '.', station, '.', location)
-        resample(select_st, freq=resample_freq)
+        if (client_name == "IRIS"):
+            resample(select_st, freq=resample_freq)
+        elif (client_name == "LLNL"):
+            resample_cut(select_st, resample_freq, evtime, before, after)
         npts = int((min_endtime - max_starttime) // (1.0 / resample_freq))
-        select_st.interpolate(sampling_rate=resample_freq,
+        try:
+            select_st.interpolate(sampling_rate=resample_freq,
                               method="lanczos",
                               starttime=max_starttime,
                               npts=npts, a=8)
+        except:
+            # XXX handle errors. this is a common error with very short traces:
+            # The new array must be fully contained in the old array. 
+            # No extrapolation can be performed. 
+            print("WARNING -- station " + tr.stats.station + ". " + \
+                    "there was a problem applying interpolation. Skipping...")
+            st.remove(tr)
+            continue
         for tr in select_st.traces:
             temp_stream = temp_stream.append(tr)
     output_log = ("data_processing_status_%s.log" % client_name)

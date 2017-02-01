@@ -165,7 +165,7 @@ def run_get_waveform(c, event, idb,
     stalist = list(set(stalist))
 
     # match start and end points for all traces
-    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, resample_freq)
+    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, resample_freq, before, after)
 
     # save raw waveforms in SAC format
     path_to_waveforms = evname_key + "/RAW"
