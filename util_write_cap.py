@@ -933,7 +933,8 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq,
             resample(select_st, freq=resample_freq)
         elif (client_name == "LLNL"):
             resample_cut(select_st, resample_freq, evtime, before, after)
-        npts = int((min_endtime - max_starttime) // (1.0 / resample_freq))
+        # npts = int((min_endtime - max_starttime) // (1.0 / resample_freq)) # illegal division by zero when not resampling
+        npts = int((min_endtime - max_starttime) * resample_freq)
         try:
             select_st.interpolate(sampling_rate=resample_freq,
                               method="lanczos",
