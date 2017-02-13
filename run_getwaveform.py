@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 104
+iex = 100
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
