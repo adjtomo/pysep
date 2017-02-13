@@ -646,10 +646,10 @@ if iex == 104:
     max_dist = 500
     tbefore_sec = 100
     tafter_sec = 600
-    network = '*'
-    channel = 'BN?,HN?,EN?'
+    network = '-CN,-IM'
+    channel = 'BH?,HH?'
     resample_freq = 50        # no resampling
-    scale_factor = 1         # no scale factor
+    scale_factor = 100         # no scale factor
 
 # MFFZ earthquake near Clear - Mw 4.1 
 if iex == 200:
