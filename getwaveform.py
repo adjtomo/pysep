@@ -149,12 +149,6 @@ def run_get_waveform(c, event, idb,
         # appears to be stable
     #    resample_cut(st2, resample_freq,evtime, before, after)
 
-    # Do some waveform QA
-    # - (disabled) Throw out traces with missing data
-    # - log waveform lengths and discrepancies
-    # - Fill-in missing data -- Carl request
-    do_waveform_QA(st2, client_name, event, evtime, before, after)
-
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
     for tr in st2.traces:
@@ -166,6 +160,12 @@ def run_get_waveform(c, event, idb,
 
     # match start and end points for all traces
     st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, resample_freq, before, after)
+
+    # Do some waveform QA
+    # - (disabled) Throw out traces with missing data
+    # - log waveform lengths and discrepancies
+    # - Fill-in missing data -- Carl request
+    do_waveform_QA(st2, client_name, event, evtime, before, after)
 
     # save raw waveforms in SAC format
     path_to_waveforms = evname_key + "/RAW"
