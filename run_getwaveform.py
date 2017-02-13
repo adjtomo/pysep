@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 100
+iex = 104
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -629,21 +629,57 @@ if iex == 103:
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
 
+# Totschunda fault
+if iex == 104:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2017-02-13T07:17:12.000") 
+    elat = 62.5154
+    elon = -142.7485
+    edep = 7564
+    emag = 5.3
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 600
+    network = '*'
+    channel = 'BN?,HN?,EN?'
+    resample_freq = 50        # no resampling
+    scale_factor = 1         # no scale factor
+
 # MFFZ earthquake near Clear - Mw 4.1 
 if iex == 200:
     idb = 1
-    use_catalog = 0  
+    use_catalog = 0
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
+    elat = 64.4285
+    elon = -149.6969
+    edep = 23852
+    emag = 3.47
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
+    elat = 64.6827
+    elon = -149.2479
+    edep = 22663
+    emag = 3.8
+    #-------------------------------------------------
     otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
     elat = 64.1639
     elon = -150.0626
     edep = 23190
     emag = 4.10
-
+    #-------------------------------------------------
     otime = obspy.UTCDateTime("2016-12-08T10:18:13.000")
     elat = 64.2380
     elon = -150.0581
     edep = 18507
     emag = 4.60
+    #-------------------------------------------------
 
     min_dist = 0
     max_dist = 300
@@ -714,6 +750,8 @@ if iex == 201:
     #demean = True
     #detrend = True
 
+
+#-----------------------------------------------------------
 # Event from HutchisonGhosh2016
 # Crashes when using all networks [i.e. network = '*']
 if iex == 900:
