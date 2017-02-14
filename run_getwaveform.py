@@ -651,10 +651,28 @@ if iex == 104:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
-# MFFZ earthquake near Clear - Mw 4.1 
+# MFFZ earthquakes for investigating clipping
 if iex == 200:
     idb = 1
     use_catalog = 0
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
+    elat = 65.1526
+    elon = -149.0398
+    edep = 16614
+    emag = 5.2
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2014-10-21T00:36:58.333")
+    elat = 65.1489
+    elon = -149.0413
+    edep = 13134
+    emag = 4.9
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2014-10-23T16:30:23.968")
+    elat = 65.1644
+    elon = -149.0523
+    edep = 20066
+    emag = 5.0
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
     elat = 64.4285
