@@ -946,7 +946,8 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq,
             # No extrapolation can be performed. 
             print("WARNING -- station " + tr.stats.station + ". " + \
                     "there was a problem applying interpolation. Skipping...")
-            st.remove(tr)
+            for tr in select_st:
+                select_st.remove(tr)
             continue
         for tr in select_st.traces:
             temp_stream = temp_stream.append(tr)
