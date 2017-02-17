@@ -24,7 +24,7 @@ def run_get_waveform(c, event, idb,
                      icreateNull = 1,
                      ifFilter=False, fmin=.02, fmax=1, filter_type='bandpass', 
                      zerophase=False, corners=4, 
-                     iplot_response = False):
+                     iplot_response = False, ifplot_spectrogram = False):
     """
     Get SAC waveforms for an event
 
@@ -190,3 +190,5 @@ def run_get_waveform(c, event, idb,
     if ifEvInfo:
         write_ev_info(event, evname_key)
 
+    if ifplot_spectrogram:
+        plot_spectrogram(st2, evname_key)

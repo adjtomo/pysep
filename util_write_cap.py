@@ -17,6 +17,7 @@ from scipy import signal
 import numpy as np
 import util_helpers
 import json
+import matplotlib.pyplot as plt
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -1174,5 +1175,20 @@ def rotate2UVW(st,evname_key):
             + tr.stats.channel[-1].lower()
         tr.write(outfnam, format='SAC')
 
-    
-    
+
+def plot_spectrogram(st2,evname_key):
+    for tr in st2:
+            station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+                tr.stats.location + '.' + tr.stats.channel
+
+            spectral_plot_dir =  evname_key + '/' + 'spectrograms'
+            if not os.path.exists(spectral_plot_dir):
+                os.makedirs(evname_key + '/' + 'spectrograms')
+            spectral_plot = spectral_plot_dir + '/' + station_key + '_spectro.eps'
+            
+            try:
+                tr.spectrogram(outfile = spectral_plot)
+                plt.close()
+            except:
+                print('Could not generate spectrogram for %s' % station_key)
+

@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 100
+iex = 0
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -83,6 +83,7 @@ corners = 4                  # Is corner in Obspy same as Pole in SAC?
 # Pre-filter will not be applied if remove_response = False 
 remove_response = True
 iplot_response = False
+ifplot_spectrogram = True
 ipre_filt = 1                # =0 No pre_filter
                              # =1 default pre_filter (see getwaveform_iris.py)
                              # =2 user-defined pre_filter (use this if you are using bandpass filter)
@@ -107,6 +108,7 @@ if iex == 0:
     tbefore_sec = 100
     tafter_sec = 300
     network = 'II,IU'
+    station = 'KDAK,COLA'
     channel = '*'
 
 #=================================================================================
@@ -891,4 +893,4 @@ getwaveform.run_get_waveform(c = client, event = ev, idb = idb,
                                   icreateNull=icreateNull,
                                   ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
                                   zerophase = zerophase, corners = corners, 
-                                  iplot_response = iplot_response)
+                                  iplot_response = iplot_response, ifplot_spectrogram = ifplot_spectrogram)
