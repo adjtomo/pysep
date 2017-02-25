@@ -83,7 +83,7 @@ corners = 4                  # Is corner in Obspy same as Pole in SAC?
 # Pre-filter will not be applied if remove_response = False 
 remove_response = True
 iplot_response = False
-ifplot_spectrogram = True
+ifplot_spectrogram = False
 ipre_filt = 1                # =0 No pre_filter
                              # =1 default pre_filter (see getwaveform_iris.py)
                              # =2 user-defined pre_filter (use this if you are using bandpass filter)
@@ -646,9 +646,9 @@ if iex == 104:
     # subset of stations
     min_dist = 0
     max_dist = 500
-    tbefore_sec = 100
-    tafter_sec = 600
-    network = '-CN,-IM'
+    tbefore_sec = 50
+    tafter_sec = 300
+    network = 'AV'
     channel = 'BH?,HH?'
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
