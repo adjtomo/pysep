@@ -930,26 +930,27 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq,
         #        temp_stream = temp_stream.append(tr)
         #except:
         #    print('WARNING: starttime larger than endtime for channels of', netw, '.', station, '.', location)
-        if (client_name == "IRIS"):
-            resample(select_st, freq=resample_freq)
-        elif (client_name == "LLNL"):
-            resample_cut(select_st, resample_freq, evtime, before, after)
-        # npts = int((min_endtime - max_starttime) // (1.0 / resample_freq)) # illegal division by zero when not resampling
-        npts = int((min_endtime - max_starttime) * resample_freq)
-        try:
-            select_st.interpolate(sampling_rate=resample_freq,
-                              method="lanczos",
-                              starttime=max_starttime,
-                              npts=npts, a=8)
-        except:
-            # XXX handle errors. this is a common error with very short traces:
-            # The new array must be fully contained in the old array. 
-            # No extrapolation can be performed. 
-            print("WARNING -- station " + tr.stats.station + ". " + \
-                    "there was a problem applying interpolation. Skipping...")
-            for tr in select_st:
-                select_st.remove(tr)
-            continue
+        if (int(resample_freq) != 0):
+            if (client_name == "IRIS"):
+                resample(select_st, freq=resample_freq)
+            elif (client_name == "LLNL"):
+                resample_cut(select_st, resample_freq, evtime, before, after)
+            # npts = int((min_endtime - max_starttime) // (1.0 / resample_freq)) # illegal division by zero when not resampling
+            npts = int((min_endtime - max_starttime) * resample_freq)
+            try:
+                select_st.interpolate(sampling_rate=resample_freq,
+                                      method="lanczos",
+                                      starttime=max_starttime,
+                                      npts=npts, a=8)
+            except:
+                # XXX handle errors. this is a common error with very short traces:
+                # The new array must be fully contained in the old array. 
+                # No extrapolation can be performed. 
+                print("WARNING -- station " + netw + '.' + station + '.' + location +'. ' + \
+                          "there was a problem applying interpolation. Skipping...")
+                for tr in select_st:
+                    select_st.remove(tr)
+                continue
         for tr in select_st.traces:
             temp_stream = temp_stream.append(tr)
     output_log = ("data_processing_status_%s.log" % client_name)
@@ -1103,7 +1104,9 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
             fid.write(" -- data missing")
 
             ## remove waveforms with missing data
-            #stream.remove(tr)
+            stream.remove(tr)
+            ## rotate2zne crashes because traces are of unequal length
+            print("Removing this channel otherwise the rotate2zne script crashes") 
 
     # Fill in missing data -- Carl request
     # OPTION 1 fill gaps with 0
