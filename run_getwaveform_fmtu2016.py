@@ -297,7 +297,7 @@ origins_explosions = {
         "AMARILLO      ": ["1989-06-27T15:30:00.02", "-116.354", "37.275", "640", "Ford2009", "4.90", "ml", "NCSN"], 
         "DISKO_ELM     ": ["1989-09-14T15:00:00.10", "-116.164", "37.236", "261", "Ford2009", "4.40", "ml", "NCSN"], 
         "HORNITOS      ": ["1989-10-31T15:30:00.09", "-116.492", "37.263", "564", "Ford2009", "5.40", "ml", "NCSN"], 
-        "BARNWELL      ": ["1989-12-08T15:00:00.09", "-116.410", "37.231", "601", "Ford2009", "5.30", "ml", "NCSN"], 
+        "BAMWELL       ": ["1989-12-08T15:00:00.09", "-116.410", "37.231", "601", "Ford2009", "5.30", "ml", "NCSN"], 
         "METROPOLIS    ": ["1990-03-10T16:00:00.08", "-116.056", "37.112", "469", "Ford2009", "4.94", "md", "NCSN"], 
         "BULLION       ": ["1990-06-13T16:00:00.09", "-116.421", "37.262", "674", "Ford2009", "5.34", "md", "NCSN"], 
         "AUSTIN        ": ["1990-06-21T18:15:00.00", "-116.005", "36.993", "350", "Ford2009", "4.11", "md", "NCSN"], 
@@ -334,7 +334,7 @@ origins_collapses = {
         }
 
 # get the waveforms
-getdata_iris_llnl(origins_explosions, llnl=True, iris=True)
-getdata_iris_llnl(origins_quakes, llnl=True, iris=True)
-getdata_iris_llnl(origins_collapses, llnl=True, iris=True)
+getdata_iris_llnl(origins_explosions, llnl=True, iris=False)
+getdata_iris_llnl(origins_quakes,     llnl=False, iris=False)
+getdata_iris_llnl(origins_collapses,  llnl=False, iris=False)
 
