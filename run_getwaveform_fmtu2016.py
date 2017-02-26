@@ -47,7 +47,7 @@ def get_data_iris_ncedc(cat0):
     output_event_info = True
 
     # for CAP all waveforms need to have the same sample rate
-    resample_freq = 50.0         # 0 for no resampling
+    resample_freq = 20.0         # 0 for no resampling
     scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 
     # event parameters
@@ -80,6 +80,8 @@ def get_data_iris_ncedc(cat0):
                                  # 2 user-defined pre_filter
     f0 = 0.5 * f1
     f3 = 2.0 * f2
+    # The following are for the FMTU paper
+    f0 = 0.005; f1 = 0.006; f3 = 10; f4 = 15
     pre_filt = (f0, f1, f2, f3)  # applies for ipre_filt = 2 only
 
     # NOTE event data from user-defined catalog!
@@ -170,7 +172,7 @@ def get_data_llnl(cat0):
     output_event_info = True
 
     # for CAP all waveforms need to have the same sample rate
-    resample_freq = 50.0         # 0 for no resampling
+    resample_freq = 20.0         # 0 for no resampling
     scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 
     # event parameters
@@ -203,6 +205,8 @@ def get_data_llnl(cat0):
                                  # 2 user-defined pre_filter
     f0 = 0.5 * f1
     f3 = 2.0 * f2
+    # The following settings are for the FMTU paper
+    f0 = 0.005; f1 = 0.006; f3 = 10; f4 = 15
     pre_filt = (f0, f1, f2, f3)  # applies for ipre_filt = 2 only
 
     # NOTE event data from user-defined catalog!
