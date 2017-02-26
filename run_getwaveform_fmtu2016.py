@@ -150,14 +150,17 @@ def get_data_iris_ncedc(cat0):
     print("Done")
 
 
-def getdata_iris_llnl(dataset, llnl=False, iris=False):
+def call_getwf(dataset, llnl=False, iris=False):
     """
     get data from LLNL and IRIS + NCEDC
     """
     for evname, origin in dataset.items():
+        print("Processing event %s %s" % (evname, origin))
         # download waveforms
-        if(llnl): get_data_llnl(origin)
-        if(iris): get_data_iris_ncedc(origin)
+        if(iris):
+            getwf_iris_ncedc_llnl(origin, client_pick="IRIS")
+        if(llnl):
+            getwf_iris_ncedc_llnl(origin, client_pick="LLNL")
 
 # List of events and their EVIDs from Ford (2009).
 # First I matched event times in Ford to those in the LLNL database. 
@@ -205,7 +208,7 @@ origins_collapses = {
         }
 
 # get the waveforms
-getdata_iris_llnl(origins_explosions, llnl=True, iris=False)
-getdata_iris_llnl(origins_quakes,     llnl=False, iris=False)
-getdata_iris_llnl(origins_collapses,  llnl=False, iris=False)
+call_getwf(origins_explosions, llnl=True, iris=False)
+call_getwf(origins_quakes,     llnl=False, iris=False)
+call_getwf(origins_collapses,  llnl=False, iris=False)
 
