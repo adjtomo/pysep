@@ -31,8 +31,9 @@ from obspy.clients.fdsn import Client
 from obspy import UTCDateTime
 from obspy.core.event import Event, Origin, Magnitude
 
-def get_data_iris_ncedc(cat0):
-    print("Calling getwaveform_iris")
+def getwf_iris_ncedc_llnl(origin0, client_pick):
+
+    print("Running function getwf_iris_ncedc_llnl")
 
     # parameters for waveform request
     tbefore_sec = 100
@@ -93,12 +94,12 @@ def get_data_iris_ncedc(cat0):
     mag = Magnitude()
 
     # build objects
-    org.time        = UTCDateTime(cat0[0])
-    org.longitude   = cat0[1]
-    org.latitude    = cat0[2]
-    org.depth       = cat0[3]
-    mag.mag         = cat0[5]
-    mag.magnitude_type = cat0[6]    # Mw, ml, mb, ...
+    org.time        = UTCDateTime(origin0[0])
+    org.longitude   = origin0[1]
+    org.latitude    = origin0[2]
+    org.depth       = origin0[3]
+    mag.mag         = origin0[5]
+    mag.magnitude_type = origin0[6]    # Mw, ml, mb, ...
 
     ev.origins.append(org)
     ev.magnitudes.append(mag)
