@@ -35,15 +35,18 @@ def get_data_iris_ncedc(cat0):
     print("Calling getwaveform_iris")
 
     # parameters for waveform request
-    sec_before_t0 = 100
-    sec_after_t0 = 600
+    tbefore_sec = 100
+    tafter_sec = 600
 
     # DEFAULT SETTINGS (see getwaveform_iris.py)
-    rotate = True
+    rotateRTZ = True
+    rotateUVW = False   # works only if 'rotateRTZ = True'
     output_cap_weight_file = True
     detrend = True
     demean = True
     output_event_info = True
+    taper = False
+    ifplot_spectrogram = False
 
     # for CAP all waveforms need to have the same sample rate
     resample_freq = 20.0         # 0 for no resampling
