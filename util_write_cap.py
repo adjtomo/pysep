@@ -1104,9 +1104,9 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
             fid.write(" -- data missing")
 
             ## remove waveforms with missing data
-            stream.remove(tr)
+            #stream.remove(tr)
             ## rotate2zne crashes because traces are of unequal length
-            print("Removing this channel otherwise the rotate2zne script crashes") 
+            #print("Removing this channel otherwise the rotate2zne script crashes") 
 
     # Fill in missing data -- Carl request
     # OPTION 1 fill gaps with 0
