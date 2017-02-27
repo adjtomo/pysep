@@ -1101,6 +1101,7 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
         if tr.stats.npts < (tr.stats.sampling_rate * (before + after)):
             print("WARNING station %14s Data available < (before + after). Consider removing this station" 
                     % station_key)
+            print(tr.stats.npts,'<',tr.stats.sampling_rate * (before + after))
             fid.write(" -- data missing")
 
             ## remove waveforms with missing data
