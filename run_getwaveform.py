@@ -42,6 +42,8 @@ detrend = True
 demean = True
 taper = False
 output_event_info = True
+outformat = 'VEL'            # Intrument response removed waveforms could be saved as 'VEL' 'DISP' 'ACC'
+ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
 
 # for CAP all waveforms need to have the same sample rate
 resample_freq = 50.0         # =0 for no resampling
@@ -599,7 +601,7 @@ if iex == 101:
 
     # parameters for examining clipping (causal low-pass filter on raw waveforms)
     # delete AUQ, SPCP, SPBG
-    rotate = False
+    rotateRTZ = False
     ifFilter = True
     filter_type = 'lowpass'
     f1 = 1/4
@@ -703,18 +705,21 @@ if iex == 200:
 
     min_dist = 0
     max_dist = 300
-    tbefore_sec = 200
-    tafter_sec = 400
-    network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+    tbefore_sec = 1000
+    tafter_sec = 1000
+    #network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+    network = 'AK,XV,TA'
     channel = 'BH?,HH?'
     scale_factor = 1
     resample_freq = 0
+    station = ''
     # for CAP
     #scale_factor = 10.0**2
     #resample_freq = 50 
 
     # to investigate clipping
-    rotate = False
+    rotateRTZ = True
+    rotateUVW = True
     ifFilter = True
     zerophase = False
     filter_type = 'bandpass'
@@ -723,14 +728,15 @@ if iex == 200:
     remove_response = True
     demean = True
     detrend = True
-    # this creates some pre-origin signal/artifact
-    ipre_filt = 0
     # this does not seem to make a difference
     #ipre_filt = 1
     # this creates some very long-period signal/artifact
     #ipre_filt = 0
     #f1 = 1/10
     #filt_type = 'lowpass' 
+    output_cap_weight_file = False
+    outformat = 'DISP'
+    ifsave_sacpaz = True
 
 # NENNUC event (from Steve)
 if iex == 201:
@@ -871,26 +877,27 @@ if idb == 3:
 # Delete existing data directory
 eid = util_helpers.otime2eid(ev.origins[0].time)
 ddir = './'+ eid
-if os.path.exists('RAW'):
-    print("WARNING. %s already exists. Deleting ..." % ddir)
-    shutil.rmtree('RAW')
+#if os.path.exists('RAW'):
+#    print("WARNING. %s already exists. Deleting ..." % ddir)
+#    shutil.rmtree('RAW')
 if overwrite_ddir and os.path.exists(ddir):
     print("WARNING. %s already exists. Deleting ..." % ddir)
     shutil.rmtree(ddir)
 
 # Extract waveforms, IRIS
 getwaveform.run_get_waveform(c = client, event = ev, idb = idb, 
-                                  min_dist = min_dist, max_dist = max_dist, 
-                                  before = tbefore_sec, after = tafter_sec, 
-                                  network = network, station = station, channel = channel, 
-                                  resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
-                                  ifCapInp = output_cap_weight_file, 
-                                  ifRemoveResponse = remove_response,
-                                  ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
-                                  ifEvInfo = output_event_info,
-                                  scale_factor = scale_factor,
-                                  ipre_filt = ipre_filt, pre_filt = pre_filt, 
-                                  icreateNull=icreateNull,
-                                  ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
-                                  zerophase = zerophase, corners = corners, 
-                                  iplot_response = iplot_response, ifplot_spectrogram = ifplot_spectrogram)
+                             min_dist = min_dist, max_dist = max_dist, 
+                             before = tbefore_sec, after = tafter_sec, 
+                             network = network, station = station, channel = channel, 
+                             resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
+                             ifCapInp = output_cap_weight_file, 
+                             ifRemoveResponse = remove_response,
+                             ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                             ifEvInfo = output_event_info,
+                             scale_factor = scale_factor,
+                             ipre_filt = ipre_filt, pre_filt = pre_filt, 
+                             icreateNull=icreateNull,
+                             ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
+                             zerophase = zerophase, corners = corners, 
+                             iplot_response = iplot_response, ifplot_spectrogram = ifplot_spectrogram,
+                             outformat = outformat, ifsave_sacpaz = ifsave_sacpaz)

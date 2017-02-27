@@ -24,7 +24,8 @@ def run_get_waveform(c, event, idb,
                      icreateNull = 1,
                      ifFilter=False, fmin=.02, fmax=1, filter_type='bandpass', 
                      zerophase=False, corners=4, 
-                     iplot_response = False, ifplot_spectrogram = False):
+                     iplot_response = False, ifplot_spectrogram = False,
+                     outformat = 'VEL', ifsave_sacpaz = False):
     """
     Get SAC waveforms for an event
 
@@ -121,7 +122,7 @@ def run_get_waveform(c, event, idb,
         prefilter(stream, fmin, fmax, zerophase, corners, filter_type)
 
     if ifRemoveResponse:
-        resp_plot_remove(stream, ipre_filt, pre_filt, iplot_response, scale_factor, stations)
+        resp_plot_remove(stream, ipre_filt, pre_filt, iplot_response, scale_factor, stations, outformat)
     else:
         # output RAW waveforms
         decon=False
@@ -192,3 +193,6 @@ def run_get_waveform(c, event, idb,
 
     if ifplot_spectrogram:
         plot_spectrogram(st2, evname_key)
+
+    if ifsave_sacpaz:
+        write_resp(inventory,evname_key)

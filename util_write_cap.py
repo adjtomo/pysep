@@ -18,6 +18,7 @@ import numpy as np
 import util_helpers
 import json
 import matplotlib.pyplot as plt
+import shutil
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -1024,7 +1025,7 @@ def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
             tr.filter(filter_type, freq=fmax, zerophase=zerophase, \
                     corners=corners)
 
-def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stations):
+def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stations, outformat):
     """
     Remove instrument response. Or plot (but not both)
     TODO consider separating the remove and plot functions
@@ -1129,7 +1130,13 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
 
 
 def rotate2UVW(st,evname_key):
-    outdir = evname_key
+    """
+    Rotate to UVW orthogonal frame.
+    In Symmetric Triaxial Seismometers, the sensing elements are also arranged to be mutually orthogonal, but instead of one axis being vertical, all three are inclined upwards from the horizontal at precisely the same angle, as if they were aligned with the edges of a cube balanced on a corner.
+    Reference:
+    http://link.springer.com/referenceworkentry/10.1007/978-3-642-36197-5_194-1
+    """
+    outdir = evname_key + '/UVW'
     d1 = st[0].data
     d2 = st[1].data
     d3 = st[2].data
@@ -1171,6 +1178,10 @@ def rotate2UVW(st,evname_key):
     st[1].stats.sac['kcmpnm'] = st[1].stats.channel
     st[2].stats.sac['kcmpnm'] = st[2].stats.channel
  
+    # Create output directory if it doesn't exist
+    if not(os.path.exists(outdir)):
+        os.makedirs(outdir)
+
     # save NEZ waveforms
     for tr in st:
         outfnam = outdir + '/' + evname_key + '.' \
@@ -1181,6 +1192,11 @@ def rotate2UVW(st,evname_key):
 
 
 def plot_spectrogram(st2,evname_key):
+    """
+    Plot spectrogram
+    This still needs some work (specifying input parameters for smoothing)
+    https://docs.obspy.org/packages/autogen/obspy.imaging.spectrogram.spectrogram.html#obspy.imaging.spectrogram.spectrogram
+    """
     for tr in st2:
             station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
                 tr.stats.location + '.' + tr.stats.channel
@@ -1196,3 +1212,28 @@ def plot_spectrogram(st2,evname_key):
             except:
                 print('Could not generate spectrogram for %s' % station_key)
 
+def write_resp(stalist,evname_key):
+    """
+    Out response file in SAC Pole-Zero format
+    This is needed as an input to the MouseTrap module
+    Additional Notes:
+    http://web.mit.edu/2.14/www/Handouts/PoleZero.pdf
+    http://geo.mff.cuni.cz/~vackar/mouse/
+    """
+
+    outdir = evname_key + '/resp'
+    otime = util_helpers.eid2otime(evname_key)
+    
+    # Create directory for saving the pole-zero response files
+    if not(os.path.exists(outdir)):
+        os.makedirs(outdir)
+    
+    for net in stalist:
+        for sta in net.stations:
+            for ch in sta.channels:
+                tag = net.code + '.' + sta.code + '.' + ch.location_code + '.' + ch.code
+                resp = stalist.get_response(tag,otime)  # get response info
+                respfile = outdir + '/' + evname_key + '.' + tag + '.resp'
+                f =  open(respfile, 'w')
+                f.write('%s' % resp.get_sacpz())        # save in sac pole-zero format
+                f.close()
