@@ -2,8 +2,8 @@
 
 import numpy as np
 from obspy.core import read
-from obspy.arclink import Client #ArcLink
-from obspy.sac.sacio import attach_paz # load poles and zeros from SAC PZ file
+from obspy.clients.arclink import Client #ArcLink
+from obspy.io.sac.sacpz import attach_paz # load poles and zeros from SAC PZ file
 from MouseTrap import *
 
 # constants
@@ -31,7 +31,7 @@ mouse.create(paz, length*2, dt, length*dt, 1)
 
 # fit waveform by synthetic mouse
 mouse.fit_3D(st, t_min=105, t_max=210)
-mouse.plot(st, outfile='VANNI.png', xmax=300, ylabel='raw displacement')
+mouse.plot(st, outfile='VANNI.eps', xmax=300, ylabel='raw displacement')
 
 if mouse.exist(t_start_origin):
 	print('=== MOUSE DETECTED ===')

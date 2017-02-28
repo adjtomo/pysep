@@ -5,16 +5,25 @@ from obspy.core import read
 from obspy.clients.arclink import Client #ArcLink
 from obspy.io.sac.sacpz import attach_paz # load poles and zeros from SAC PZ file
 from MouseTrap import *
+import glob
 
 # constants
 t_start_origin = 200 # records start-time is `t_start_origin` seconds before the event origin time
 
+# Event info
+ddir = '/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/20161208101813000_save/'
+net = '*'
+station = 'FNN1'
+
 # read waveform file
-st = read('FNN1.mseed')
+waveform_dir = ddir + 'RAW/'
+st = read(waveform_dir + '*' + net + '*' + station + '*')
 
 # read poles and zeros
-paz_file = 'FNN1_resp'
-attach_paz(st[0], paz_file, tovel=True)
+resp_dir = ddir + 'resp/'
+paz_file = resp_dir + '*' + station + '*' + 'resp'
+paz_list = glob.glob(paz_file)
+attach_paz(st[0], paz_list[0], tovel=True)
 paz = st[0].stats.paz
 
 # demean, integrate, check signal-to-noise ratio
@@ -35,7 +44,7 @@ mouse.create(paz, mouse_length, dt, mouse_onset, 1)
 
 # fit waveform by synthetic mouse
 mouse.fit_3D(st, t_min=100, t_max=500)
-mouse.plot(st, outfile='FNN1.png', xmax=600, ylabel='raw displacement')
+mouse.plot(st, outfile='FNN1.eps', xmax=600, ylabel='raw displacement')
 
 if mouse.exist(t_start_origin):
 	print('=== MOUSE DETECTED ===')

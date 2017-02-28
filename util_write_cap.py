@@ -1228,6 +1228,8 @@ def write_resp(stalist,evname_key):
     if not(os.path.exists(outdir)):
         os.makedirs(outdir)
     
+    # Maybe we don't need to save different files for different channels
+    # Is instruement response always same for all 3 channels
     for net in stalist:
         for sta in net.stations:
             for ch in sta.channels:

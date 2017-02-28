@@ -14,8 +14,8 @@ Limitations:
 
 import numpy as np
 from obspy.core import read
-from obspy.arclink import Client #ArcLink
-from obspy.sac.sacio import attach_paz # load poles and zeros from SAC PZ file
+from obspy.clients.arclink import Client #ArcLink
+from obspy.io.sac.sacpz import attach_paz # load poles and zeros from SAC PZ file
 from MouseTrap import *
 
 # constants
