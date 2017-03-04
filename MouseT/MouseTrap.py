@@ -268,19 +268,20 @@ class mouse:
 		t2 = np.arange(fit_t0, fit_t1 - 0.5/samprate, 1 / samprate)
 		shifts = {st[0].stats.channel[2]:0, st[1].stats.channel[2]:distance, st[2].stats.channel[2]:-distance}
 		colors = {'N':'r', 'E':'g', 'Z':'b'}
+		colors_syn = {'N':'c', 'E':'k', 'Z':'m'}
 		plt.rcParams.update({'font.size': 22})
 		plt.figure(figsize=(12, 6))
 		for tr in st:
 			ch = tr.stats.channel[2]
 			print(len(t), len(tr.data), len(t2), len(self.mouse[samp_0:samp_1]))
-			p = plt.plot(t, tr.data+shifts[ch], colors[ch], label = {'Z':'raw record','N':'','E':''}[ch])
+			p = plt.plot(t, tr.data+shifts[ch], colors[ch], label = {'Z':'raw record','N':'','E':''}[ch], linewidth=4)
 			plt.text(xmin+(xmax-xmin)*0.05, shifts[ch]+distance*0.2, ch, color=colors[ch])
 			if ch == 'E':
-				m = plt.plot(t2, self.mouse[samp_0:samp_1]*self.amplitude*sin(self.phi)*cos(self.theta)+shifts[ch], colors[ch]+'--')
+				m = plt.plot(t2, self.mouse[samp_0:samp_1]*self.amplitude*sin(self.phi)*cos(self.theta)+shifts[ch], colors_syn[ch]+'--', linewidth=4)
 			elif ch == 'N':
-				m = plt.plot(t2, self.mouse[samp_0:samp_1]*self.amplitude*cos(self.phi)*cos(self.theta)+shifts[ch], colors[ch]+'--')
+				m = plt.plot(t2, self.mouse[samp_0:samp_1]*self.amplitude*cos(self.phi)*cos(self.theta)+shifts[ch], colors_syn[ch]+'--', linewidth=4)
 			elif ch == 'Z':
-				m = plt.plot(t2, self.mouse[samp_0:samp_1]*self.amplitude*sin(self.theta)+shifts[ch], colors[ch]+'--', label='simulated')
+				m = plt.plot(t2, self.mouse[samp_0:samp_1]*self.amplitude*sin(self.theta)+shifts[ch], colors_syn[ch]+'--', label='simulated', linewidth=4)
 		plt.xlim(xmin, xmax)
 		if legend:
 			plt.legend(loc='upper right')
@@ -295,16 +296,48 @@ class mouse:
 			ax2=plt.twinx()
 			const = self.mouse[int((self.nmax+self.onset/self.dt) / 2)]
 			ax2.set_ylim(ymin/const,ymax/const)
-			ax2.set_ylabel('acceleration [m/s$^2$]')
+			#ax2.set_ylabel('acceleration [m/s$^2$]')
 			ax2.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
 		else:
 			plt.tick_params(axis='y', which='both', left='off', right='off', labelleft='off')
 		if outfile:
 			plt.savefig(outfile, bbox_inches='tight')
+			plt.close()
 		else:
 			plt.show()
 
-
+	def remove(self, st):
+		npts = st[0].stats.npts
+		samprate = st[0].stats.sampling_rate
+		#t = np.arange(0, npts / samprate, 1 / samprate)
+		fit_t0 = self.onset_found - self.fit_time_before
+		fit_t1 = self.onset_found + self.fit_time_after
+		samp_0 = int((self.onset_found - self.fit_time_before) / self.dt)
+		samp_1 = int((self.onset_found + self.fit_time_after ) / self.dt)
+		samp_2 = int((self.onset - self.fit_time_before) / self.dt)
+		samp_3 = int((self.onset + self.fit_time_after ) / self.dt)
+		t2 = np.arange(fit_t0, fit_t1 - 0.5/samprate, 1 / samprate)
+		#shifts = {st[0].stats.channel[2]:0, st[1].stats.channel[2]:distance, st[2].stats.channel[2]:-distance}
+		d0 = st[0].data[samp_0:samp_1 + 1]
+		d1 = st[1].data[samp_0:samp_1 + 1]
+		d2 = st[2].data[samp_0:samp_1 + 1]
+		s0 = self.mouse[samp_2:samp_3]*self.amplitude*sin(self.phi)*cos(self.theta)
+		s1 = self.mouse[samp_2:samp_3]*self.amplitude*cos(self.phi)*cos(self.theta)
+		s2 = self.mouse[samp_2:samp_3]*self.amplitude*sin(self.theta)
+		print(self.onset_found, self.onset)
+		print(len(d0),len(t2),len(s0))
+		e0 = d0 - s0
+		e1 = d1 - s1
+		e2 = d2 - s2
+		# Plotting
+		plt.rcParams.update({'font.size': 16})
+		plt.plot(t2, e0, color='g')
+		plt.plot(t2, e1, color='r')
+		plt.plot(t2, e2, color='b')
+		plt.title(st[0].stats.network+':'+st[0].stats.station+', '+str(st[0].stats.starttime.date)+' '+str(st[0].stats.starttime.time)[:8])
+		plt.ylabel('raw displacement')
+		plt.xlabel('time [s]')
+		plt.savefig('test.eps')
 
 def NoiseTest1_demean(st, t, ratio=20):
 	# Simple signal-to-noise criterion based on maximum-before-event / trace-maximum

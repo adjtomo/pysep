@@ -8,12 +8,12 @@ from MouseTrap import *
 import glob
 
 # constants
-t_start_origin = 200 # records start-time is `t_start_origin` seconds before the event origin time
+t_start_origin = 100 # records start-time is `t_start_origin` seconds before the event origin time
 
 # Event info
-ddir = '/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/20161208101813000_save/'
+ddir = '/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/20161208101813000/'
 net = '*'
-station = 'FNN1'
+station = 'BPAW'
 
 # read waveform file
 waveform_dir = ddir + 'RAW/'
@@ -35,20 +35,21 @@ if error:
 # create synthetic mouse
 length = max(len(st[0]), len(st[1]), len(st[2]))
 dt = st[0].stats.delta
-mouse = mouse(fit_time_before = 200,fit_time_after = 100)
+mouse = mouse(fit_time_before = 100,fit_time_after = 400)
 #mouse = mouse()
 mouse_length = length*2
-mouse_onset = 300
+mouse_onset = 100
 print(mouse_length,mouse_onset)
-mouse.create(paz, mouse_length, dt, mouse_onset, 1)
+mouse.create(paz, mouse_length, dt, mouse_onset, 2)
 
 # fit waveform by synthetic mouse
-mouse.fit_3D(st, t_min=100, t_max=500)
-mouse.plot(st, outfile='FNN1.eps', xmax=600, ylabel='raw displacement')
+mouse.fit_3D(st, t_min=80, t_max=120)
+mouse.plot(st, distance=5e5, outfile=station+'.eps', xmin = 0, xmax=600, ylabel='raw displacement')
+mouse.remove(st)
 
 if mouse.exist(t_start_origin):
 	print('=== MOUSE DETECTED ===')
-	print('time of onset:   %6.1f s' % mouse.onset)
+	print('time of onset:   %6.1f s' % mouse.onset_found)
 	print('amplitude:   %10.2e m s^-2' % mouse.amplitude)
 	print('phi:             %6.1f deg' % (mouse.phi*180./np.pi))
 	print('theta:           %6.1f deg' % (mouse.theta*180./np.pi))

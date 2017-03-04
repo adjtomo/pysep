@@ -61,8 +61,8 @@ icreateNull = 1              # create Null traces so that rotation can work (obs
 
 #------Filter--------------
 # for 'bandpass' both f1 and f2 are used
-# for 'lowpass' only f1 is used
-# for 'highpass' only f2 is used
+# for 'lowpass' only f2 is used
+# for 'highpass' only f1 is used
 #
 # EXAMPLES
 #                                   ifFilter  zerophase  remove_response  ipre_filt
@@ -76,10 +76,12 @@ ifFilter = False
 filter_type = 'bandpass'
 # f1 should consider the requested length of the time series
 # f2 should consider the sampling rate for the desired channels
-f1 = 1/40
-f2 = 1/10
+f1 = 1/40 # fmin - highpass will keep frequencies larger than fmin
+f2 = 1/10 # fmax - lowpass will keep frequencies lower than fmax
 zerophase = True             # = False (causal), = True (acausal)
+# 4 pole filter is more sharper at the edges than 2 pole
 corners = 4                  # Is corner in Obspy same as Pole in SAC?
+
 # pre-filter for deconvolution
 # https://ds.iris.edu/files/sac-manual/commands/transfer.html
 # Pre-filter will not be applied if remove_response = False 
@@ -89,6 +91,7 @@ ifplot_spectrogram = False
 ipre_filt = 1                # =0 No pre_filter
                              # =1 default pre_filter (see getwaveform_iris.py)
                              # =2 user-defined pre_filter (use this if you are using bandpass filter)
+# For tapering down the pre-filter
 f0 = 0.5*f1
 f3 = 2.0*f2
 pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
@@ -697,6 +700,9 @@ if iex == 200:
     emag = 4.10
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2016-12-08T10:18:13.000")
+    #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
+    #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
+    #otime = obspy.UTCDateTime("2011-12-21T16:28:41.000")
     elat = 64.2380
     elon = -150.0581
     edep = 18507
@@ -705,14 +711,13 @@ if iex == 200:
 
     min_dist = 0
     max_dist = 300
-    tbefore_sec = 1000
-    tafter_sec = 1000
+    tbefore_sec = 100
+    tafter_sec = 600
     #network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
-    network = 'AK,XV,TA'
+    network = 'XV,AK'
     channel = 'BH?,HH?'
     scale_factor = 1
     resample_freq = 0
-    station = ''
     # for CAP
     #scale_factor = 10.0**2
     #resample_freq = 50 
@@ -720,20 +725,17 @@ if iex == 200:
     # to investigate clipping
     rotateRTZ = True
     rotateUVW = True
-    ifFilter = True
+    ifFilter = False
     zerophase = False
-    filter_type = 'bandpass'
-    f1 = 1/100
-    f2 = 1/10
-    remove_response = True
-    demean = True
-    detrend = True
-    # this does not seem to make a difference
-    #ipre_filt = 1
-    # this creates some very long-period signal/artifact
-    #ipre_filt = 0
-    #f1 = 1/10
-    #filt_type = 'lowpass' 
+    filter_type = 'lowpass'
+    f1 = 1/200  # fmin
+    f2 = 1/20  # fmax
+    corners = 4
+    remove_response = False
+    ipre_filt = 1
+    pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
+    demean = False
+    detrend = False
     output_cap_weight_file = False
     outformat = 'DISP'
     ifsave_sacpaz = True
