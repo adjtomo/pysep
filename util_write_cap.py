@@ -511,11 +511,11 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                         # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
                         if idb==1:
-                            if tr.stats.sac['kuser0'] == 'RAW':
-                                tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
-                            else:
-                                scale_factor = tr.stats.sac['kuser0']
-                                tr.stats.sac['kuser0'] = 'M/S'
+                            #if tr.stats.sac['kuser0'] == 'RAW':
+                            #    tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
+                            #else:
+                            #    scale_factor = tr.stats.sac['kuser0']
+                            tr.stats.sac['kuser0'] = 'M/S'
                             sensor = ch.sensor.description
                             # add sensor information
                             # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
@@ -1016,13 +1016,16 @@ def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
                 tr.stats.location +'.'+ tr.stats.channel
         print("--> station %14s Applying %s filter" % (station_key, filter_type))
         if filter_type=='bandpass':
+            print("%.3f to %.3f seconds" % (1/fmax, 1/fmin))
             tr.filter(filter_type, freqmin=fmin, freqmax=fmax, \
                     zerophase=zerophase, corners=corners)
-        elif filter_type=='lowpass':
-            tr.filter(filter_type, freq=fmin, zerophase=zerophase, \
-                    corners=corners)
-        elif filter_type=='highpass':
+        elif filter_type=='lowpass': # For period larger than maximum frequency
+            print("More than %.3f seconds" % (1/fmax))
             tr.filter(filter_type, freq=fmax, zerophase=zerophase, \
+                    corners=corners)
+        elif filter_type=='highpass': # For period larger than maximum frequency
+            print("Less than %.3f seconds" % (1/fmin))
+            tr.filter(filter_type, freq=fmin, zerophase=zerophase, \
                     corners=corners)
 
 def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stations, outformat):
@@ -1038,8 +1041,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
             pre_filt = None
         elif ipre_filt == 1:
 
-            # ADD COMMENTS
-            # ADD COMMENTS
+            # See here: https://ds.iris.edu/files/sac-manual/commands/transfer.html
             FCUT1_PAR = 4.0 # comments
             FCUT2_PAR = 0.5
             fnyq = tr.stats.sampling_rate/2
@@ -1049,6 +1051,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
             f0 = 0.5*f1
             f3 = 2.0*f2
             pre_filt = (f0, f1, f2, f3)
+            print('pre_filter: (%f %f %f %f) seconds' % (1/f3, 1/f2, 1/f1, 1/f0))
 
         print('--> station %14s Correcting instrument response' %\
                 station_key)
@@ -1064,14 +1067,14 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
 
             try:
                 tr.remove_response(inventory=stations, pre_filt=pre_filt, \
-                        output="VEL", plot = resp_plot)
+                        output=outformat, plot = resp_plot)
                 continue
             except:
                 print('Could not generate response plot for %s' % station_key)
         else:
             try:
                 tr.remove_response(inventory=stations, pre_filt=pre_filt, \
-                        output="VEL")
+                        output=outformat)
             except Exception as e:
                 print("Failed to correct %s due to: %s" % (tr.id, str(e)))
 
