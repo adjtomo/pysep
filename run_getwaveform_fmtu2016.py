@@ -64,7 +64,7 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
     channel = 'BH?,LH?'
 
     overwrite_ddir = 1           # 1 = delete data directory if it already exists
-    icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
+    icreateNull = 0              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
 
     # filter
     # set ipre_filt = 0 to prevent extra filtering
@@ -114,45 +114,62 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
         print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
 
-    # BK data has to be requested through NCEDC
-    clients = ["IRIS", "NCEDC"]
-    for thisclient in clients:
-        if thisclient is "IRIS":
-            # do nothing
+    if client_pick is "IRIS":
+        print('Using client %s' % client_pick)
+        idb = 1 
+        client_list = ["IRIS", "NCEDC"]
+        print("WARNING using event data from user-defined catalog")
+
+    # LLNL
+    if client_pick is "LLNL":
+        print('Using client %s' % client_pick)
+        idb = 3
+        client_list = ["LLNL"]
+
+        client = llnl_db_client.LLNLDBClient(
+                "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
+        # get event time and event ID
+        otime = obspy.UTCDateTime(origin0[0])
+        cat = client.get_catalog()
+        mintime_str = "time > %s" % (otime - sec_before_after_event)
+        maxtime_str = "time < %s" % (otime + sec_before_after_event)
+        print(mintime_str + "\n" + maxtime_str)
+        ev = cat.filter(mintime_str, maxtime_str)
+        if len(ev) > 0:
+            ev = ev[0]
+            print(len(ev))
+        else:
+            print("No events in the catalog for the given time period. Stop.")
+            sys.exit(0)
+
+    # The IRIS requests include BK data, but it has to be requested through 
+    # the NCEDC client
+    for iclient in client_list:
+        if iclient is "IRIS":
             network = network
-            #network = 'CI,TS,II,IM,IU' 
-        elif thisclient is "NCEDC":
+            client = Client(iclient)
+        elif iclient is "NCEDC":
             network = 'BK'
             station = '*'   # doesn't like "-staX"
-        else:
-            print("error. client not recognized")
+            client = Client(iclient)
 
-        client = Client(thisclient)
-        try:
-            getwaveform_iris.run_get_waveform(c = client, event = ev, 
-                    min_dist = min_dist, max_dist = max_dist, 
-                    before = sec_before_t0, after = sec_after_t0, 
-                    network = network, station = station, channel = channel, 
-                    resample_freq = resample_freq, ifrotate = rotate,
-                    ifCapInp = output_cap_weight_file, 
-                    ifRemoveResponse = remove_response,
-                    ifDetrend = detrend, ifDemean = demean, 
-                    ifEvInfo = output_event_info,
-                    scale_factor = scale_factor,
-                    ipre_filt = ipre_filt, pre_filt = pre_filt, 
-                    icreateNull = icreateNull,
-                    ifFilter = ifFilter, fmin = f1, fmax = f2, filter_type = filter_type, 
-                    zerophase = zerophase, corners = corners, 
-                    iplot_response = iplot_response)
-        except Exception as msg:
-            print("\n==========================================================\n")
-            print("WARNING. There was a problem with client %s" % thisclient)
-            print(msg)
-            print("Continuing ... \n")
-            print("\n==========================================================\n")
-            pass
-    print("Done")
-
+        gw.run_get_waveform(c = client, event = ev, idb = idb, 
+                min_dist = min_dist, max_dist = max_dist, 
+                before = tbefore_sec, after = tafter_sec, 
+                network = network, station = station, channel = channel, 
+                resample_freq = resample_freq,
+                ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
+                ifCapInp = output_cap_weight_file, 
+                ifRemoveResponse = remove_response,
+                ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                ifEvInfo = output_event_info,
+                scale_factor = scale_factor,
+                icreateNull = icreateNull,
+                ipre_filt = ipre_filt, pre_filt = pre_filt, ifFilter = ifFilter, 
+                fmin = f1, fmax = f2, filter_type = filter_type, 
+                zerophase = zerophase, corners = corners, 
+                iplot_response = iplot_response, 
+                ifplot_spectrogram = ifplot_spectrogram)
 
 def call_getwf(dataset, llnl=False, iris=False):
     """
