@@ -981,14 +981,16 @@ def amp_rescale(stream, scale_factor):
 def amp_rescale_llnl(st, scale_factor):
     """
     Rescale amplitudes for LLNL data. The scales are different for different 
-    channels. Current factors
+    channels. Old factors
     BB = 4.0e-4 
     HF = 1.8e-2
+    HF = 1.8e-4
 
     """
-    # scales based on tests with hoya event
-    scale_factor_BB = 4.0e-4 
-    scale_factor_HF = 1.8e-2
+    # scales based on tests with events HOYA, BEXAR
+    scale_factor_BB = -1.0e-9 # flip
+    scale_factor_HF = 1.0e-4
+    scale_factor_LH = -1.0e-2 # flip
 
     for tr in st.traces:
         station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
@@ -1005,6 +1007,12 @@ def amp_rescale_llnl(st, scale_factor):
             tr.data = tr.data * scale_factor_HF
             # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_HF * scale_factor
+        elif ('LH' in tr.stats.channel):
+            print("--> WARNING LLNL station %14s Rescaling by %f" % \
+                    (station_key, scale_factor_LH))
+            tr.data = tr.data * scale_factor_LH
+            # combine scale_factor with scale_factor_XX
+            tr.stats.sac['scale'] = scale_factor_LH * scale_factor
 
 def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
     """
