@@ -135,12 +135,13 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
         maxtime_str = "time < %s" % (otime + sec_before_after_event)
         print(mintime_str + "\n" + maxtime_str)
         ev = cat.filter(mintime_str, maxtime_str)
-        if len(ev) > 0:
-            ev = ev[0]
-            print(len(ev))
+        nev = len(ev)
+        if nev == 1:
+            ev = ev[0]  # doesn't have magnitude (ATRISCO)
+        elif nev > 1:
+            ev = ev[1]  # [0] may not include magnitude. [1] may (LLNL)
         else:
             print("No events in the catalog for the given time period. Stop.")
-            sys.exit(0)
 
     # The IRIS requests include BK data, but it has to be requested through 
     # the NCEDC client
