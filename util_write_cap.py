@@ -74,38 +74,38 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
        os.makedirs(outdir)
 
     # Directory is made, now rotate
-    # Sorted stream makes for structured loop
-    stream.sort()
-
-    print(stream)
-    # Add backazimuth to metadata in a particular way...
-    for tr in stream.traces:
-        tr.stats.back_azimuth = tr.stats.sac['baz']
-        # code for debugging. print station and backazimuth
-        #print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
-
-        # Do some qc: throw out any stations without three components
-        substr = stream.select(station=tr.stats.station)
-
-        # Select the alphabetically lowest band code.
-        band_code = sorted([tr.stats.channel[0] for tr in substr])[0]
-        substr = substr.select(channel=band_code + "*")
-
-#        # 20160805 cralvizuri@alaska.edu -- currently this option
-#        # also skips if stream is not 3 (eg there is PFO.CI and PFO.TS -- i.e.
-#        # 6 streams). We want all possible data, so change this to < 3
-#        #if len(substr) != 3:
-        if len(substr) < 3:
-            for subtr in substr:
-                if icreateNull == 1:
-                    print('One or more components missing: consider removing ',
-                          subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
-                          ' Number of traces: ', len(substr))
-                if icreateNull == 0:
-                    stream.remove(subtr)
-                    print('One or more components missing: Removing ',
-                      subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
-                      ' Number of traces: ', len(substr))
+#     # Sorted stream makes for structured loop
+#     stream.sort()
+# 
+#     print(stream)
+#     # Add backazimuth to metadata in a particular way...
+#     for tr in stream.traces:
+#         tr.stats.back_azimuth = tr.stats.sac['baz']
+#         # code for debugging. print station and backazimuth
+#         #print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
+# 
+#         # Do some qc: throw out any stations without three components
+#         substr = stream.select(station=tr.stats.station)
+# 
+#         # Select the alphabetically lowest band code.
+#         band_code = sorted([tr.stats.channel[0] for tr in substr])[0]
+#         substr = substr.select(channel=band_code + "*")
+# 
+# #        # 20160805 cralvizuri@alaska.edu -- currently this option
+# #        # also skips if stream is not 3 (eg there is PFO.CI and PFO.TS -- i.e.
+# #        # 6 streams). We want all possible data, so change this to < 3
+# #        #if len(substr) != 3:
+#         if len(substr) < 3:
+#             for subtr in substr:
+#                 if icreateNull == 1:
+#                     print('One or more components missing: consider removing ',
+#                           subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
+#                           ' Number of traces: ', len(substr))
+#                 if icreateNull == 0:
+#                     stream.remove(subtr)
+#                     print('One or more components missing: Removing ',
+#                       subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
+#                       ' Number of traces: ', len(substr))
 
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
