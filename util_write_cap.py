@@ -1119,6 +1119,11 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
             tr.stats.channel = tr.stats.channel[0:3]
             print("WARNING station %s new names: LOC %s CHA %s" % \
                     (tr.id, tr.stats.location, tr.stats.channel))
+        elif nletters_cha == 4:
+            tr.stats.location = tr.stats.channel[3]
+            tr.stats.channel = tr.stats.channel[0:3]
+            print("WARNING station %s new names: LOC %s CHA %s" % \
+                    (tr.id, tr.stats.location, tr.stats.channel))
 
     # Compare requested with available times. log discrepancies.
     for tr in stream:
