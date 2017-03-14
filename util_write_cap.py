@@ -902,6 +902,8 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq,
         print(select_st)
 
         # Find max startime, min endtime for stations with 1 or 2 or 3 channels
+        max_starttime = obspy.UTCDateTime(4000, 1, 1, 0, 0)
+        min_endtime = obspy.UTCDateTime(3000, 1, 1, 0, 0)
         if len(select_st) == 1:
             max_starttime = select_st[0].stats.starttime
             min_endtime = select_st[0].stats.endtime
@@ -1104,6 +1106,15 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     fid.write("\n--------------------\n%s\n" % event.short_str())
     fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
 
+    # # Remove traces that are too short
+    # min_tlen = 100  # minimum duration of signal in seconds
+    # for tr in stream:
+    #     tlen = tr.stats.npts / tr.stats.sampling_rate
+    #     if tlen < min_tlen:
+    #         print("WARNING station %s. Signal is too short. Removing"%\
+    #                 (tr.id))
+    #         stream.remove(tr)
+
     # Cleanup channel name. Cases:
     # BHX00 --> channel = BHX, location = 00
     # SHZ1 --> channel = SHZ, location = 1  
@@ -1124,6 +1135,28 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
             tr.stats.channel = tr.stats.channel[0:3]
             print("WARNING station %s new names: LOC %s CHA %s" % \
                     (tr.id, tr.stats.location, tr.stats.channel))
+
+    # Remove stations with missing channels. 
+    # LLNL data is already problematic, so if there are signs of too many
+    # issues / problems for a given station then remove that station.
+    # The thresholds for removing data are the following:
+    # If number of channels is not 3, then remove
+    # If ...
+
+    # Remove station if number of channels is less than 3 and network is LL
+    thr_ncha = 3
+    for tr in stream:
+        net = tr.stats.network
+        sta = tr.stats.station
+        loc = tr.stats.location
+        cha = tr.stats.channel[:-1] + '*'
+        chalist = stream.select(station = sta, location = loc, channel = cha)
+        chalist.merge()
+        ncha = len(chalist)
+        if (ncha < thr_ncha) and (net == 'LL'):
+            print("WARNING station %s. There are %d channels (<%d). Removing"%\
+                    (tr.id, ncha, thr_ncha))
+            stream.remove(tr)
 
     # Compare requested with available times. log discrepancies.
     for tr in stream:
