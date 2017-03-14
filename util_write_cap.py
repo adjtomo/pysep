@@ -1097,12 +1097,30 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     - fill in missing data
     """
 
+    print("\nQUALITY CHECK!\n")
+
     output_log = ("data_processing_status_%s.log" % client_name)
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
     fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
 
-    # compare requested with available times. log discrepancies.
+    # Cleanup channel name. Cases:
+    # BHX00 --> channel = BHX, location = 00
+    # SHZ1 --> channel = SHZ, location = 1  
+    for tr in stream:
+        nletters_cha = len(tr.stats.channel)
+        if '00' in tr.stats.channel[3:]:
+            tr.stats.location = '00'
+            tr.stats.channel = tr.stats.channel[0:3]
+            print("WARNING station %s new names: LOC %s CHA %s" % \
+                    (tr.id, tr.stats.location, tr.stats.channel))
+        elif '10' in tr.stats.channel[3:]:
+            tr.stats.location = '10'
+            tr.stats.channel = tr.stats.channel[0:3]
+            print("WARNING station %s new names: LOC %s CHA %s" % \
+                    (tr.id, tr.stats.location, tr.stats.channel))
+
+    # Compare requested with available times. log discrepancies.
     for tr in stream:
         station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
                 tr.stats.location +'.'+ tr.stats.channel
