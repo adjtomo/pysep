@@ -112,35 +112,36 @@ def run_get_waveform(c, event, idb,
     stream = obspy.Stream()
     stream = set_reftime(stream_raw, evtime)
 
+    print("--> Adding SAC metadata...")
+    st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=inventory)
+
     # Do some waveform QA
     # - (disabled) Throw out traces with missing data
     # - log waveform lengths and discrepancies
     # - Fill-in missing data -- Carl request
-    do_waveform_QA(stream, client_name, event, evtime, before, after)
+    do_waveform_QA(st2, client_name, event, evtime, before, after)
 
     if ifDemean:
-        stream.detrend('demean')
+        st2.detrend('demean')
 
     if ifDetrend:
-        stream.detrend('linear')
+        st2.detrend('linear')
 
     if ifFilter:
-        prefilter(stream, fmin, fmax, zerophase, corners, filter_type)
+        prefilter(st2, fmin, fmax, zerophase, corners, filter_type)
 
     if ifRemoveResponse:
-        resp_plot_remove(stream, ipre_filt, pre_filt, iplot_response, scale_factor, stations, outformat)
+        resp_plot_remove(st2, ipre_filt, pre_filt, iplot_response, scale_factor, stations, outformat)
     else:
         # output RAW waveforms
         decon=False
         print("WARNING -- NOT correcting for instrument response")
 
     if scale_factor > 0:
-        amp_rescale(stream, scale_factor)
+        amp_rescale(st2, scale_factor)
         if idb ==3:
-            amp_rescale_llnl(stream, scale_factor)
+            amp_rescale_llnl(st2, scale_factor)
 
-    print("--> Adding SAC metadata...")
-    st2 = add_sac_metadata(stream,idb=idb, ev=event, stalist=inventory)
 
     # Set the sac header KEVNM with event name
     # This applies to the events from the LLNL database
