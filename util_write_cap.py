@@ -1106,14 +1106,14 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     fid.write("\n--------------------\n%s\n" % event.short_str())
     fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
 
-    # # Remove traces that are too short
-    # min_tlen = 100  # minimum duration of signal in seconds
-    # for tr in stream:
-    #     tlen = tr.stats.npts / tr.stats.sampling_rate
-    #     if tlen < min_tlen:
-    #         print("WARNING station %s. Signal is too short. Removing"%\
-    #                 (tr.id))
-    #         stream.remove(tr)
+    # Remove traces that are too short
+    min_tlen = 1  # minimum duration of signal in seconds
+    for tr in stream:
+        tlen = tr.stats.npts / tr.stats.sampling_rate
+        if tlen < min_tlen:
+            print("WARNING station %s. Signal is too short. Removing"%\
+                    (tr.id))
+            stream.remove(tr)
 
     # Cleanup channel name. Cases:
     # BHX00 --> channel = BHX, location = 00
