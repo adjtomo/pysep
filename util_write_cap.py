@@ -999,9 +999,10 @@ def amp_rescale_llnl(st, scale_factor):
     scale_factor_HF = 1.0e-4
     scale_factor_LH = -1.0e-2 # flip
     scale_factor_VB = 1.0e-9
-    scale_factor_EH = 1.0e-7  # orig: 1e-7 but for FF2 some  amps are too large
+    scale_factor_EH = 1.0e-7  # orig: 1e-7 but some amps are too large, eg FF2
     scale_factor_HH = 1.0e-9 # orig 1e-10. for FF2 some amps are small
     scale_factor_BH = 1.0e-9
+    scale_factor_SH = 1.0e-9
 
     for tr in st.traces:
         station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
@@ -1048,6 +1049,12 @@ def amp_rescale_llnl(st, scale_factor):
             tr.data = tr.data * scale_factor_BH
             # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_BH * scale_factor
+        elif ('SH' in tr.stats.channel):
+            print("--> WARNING LLNL station %14s Rescaling by %f" % \
+                    (station_key, scale_factor_SH))
+            tr.data = tr.data * scale_factor_SH
+            # combine scale_factor with scale_factor_XX
+            tr.stats.sac['scale'] = scale_factor_SH * scale_factor
 
 def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
     """
