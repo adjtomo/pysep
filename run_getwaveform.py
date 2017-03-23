@@ -780,20 +780,6 @@ if iex == 201:
     #detrend = True
 
 # Kyle Nenana basin earthquakes for basin amplification
-#
-# ERROR WITH ROTATION DUE TO COLA ROTATION
-#--> Station IU.COLA.10 Rotating random orientation to NEZ.
-#Traceback (most recent call last):
-#  File "run_getwaveform.py", line 926, in <module>
-#    outformat = outformat, ifsave_sacpaz = ifsave_sacpaz)
-#  File "/home/carltape/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 187, in run_get_waveform
-#    rotate_and_write_stream(st2, evname_key, icreateNull, ifrotateUVW)
-#  File "/home/carltape/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 175, in rotate_and_write_stream
-#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
-#  File "/home/carltape/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
-#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
-#ValueError: setting an array element with a sequence.
-#
 if iex == 210:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
