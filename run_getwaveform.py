@@ -779,6 +779,40 @@ if iex == 201:
     #demean = True
     #detrend = True
 
+# Kyle Nenana basin earthquakes for basin amplification
+#
+# ERROR WITH ROTATION DUE TO COLA ROTATION
+#--> Station IU.COLA.10 Rotating random orientation to NEZ.
+#Traceback (most recent call last):
+#  File "run_getwaveform.py", line 926, in <module>
+#    outformat = outformat, ifsave_sacpaz = ifsave_sacpaz)
+#  File "/home/carltape/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform.py", line 187, in run_get_waveform
+#    rotate_and_write_stream(st2, evname_key, icreateNull, ifrotateUVW)
+#  File "/home/carltape/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/util_write_cap.py", line 175, in rotate_and_write_stream
+#    data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
+#  File "/home/carltape/miniconda2/envs/sln/lib/python3.5/site-packages/obspy/signal/rotate.py", line 257, in rotate2zne
+#    x, y, z = np.dot(_t, [data_1, data_2, data_3])
+#ValueError: setting an array element with a sequence.
+#
+if iex == 210:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # AEC source parameters
+    otime = obspy.UTCDateTime("2015-11-20T10:53:48.168") 
+    elat = 64.6210
+    elon = -149.4024
+    edep = 17113.4
+    emag = 2.67
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 600
+    tafter_sec = 600
+    network = 'AK,AT,II,IU,US,XM,XV,XZ'  # no CN,AV,YV,ZE
+    channel = 'BH?,HH?'
+    resample_freq = 0        # no resampling
+    scale_factor = 1         # no scale factor
 
 #-----------------------------------------------------------
 # Event from HutchisonGhosh2016
