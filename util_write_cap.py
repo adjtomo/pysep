@@ -75,7 +75,7 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
 
     # Directory is made, now rotate
 #     # Sorted stream makes for structured loop
-#     stream.sort()
+    stream.sort()
 # 
 #     print(stream)
 #     # Add backazimuth to metadata in a particular way...
@@ -218,7 +218,7 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
                 + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
                 + tr.stats.channel[-1].lower()
             tr.write(outfnam, format='SAC')
-            #print(tr.stats.channel)
+            print(tr.stats.channel)
 
         try:
             print('--> Station ' + netw + '.' + station + '.' + location + \
@@ -933,6 +933,11 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq,
         #        temp_stream = temp_stream.append(tr)
         #except:
         #    print('WARNING: starttime larger than endtime for channels of', netw, '.', station, '.', location)
+
+        # If no resample_freq is required then resample to the resample_freq of the data
+        # This seems useless but same function 'interpolate' is used for resampling and trimming
+        if (int(resample_freq) == 0):
+            resample_freq = select_st[0].stats.sampling_rate;
         if (int(resample_freq) != 0):
             if (client_name == "IRIS"):
                 resample(select_st, freq=resample_freq)
