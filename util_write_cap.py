@@ -1004,64 +1004,63 @@ def amp_rescale_llnl(st, scale_factor):
     scale_factor_BH = 1.0e-9
     scale_factor_SH = 1.0e-9
     scale_factor_HG = 1.0e-5
+    scale_factor_XX = -1.0e-9
 
     for tr in st.traces:
         station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
                 tr.stats.location +'.'+ tr.stats.channel
-        if ('BB' in tr.stats.channel):
+        print(station_key)
+        if ('BB' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_BB))
             tr.data = tr.data * scale_factor_BB
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_BB * scale_factor
-        elif ('HF' in tr.stats.channel):
+        elif ('HF' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_HF))
             tr.data = tr.data * scale_factor_HF
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_HF * scale_factor
-        elif ('LH' in tr.stats.channel):
+        elif ('LH' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_LH))
             tr.data = tr.data * scale_factor_LH
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_LH * scale_factor
-        elif ('VB' in tr.stats.channel):
+        elif ('VB' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_VB))
             tr.data = tr.data * scale_factor_VB
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_VB * scale_factor
-        elif ('HH' in tr.stats.channel):
+        elif ('HH' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_HH))
             tr.data = tr.data * scale_factor_HH
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_HH * scale_factor
-        elif ('EH' in tr.stats.channel):
+        elif ('EH' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_EH))
             tr.data = tr.data * scale_factor_EH
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_EH * scale_factor
-        elif ('BH' in tr.stats.channel):
+        elif ('BH' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_BH))
             tr.data = tr.data * scale_factor_BH
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_BH * scale_factor
-        elif ('SH' in tr.stats.channel):
+        elif ('SH' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_SH))
             tr.data = tr.data * scale_factor_SH
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_SH * scale_factor
-        elif ('HG' in tr.stats.channel):
+        elif ('HG' in tr.stats.channel) and ('LL' in tr.stats.network):
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_HG))
             tr.data = tr.data * scale_factor_HG
-            # combine scale_factor with scale_factor_XX
             tr.stats.sac['scale'] = scale_factor_HG * scale_factor
+        elif (tr.stats.channel is 'R') or (tr.stats.channel is 'T') or (tr.stats.channel is 'V') :
+            print("--> WARNING LLNL station %14s Rescaling by %f" % \
+                    (station_key, scale_factor_XX))
+            tr.data = tr.data * scale_factor_XX
+            # combine scale_factor with scale_factor_XX
+            tr.stats.sac['scale'] = scale_factor_XX * scale_factor
 
 def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
     """
