@@ -59,7 +59,12 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
     max_dist = 1200
 
     # station parameters
-    network = '*'                # all networks
+    # 20170321 cralvizuri@alaska.edu -- I disabled retrieving data for the
+    # networks listed below
+    # reason 1 some are dense/local and don't improve station coverage
+    # reason 2 many have crappy data (noisy)
+    # reason 3 some have very large amplitudes. Bad response?
+    network = '*,-XK,-XM,-XS,-XC,-XU,-XT,-XE'
     station = '*,-PURD,-NV33,-GPO'  # all stations
     channel = 'BH?,LH?'
 
@@ -154,23 +159,29 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
             station = '*'   # doesn't like "-staX"
             client = Client(iclient)
 
-        gw.run_get_waveform(c = client, event = ev, idb = idb, 
-                min_dist = min_dist, max_dist = max_dist, 
-                before = tbefore_sec, after = tafter_sec, 
-                network = network, station = station, channel = channel, 
-                resample_freq = resample_freq,
-                ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
-                ifCapInp = output_cap_weight_file, 
-                ifRemoveResponse = remove_response,
-                ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
-                ifEvInfo = output_event_info,
-                scale_factor = scale_factor,
-                icreateNull = icreateNull,
-                ipre_filt = ipre_filt, pre_filt = pre_filt, ifFilter = ifFilter, 
-                fmin = f1, fmax = f2, filter_type = filter_type, 
-                zerophase = zerophase, corners = corners, 
-                iplot_response = iplot_response, 
-                ifplot_spectrogram = ifplot_spectrogram)
+        try:
+            gw.run_get_waveform(c = client, event = ev, idb = idb, 
+                    min_dist = min_dist, max_dist = max_dist, 
+                    before = tbefore_sec, after = tafter_sec, 
+                    network = network, station = station, channel = channel, 
+                    resample_freq = resample_freq,
+                    ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
+                    ifCapInp = output_cap_weight_file, 
+                    ifRemoveResponse = remove_response,
+                    ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                    ifEvInfo = output_event_info,
+                    scale_factor = scale_factor,
+                    icreateNull = icreateNull,
+                    ipre_filt = ipre_filt, pre_filt = pre_filt, ifFilter = ifFilter, 
+                    fmin = f1, fmax = f2, filter_type = filter_type, 
+                    zerophase = zerophase, corners = corners, 
+                    iplot_response = iplot_response, 
+                    ifplot_spectrogram = ifplot_spectrogram)
+        except:
+            print("~~~~~ SOMETHING HAPPENED ~~~~~~~~~~")
+            print(ev, client)
+            print("Continuing")
+            continue
 
 def call_getwf(dataset, llnl=False, iris=False):
     """
@@ -193,7 +204,7 @@ origins_explosions = {
         "AMARILLO      ": ["1989-06-27T15:30:00.02", "-116.354", "37.275", "640", "Ford2009", "4.90", "ml", "NCSN"], 
         "DISKO_ELM     ": ["1989-09-14T15:00:00.10", "-116.164", "37.236", "261", "Ford2009", "4.40", "ml", "NCSN"], 
         "HORNITOS      ": ["1989-10-31T15:30:00.09", "-116.492", "37.263", "564", "Ford2009", "5.40", "ml", "NCSN"], 
-        "BAMWELL       ": ["1989-12-08T15:00:00.09", "-116.410", "37.231", "601", "Ford2009", "5.30", "ml", "NCSN"], 
+        "BARNWELL      ": ["1989-12-08T15:00:00.09", "-116.410", "37.231", "601", "Ford2009", "5.30", "ml", "NCSN"], 
         "METROPOLIS    ": ["1990-03-10T16:00:00.08", "-116.056", "37.112", "469", "Ford2009", "4.94", "md", "NCSN"], 
         "BULLION       ": ["1990-06-13T16:00:00.09", "-116.421", "37.262", "674", "Ford2009", "5.34", "md", "NCSN"], 
         "AUSTIN        ": ["1990-06-21T18:15:00.00", "-116.005", "36.993", "350", "Ford2009", "4.11", "md", "NCSN"], 
@@ -231,6 +242,6 @@ origins_collapses = {
 
 # get the waveforms
 call_getwf(origins_explosions, llnl=True, iris=False)
-call_getwf(origins_quakes,     llnl=False, iris=False)
-call_getwf(origins_collapses,  llnl=False, iris=False)
+call_getwf(origins_quakes,     llnl=True, iris=False)
+call_getwf(origins_collapses,  llnl=True, iris=False)
 
