@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 210
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -792,13 +792,17 @@ if iex == 210:
     emag = 2.67
     # subset of stations
     min_dist = 0
-    max_dist = 500
-    tbefore_sec = 600
-    tafter_sec = 600
-    network = 'AK,AT,II,IU,US,XM,XV,XZ'  # no CN,AV,YV,ZE
+    max_dist = 100
+    tbefore_sec = 100
+    tafter_sec = 400
+    network = 'AK,AT,II,IU,US,XM,XV,XZ,TA'  # no CN,AV,YV,ZE
     channel = 'BH?,HH?'
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
+    #ipre_filt = 0
+    remove_response = True
+    #demean = False
+    #detrend = False
 
 #-----------------------------------------------------------
 # Event from HutchisonGhosh2016

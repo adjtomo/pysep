@@ -75,9 +75,9 @@ def run_get_waveform(c, event, idb,
                                   starttime=evtime - before, endtime=evtime + after,
                                   level="response")
         inventory = stations    # so that llnl and iris scripts can be combined
-        
+        print("Printing stations")
         print(stations)
-        
+        print("Done Printing stations...")
         sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist)
         
         print("Downloading waveforms...")
