@@ -760,10 +760,14 @@ if iex == 201:
     # For CAP
     min_dist = 0
     max_dist = 200
-    tbefore_sec = 100
-    tafter_sec = 300
+    tbefore_sec = 500
+    tafter_sec = 2000
     network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+    # network = 'AK,TA,II,IU,US'
+    # station = "-RAG"  # RAG has choppy data; gives error: Exception: Can't merge traces with same ids but differing sampling rates!
     channel = 'BH?,HH?'
+    pre_filt = (0.0025, 0.003, 10.0, 15.0) # BH default
+    ipre_filt = 1
 
     # to investigate clipping
     #tbefore_sec = 2000
