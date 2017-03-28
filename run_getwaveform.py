@@ -660,7 +660,7 @@ if iex == 104:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
-# MFFZ earthquakes for investigating clipping
+# MFFZ earthquakes for investigating the step response
 if iex == 200:
     idb = 1
     use_catalog = 0
@@ -711,9 +711,16 @@ if iex == 200:
     emag = 4.60
     #-------------------------------------------------
 
+    # copy and pasted from block above
+    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
+    elat = 64.4285
+    elon = -149.6969
+    edep = 23852
+    emag = 3.47
+
     min_dist = 0
     max_dist = 300
-    tbefore_sec = 100
+    tbefore_sec = 200
     tafter_sec = 600
     #network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     network = 'XV,AK'
@@ -724,10 +731,10 @@ if iex == 200:
     #scale_factor = 10.0**2
     #resample_freq = 50 
 
-    # to investigate clipping
+    # to investigate step response
     rotateRTZ = True
     rotateUVW = True
-    ifFilter = False
+    ifFilter = True
     zerophase = False
     filter_type = 'lowpass'
     f1 = 1/200  # fmin
@@ -735,7 +742,7 @@ if iex == 200:
     corners = 4
     remove_response = False
     ipre_filt = 1
-    pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
+    #pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
     demean = False
     detrend = False
     output_cap_weight_file = False
