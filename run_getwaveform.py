@@ -18,6 +18,7 @@
 #
 # TO DO
 # + filetags for the case iFilter = True (like lp10, bp10_40, etc)
+# + provide better options and handling for data gaps (like: "toss waveform if gaps ar 0.01*length")
 #
 #=============================================================
 
@@ -30,7 +31,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 210
+iex = 0
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
