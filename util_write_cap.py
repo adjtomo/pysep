@@ -1295,7 +1295,7 @@ def rotate2UVW(st,evname_key):
     if not(os.path.exists(outdir)):
         os.makedirs(outdir)
 
-    # save NEZ waveforms
+    # save UVW waveforms
     for tr in st:
         outfnam = outdir + '/' + evname_key + '.' \
             + tr.stats.network + '.' + tr.stats.station + '.' \

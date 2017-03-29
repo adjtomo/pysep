@@ -42,7 +42,7 @@ rotateUVW = False   # This option works only if 'rotateRTZ = True'
 output_cap_weight_file = True
 detrend = True
 demean = True
-taper = False
+taper = False       # this could also be a fraction between 0 and 1 (fraction to be tapered from both sides)
 output_event_info = True
 outformat = 'VEL'            # Intrument response removed waveforms could be saved as 'VEL' 'DISP' 'ACC'
 ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
@@ -748,6 +748,7 @@ if iex == 200:
     output_cap_weight_file = False
     outformat = 'DISP'
     ifsave_sacpaz = True
+    taper = 0.2
 
 # NENNUC event (from Steve)
 if iex == 201:
@@ -931,7 +932,7 @@ getwaveform.run_get_waveform(c = client, event = ev, idb = idb,
                              resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                              ifCapInp = output_cap_weight_file, 
                              ifRemoveResponse = remove_response,
-                             ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                             ifDetrend = detrend, ifDemean = demean, Taper = taper,
                              ifEvInfo = output_event_info,
                              scale_factor = scale_factor,
                              ipre_filt = ipre_filt, pre_filt = pre_filt, 
