@@ -604,7 +604,7 @@ if iex == 101:
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
 
-    # parameters for examining clipping (causal low-pass filter on raw waveforms)
+    # parameters for examining step response (causal low-pass filter on raw waveforms)
     # delete AUQ, SPCP, SPBG
     rotateRTZ = False
     ifFilter = True
@@ -722,8 +722,8 @@ if iex == 200:
     max_dist = 300
     tbefore_sec = 200
     tafter_sec = 600
-    #network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
-    network = 'XV,AK'
+    network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+    #network = 'XV,AK'
     channel = 'BH?,HH?'
     scale_factor = 1
     resample_freq = 0
@@ -737,11 +737,12 @@ if iex == 200:
     ifFilter = True
     zerophase = False
     filter_type = 'lowpass'
+    #filter_type = 'bandpass'
     f1 = 1/200  # fmin
     f2 = 1/20  # fmax
     corners = 4
     remove_response = False
-    ipre_filt = 1
+    #ipre_filt = 1
     #pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
     demean = False
     detrend = False
@@ -777,7 +778,7 @@ if iex == 201:
     pre_filt = (0.0025, 0.003, 10.0, 15.0) # BH default
     ipre_filt = 1
 
-    # to investigate clipping
+    # to investigate step response
     #tbefore_sec = 2000
     #tafter_sec = 2000
     #resample_freq = 0 
