@@ -19,6 +19,9 @@
 # TO DO
 # + filetags for the case iFilter = True (like lp10, bp10_40, etc)
 # + provide better options and handling for data gaps (like: "toss waveform if gaps ar 0.01*length")
+# + the KEVNM header cannot store the time to the 3rd millisecond character
+#   probably the best approach is to write the spill-over character into another field
+#   (or reconstruct the EID from the origin time, if that is your convention)
 #
 #=============================================================
 
@@ -668,55 +671,56 @@ if iex == 200:
     otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
     elat = 65.1526
     elon = -149.0398
-    edep = 16614
-    emag = 5.2
+    edep = 16614.7
+    emag = 5.20
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2014-10-21T00:36:58.333")
     elat = 65.1489
     elon = -149.0413
-    edep = 13134
-    emag = 4.9
+    edep = 13134.8
+    emag = 4.90
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2014-10-23T16:30:23.968")
     elat = 65.1644
     elon = -149.0523
-    edep = 20066
-    emag = 5.0
+    edep = 20066.5
+    emag = 5.00
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
     elat = 64.4285
     elon = -149.6969
-    edep = 23852
+    edep = 23852.1
     emag = 3.47
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
     elat = 64.6827
     elon = -149.2479
-    edep = 22663
-    emag = 3.8
+    edep = 22663.7
+    emag = 3.80
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
     elat = 64.1639
     elon = -150.0626
-    edep = 23190
-    emag = 4.10
+    edep = 23190.0
+    emag = 4.00
     #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-12-08T10:18:13.000")
+    otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
+    # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
     #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
     #otime = obspy.UTCDateTime("2011-12-21T16:28:41.000")
-    elat = 64.2380
-    elon = -150.0581
-    edep = 18507
-    emag = 4.60
+    elat = 64.1937
+    elon = -150.0376
+    edep = 24522.1
+    emag = 4.30
     #-------------------------------------------------
 
     # copy and pasted from block above
-    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
-    elat = 64.4285
-    elon = -149.6969
-    edep = 23852
-    emag = 3.47
+    otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
+    elat = 65.1526
+    elon = -149.0398
+    edep = 16614.7
+    emag = 5.20
 
     min_dist = 0
     max_dist = 300
@@ -736,18 +740,18 @@ if iex == 200:
     rotateUVW = True
     ifFilter = True
     zerophase = False
-    filter_type = 'lowpass'
-    #filter_type = 'bandpass'
-    f1 = 1/200  # fmin
-    f2 = 1/20  # fmax
+    #filter_type = 'lowpass'
+    filter_type = 'bandpass'
+    f1 = 1/100  # fmin
+    f2 = 1/10  # fmax
     corners = 4
-    remove_response = False
-    #ipre_filt = 1
-    #pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
-    demean = False
-    detrend = False
+    #remove_response = False
+    remove_response = True
+    ipre_filt = 1
+    demean = True
+    detrend = True
     output_cap_weight_file = False
-    outformat = 'DISP'
+    #outformat = 'DISP'
     ifsave_sacpaz = True
     taper = 0.2
 
