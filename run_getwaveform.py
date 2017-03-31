@@ -668,6 +668,30 @@ if iex == 200:
     idb = 1
     use_catalog = 0
     #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
+    elat = 64.1937
+    elon = -150.0376
+    edep = 24522.1
+    emag = 4.30
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
+    elat = 64.1639
+    elon = -150.0626
+    edep = 23190.0
+    emag = 4.00
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
+    elat = 64.6827
+    elon = -149.2479
+    edep = 22663.7
+    emag = 3.80
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
+    elat = 64.4285
+    elon = -149.6969
+    edep = 23852.1
+    emag = 3.47
+    #-------------------------------------------------
     otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
     elat = 65.1526
     elon = -149.0398
@@ -686,41 +710,11 @@ if iex == 200:
     edep = 20066.5
     emag = 5.00
     #-------------------------------------------------
-    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
-    elat = 64.4285
-    elon = -149.6969
-    edep = 23852.1
-    emag = 3.47
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
-    elat = 64.6827
-    elon = -149.2479
-    edep = 22663.7
-    emag = 3.80
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
-    elat = 64.1639
-    elon = -150.0626
-    edep = 23190.0
-    emag = 4.00
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
     # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
     #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
     #otime = obspy.UTCDateTime("2011-12-21T16:28:41.000")
-    elat = 64.1937
-    elon = -150.0376
-    edep = 24522.1
-    emag = 4.30
     #-------------------------------------------------
-
-    # copy and pasted from block above
-    otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
-    elat = 65.1526
-    elon = -149.0398
-    edep = 16614.7
-    emag = 5.20
 
     min_dist = 0
     max_dist = 300
@@ -739,7 +733,7 @@ if iex == 200:
     rotateRTZ = True
     rotateUVW = True
     ifFilter = True
-    zerophase = False
+    zerophase = False    # causal
     #filter_type = 'lowpass'
     filter_type = 'bandpass'
     f1 = 1/100  # fmin
