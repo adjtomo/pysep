@@ -18,6 +18,10 @@
 #
 # TO DO
 # + filetags for the case iFilter = True (like lp10, bp10_40, etc)
+# + provide better options and handling for data gaps (like: "toss waveform if gaps ar 0.01*length")
+# + the KEVNM header cannot store the time to the 3rd millisecond character
+#   probably the best approach is to write the spill-over character into another field
+#   (or reconstruct the EID from the origin time, if that is your convention)
 #
 #=============================================================
 
@@ -41,7 +45,7 @@ rotateUVW = False   # This option works only if 'rotateRTZ = True'
 output_cap_weight_file = True
 detrend = True
 demean = True
-taper = False
+taper = False       # this could also be a fraction between 0 and 1 (fraction to be tapered from both sides)
 output_event_info = True
 outformat = 'VEL'            # Intrument response removed waveforms could be saved as 'VEL' 'DISP' 'ACC'
 ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
@@ -613,7 +617,7 @@ if iex == 101:
     resample_freq = 0        # no resampling
     scale_factor = 1         # no scale factor
 
-    # parameters for examining clipping (causal low-pass filter on raw waveforms)
+    # parameters for examining step response (causal low-pass filter on raw waveforms)
     # delete AUQ, SPCP, SPBG
     rotateRTZ = False
     ifFilter = True
@@ -669,63 +673,65 @@ if iex == 104:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
-# MFFZ earthquakes for investigating clipping
+# MFFZ earthquakes for investigating the step response
 if iex == 200:
     idb = 1
     use_catalog = 0
     #-------------------------------------------------
-    otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
-    elat = 65.1526
-    elon = -149.0398
-    edep = 16614
-    emag = 5.2
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2014-10-21T00:36:58.333")
-    elat = 65.1489
-    elon = -149.0413
-    edep = 13134
-    emag = 4.9
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2014-10-23T16:30:23.968")
-    elat = 65.1644
-    elon = -149.0523
-    edep = 20066
-    emag = 5.0
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
-    elat = 64.4285
-    elon = -149.6969
-    edep = 23852
-    emag = 3.47
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
-    elat = 64.6827
-    elon = -149.2479
-    edep = 22663
-    emag = 3.8
+    otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
+    elat = 64.1937
+    elon = -150.0376
+    edep = 24522.1
+    emag = 4.30
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
     elat = 64.1639
     elon = -150.0626
-    edep = 23190
-    emag = 4.10
+    edep = 23190.0
+    emag = 4.00
     #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-12-08T10:18:13.000")
+    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
+    elat = 64.6827
+    elon = -149.2479
+    edep = 22663.7
+    emag = 3.80
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
+    elat = 64.4285
+    elon = -149.6969
+    edep = 23852.1
+    emag = 3.47
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
+    elat = 65.1526
+    elon = -149.0398
+    edep = 16614.7
+    emag = 5.20
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2014-10-21T00:36:58.333")
+    elat = 65.1489
+    elon = -149.0413
+    edep = 13134.8
+    emag = 4.90
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2014-10-23T16:30:23.968")
+    elat = 65.1644
+    elon = -149.0523
+    edep = 20066.5
+    emag = 5.00
+    #-------------------------------------------------
+    # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
     #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
     #otime = obspy.UTCDateTime("2011-12-21T16:28:41.000")
-    elat = 64.2380
-    elon = -150.0581
-    edep = 18507
-    emag = 4.60
     #-------------------------------------------------
 
     min_dist = 0
     max_dist = 300
-    tbefore_sec = 100
+    tbefore_sec = 200
     tafter_sec = 600
-    #network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
-    network = 'XV,AK'
+    network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+    #network = 'XV,AK'
     channel = 'BH?,HH?'
     scale_factor = 1
     resample_freq = 0
@@ -733,23 +739,25 @@ if iex == 200:
     #scale_factor = 10.0**2
     #resample_freq = 50 
 
-    # to investigate clipping
+    # to investigate step response
     rotateRTZ = True
     rotateUVW = True
-    ifFilter = False
-    zerophase = False
-    filter_type = 'lowpass'
-    f1 = 1/200  # fmin
-    f2 = 1/20  # fmax
+    ifFilter = True
+    zerophase = False    # causal
+    #filter_type = 'lowpass'
+    filter_type = 'bandpass'
+    f1 = 1/100  # fmin
+    f2 = 1/10  # fmax
     corners = 4
-    remove_response = False
+    #remove_response = False
+    remove_response = True
     ipre_filt = 1
-    pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
-    demean = False
-    detrend = False
+    demean = True
+    detrend = True
     output_cap_weight_file = False
-    outformat = 'DISP'
+    #outformat = 'DISP'
     ifsave_sacpaz = True
+    taper = 0.2
 
 # NENNUC event (from Steve)
 if iex == 201:
@@ -778,7 +786,7 @@ if iex == 201:
     pre_filt = (0.0025, 0.003, 10.0, 15.0) # BH default
     ipre_filt = 1
 
-    # to investigate clipping
+    # to investigate step response
     #tbefore_sec = 2000
     #tafter_sec = 2000
     #resample_freq = 0 
@@ -980,7 +988,7 @@ getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place =
                              resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                              ifCapInp = output_cap_weight_file, 
                              ifRemoveResponse = remove_response,
-                             ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                             ifDetrend = detrend, ifDemean = demean, Taper = taper,
                              ifEvInfo = output_event_info,
                              scale_factor = scale_factor,
                              ipre_filt = ipre_filt, pre_filt = pre_filt, 

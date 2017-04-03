@@ -515,7 +515,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                             #    tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
                             #else:
                             #    scale_factor = tr.stats.sac['kuser0']
-                            tr.stats.sac['kuser0'] = 'M/S'
+                            # tr.stats.sac['kuser0'] = 'M/S'
                             sensor = ch.sensor.description
                             # add sensor information
                             # SAC header variables can only be 8 characters long (except KEVNM: 16 chars)
@@ -1135,7 +1135,13 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
                 print("Failed to correct %s due to: %s" % (tr.id, str(e)))
 
         # Change the units if instrument response is removed
-        tr.stats.sac['kuser0'] = str(scale_factor)
+        tr.stats.sac['scale'] = str(scale_factor)
+        if outformat.upper() == 'VEL':
+            tr.stats.sac['kuser0'] = 'M/S'
+        elif outformat.upper() == 'DISP':
+            tr.stats.sac['kuser0'] = 'M'
+        elif outformat.upper() == 'ACC':
+            tr.stats.sac['kuser0'] = 'M/S/S'
 
 def do_waveform_QA(stream, client_name, event, evtime, before, after):
     """
@@ -1295,7 +1301,7 @@ def rotate2UVW(st,evname_key):
     if not(os.path.exists(outdir)):
         os.makedirs(outdir)
 
-    # save NEZ waveforms
+    # save UVW waveforms
     for tr in st:
         outfnam = outdir + '/' + evname_key + '.' \
             + tr.stats.network + '.' + tr.stats.station + '.' \
