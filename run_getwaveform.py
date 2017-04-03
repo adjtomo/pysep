@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 210
+iex = 0
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -98,6 +98,13 @@ f3 = 2.0*f2
 pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
 #pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
 
+
+# dummy values
+dummyval = -9999
+rlat = dummyval
+rlon = dummyval
+rtime = dummyval
+
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
 # Run example iex = 4 to check
@@ -115,7 +122,7 @@ if iex == 0:
     tafter_sec = 300
     network = 'II,IU'
     station = 'KDAK,COLA'
-    channel = '*'
+    channel = '*'   
 
 #=================================================================================
 # CATEGORY A EXAMPLES: simple test cases (including current and previous bugs)
@@ -134,6 +141,9 @@ if iex == 1:
     tafter_sec = 600
     network = 'AV'       # Crashes when -  tbefore_sec = 42; Works fine when - tbefore_sec = 41
     channel = 'BH?'
+    rlat = 64.7716
+    rlon = -149.1465
+    rtime = obspy.UTCDateTime("2009-04-07T20:20:00")
 
 # ERROR EXAMPLE [obspy]
 # PROBLEM: If a particular network is requested (either explicitly or within *), no waveforms are returned.
@@ -808,6 +818,29 @@ if iex == 210:
     #demean = False
     #detrend = False
 
+# gets waveforms from M 8.3 Chile event with stations centered in Minto
+if iex == 211:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0
+    otime = obspy.UTCDateTime("2015-09-16T22:54:33.000")
+    elat = -31.5695
+    elon = -71.6543
+    edep = 22400.0
+    emag = 8.30
+    rlat = 64.7716
+    rlon = -149.1465
+    rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
+    tbefore_sec = 100
+    tafter_sec = 200
+    min_dist = 0
+    max_dist = 100
+    network = 'AK,AT,II,IU,US,XM,XV,XZ,TA'  # no CN,AV,YV,ZE
+    channel = 'BH?,HH?'
+    resample_freq = 0        
+    scale_factor = 1        
+    remove_response = True
+
 #-----------------------------------------------------------
 # Event from HutchisonGhosh2016
 # Crashes when using all networks [i.e. network = '*']
@@ -870,6 +903,12 @@ if idb == 1:
         cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
         ev = cat[0]
+        
+        ref_time_place = ev
+        if rlat != dummyval:
+            ref_time_place.origins[0].latitude = rlat
+            ref_time_place.origins[0].longitude = rlon
+            ref_time_place.origins[0].time = rtime 
     else:
         print("WARNING using event data from user-defined catalog")
         ev = Event()
@@ -883,6 +922,21 @@ if idb == 1:
         mag.magnitude_type = "Mw"
         ev.origins.append(org)
         ev.magnitudes.append(mag)
+
+        if rlat == dummyval:
+            # By default this should be the event time and location unless we want to grab stations centered at another location
+            rlat = elat
+            rlon = elon
+            rtime = otime
+        
+        ref_time_place = Event()
+        ref_org = Origin()
+        ref_org.latitude = rlat
+        ref_org.longitude = rlon
+        ref_org.time = rtime
+        ref_org.depth = 0 # dummy value
+        ref_time_place.origins.append(ref_org)
+        ref_time_place.magnitudes.append(mag) # more dummies
 
 # LLNL
 if idb == 3:
@@ -898,8 +952,11 @@ if idb == 3:
     print(mintime_str + "\n" + maxtime_str)
     #ev = cat.filter(mintime_str, maxtime_str)[0]
     ev = cat.filter(mintime_str, maxtime_str)
+    
     if len(ev) > 0:
         ev = ev[0]
+        # Nothing happens here.  We can change later
+        ref_time_place = ev
         print(len(ev))
     else:
         print("No events in the catalog for the given time period. Stop.")
@@ -916,7 +973,7 @@ if overwrite_ddir and os.path.exists(ddir):
     shutil.rmtree(ddir)
 
 # Extract waveforms, IRIS
-getwaveform.run_get_waveform(c = client, event = ev, idb = idb, 
+getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place,
                              min_dist = min_dist, max_dist = max_dist, 
                              before = tbefore_sec, after = tafter_sec, 
                              network = network, station = station, channel = channel, 

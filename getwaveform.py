@@ -13,7 +13,7 @@ from scipy import signal
 
 from util_write_cap import *
 
-def run_get_waveform(c, event, idb,
+def run_get_waveform(c, event, idb, ref_time_place,
                      min_dist=20, max_dist=300, before=100, after=300,
                      network='*', station = '*', channel='BH*', 
                      resample_freq=20, 
@@ -57,7 +57,8 @@ def run_get_waveform(c, event, idb,
     """
     
     evtime = event.origins[0].time
-    
+    reftime = ref_time_place.origins[0].time
+
     if idb==1:
         print("Preparing request for IRIS ...")
         # BK network doesn't return data when using the IRIS client.
@@ -72,17 +73,17 @@ def run_get_waveform(c, event, idb,
         print("Download stations...")
         stations = c.get_stations(network=network, station=station, 
                                   channel=channel,
-                                  starttime=evtime - before, endtime=evtime + after,
+                                  starttime=reftime - before, endtime=reftime + after,
                                   level="response")
         inventory = stations    # so that llnl and iris scripts can be combined
         print("Printing stations")
         print(stations)
         print("Done Printing stations...")
-        sta_limit_distance(event, stations, min_dist=min_dist, max_dist=max_dist)
+        sta_limit_distance(ref_time_place, stations, min_dist=min_dist, max_dist=max_dist)
         
         print("Downloading waveforms...")
         bulk_list = make_bulk_list_from_stalist(
-            stations, evtime - before, evtime + after, channel=channel)
+            stations, reftime - before, reftime + after, channel=channel)
         stream_raw = c.get_waveforms_bulk(bulk_list)
             
     elif idb==3:
