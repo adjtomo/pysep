@@ -112,7 +112,7 @@ remove_response = True
 user = ''
 password = ''
 
-for iex in range(14,15):
+for iex in range(1,15):
     # dummy values
     dummyval = -9999
     rlat = dummyval
@@ -316,7 +316,7 @@ for iex in range(14,15):
                                  resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                                  ifCapInp = output_cap_weight_file, 
                                  ifRemoveResponse = remove_response,
-                                 ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                                 ifDetrend = detrend, ifDemean = demean, Taper = taper,
                                  ifEvInfo = output_event_info,
                                  scale_factor = scale_factor,
                                  ipre_filt = ipre_filt, pre_filt = pre_filt, 
