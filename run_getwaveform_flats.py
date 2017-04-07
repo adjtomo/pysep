@@ -112,7 +112,7 @@ remove_response = True
 user = ''
 password = ''
 
-for iex in range(1,15):
+for iex in range(14,15):
     # dummy values
     dummyval = -9999
     rlat = dummyval
@@ -247,7 +247,9 @@ for iex in range(1,15):
         emag = 7.7
         rlat = 64.7716
         rlon = -149.1465
-        rtime = obspy.UTCDateTime("2016-07-29T21:28:29.000")
+        #rtime = obspy.UTCDateTime("2016-07-29T21:28:29.000")
+        # use this instead since waveforms tell a clearer story of arrivals
+        rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
         tafter_sec = 250
 
     if rlat == dummyval:
