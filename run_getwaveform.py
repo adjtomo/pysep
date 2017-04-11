@@ -720,6 +720,12 @@ if iex == 200:
     edep = 20066.5
     emag = 5.00
     #-------------------------------------------------
+    otime = obspy.UTCDateTime("2015-09-12T03:25:12.711")
+    elat = 65.1207
+    elon = -148.6646
+    edep = 15556.8
+    emag = 2.6
+    #-------------------------------------------------
     # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
     #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
