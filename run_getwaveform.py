@@ -774,17 +774,25 @@ if iex == 201:
     elon = -149.2479
     edep = 22663.7
     emag = 3.8
+    #-------------------------------------------------
     otime = obspy.UTCDateTime("2015-09-12T03:25:12.711")
     elat = 65.1207
     elon = -148.6646
     edep = 15556.8
     emag = 2.6
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2013-03-12T07:39:50.214")
+    elat = 64.7161
+    elon = -148.9505
+    edep = 20000
+    emag = 2.1
 
     # For CAP
     min_dist = 0
     max_dist = 200
     tbefore_sec = 500
     tafter_sec = 2000
+    taper = 0.1
     network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
     # network = 'AK,TA,II,IU,US'
     # station = "-RAG"  # RAG has choppy data; gives error: Exception: Can't merge traces with same ids but differing sampling rates!
