@@ -37,53 +37,57 @@ print(sys.version)
 
 # Set parameters
 net = "XV"
-sta = "F2TN"
+stationlist = ["F1TN", "F2TN", "F3TN","F4TN","F5MN","F6TP","F7TV","F8KN","FTGH","FNN1","FNN2","FAPT","FPAP"]
 
-time1 = UTCDateTime(2016,11,6,9,0,0)
-time2 = UTCDateTime(2016,11,6,10,0,0)
+#sta = "F2TN"
 
 
-# get data
-vm0,vm0t = get_iris_soh(net,sta,"VM0",time1,time2)
+time1 = UTCDateTime(2017,1,1,0,0,0)
+time2 = UTCDateTime(2017,4,6,0,0,0)
 
-vm1,vm1t = get_iris_soh(net,sta,"VM1",time1,time2)
+for sta in stationlist:
+    # get data
+    vm0,vm0t = get_iris_soh(net,sta,"VM0",time1,time2)
 
-vm2,vm2t = get_iris_soh(net,sta,"VM2",time1,time2)
+    vm1,vm1t = get_iris_soh(net,sta,"VM1",time1,time2)
 
-vki,vkit = get_iris_soh(net,sta,"VKI",time1,time2)
+    vm2,vm2t = get_iris_soh(net,sta,"VM2",time1,time2)
 
-veptemp,vept = get_iris_soh(net,sta,"VEP",time1,time2)
-vep = [a*0.15 for a in veptemp]
+    vki,vkit = get_iris_soh(net,sta,"VKI",time1,time2)
 
-vec,vect = get_iris_soh(net,sta,"VEC",time1,time2)
+    veptemp,vept = get_iris_soh(net,sta,"VEP",time1,time2)
+    vep = []
+    vep = [a*0.15 for a in veptemp]
+
+    vec,vect = get_iris_soh(net,sta,"VEC",time1,time2)
 
 # make plots
-fig = plt.figure(num=1,figsize=(8.5,11))
-plt.subplot(411)
-plt.title(sta + ' ' + vkit[0].strftime('%Y/%m/%d') + ' - ' + vkit[len(vkit)-1].strftime('%Y/%m/%d') + "\n VKI temperature ")
-plt.plot_date(vkit,vki,'b-')
-plt.ylim(-10,50)
-plt.ylabel("Celsius")
+    fig = plt.figure(figsize=(8.5,11))
+    plt.subplot(411)
+    plt.title(sta + ' ' + vkit[0].strftime('%Y/%m/%d') + ' - ' + vkit[len(vkit)-1].strftime('%Y/%m/%d') + "\n VKI temperature ")
+    plt.plot_date(vkit,vki,'b-')
+    plt.ylim(-10,50)
+    plt.ylabel("Celsius")
 
-plt.subplot(412)
-plt.title("VEP main system voltage")
-plt.plot_date(vept,vep,'b-')
-plt.ylim(8,17)
-plt.ylabel("Volts")
+    plt.subplot(412)
+    plt.title("VEP main system voltage")
+    plt.plot_date(vept,vep,'b-')
+    plt.ylim(8,17)
+    plt.ylabel("Volts")
 
-plt.subplot(413)
-plt.title("VEC main system current")
-plt.plot_date(vect,vec,'b-')
-plt.ylim(50,100)
-plt.ylabel("mA")
+    plt.subplot(413)
+    plt.title("VEC main system current")
+    plt.plot_date(vect,vec,'b-')
+    plt.ylim(50,100)
+    plt.ylabel("mA")
 
-plt.subplot(414)
-plt.title("Mass Positions")
-plt.plot_date(vm0t,vm0,'g-',label="VM0")
-plt.plot_date(vm1t,vm1,'r-',label="VM1")
-plt.plot_date(vm2t,vm2,'b-',label="VM2")
-plt.ylim(-35,35)
-plt.legend(loc=2,fontsize = 10)
+    plt.subplot(414)
+    plt.title("Mass Positions")
+    plt.plot_date(vm0t,vm0,'g-',label="VM0")
+    plt.plot_date(vm1t,vm1,'r-',label="VM1")
+    plt.plot_date(vm2t,vm2,'b-',label="VM2")
+    plt.ylim(-35,35)
+    plt.legend(loc=2,fontsize = 10)
 
 #pp = max(abs(i) for i in vm0)
 #pp2 = max(abs(j) for j in vm1)
@@ -92,10 +96,10 @@ plt.legend(loc=2,fontsize = 10)
 
 #plt.ylim(-ymax,ymax)
 
-fig.autofmt_xdate()
-fig.savefig("/home/ksmith/" + sta + "soh.pdf", dpi=200)
+    fig.autofmt_xdate()
+    fig.savefig("/home/ksmith/currentSOH/" + sta + "soh.pdf", dpi=200)
 
-plt.show()
+    #plt.show()
 
 
 
