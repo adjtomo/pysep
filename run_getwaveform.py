@@ -673,6 +673,63 @@ if iex == 104:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
+# Klukwan earthquakes
+if iex == 105:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2017-05-01T12:31:53.000") 
+    elat = 59.8522
+    elon = -136.6618
+    edep = 4000
+    emag = 6.2
+    otime = obspy.UTCDateTime("2017-05-01T14:18:14.000") 
+    elat = 59.8184
+    elon = -136.7163
+    edep = 1000
+    emag = 6.0
+    
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 500
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+    channel = 'BH?,HH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
+# Kantishna earthquakes
+if iex == 106:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2017-04-29T11:15:48.000") 
+    elat = 63.1296
+    elon = -151.1517
+    edep = 11000
+    emag = 5.2
+    otime = obspy.UTCDateTime("2017-01-31T09:38:37.000") 
+    elat = 63.0817
+    elon = -150.9427
+    edep = 135000
+    emag = 5.2
+    
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 500
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+    channel = 'BH?,HH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
+
 # MFFZ earthquakes for investigating the step response
 if iex == 200:
     idb = 1
