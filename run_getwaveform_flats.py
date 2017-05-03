@@ -97,7 +97,7 @@ overwrite_ddir = 1       # delete data dir if it exists
 use_catalog = 0          #  # use an existing catalog (=1) or specify your own source parameters (=0)
 # subset of stations
 min_dist = 0
-max_dist = 100
+max_dist = 150
 tbefore_sec = 100
 tafter_sec = 400
 network = 'AK,AT,II,IU,US,XM,XV,XZ,TA' # no CN,AV,YV,ZE
@@ -112,12 +112,14 @@ remove_response = True
 user = ''
 password = ''
 
-for iex in range(14,15):
+for iex in range(1,17):
     # dummy values
     dummyval = -9999
     rlat = dummyval
     rlon = dummyval
     rtime = dummyval
+    rlat = 64.7716
+    rlon = -149.1465
 
 
     print("my iex is %d" %(iex))
@@ -129,6 +131,7 @@ for iex in range(14,15):
         elon = -149.4024
         edep = 17113.4
         emag = 2.67
+        rtime = otime
 
     if iex == 2:
         # AEC source parameters
@@ -136,7 +139,8 @@ for iex in range(14,15):
         elat = 64.7334
         elon = -149.0388
         edep = 18830.2
-        emag = 2.74   
+        emag = 2.74  
+        rtime = otime
 
     if iex == 3:
         # AEC source parameters
@@ -144,7 +148,8 @@ for iex in range(14,15):
         elat = 64.4325
         elon = -149.3840
         edep = 12431.1
-        emag = 3.25    
+        emag = 3.25  
+        rtime = otime
 
     if iex == 4:
         # AEC source parameters
@@ -153,6 +158,7 @@ for iex in range(14,15):
         elon = -149.6969
         edep = 23852.1
         emag = 3.47
+        rtime = otime
 
     if iex == 5:
         # AEC source parameters
@@ -161,6 +167,7 @@ for iex in range(14,15):
         elon = -151.3103
         edep = 1502.1
         emag = 3.35
+        rtime = otime
 
     if iex == 6:
         # AEC source parameters
@@ -169,6 +176,7 @@ for iex in range(14,15):
         elon = -149.0413
         edep = 13134.8
         emag = 4.90
+        rtime = otime
 
     if iex == 7:
         # AEC source parameters
@@ -177,6 +185,7 @@ for iex in range(14,15):
         elon = -149.0523
         edep = 200665
         emag = 5.00
+        rtime = otime
 
     if iex == 8:
         # AEC source parameters
@@ -185,6 +194,7 @@ for iex in range(14,15):
         elon = -149.2479
         edep = 22663.7
         emag = 3.80
+        rtime = otime
 
     if iex == 9:
         # AEC source parameters
@@ -193,6 +203,7 @@ for iex in range(14,15):
         elon = -148.9769
         edep = 15112.7
         emag = 2.91
+        rtime = otime
 
     if iex == 10:
         # Big Minto Event
@@ -202,7 +213,8 @@ for iex in range(14,15):
         elon = -150.0626
         edep = 23190.0
         emag = 4.00
-        max_dist = 150
+        #max_dist = 150
+        rtime = otime
 
     if iex == 11:
         # Big Minto Event
@@ -212,7 +224,8 @@ for iex in range(14,15):
         elon = -150.0376
         edep = 24522.1
         emag = 4.30
-        max_dist = 150
+        #max_dist = 150
+        rtime = otime
 
     if iex == 12:
         # Iniskin Event
@@ -221,8 +234,8 @@ for iex in range(14,15):
         elon = -153.3392
         edep = 125645.3
         emag = 7.10
-        rlat = 64.7716
-        rlon = -149.1465
+        #rlat = 64.7716
+        #rlon = -149.1465
         rtime = otime
         tafter_sec = 600
 
@@ -233,8 +246,8 @@ for iex in range(14,15):
         elon = -71.6543
         edep = 22400.0
         emag = 8.30
-        rlat = 64.7716
-        rlon = -149.1465
+        #rlat = 64.7716
+        #rlon = -149.1465
         rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
         tafter_sec = 200
     
@@ -245,13 +258,30 @@ for iex in range(14,15):
         elon = 145.541
         edep = 207620.0
         emag = 7.7
-        rlat = 64.7716
-        rlon = -149.1465
+        #rlat = 64.7716
+        #rlon = -149.1465
         #rtime = obspy.UTCDateTime("2016-07-29T21:28:29.000")
         # use this instead since waveforms tell a clearer story of arrivals
         rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
         tafter_sec = 250
+        
+    if iex == 15:
+        otime = obspy.UTCDateTime("2017-01-31T09:38:37.576")
+        #otime = obspy.UTCDateTime("2017-01-31T09:38:37.000")
+        elat = 63.0817
+        elon = -150.9427
+        edep = 132900
+        emag = 5.2
+        rtime = otime
 
+    if iex == 16:
+        otime = obspy.UTCDateTime("2017-04-29T11:15:48.000")
+        elat = 63.1296
+        elon = -151.1517
+        edep = 10800
+        emag = 5.2
+        rtime = otime
+    
     if rlat == dummyval:
         # By default this should be the event time and location unless we want to grab stations centered at another location
         rlat = elat
