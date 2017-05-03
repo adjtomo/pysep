@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 212
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -919,6 +919,31 @@ if iex == 211:
     resample_freq = 0        
     scale_factor = 1        
     remove_response = True
+
+# gets a 
+if iex == 212:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0
+    otime = obspy.UTCDateTime("2015-01-01T00:00:00.000")
+    elat = 64.6130
+    elon = -149.0992
+    edep = 0
+    emag = 0.00
+    #rlat = 64.7716
+    #rlon = -149.1465
+    #rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
+    tbefore_sec = 0
+    tafter_sec = 3600
+    min_dist = 0
+    max_dist = 2
+    network = 'XV'  # no CN,AV,YV,ZE
+    channel = 'HHZ'
+    resample_freq = 0        
+    scale_factor = 1        
+    remove_response = True
+    rotateRTZ = False
+#------------------------------------------------
 
 #-----------------------------------------------------------
 # Event from HutchisonGhosh2016
