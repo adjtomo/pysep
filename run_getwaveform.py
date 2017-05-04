@@ -938,7 +938,7 @@ if iex == 212:
     min_dist = 0
     max_dist = 2
     network = 'XV'  # no CN,AV,YV,ZE
-    channel = 'HHZ'
+    channel = 'HH?'
     resample_freq = 0        
     scale_factor = 1        
     remove_response = True
