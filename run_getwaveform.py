@@ -112,8 +112,8 @@ rtime = dummyval
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
 # Run example iex = 4 to check
-user = 'vsilwal@alaska.edu'
-password = 'dmk3hjKl3Jnq'
+user = ''
+password = ''
 
 # EXAMPLE TEMPLATE -- DO NOT USE
 # This is a template for testing before creating an example.
@@ -806,6 +806,12 @@ if iex == 200:
     edep = 15556.8
     emag = 2.6
     #-------------------------------------------------
+    otime = obspy.UTCDateTime("2017-05-08T05:09:02.000") 
+    elat = 65.2643
+    elon = -146.922
+    edep = 9000
+    emag = 3.6
+    #-------------------------------------------------
     # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
     #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
@@ -990,25 +996,6 @@ if iex == 213:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
-    # to investigate step response
-    rotateRTZ = True
-    rotateUVW = True
-    ifFilter = True
-    zerophase = False    # causal
-    #filter_type = 'lowpass'
-    filter_type = 'bandpass'
-    f1 = 1/100  # fmin
-    f2 = 1/50  # fmax
-    corners = 4
-    #remove_response = False
-    remove_response = True
-    ipre_filt = 1
-    demean = True
-    detrend = True
-    output_cap_weight_file = False
-    #outformat = 'DISP'
-    ifsave_sacpaz = False
-    taper = 0.2
 #------------------------------------------------
 
 #-----------------------------------------------------------
