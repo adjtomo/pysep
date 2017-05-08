@@ -112,8 +112,8 @@ rtime = dummyval
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
 # Run example iex = 4 to check
-user = ''
-password = ''
+user = 'vsilwal@alaska.edu'
+password = 'dmk3hjKl3Jnq'
 
 # EXAMPLE TEMPLATE -- DO NOT USE
 # This is a template for testing before creating an example.
@@ -729,6 +729,29 @@ if iex == 106:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
+# Cook Inlet earthquake
+if iex == 107:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2017-05-07T04:25:19.000") 
+    elat = 60.1945
+    elon = -151.6743
+    edep = 64000
+    emag = 5.2
+    
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 500
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+    channel = 'BH?,HH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
 
 # MFFZ earthquakes for investigating the step response
 if iex == 200:
@@ -943,6 +966,49 @@ if iex == 212:
     scale_factor = 1        
     remove_response = True
     rotateRTZ = False
+
+# Chatnika earthquake
+if iex == 213:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2017-05-08T05:09:02.000") 
+    elat = 65.2643
+    elon = -146.922
+    edep = 9000
+    emag = 3.8
+    
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 500
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+    channel = 'BH?,HH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
+
+    # to investigate step response
+    rotateRTZ = True
+    rotateUVW = True
+    ifFilter = True
+    zerophase = False    # causal
+    #filter_type = 'lowpass'
+    filter_type = 'bandpass'
+    f1 = 1/100  # fmin
+    f2 = 1/50  # fmax
+    corners = 4
+    #remove_response = False
+    remove_response = True
+    ipre_filt = 1
+    demean = True
+    detrend = True
+    output_cap_weight_file = False
+    #outformat = 'DISP'
+    ifsave_sacpaz = False
+    taper = 0.2
 #------------------------------------------------
 
 #-----------------------------------------------------------
