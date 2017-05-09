@@ -943,6 +943,31 @@ if iex == 212:
     scale_factor = 1        
     remove_response = True
     rotateRTZ = False
+
+# gets a time series for a station
+if iex == 213:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0
+    otime = obspy.UTCDateTime("2017-05-05T12:25:00.000")
+    elat = 64.709
+    elon = -149.1327
+    edep = 0
+    emag = 0.00
+    #rlat = 64.7716
+    #rlon = -149.1465
+    #rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
+    tbefore_sec = 0
+    tafter_sec = 3600
+    min_dist = 0
+    max_dist = 1
+    network = 'XV'  # no CN,AV,YV,ZE
+    channel = 'HH?'
+    resample_freq = 0        
+    scale_factor = 1        
+    remove_response = False
+    rotateRTZ = False
+
 #------------------------------------------------
 
 #-----------------------------------------------------------

@@ -37,13 +37,14 @@ print(sys.version)
 
 # Set parameters
 net = "XV"
-stationlist = ["F1TN", "F2TN", "F3TN","F4TN","F5MN","F6TP","F7TV","F8KN","FTGH","FNN1","FNN2","FAPT","FPAP"]
-
-#sta = "F2TN"
+#stationlist = ["F1TN", "F2TN", "F3TN","F4TN","F5MN","F6TP","F7TV","F8KN","FTGH","FNN1","FNN2","FAPT","FPAP"]
 
 
-time1 = UTCDateTime(2017,1,1,0,0,0)
-time2 = UTCDateTime(2017,4,6,0,0,0)
+stationlist = ["F2TN"]
+
+
+time1 = UTCDateTime(2017,4,15,0,0,0)
+time2 = UTCDateTime(2017,5,7,0,0,0)
 
 for sta in stationlist:
     # get data
