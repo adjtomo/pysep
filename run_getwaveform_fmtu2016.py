@@ -160,7 +160,7 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
             client = Client(iclient)
 
         try:
-            gw.run_get_waveform(c = client, event = ev, idb = idb, 
+            gw.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ev,
                     min_dist = min_dist, max_dist = max_dist, 
                     before = tbefore_sec, after = tafter_sec, 
                     network = network, station = station, channel = channel, 
@@ -168,7 +168,7 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
                     ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                     ifCapInp = output_cap_weight_file, 
                     ifRemoveResponse = remove_response,
-                    ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                    ifDetrend = detrend, ifDemean = demean, Taper = taper,
                     ifEvInfo = output_event_info,
                     scale_factor = scale_factor,
                     icreateNull = icreateNull,
