@@ -108,7 +108,7 @@ def run_get_waveform(c, event, idb, ref_time_place,
         for tr in _st:
             if tr.stats.station in stations:
                 stream_raw.append(tr)
-
+    
     # set reftime
     stream = obspy.Stream()
     stream = set_reftime(stream_raw, evtime)
@@ -198,3 +198,7 @@ def run_get_waveform(c, event, idb, ref_time_place,
 
     if ifsave_sacpaz:
         write_resp(inventory,evname_key)
+
+    # save station inventory as XML file
+    xmlfilename = evname_key + "/stations.xml"
+    stations.write(xmlfilename, format="stationxml", validate=True)
