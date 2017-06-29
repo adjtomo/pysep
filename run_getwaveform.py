@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 200
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -812,6 +812,12 @@ if iex == 200:
     edep = 9000
     emag = 3.6
     #-------------------------------------------------
+    otime = obspy.UTCDateTime("2017-06-28T12:58:52.000") 
+    elat = 64.7569
+    elon = -148.8883
+    edep = 18000
+    emag = 3.5
+    #-------------------------------------------------
     # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
     #otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
@@ -996,6 +1002,28 @@ if iex == 213:
     resample_freq = 50        # no resampling
     scale_factor = 100         # no scale factor
 
+# NE Nenana earthquake
+if iex == 213:
+    idb = 1
+    overwrite_ddir = 1       # delete data dir if it exists
+    use_catalog = 0          # do not use event catalog for source parameters
+    # GCMT source parameters
+    # the otime is the centroid time and accounts for tshift
+    otime = obspy.UTCDateTime("2017-06-28T12:58:52") 
+    elat = 64.7569
+    elon = -148.8883
+    edep = 18000
+    emag = 3.5
+    
+    # subset of stations
+    min_dist = 0
+    max_dist = 500
+    tbefore_sec = 100
+    tafter_sec = 500
+    network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+    channel = 'BH?,HH?'
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
 #------------------------------------------------
 
 #-----------------------------------------------------------
