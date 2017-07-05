@@ -112,7 +112,7 @@ remove_response = True
 user = ''
 password = ''
 
-for iex in range(1,17):
+for iex in range(17,18):
     # dummy values
     dummyval = -9999
     rlat = dummyval
@@ -280,6 +280,14 @@ for iex in range(1,17):
         elon = -151.1517
         edep = 10800
         emag = 5.2
+        rtime = otime
+
+    if iex == 17:
+        otime = obspy.UTCDateTime("2017-06-28T12:58:52")
+        elat = 64.7569
+        elon = -148.8883
+        edep = 18000
+        emag = 3.5
         rtime = otime
     
     if rlat == dummyval:

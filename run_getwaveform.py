@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 200
+iex = 214
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -1003,7 +1003,7 @@ if iex == 213:
     scale_factor = 100         # no scale factor
 
 # NE Nenana earthquake
-if iex == 213:
+if iex == 214:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
     use_catalog = 0          # do not use event catalog for source parameters
@@ -1022,8 +1022,8 @@ if iex == 213:
     tafter_sec = 500
     network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
     channel = 'BH?,HH?'
-    resample_freq = 50        # no resampling
-    scale_factor = 100         # no scale factor
+    resample_freq = 50        
+    scale_factor = 100        
 #------------------------------------------------
 
 #-----------------------------------------------------------
