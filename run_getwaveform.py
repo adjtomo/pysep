@@ -754,33 +754,10 @@ if iex == 107:
 
 
 # MFFZ earthquakes for investigating the step response
+# LISTED IN CHRONOLOGICAL ORDER
 if iex == 200:
     idb = 1
     use_catalog = 0
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
-    elat = 64.1937
-    elon = -150.0376
-    edep = 24522.1
-    emag = 4.30
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
-    elat = 64.1639
-    elon = -150.0626
-    edep = 23190.0
-    emag = 4.00
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
-    elat = 64.6827
-    elon = -149.2479
-    edep = 22663.7
-    emag = 3.80
-    #-------------------------------------------------
-    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
-    elat = 64.4285
-    elon = -149.6969
-    edep = 23852.1
-    emag = 3.47
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
     elat = 65.1526
@@ -804,19 +781,43 @@ if iex == 200:
     elat = 65.1207
     elon = -148.6646
     edep = 15556.8
-    emag = 2.6
+    emag = 2.63
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
+    elat = 64.4285
+    elon = -149.6969
+    edep = 23852.1
+    emag = 3.47
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
+    elat = 64.6827
+    elon = -149.2479
+    edep = 22663.7
+    emag = 3.80
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
+    elat = 64.1639
+    elon = -150.0626
+    edep = 23190.0
+    emag = 4.00
+    #-------------------------------------------------
+    otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
+    elat = 64.1937
+    elon = -150.0376
+    edep = 24522.1
+    emag = 4.30
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2017-05-08T05:09:02.000") 
     elat = 65.2643
     elon = -146.922
-    edep = 9000
-    emag = 3.6
+    edep = 9000   # AEC/Vipul
+    emag = 3.60   # Vipul
     #-------------------------------------------------
     otime = obspy.UTCDateTime("2017-06-28T12:58:52.000") 
     elat = 64.7569
     elon = -148.8883
-    edep = 18000
-    emag = 3.5
+    edep = 18000  # Vipul
+    emag = 3.50   # Vipul
     #-------------------------------------------------
     # VIPUL: WHAT ARE THESE? OTHER EVENTS?
     #otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
