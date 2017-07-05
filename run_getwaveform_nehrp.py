@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 4
+iex = 70
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -91,6 +91,12 @@ f0 = 0.5*f1
 f3 = 2.0*f2
 pre_filt=(f0, f1, f2, f3)    # applies for ipre_filt = 2 only
 #pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
+
+# dummy values
+dummyval = -9999
+rlat = dummyval
+rlon = dummyval
+rtime = dummyval
 
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -557,6 +563,70 @@ if iex == 61:
     edep = 21500
     emag = 4.27
 
+# Picked later (not in ellipses selected earlier)
+# Southern and eastern Susitna 
+if iex == 62:
+    otime = util_helpers.eid2otime("20101112032532608")
+    elat = 62.16
+    elon = -150.01
+    edep = 4590
+    emag = 2.73
+
+if iex == 63:
+    otime = util_helpers.eid2otime("20120429105757029")
+    elat = 62.07
+    elon = -149.99
+    edep = 6360
+    emag = 3.24
+
+if iex == 64:
+    otime = util_helpers.eid2otime("20080602172740362")
+    elat = 61.88
+    elon = -150.10
+    edep = 5750
+    emag = 3.64
+
+if iex == 65:
+    otime = util_helpers.eid2otime("20100708031549634")
+    elat = 61.81
+    elon = -150.50
+    edep = 14860
+    emag = 5.05
+
+if iex == 66:
+    otime = util_helpers.eid2otime("20111021170940487")
+    elat = 61.90 
+    elon = -150.25
+    edep = 2890
+    emag = 3.76
+
+if iex == 67:
+    otime = util_helpers.eid2otime("20120130081045329")
+    elat = 61.83
+    elon = -150.17
+    edep = 8550
+    emag = 2.83
+
+if iex == 68:
+    otime = util_helpers.eid2otime("20090905092327142")
+    elat = 61.78
+    elon = -150.41
+    edep = 4750
+    emag = 2.91
+
+if iex == 69:
+    otime = util_helpers.eid2otime("20130923092118178")
+    elat = 61.63
+    elon = -150.65
+    edep = 5960
+    emag = 3.71
+
+if iex == 70:
+    otime = util_helpers.eid2otime("20120127171028529")
+    elat = 61.80
+    elon = -150.18
+    edep = 10010
+    emag = 3.02
 
 
 # subset of stations
@@ -591,6 +661,11 @@ if idb == 1:
         cat = client.get_events(starttime = otime - sec_before_after_event,\
                                 endtime = otime + sec_before_after_event)
         ev = cat[0]
+        ref_time_place = ev
+        if rlat != dummyval:
+            ref_time_place.origins[0].latitude = rlat
+            ref_time_place.origins[0].longitude = rlon
+            ref_time_place.origins[0].time = rtime 
     else:
         print("WARNING using event data from user-defined catalog")
         ev = Event()
@@ -605,6 +680,21 @@ if idb == 1:
         ev.origins.append(org)
         ev.magnitudes.append(mag)
 
+        if rlat == dummyval:
+            # By default this should be the event time and location unless we want to grab stations centered at another location
+            rlat = elat
+            rlon = elon
+            rtime = otime
+        
+        ref_time_place = Event()
+        ref_org = Origin()
+        ref_org.latitude = rlat
+        ref_org.longitude = rlon
+        ref_org.time = rtime
+        ref_org.depth = 0 # dummy value
+        ref_time_place.origins.append(ref_org)
+        ref_time_place.magnitudes.append(mag) # more dummies
+
 # Delete existing data directory
 eid = util_helpers.otime2eid(ev.origins[0].time)
 ddir = './'+ eid
@@ -616,14 +706,14 @@ if overwrite_ddir and os.path.exists(ddir):
     shutil.rmtree(ddir)
 
 # Extract waveforms, IRIS
-getwaveform.run_get_waveform(c = client, event = ev, idb = idb, 
+getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place,
                                   min_dist = min_dist, max_dist = max_dist, 
                                   before = tbefore_sec, after = tafter_sec, 
                                   network = network, station = station, channel = channel, 
                                   resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                                   ifCapInp = output_cap_weight_file, 
                                   ifRemoveResponse = remove_response,
-                                  ifDetrend = detrend, ifDemean = demean, ifTaper = taper,
+                                  ifDetrend = detrend, ifDemean = demean, Taper = taper,
                                   ifEvInfo = output_event_info,
                                   scale_factor = scale_factor,
                                   ipre_filt = ipre_filt, pre_filt = pre_filt, 
