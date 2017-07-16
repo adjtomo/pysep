@@ -16,9 +16,13 @@ from util_write_cap import *
 def run_get_waveform(c, event, idb, ref_time_place,
                      min_dist=20, max_dist=300, before=100, after=300,
                      network='*', station = '*', channel='BH*', 
+                     ifresample = False, 
                      resample_freq=20, 
-                     ifrotateRTZ=True, ifrotateUVW=False, ifCapInp=True, ifRemoveResponse=True,
-                     ifDetrend=True, ifDemean=True, Taper=False, ifEvInfo=True,
+                     ifrotateRTZ=True, ifrotateUVW=False, 
+                     ifCapInp=True, 
+                     ifRemoveResponse=True,
+                     ifDetrend=True, ifDemean=True, Taper=False, 
+                     ifEvInfo=True,
                      scale_factor=10.0**2, ipre_filt = 1,
                      pre_filt=(0.005, 0.006, 10.0, 15.0),
                      icreateNull = 1,
@@ -40,8 +44,8 @@ def run_get_waveform(c, event, idb, ref_time_place,
     after  -   time window length after the event time (default = 300)
     network -  network codes of potential stations (default=*)
     channel -  component(s) to get, accepts comma separated (default='BH*')
-    resample_freq- sampling frequency to resample files (default 20.0, 0 for
-                                                     no resampling)
+    ifresample_TF   - Boolean. Request resample or not. Default = False
+    resample_freq   - sampling frequency to resample waveforms (default 20.0)
     ifrotate - Boolean, if true will output sac files rotated to baz
                unrotated sac files will also be written
     ifCapInp - Boolean, make weight files for CAP
@@ -150,13 +154,18 @@ def run_get_waveform(c, event, idb, ref_time_place,
     # be set early
     st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
-    #if resample_freq != 0:
-    #    print("\n--> WARNING -- RESAMPLING")
-    #    print("--> New sample rate = %5.1f\n" % resample_freq)
-        # sporadical crashes (see iex = 18)
-    #    resample(st2, freq=resample_freq)
-        # appears to be stable
-    #    resample_cut(st2, resample_freq,evtime, before, after)
+    # if resample_freq == 0:
+    #     print("WARNING. Will not resample, using original rate from the data")
+    # else:
+    #     resample = False
+    #     if resample == True:
+    #         # NOTE !!! tell the user if BOTH commands are disabled NOTE !!!
+    #         # sporadical crashes (see iex = 18)
+    #         resample(st2, freq=resample_freq)
+    #         # appears to be stable
+    #         #resample_cut(st2, resample_freq,evtime, before, after)
+    #     else:
+    #         print("DANGER. Resampling requested but currently disabled. Will NOT resample!")
 
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
@@ -168,7 +177,7 @@ def run_get_waveform(c, event, idb, ref_time_place,
     stalist = list(set(stalist))
 
     # match start and end points for all traces
-    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, resample_freq, before, after)
+    st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, resample_freq, before, after)
 
     # save raw waveforms in SAC format
     path_to_waveforms = evname_key + "/RAW"
