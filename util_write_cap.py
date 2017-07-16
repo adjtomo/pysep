@@ -789,6 +789,9 @@ def resample(st, freq):
     """
     Custom resampling with a very sharp zerophase filter.
     """
+
+    print("\n--> WARNING Resampling. New sample rate %5.1f" % freq)
+
     new_nyquist = 0.5 * freq
     # added for checking length of trimmed seismograms
     new_npts = (st[0].stats.endtime - st[0].stats.starttime)*freq
@@ -834,7 +837,8 @@ def resample_cut(st, freq, evtime, before, after):
     """
     Custom resampling with a very sharp zerophase filter.
     """
-    print("\n--> WARNING Resampling. New sample rate %5.1f" % freq)
+    print("\n--> WARNING Applying resample + cut")
+    print("New sample rate %5.1f. Window [before, after] = %f, %f " % (freq, before, after))
 
     new_nyquist = 0.5 * freq
     for tr in st:
@@ -877,7 +881,7 @@ def resample_cut(st, freq, evtime, before, after):
         #    st.remove(tr)
         #    continue
 
-def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq, before, after):
+def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, resample_freq, before, after):
     """
     Function to cut the start and end points of a stream.
     The starttime and endtime are set to the latest starttime and earliest
@@ -936,9 +940,21 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime,resample_freq,
 
         # If no resample_freq is required then resample to the resample_freq of the data
         # This seems useless but same function 'interpolate' is used for resampling and trimming
-        if (int(resample_freq) == 0):
+
+        # NOTE (2017-07-13) In the original code below if (#1) is true then resample_freq gets overwritten (#2). Then for the next station (#3) is executed
+	    # 1. if (int(resample_freq) == 0): 
+            # 2. resample_freq = select_st[0].stats.sampling_rate;
+	    # 3. if (int(resample_freq) != 0): 
+        if ifresample == False:
+            print("\nWARNING. Will not resample, using original rate from the data")
+            print("NOTE resample frequency will be read from each SAC file")
             resample_freq = select_st[0].stats.sampling_rate;
-        if (int(resample_freq) != 0):
+        else:
+            # NOTE (2017-07-14) The following commands will resample and interpolate.
+            # But the interpolate function requires resampling. The following commands then may apply resampling twice.
+            # Also interpolation is already applied in do_waveform_QA, so in essence we may be resampling 3+ times!
+            # Also when downsampling the data may need to be lowpass filtered.
+            # We may want to consider applying interpolation selectively
             if (client_name == "IRIS"):
                 resample(select_st, freq=resample_freq)
             elif (client_name == "LLNL"):
@@ -1234,6 +1250,7 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     #stream.merge(method=0,fill_value=0)
 
     # OPTION 2 interpolate
+    print("WARNING. applying merge/interpolate to the data")
     stream.merge(fill_value='interpolate')
 
     fid.write("\n\nAfter filling values (fill_value = interpolate)")
@@ -1246,6 +1263,7 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
                 float(tr.stats.npts / tr.stats.sampling_rate)))
 
     fid.close
+    print("Done quality check")
 
 
 def rotate2UVW(st,evname_key):
