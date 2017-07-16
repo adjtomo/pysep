@@ -50,6 +50,7 @@ def getwf_iris_ncedc_llnl(origin0, client_pick):
     ifplot_spectrogram = False
 
     # for CAP all waveforms need to have the same sample rate
+    resample_TF = True
     resample_freq = 20.0         # 0 for no resampling
     scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 
