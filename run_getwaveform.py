@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 214
+iex = 0
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -51,6 +51,7 @@ outformat = 'VEL'            # Intrument response removed waveforms could be sav
 ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
 
 # for CAP all waveforms need to have the same sample rate
+resample_TF = True
 resample_freq = 50.0         # =0 for no resampling
 scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 # event parameters
@@ -926,8 +927,11 @@ if iex == 210:
     tafter_sec = 400
     network = 'AK,AT,II,IU,US,XM,XV,XZ,TA'  # no CN,AV,YV,ZE
     channel = 'BH?,HH?'
-    resample_freq = 0        # no resampling
-    scale_factor = 1         # no scale factor
+    #resample_freq = 0        # no resampling
+    #scale_factor = 1         # no scale factor
+    # For CAP moment tensor
+    resample_freq = 50         # same as greens function 
+    scale_factor = 100         # change from m/s to cm/s
     #ipre_filt = 0
     remove_response = True
     #demean = False
@@ -1162,7 +1166,7 @@ if overwrite_ddir and os.path.exists(ddir):
 getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place,
                              min_dist = min_dist, max_dist = max_dist, 
                              before = tbefore_sec, after = tafter_sec, 
-                             network = network, station = station, channel = channel, 
+                             network = network, station = station, channel = channel, ifresample = resample_TF,
                              resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                              ifCapInp = output_cap_weight_file, 
                              ifRemoveResponse = remove_response,
