@@ -709,7 +709,7 @@ if overwrite_ddir and os.path.exists(ddir):
 getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place,
                                   min_dist = min_dist, max_dist = max_dist, 
                                   before = tbefore_sec, after = tafter_sec, 
-                                  network = network, station = station, channel = channel, 
+                                  network = network, station = station, channel = channel, ifresample = resample_TF,
                                   resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
                                   ifCapInp = output_cap_weight_file, 
                                   ifRemoveResponse = remove_response,
