@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 214
+iex = 210
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -921,13 +921,15 @@ if iex == 210:
     emag = 2.67
     # subset of stations
     min_dist = 0
-    max_dist = 100
+    max_dist = 200
     tbefore_sec = 100
     tafter_sec = 400
     network = 'AK,AT,II,IU,US,XM,XV,XZ,TA'  # no CN,AV,YV,ZE
     channel = 'BH?,HH?'
-    resample_freq = 0        # no resampling
-    scale_factor = 1         # no scale factor
+    #resample_freq = 0        # no resampling
+    #scale_factor = 1         # no scale factor
+    resample_freq = 50        # no resampling
+    scale_factor = 100         # no scale factor
     #ipre_filt = 0
     remove_response = True
     #demean = False
@@ -961,7 +963,7 @@ if iex == 212:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
     use_catalog = 0
-    otime = obspy.UTCDateTime("2016-01-01T00:00:00.000")
+    otime = obspy.UTCDateTime("2016-06-06T00:00:00.000")
     elat = 64.6130
     elon = -149.0992
     edep = 0
@@ -979,7 +981,9 @@ if iex == 212:
     scale_factor = 1        
     remove_response = True
     rotateRTZ = False
-
+    #pre_filt=(f0*0.001, f1*0.001, f2*1000, f3*1000)
+    #ipre_filt = 2
+    ipre_filt = 0
 # Chatnika earthquake
 if iex == 213:
     idb = 1
