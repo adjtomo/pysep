@@ -962,6 +962,7 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
 
         for tr in select_st.traces:
             temp_stream = temp_stream.append(tr)
+
     output_log = ("data_processing_status_%s.log" % client_name)
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
@@ -1160,12 +1161,22 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
 
     # Remove traces that are too short
-    min_tlen = 1  # minimum duration of signal in seconds
+    min_tlen_sec = 1  # minimum duration of signal in seconds
     for tr in stream:
-        tlen = tr.stats.npts / tr.stats.sampling_rate
-        if tlen < min_tlen:
-            print("WARNING station %s. Signal is too short. Removing"%\
-                    (tr.id))
+        station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
+                tr.stats.location, tr.stats.channel)
+
+        #-----------------------------------------------------------
+        # Remove stations with incomplete data. This first part is more lenient
+        # and allows some threshold of missing data. If after interpolating for
+        # missing data (sections below) there still is too much missing data,
+        # then remove it. Otherwise this causes the rotate scripts to crash.
+        #-----------------------------------------------------------
+        # remove stations (part 1 of 2) if tlen < threshold (currently 1 sec)
+        tlen_sec = tr.stats.npts / tr.stats.sampling_rate
+        if tlen_sec < min_tlen_sec:
+            print("WARNING station %14s Data available < (before + after). Removing this station" 
+                    (station_key))
             stream.remove(tr)
 
     # Cleanup channel name. Cases:
@@ -1211,25 +1222,6 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
                     (tr.id, ncha, thr_ncha))
             stream.remove(tr)
 
-    # Compare requested with available times. log discrepancies.
-    for tr in stream:
-        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
-                tr.stats.location +'.'+ tr.stats.channel
-        fid.write("\nt0 %s %s t1 %s t2 %s npts %6s T %.2f sec" % \
-                (evtime, station_key,\
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
-        if tr.stats.npts < (tr.stats.sampling_rate * (before + after)):
-            print("WARNING station %14s Data available < (before + after). Consider removing this station" 
-                    % station_key)
-            print(tr.stats.npts,'<',tr.stats.sampling_rate * (before + after))
-            fid.write(" -- data missing")
-
-            ## remove waveforms with missing data
-            #stream.remove(tr)
-            ## rotate2zne crashes because traces are of unequal length
-            #print("Removing this channel otherwise the rotate2zne script crashes") 
-
     # Fill in missing data -- Carl request
     # OPTION 1 fill gaps with 0
     #stream.merge(method=0,fill_value=0)
@@ -1237,6 +1229,35 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     # OPTION 2 interpolate
     print("WARNING. applying merge/interpolate to the data")
     stream.merge(fill_value='interpolate')
+
+    # remove stations (part 2 of 2), this time if npts_actual < npts_expected
+    for tr in stream:
+        station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
+                tr.stats.location, tr.stats.channel)
+        npts_expected = tr.stats.sampling_rate * (before + after)
+        if tr.stats.npts < npts_expected:
+            print("WARNING station %14s Data available < (before + after). Consider removing this station" 
+                    % station_key)
+            print(tr.stats.npts,'<',tr.stats.sampling_rate * (before + after))
+            fid.write(" -- data missing")
+
+            ## remove waveforms with missing data
+            ## NOTE 2017-07-20 currently the removing is disabled. The next
+            # removal stage is set in function trim_maxstart_minend if it's
+            # unable to trim all channels into a same length.
+            #stream.remove(tr)
+
+            ## rotate2zne crashes because traces are of unequal length
+            #print("Removing this channel otherwise the rotate2zne script crashes") 
+
+        ## NOTE 2017-07-20. This may only be useful for debugging, so I'm
+        ## commenting it for now
+        ## Log discrepancies.
+        ## Output waveform start time, end time, number of points. 
+        #fid.write("\nt0 %s %s t1 %s t2 %s npts %6s T %.2f sec" % \
+        #        (evtime, station_key,\
+        #        tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+        #        float(tr.stats.npts / tr.stats.sampling_rate)))
 
     fid.write("\n\nAfter filling values (fill_value = interpolate)")
     for tr in stream:
