@@ -702,7 +702,8 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
         os.makedirs(outdir)
 
     outfile = outdir + '/' + evname_key + "_station_list_ALL.dat"
-    f = open(outfile, 'w') 
+    # APPEND is needed for requests from multiple sources (IRIS, NCEDC, LLNL, etc)
+    f = open(outfile, 'a') 
     outform = '%s %s %f %f %f %f\n'
 
     # Loop over network and stations
