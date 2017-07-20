@@ -34,8 +34,8 @@ output_event_info = True        # here too
 fminc = 1/20                    # see cutoff = [0.05 20] in rs_bolivia.m
 fmaxc = 20                      # and here
 pre_filt = (0.5*fminc, fminc, fmaxc, 2.0*fmaxc)    
-resample_TF = False     # resample_freq is not used if this is False
-resample_freq = 0       # For Uturuncu we use the original sample rate (100)
+resample_TF = True      # if False then resample_freq is taken from SAC files
+resample_freq = 20      # For Uturuncu we use the original sample rate (100)
 scale_factor = 10**2    # for CAP use 10**2 (to convert m/s to cm/s)
 idb = 1                 # default: =1-IRIS; =2-AEC; =3-LLNL
 
@@ -92,6 +92,7 @@ for line in origins_quakes.items():
                 max_dist = max_dist, 
                 before = tbefore_sec, after = tafter_sec, 
                 network = network, station = station, channel = channel, 
+                ifresample = resample_TF,
                 resample_freq = resample_freq, 
                 pre_filt = pre_filt,
                 ifrotateRTZ = rotateRTZ,

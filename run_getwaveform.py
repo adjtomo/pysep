@@ -52,7 +52,7 @@ ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap
 
 # for CAP all waveforms need to have the same sample rate
 resample_TF = True
-resample_freq = 50.0         # =0 for no resampling
+resample_freq = 40           # 0 causes errors. Use resample_TF instead
 scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 # event parameters
 use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)

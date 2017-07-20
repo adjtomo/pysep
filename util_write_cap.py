@@ -702,7 +702,8 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
         os.makedirs(outdir)
 
     outfile = outdir + '/' + evname_key + "_station_list_ALL.dat"
-    f = open(outfile, 'w') 
+    # APPEND is needed for requests from multiple sources (IRIS, NCEDC, LLNL, etc)
+    f = open(outfile, 'a') 
     outform = '%s %s %f %f %f %f\n'
 
     # Loop over network and stations
@@ -886,8 +887,17 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
     Function to cut the start and end points of a stream.
     The starttime and endtime are set to the latest starttime and earliest
     endtime from all channels (up to 3 channels).
+
+    NOTE the only goal of this function is to trim waveforms. At the moment the
+    recommended way to trim traces is to use the method stream.interpolate() 
+    This approach causes the scripts to resample :( and interpolate :'(
+    At the end of all the processing, this multiple resample/interpolate may
+    introduce artifacts in the data.
+    Check the data against raw!
+
+    TRY to keep this function simple and for trimming only.
     """
-    print("---> trimming end points")
+    print("\nTRIM END POINTS\n")
     temp_stream = obspy.Stream()
 
     # Trim the edges in case 3 channels have different lengths
@@ -898,12 +908,18 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
         station = split_stream[1]
         location = split_stream[2]
         chan = split_stream[3] + '*'
+        station_key = "%s.%s.%s.%s" % (netw, station, location, chan)
 
         # Get 3 traces (subset based on matching station name and location code)
         #temp_stream = stream.select(network=netw,station=station,location=location,channel=chan)
         select_st = st2.select(network = netw, station = station, \
                 location = location, channel = chan)
+        samprate = select_st[0].stats.sampling_rate;
         print(select_st)
+
+        if ifresample == False:
+            # NOTE the sampling rate is read from the SAC files
+            resample_freq = samprate
 
         # Find max startime, min endtime for stations with 1 or 2 or 3 channels
         max_starttime = obspy.UTCDateTime(4000, 1, 1, 0, 0)
@@ -923,60 +939,31 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
             min_endtime = min(select_st[0].stats.endtime,\
                     select_st[1].stats.endtime,\
                     select_st[2].stats.endtime) 
+        npts = int((min_endtime - max_starttime) * samprate)
 
         if max_starttime > min_endtime:
-            print('WARNING: starttime larger than endtime for channels of', netw + '.' + station + '.' + location)
+            print('WARNING station %s: starttime > endtime. Skipping' % station_key)
             continue
 
-        print(netw + '.' + station + '.' + chan +'.'+ location,'| Start Time: ',max_starttime, 'End Time: ',min_endtime)
-        #try:
-        #    select_st.trim(starttime=max_starttime, endtime = min_endtime, \
-        #            pad = True, nearest_sample = True, fill_value=0)
-        #    for tr in select_st.traces:
-        #        #print(len(tr.data))
-        #        temp_stream = temp_stream.append(tr)
-        #except:
-        #    print('WARNING: starttime larger than endtime for channels of', netw, '.', station, '.', location)
+        print("New endpoints   %s - %s (%d samples)" % (max_starttime, min_endtime, npts))
 
-        # If no resample_freq is required then resample to the resample_freq of the data
-        # This seems useless but same function 'interpolate' is used for resampling and trimming
+        # APPLY TRIM COMMAND
+        try:
+            select_st.interpolate(sampling_rate=resample_freq,
+                                  method="lanczos",
+                                  starttime=max_starttime,
+                                  npts=npts, a=8)
+        except Exception as e:
+            print('WARNING station %s: Unable to trim/interpolate\n%s' %\
+                    (station_key, e))
+            print('Removing this station\n')
+            for tr in select_st:
+                select_st.remove(tr)
+            continue
 
-        # NOTE (2017-07-13) In the original code below if (#1) is true then resample_freq gets overwritten (#2). Then for the next station (#3) is executed
-	    # 1. if (int(resample_freq) == 0): 
-            # 2. resample_freq = select_st[0].stats.sampling_rate;
-	    # 3. if (int(resample_freq) != 0): 
-        if ifresample == False:
-            print("\nWARNING. Will not resample, using original rate from the data")
-            print("NOTE resample frequency will be read from each SAC file")
-            resample_freq = select_st[0].stats.sampling_rate;
-        else:
-            # NOTE (2017-07-14) The following commands will resample and interpolate.
-            # But the interpolate function requires resampling. The following commands then may apply resampling twice.
-            # Also interpolation is already applied in do_waveform_QA, so in essence we may be resampling 3+ times!
-            # Also when downsampling the data may need to be lowpass filtered.
-            # We may want to consider applying interpolation selectively
-            if (client_name == "IRIS"):
-                resample(select_st, freq=resample_freq)
-            elif (client_name == "LLNL"):
-                resample_cut(select_st, resample_freq, evtime, before, after)
-            # npts = int((min_endtime - max_starttime) // (1.0 / resample_freq)) # illegal division by zero when not resampling
-            npts = int((min_endtime - max_starttime) * resample_freq)
-            try:
-                select_st.interpolate(sampling_rate=resample_freq,
-                                      method="lanczos",
-                                      starttime=max_starttime,
-                                      npts=npts, a=8)
-            except:
-                # XXX handle errors. this is a common error with very short traces:
-                # The new array must be fully contained in the old array. 
-                # No extrapolation can be performed. 
-                print("WARNING -- station " + netw + '.' + station + '.' + location +'. ' + \
-                          "there was a problem applying interpolation. Skipping...")
-                for tr in select_st:
-                    select_st.remove(tr)
-                continue
         for tr in select_st.traces:
             temp_stream = temp_stream.append(tr)
+
     output_log = ("data_processing_status_%s.log" % client_name)
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
@@ -1175,12 +1162,22 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
 
     # Remove traces that are too short
-    min_tlen = 1  # minimum duration of signal in seconds
+    min_tlen_sec = 1  # minimum duration of signal in seconds
     for tr in stream:
-        tlen = tr.stats.npts / tr.stats.sampling_rate
-        if tlen < min_tlen:
-            print("WARNING station %s. Signal is too short. Removing"%\
-                    (tr.id))
+        station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
+                tr.stats.location, tr.stats.channel)
+
+        #-----------------------------------------------------------
+        # Remove stations with incomplete data. This first part is more lenient
+        # and allows some threshold of missing data. If after interpolating for
+        # missing data (sections below) there still is too much missing data,
+        # then remove it. Otherwise this causes the rotate scripts to crash.
+        #-----------------------------------------------------------
+        # remove stations (part 1 of 2) if tlen < threshold (currently 1 sec)
+        tlen_sec = tr.stats.npts / tr.stats.sampling_rate
+        if tlen_sec < min_tlen_sec:
+            print("WARNING station %14s Data available < (before + after). Removing this station" 
+                    (station_key))
             stream.remove(tr)
 
     # Cleanup channel name. Cases:
@@ -1226,25 +1223,6 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
                     (tr.id, ncha, thr_ncha))
             stream.remove(tr)
 
-    # Compare requested with available times. log discrepancies.
-    for tr in stream:
-        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
-                tr.stats.location +'.'+ tr.stats.channel
-        fid.write("\nt0 %s %s t1 %s t2 %s npts %6s T %.2f sec" % \
-                (evtime, station_key,\
-                tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
-                float(tr.stats.npts / tr.stats.sampling_rate)))
-        if tr.stats.npts < (tr.stats.sampling_rate * (before + after)):
-            print("WARNING station %14s Data available < (before + after). Consider removing this station" 
-                    % station_key)
-            print(tr.stats.npts,'<',tr.stats.sampling_rate * (before + after))
-            fid.write(" -- data missing")
-
-            ## remove waveforms with missing data
-            #stream.remove(tr)
-            ## rotate2zne crashes because traces are of unequal length
-            #print("Removing this channel otherwise the rotate2zne script crashes") 
-
     # Fill in missing data -- Carl request
     # OPTION 1 fill gaps with 0
     #stream.merge(method=0,fill_value=0)
@@ -1252,6 +1230,35 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     # OPTION 2 interpolate
     print("WARNING. applying merge/interpolate to the data")
     stream.merge(fill_value='interpolate')
+
+    # remove stations (part 2 of 2), this time if npts_actual < npts_expected
+    for tr in stream:
+        station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
+                tr.stats.location, tr.stats.channel)
+        npts_expected = tr.stats.sampling_rate * (before + after)
+        if tr.stats.npts < npts_expected:
+            print("WARNING station %14s Data available < (before + after). Consider removing this station" 
+                    % station_key)
+            print(tr.stats.npts,'<',tr.stats.sampling_rate * (before + after))
+            fid.write(" -- data missing")
+
+            ## remove waveforms with missing data
+            ## NOTE 2017-07-20 currently the removing is disabled. The next
+            # removal stage is set in function trim_maxstart_minend if it's
+            # unable to trim all channels into a same length.
+            #stream.remove(tr)
+
+            ## rotate2zne crashes because traces are of unequal length
+            #print("Removing this channel otherwise the rotate2zne script crashes") 
+
+        ## NOTE 2017-07-20. This may only be useful for debugging, so I'm
+        ## commenting it for now
+        ## Log discrepancies.
+        ## Output waveform start time, end time, number of points. 
+        #fid.write("\nt0 %s %s t1 %s t2 %s npts %6s T %.2f sec" % \
+        #        (evtime, station_key,\
+        #        tr.stats.starttime, tr.stats.endtime, tr.stats.npts, \
+        #        float(tr.stats.npts / tr.stats.sampling_rate)))
 
     fid.write("\n\nAfter filling values (fill_value = interpolate)")
     for tr in stream:
