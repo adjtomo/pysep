@@ -52,7 +52,7 @@ ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap
 
 # for CAP all waveforms need to have the same sample rate
 resample_TF = True
-resample_freq = 50.0         # =0 for no resampling
+resample_freq = 40           # 0 causes errors. Use resample_TF instead
 scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 # event parameters
 use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
@@ -922,7 +922,7 @@ if iex == 210:
     emag = 2.67
     # subset of stations
     min_dist = 0
-    max_dist = 100
+    max_dist = 200
     tbefore_sec = 100
     tafter_sec = 400
     network = 'AK,AT,II,IU,US,XM,XV,XZ,TA'  # no CN,AV,YV,ZE
@@ -965,7 +965,7 @@ if iex == 212:
     idb = 1
     overwrite_ddir = 1       # delete data dir if it exists
     use_catalog = 0
-    otime = obspy.UTCDateTime("2016-01-01T00:00:00.000")
+    otime = obspy.UTCDateTime("2016-06-06T00:00:00.000")
     elat = 64.6130
     elon = -149.0992
     edep = 0
@@ -983,7 +983,9 @@ if iex == 212:
     scale_factor = 1        
     remove_response = True
     rotateRTZ = False
-
+    #pre_filt=(f0*0.001, f1*0.001, f2*1000, f3*1000)
+    #ipre_filt = 2
+    ipre_filt = 0
 # Chatnika earthquake
 if iex == 213:
     idb = 1

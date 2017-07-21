@@ -154,19 +154,6 @@ def run_get_waveform(c, event, idb, ref_time_place,
     # be set early
     st2, evname_key = rename_if_LLNL_event(st2, evtime)
 
-    # if resample_freq == 0:
-    #     print("WARNING. Will not resample, using original rate from the data")
-    # else:
-    #     resample = False
-    #     if resample == True:
-    #         # NOTE !!! tell the user if BOTH commands are disabled NOTE !!!
-    #         # sporadical crashes (see iex = 18)
-    #         resample(st2, freq=resample_freq)
-    #         # appears to be stable
-    #         #resample_cut(st2, resample_freq,evtime, before, after)
-    #     else:
-    #         print("DANGER. Resampling requested but currently disabled. Will NOT resample!")
-
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     stalist = []
     for tr in st2.traces:
@@ -178,6 +165,17 @@ def run_get_waveform(c, event, idb, ref_time_place,
 
     # match start and end points for all traces
     st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, resample_freq, before, after)
+    if len(st2) == 0:
+        raise ValueError("no waveforms left to process!")
+
+    if ifresample == True:
+    # NOTE !!! tell the user if BOTH commands are disabled NOTE !!!
+        if (client_name == "IRIS"):
+            resample(st2, freq=resample_freq)
+        elif (client_name == "LLNL"):
+            resample_cut(st2, resample_freq, evtime, before, after)
+    else:
+        print("WARNING. Will not resample. Using original rate from the data")
 
     # save raw waveforms in SAC format
     path_to_waveforms = evname_key + "/RAW"
