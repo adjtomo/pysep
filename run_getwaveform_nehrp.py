@@ -30,7 +30,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 70
+iex = 230
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
 idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
@@ -45,6 +45,7 @@ output_event_info = True
 
 # for CAP all waveforms need to have the same sample rate
 resample_freq = 50.0         # =0 for no resampling
+resample_TF = True
 scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 # event parameters
 use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
@@ -283,6 +284,13 @@ if iex == 23:
     elon = -151.03
     edep = 20050
     emag = 2.98
+
+if iex == 230:
+    otime = util_helpers.eid2otime("20071021120514328")
+    elat = 60.71
+    elon = -151.74
+    edep = 19320
+    emag = 4.1
 
 #=======================================================
 # Beluga events
