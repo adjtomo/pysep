@@ -31,7 +31,7 @@ import util_helpers
 import shutil   # only used for deleting data directory
 import os
 import sys
-import getwaveform
+import getwaveform_new
 import run_getwaveform_input
 
 # EXAMPLES (choose one)
@@ -144,19 +144,4 @@ if ev_info.overwrite_ddir and os.path.exists(ddir):
 os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
 
 # Extract waveforms, IRIS
-getwaveform.run_get_waveform(c = client, event = ev, idb = ev_info.idb, ref_time_place = ref_time_place,
-                             min_dist = ev_info.min_dist, max_dist = ev_info.max_dist, 
-                             before = ev_info.tbefore_sec, after = ev_info.tafter_sec, 
-                             network = ev_info.network, station = ev_info.station, channel = ev_info.channel, ifresample = ev_info.resample_TF,
-                             resample_freq = ev_info.resample_freq, ifrotateRTZ = ev_info.rotateRTZ, ifrotateUVW = ev_info.rotateUVW,
-                             ifCapInp = ev_info.output_cap_weight_file, 
-                             ifRemoveResponse = ev_info.remove_response,
-                             ifDetrend = ev_info.detrend, ifDemean = ev_info.demean, Taper = ev_info.taper,
-                             ifEvInfo = ev_info.output_event_info,
-                             scale_factor = ev_info.scale_factor,
-                             ipre_filt = ev_info.ipre_filt, pre_filt = ev_info.pre_filt, 
-                             icreateNull = ev_info.icreateNull,
-                             ifFilter = ev_info.ifFilter, fmin = ev_info.f1, fmax = ev_info.f2, filter_type = ev_info.filter_type, 
-                             zerophase = ev_info.zerophase, corners = ev_info.corners, 
-                             iplot_response = ev_info.iplot_response, ifplot_spectrogram = ev_info.ifplot_spectrogram,
-                             outformat = ev_info.outformat, ifsave_sacpaz = ev_info.ifsave_sacpaz)
+getwaveform_new.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place, ev_info = ev_info)

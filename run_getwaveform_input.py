@@ -14,6 +14,8 @@ class getwaveform_input:
         self.sec_before_after_event = 10  # time window to search for a target event in a catalog
         self.min_dist = 0 
         self.max_dist = 20000
+        self.min_az = 0 
+        self.max_az = 360
         self.tbefore_sec = 100
         self.tafter_sec = 300
 
