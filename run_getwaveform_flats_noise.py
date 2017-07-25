@@ -49,6 +49,8 @@ resample_freq = 50.0         #
 
 sec_before_after_event = 10  # time window to search for a target event in a catalog
 min_dist = 0 
+min_az = 0
+max_az = 360
 # station parameters
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
@@ -353,7 +355,7 @@ for iex in range(17,18):
 
 # Extract waveforms, IRIS
     getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place, 
-                                 min_dist = min_dist, max_dist = max_dist, 
+                                 min_dist = min_dist, max_dist = max_dist, min_az = min_az, max_az = max_az, 
                                  before = tbefore_sec, after = tafter_sec, 
                                  network = network, station = station, channel = channel, 
                                  resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,

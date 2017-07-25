@@ -1,25 +1,5 @@
-#=============================================================
-# child of run_getwaveform.py except it focuses on notes_basin.tex earthquakes
-# 
-# This script will fetch seismic waveforms, then process them, then write sac files.
-# Used heavily within the UAF seismology group.
-#
-# This script contains a large number of examples in two categories:
-# A. examples that target a current or previous bug
-# B. examples of important events for modeling efforts that others may want to reproduce
-#
-# In the future, we will try to automatically run these examples for each code update.
-# For now, we will simply try to regularly re-run the examples.
-#
-# contributors: Celso Alvizuri, Lion Krischer, Vipul Silwal, Carl Tape
-# 
 # To run this script:
-# python run_getwaveform.py
-#
-# TO DO
-# + filetags for the case iFilter = True (like lp10, bp10_40, etc)
-#
-#=============================================================
+# python run_getwaveform_flats.py
 
 import obspy
 import copy
@@ -49,6 +29,8 @@ resample_freq = 50.0         #
 
 sec_before_after_event = 10  # time window to search for a target event in a catalog
 min_dist = 0 
+min_az = 0
+max_az = 360
 # station parameters
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
@@ -112,7 +94,13 @@ remove_response = True
 user = ''
 password = ''
 
-for iex in range(17,18):
+import read_event_obspy_file as reof
+
+events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinamp/data/basinamp_obspy.txt"
+
+eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+
+for iex in range(0,3):
     # dummy values
     dummyval = -9999
     rlat = dummyval
@@ -120,9 +108,17 @@ for iex in range(17,18):
     rtime = dummyval
     rlat = 64.7716
     rlon = -149.1465
-
-
+    
     print("my iex is %d" %(iex))
+
+    otime = obspy.UTCDateTime(otimes[iex])
+    elat = elats[iex]
+    elon = elons[iex]
+    edep = edeps[iex]
+    emag = emags[iex]
+    rtime = otime
+    
+    '''
     # Kyle Nenana basin earthquakes for basin amplification
     if iex == 1:
         # AEC source parameters
@@ -289,6 +285,8 @@ for iex in range(17,18):
         edep = 18000
         emag = 3.5
         rtime = otime
+
+    '''
     
     if rlat == dummyval:
         # By default this should be the event time and location unless we want to grab stations centered at another location
@@ -341,6 +339,8 @@ for iex in range(17,18):
     # Delete existing data directory
     eid = util_helpers.otime2eid(ev.origins[0].time)
     ddir = './'+ eid
+    os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
+
 #if os.path.exists('RAW'):
 #    print("WARNING. %s already exists. Deleting ..." % ddir)
 #    shutil.rmtree('RAW')
@@ -350,7 +350,7 @@ for iex in range(17,18):
 
 # Extract waveforms, IRIS
     getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place, 
-                                 min_dist = min_dist, max_dist = max_dist, 
+                                 min_dist = min_dist, max_dist = max_dist, min_az = min_az, max_az = max_az,
                                  before = tbefore_sec, after = tafter_sec, 
                                  network = network, station = station, channel = channel, 
                                  resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
