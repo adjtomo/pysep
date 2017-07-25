@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 210 # default = 0
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -1157,6 +1157,8 @@ if idb == 3:
 # Delete existing data directory
 eid = util_helpers.otime2eid(ev.origins[0].time)
 ddir = './'+ eid
+# track git commit
+os.system('ls | head -12 > ./' + eid + '_last_2git_commits.txt')
 #if os.path.exists('RAW'):
 #    print("WARNING. %s already exists. Deleting ..." % ddir)
 #    shutil.rmtree('RAW')
