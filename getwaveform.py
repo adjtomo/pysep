@@ -14,7 +14,7 @@ from scipy import signal
 from util_write_cap import *
 
 def run_get_waveform(c, event, idb, ref_time_place,
-                     min_dist=20, max_dist=300, before=100, after=300,
+                     min_dist=20, max_dist=300, min_az=0, max_az=360, before=100, after=300,
                      network='*', station = '*', channel='BH*', 
                      ifresample = False, 
                      resample_freq=20, 
@@ -83,7 +83,7 @@ def run_get_waveform(c, event, idb, ref_time_place,
         print("Printing stations")
         print(stations)
         print("Done Printing stations...")
-        sta_limit_distance(ref_time_place, stations, min_dist=min_dist, max_dist=max_dist)
+        sta_limit_distance(ref_time_place, stations, min_dist=min_dist, max_dist=max_dist, min_az=min_az, max_az=max_az)
         
         print("Downloading waveforms...")
         bulk_list = make_bulk_list_from_stalist(
@@ -101,7 +101,7 @@ def run_get_waveform(c, event, idb, ref_time_place,
         
         print("--> Total stations in LLNL DB: %i" % (
                 len(inventory.get_contents()["stations"])))
-        sta_limit_distance(event, inventory, min_dist=min_dist, max_dist=max_dist)
+        sta_limit_distance(event, inventory, min_dist=min_dist, max_dist=max_dist, min_az=min_az, max_az=max_az)
         print("--> Stations after filtering for distance: %i" % (
                 len(inventory.get_contents()["stations"])))
 

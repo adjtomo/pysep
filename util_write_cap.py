@@ -686,7 +686,7 @@ def make_bulk_list_from_stalist(stations, t1, t2, loc='*', channel='BH*'):
             bulk_list.append((net.code, sta.code, loc, channel, t1, t2))
     return bulk_list
 
-def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
+def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000, min_az=0, max_az=360,
                        ifverbose=True):
     # Remove stations greater than a certain distance from event
     elat = ev.origins[0].latitude
@@ -716,6 +716,12 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
             if dist / 1000.0 < min_dist or dist / 1000.0 > max_dist:
                 # Keep a list of what to discard.
                 remlist.append(sta)
+            if min_az < max_az:
+                if az < min_az or az > max_az:
+                    remlist.append(sta)
+            else:
+                if az < min_az and az > max_az:
+                    remlist.append(sta)
         # Loop over discard list
         for sta in remlist:
             # Not sure why this is needed, but it is.

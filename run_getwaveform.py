@@ -34,7 +34,7 @@ import sys
 import getwaveform
 
 # EXAMPLES (choose one)
-iex = 0
+iex = 210 # default = 0
 print("Running example iex =", iex)
 
 # DEFAULT SETTINGS (see getwaveform_iris.py)
@@ -59,6 +59,8 @@ use_catalog = 1              # use an existing catalog (=1) or specify your own 
 sec_before_after_event = 10  # time window to search for a target event in a catalog
 min_dist = 0 
 max_dist = 20000
+min_az = 0
+max_az = 360
 # station parameters
 network = '*'                # all networks
 station = '*,-PURD,-NV33,-GPO'  # all stations
@@ -936,6 +938,11 @@ if iex == 210:
     remove_response = True
     #demean = False
     #detrend = False
+    # testing subset
+    #min_dist = 50
+    #max_dist = 300
+    #min_az = 330
+    #max_az = 20
 
 # gets waveforms from M 8.3 Chile event with stations centered in Minto
 if iex == 211:
@@ -1157,6 +1164,8 @@ if idb == 3:
 # Delete existing data directory
 eid = util_helpers.otime2eid(ev.origins[0].time)
 ddir = './'+ eid
+# track git commit
+os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
 #if os.path.exists('RAW'):
 #    print("WARNING. %s already exists. Deleting ..." % ddir)
 #    shutil.rmtree('RAW')
@@ -1166,7 +1175,7 @@ if overwrite_ddir and os.path.exists(ddir):
 
 # Extract waveforms, IRIS
 getwaveform.run_get_waveform(c = client, event = ev, idb = idb, ref_time_place = ref_time_place,
-                             min_dist = min_dist, max_dist = max_dist, 
+                             min_dist = min_dist, max_dist = max_dist, min_az = min_az, max_az = max_az,  
                              before = tbefore_sec, after = tafter_sec, 
                              network = network, station = station, channel = channel, ifresample = resample_TF,
                              resample_freq = resample_freq, ifrotateRTZ = rotateRTZ, ifrotateUVW = rotateUVW,
