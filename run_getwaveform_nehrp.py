@@ -285,13 +285,6 @@ if iex == 23:
     edep = 20050
     emag = 2.98
 
-if iex == 230:
-    otime = util_helpers.eid2otime("20071021120514328")
-    elat = 60.71
-    elon = -151.74
-    edep = 19320
-    emag = 4.1
-
 #=======================================================
 # Beluga events
 
@@ -636,7 +629,18 @@ if iex == 70:
     edep = 10010
     emag = 3.02
 
+#================================================================================
+# Extra events that satisfy the selection criteria
 
+# Cook (inside study region but outside cook region; above magnitude 4)
+if iex == 71:
+    otime = util_helpers.eid2otime("20071021120514328")
+    elat = 60.71
+    elon = -151.74
+    edep = 19320
+    emag = 4.1
+
+#================================================================================
 # subset of stations
 min_dist = 0
 max_dist = 200
