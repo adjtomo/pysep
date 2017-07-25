@@ -31,24 +31,28 @@ import util_helpers
 import shutil   # only used for deleting data directory
 import os
 import sys
-import getwaveform_new
+from getwaveform_new import *
 import run_getwaveform_input
 
 # EXAMPLES (choose one)
-iex = 200
+iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
+iex = 100                            # example number within iproject.py script
+
 print("Running example iex =", iex)
 
 #================================================================
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
+
 # Run example iex = 4 to check
 user = ''
 password = ''
 #================================================================
 
 # Get event info
-ev_info = run_getwaveform_input.getwaveform_input()
-ev_info.get_extraction_info(iex)
+# see getwaveform_new.py
+ev_info = getwaveform()   # create event object (contains default extraction parameters)
+run_getwaveform_input.get_ev_info(ev_info, iex)  # update default extraction parameters with inputted event extarction parameters
 
 #================================================================
 # fetch and process waveforms
@@ -144,4 +148,4 @@ if ev_info.overwrite_ddir and os.path.exists(ddir):
 os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
 
 # Extract waveforms, IRIS
-getwaveform_new.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place, ev_info = ev_info)
+ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place, ev_info = ev_info)
