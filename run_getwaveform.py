@@ -1158,7 +1158,7 @@ if idb == 3:
 eid = util_helpers.otime2eid(ev.origins[0].time)
 ddir = './'+ eid
 # track git commit
-os.system('ls | head -12 > ./' + eid + '_last_2git_commits.txt')
+os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
 #if os.path.exists('RAW'):
 #    print("WARNING. %s already exists. Deleting ..." % ddir)
 #    shutil.rmtree('RAW')
