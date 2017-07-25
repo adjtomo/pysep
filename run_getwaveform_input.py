@@ -2,8 +2,9 @@ import obspy
 
 class getwaveform_input:
     def __init__(self):
-        # DEFAULT PARAMETERS
-        
+        # DEFAULT SETTINGS (see getwaveform.py)
+        # idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
+
         # For CAP
         self.resample_freq = 40           # 0 causes errors. Use resample_TF instead
         self.scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
@@ -77,6 +78,12 @@ class getwaveform_input:
         self.remove_response = True
         self.iplot_response = False
         self.ifplot_spectrogram = False
+
+        # dummy values
+        self.dummyval = -9999
+        self.rlat = self.dummyval
+        self.rlon = self.dummyval
+        self.rtime = self.dummyval
 
     def get_extraction_info(self,iex):
         # ===============================================================

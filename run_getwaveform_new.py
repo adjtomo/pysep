@@ -39,15 +39,6 @@ iex = 200
 print("Running example iex =", iex)
 
 #================================================================
-# DEFAULT SETTINGS (see getwaveform.py)
-# idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
-
-# dummy values
-dummyval = -9999
-rlat = dummyval
-rlon = dummyval
-rtime = dummyval
-
 # username and password for accessing embargoed data from IRIS
 # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
 # Run example iex = 4 to check
@@ -80,10 +71,10 @@ if ev_info.idb == 1:
         ev = cat[0]
         
         ref_time_place = ev
-        if rlat != dummyval:
-            ref_time_place.origins[0].latitude = rlat
-            ref_time_place.origins[0].longitude = rlon
-            ref_time_place.origins[0].time = rtime 
+        if ev_info.rlat != ev_info.dummyval:
+            ref_time_place.origins[0].latitude = ev_info.rlat
+            ref_time_place.origins[0].longitude = ev_info.rlon
+            ref_time_place.origins[0].time = ev_info.rtime 
     else:
         print("WARNING using event data from user-defined catalog")
         ev = Event()
@@ -98,17 +89,17 @@ if ev_info.idb == 1:
         ev.origins.append(org)
         ev.magnitudes.append(mag)
 
-        if rlat == dummyval:
+        if ev_info.rlat == ev_info.dummyval:
             # By default this should be the event time and location unless we want to grab stations centered at another location
-            rlat = ev_info.elat
-            rlon = ev_info.elon
-            rtime = ev_info.otime
+            ev_info.rlat = ev_info.elat
+            ev_info.rlon = ev_info.elon
+            ev_info.rtime = ev_info.otime
         
         ref_time_place = Event()
         ref_org = Origin()
-        ref_org.latitude = rlat
-        ref_org.longitude = rlon
-        ref_org.time = rtime
+        ref_org.latitude = ev_info.rlat
+        ref_org.longitude = ev_info.rlon
+        ref_org.time = ev_info.rtime
         ref_org.depth = 0 # dummy value
         ref_time_place.origins.append(ref_org)
         ref_time_place.magnitudes.append(mag) # more dummies
