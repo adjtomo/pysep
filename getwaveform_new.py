@@ -51,6 +51,12 @@ class getwaveform:
         self.max_az = 360
         self.tbefore_sec = 100
         self.tafter_sec = 300
+        # These are used only if self.use_catalog = 0
+        self.otime = None
+        self.elat = None
+        self.elon = None
+        self.edep = None
+        self.emag = None
 
         # station parameters
         self.network = '*'                # all networks
@@ -116,7 +122,7 @@ class getwaveform:
         self.iplot_response = False       # plot response function
         self.ifplot_spectrogram = False   # plot spectrograms 
 
-        # dummy values
+        # Refernce origin (dummy values)
         self.dummyval = -9999
         self.rlat = self.dummyval
         self.rlon = self.dummyval
@@ -290,4 +296,31 @@ class getwaveform:
         '''
         return deepcopy(self)
 
-    
+    # XXX: Pending
+    def use_cata(self):
+        '''
+        update events otime,lat,lon and mag with IRIS (or any other clients) catalog
+        '''
+        if self.idb == 1:
+            if not user and not password:
+                client = Client("IRIS")
+            else:
+                client = Client("IRIS",user=user,password=password)
+                # will only work for events in the 'IRIS' catalog
+                # (future: for Alaska events, read the AEC catalog)
+
+            print("WARNING using event data from the IRIS catalog")
+            cat = client.get_events(starttime = ev_info.otime - ev_info.sec_before_after_event,\
+                                        endtime = ev_info.otime + ev_info.sec_before_after_event)
+            ev = cat[0]
+            
+            # use catalog parameters
+            self.otime = ev.origins[0].time
+            self.elat = ev.origins[0].latitude
+            self.elon = ev.origins[0].longitude
+            self.edep = ev.origins[0].depth
+            self.emag = ev.origins[0].magnitudes[0].mag
+
+
+                    
+            
