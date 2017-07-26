@@ -34,7 +34,11 @@ import sys
 from getwaveform_new import *
 
 # EXAMPLES (choose one)
-iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
+# event_input             -- 10 default examples (including CAP examples)
+# event_input_testing     -- examples used to isolate bugs or special cases
+# event_input_scak        -- southern Alaska
+# event_input_flats       -- Minto Flats
+iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
 iex = 100                            # example number within iproject.py script
                                      # iex = 215 (for looping over multiple events)
 

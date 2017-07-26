@@ -1,11 +1,19 @@
-This folder contains tools to request seismic data in SAC format and prepare the data for processing with CAP.
+GEOTOOLS/python_util/util_data_syn/README
+
+THIS NEEDS TO BE OVERHAULED [AUG 2017]
+
+This folder contains tools to request seismic data, process data, and write out sac files.
+Our motivation is to have files prepared for moment tensor inversions in CAP.
+However the sac files can be used for other purposes as well.
+
+MAIN SCRIPT:
+run_getwaveform.py
+
+MAIN FUNCTIONS:
+getwaveform_iris.py   -- to get data from IRIS
+getwaveform_llnl.py   -- to get data from local LLNL database
+
 For older instructions about using iris_tools.py see
 GEOTOOLS/python_util/sandbox/util_cap/README_iris_tools 
 
-Tool to get SAC data from IRIS:
-getwaveform_iris.py
-
-Tool to get SAC data from LLNL database: 
-getwaveform_llnl.py
-
-Try examples in run_getwaveform.py
+==============================
