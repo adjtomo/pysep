@@ -477,6 +477,7 @@ def get_ev_info(ev_info,iex):
         ev_info.elon = -149.7428
         ev_info.edep = 33033.60
         ev_info.emag = 4.6
+        ev_info.resample_freq = 50
 
 
 # Iniskin earthquake

@@ -32,11 +32,10 @@ import shutil   # only used for deleting data directory
 import os
 import sys
 from getwaveform_new import *
-import run_getwaveform_input
 
 # EXAMPLES (choose one)
 iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 100                            # example number within iproject.py script
+iex = 0                              # example number within iproject.py script
 
 print("Running example iex =", iex)
 
@@ -51,8 +50,9 @@ password = ''
 
 # Get event info
 # see getwaveform_new.py
-ev_info = getwaveform()   # create event object (contains default extraction parameters)
-run_getwaveform_input.get_ev_info(ev_info, iex)  # update default extraction parameters with inputted event extarction parameters
+ev_info = getwaveform()              # create event object (contains default extraction parameters)
+iproject = __import__(iproject)      # file containing all the examples
+iproject.get_ev_info(ev_info, iex)   # update default extraction parameters with inputted event extarction parameters
 
 #================================================================
 # fetch and process waveforms
@@ -116,7 +116,6 @@ if ev_info.idb == 3:
             "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
     # get event time and event ID
-    # XXX this needs update
     cat = client.get_catalog()
     mintime_str = "time > %s" % (ev_info.otime - ev_info.sec_before_after_event)
     maxtime_str = "time < %s" % (ev_info.otime + ev_info.sec_before_after_event)
@@ -148,4 +147,4 @@ if ev_info.overwrite_ddir and os.path.exists(ddir):
 os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
 
 # Extract waveforms, IRIS
-ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place, ev_info = ev_info)
+ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place)

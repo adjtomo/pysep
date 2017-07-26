@@ -41,10 +41,6 @@ class getwaveform:
         # DEFAULT SETTINGS (see getwaveform.py)
         self.idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
 
-        # For CAP
-        self.resample_freq = 40           # 0 causes errors. Use resample_TF instead
-        self.scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
-
         # event parameters
         self.use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
         self.sec_before_after_event = 10  # time window to search for a target event in a catalog
@@ -63,6 +59,7 @@ class getwaveform:
         self.icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
         
         # Filter parameters
+        self.ifFilter = False 
         #------Filter--------------
         # for 'bandpass' both f1 and f2 are used
         # for 'lowpass' only f2 is used
@@ -84,39 +81,39 @@ class getwaveform:
         # 4 pole filter is more sharper at the edges than 2 pole
         self.corners = 4                  # Is corner in Obspy same as Pole in SAC?
         
+        # Pre-filter parameters
+        self.ipre_filt = 1                # =0 No pre_filter
+                                          # =1 default pre_filter (see getwaveform_iris.py)
+                                          # =2 user-defined pre_filter (use this if you are using bandpass filter)
         # For tapering down the pre-filter
+        # Perhaps you want to set ipre_filt = 0 to prevent extra filtering
+        # pre-filter for deconvolution
+        # https://ds.iris.edu/files/sac-manual/commands/transfer.html
+        # Pre-filter will not be applied if remove_response = False 
         self.f0 = 0.5*self.f1
         self.f3 = 2.0*self.f2
         self.pre_filt=(self.f0, self.f1, self.f2, self.f3)    # applies for ipre_filt = 2 only
-        # pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
+        # self.pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
+
+        # For CAP
+        self.resample_TF = True           # if False then resample_freq is taken from SAC files
+        self.resample_freq = 50           # 0 causes errors. Use resample_TF instead
+        self.scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 
         # Pre-processing (manily for CAP)
         self.rotateRTZ = True
-        self.rotateUVW = False   # This option works only if 'rotateRTZ = True'
+        self.rotateUVW = False            # This option works only if 'rotateRTZ = True'
         self.output_cap_weight_file = True
         self.detrend = True
         self.demean = True
-        self.taper = False       # this could also be a fraction between 0 and 1 (fraction to be tapered from both sides)
+        self.taper = False                # this could also be a fraction between 0 and 1 (fraction to be tapered from both sides)
         self.output_event_info = True
         self.outformat = 'VEL'            # Intrument response removed waveforms could be saved as 'VEL' 'DISP' 'ACC'
         self.ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
         self.ifEvInfo=True
-
-        # for CAP all waveforms need to have the same sample rate
-        self.resample_TF = True
-
-        # Perhaps you want to set ipre_filt = 0 to prevent extra filtering
-        self.ifFilter = False 
-        # pre-filter for deconvolution
-        # https://ds.iris.edu/files/sac-manual/commands/transfer.html
-        # Pre-filter will not be applied if remove_response = False 
-        self.ipre_filt = 1                # =0 No pre_filter
-                                     # =1 default pre_filter (see getwaveform_iris.py)
-                                     # =2 user-defined pre_filter (use this if you are using bandpass filter)
-
-        self.remove_response = True
-        self.iplot_response = False
-        self.ifplot_spectrogram = False
+        self.remove_response = True       # remove instrument response 
+        self.iplot_response = False       # plot response function
+        self.ifplot_spectrogram = False   # plot spectrograms 
 
         # dummy values
         self.dummyval = -9999
@@ -124,7 +121,7 @@ class getwaveform:
         self.rlon = self.dummyval
         self.rtime = self.dummyval
 
-    def run_get_waveform(self,c, event, ref_time_place, ev_info):
+    def run_get_waveform(self,c, event, ref_time_place):
         """
         Get SAC waveforms for an event
         
@@ -134,17 +131,16 @@ class getwaveform:
         c              -  client
         event          -  obspy Event object
         ref_time_place -  reference time and place (other than origin time and place - for station subsetting)
-        ev_info        -  event info (See run_getwaveform_input.py)
         """
         
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
         
-        if ev_info.idb==1:
+        if self.idb==1:
             print("Preparing request for IRIS ...")
             # BK network doesn't return data when using the IRIS client.
             # this option switches to NCEDC if BK is 
-            if "BK" in ev_info.network:
+            if "BK" in self.network:
                 client_name = "NCEDC"
                 print("\nWARNING. Request for BK network. Switching to NCEDC client")
                 c = Client("NCEDC")
@@ -152,22 +148,22 @@ class getwaveform:
                 client_name = "IRIS" 
                 
                 print("Download stations...")
-                stations = c.get_stations(network=ev_info.network, station=ev_info.station, 
-                                          channel=ev_info.channel,
-                                          starttime=reftime - ev_info.tbefore_sec, endtime=reftime + ev_info.tafter_sec,
+                stations = c.get_stations(network=self.network, station=self.station, 
+                                          channel=self.channel,
+                                          starttime=reftime - self.tbefore_sec, endtime=reftime + self.tafter_sec,
                                           level="response")
                 inventory = stations    # so that llnl and iris scripts can be combined
                 print("Printing stations")
                 print(stations)
                 print("Done Printing stations...")
-                sta_limit_distance(ref_time_place, stations, min_dist=ev_info.min_dist, max_dist=ev_info.max_dist, min_az=ev_info.min_az, max_az=ev_info.max_az)
+                sta_limit_distance(ref_time_place, stations, min_dist=self.min_dist, max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az)
                 
                 print("Downloading waveforms...")
                 bulk_list = make_bulk_list_from_stalist(
-                    stations, reftime - ev_info.tbefore_sec, reftime + ev_info.tafter_sec, channel=ev_info.channel)
+                    stations, reftime - self.tbefore_sec, reftime + self.tafter_sec, channel=self.channel)
                 stream_raw = c.get_waveforms_bulk(bulk_list)
                 
-        elif ev_info.idb==3:
+        elif self.idb==3:
             client_name = "LLNL"
             print("Preparing request for LLNL ...")
             
@@ -178,7 +174,7 @@ class getwaveform:
             
             print("--> Total stations in LLNL DB: %i" % (
                     len(inventory.get_contents()["stations"])))
-            sta_limit_distance(event, inventory, min_dist=ev_info.min_dist, max_dist=ev_info.max_dist, min_az=ev_info.min_az, max_az=ev_info.max_az)
+            sta_limit_distance(event, inventory, min_dist=self.min_dist, max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az)
             print("--> Stations after filtering for distance: %i" % (
                     len(inventory.get_contents()["stations"])))
             
@@ -195,34 +191,34 @@ class getwaveform:
         stream = set_reftime(stream_raw, evtime)
         
         print("--> Adding SAC metadata...")
-        st2 = add_sac_metadata(stream,idb=ev_info.idb, ev=event, stalist=inventory)
+        st2 = add_sac_metadata(stream,idb=self.idb, ev=event, stalist=inventory)
         
         # Do some waveform QA
         # - (disabled) Throw out traces with missing data
         # - log waveform lengths and discrepancies
         # - Fill-in missing data -- Carl request
-        do_waveform_QA(st2, client_name, event, evtime, ev_info.tbefore_sec, ev_info.tafter_sec)
+        do_waveform_QA(st2, client_name, event, evtime, self.tbefore_sec, self.tafter_sec)
         
-        if ev_info.demean:
+        if self.demean:
             st2.detrend('demean')
             
-        if ev_info.detrend:
+        if self.detrend:
             st2.detrend('linear')
             
-        if ev_info.ifFilter:
-            prefilter(st2, ev_info.f1, ev_info.f2, ev_info.zerophase, ev_info.corners, ev_info.filter_type)
+        if self.ifFilter:
+            prefilter(st2, self.f1, self.f2, self.zerophase, self.corners, self.filter_type)
             
-        if ev_info.remove_response:
-            resp_plot_remove(st2, ev_info.ipre_filt, ev_info.pre_filt, ev_info.iplot_response, ev_info.scale_factor, stations, ev_info.outformat)
+        if self.remove_response:
+            resp_plot_remove(st2, self.ipre_filt, self.pre_filt, self.iplot_response, self.scale_factor, stations, self.outformat)
         else:
             # output RAW waveforms
             decon=False
             print("WARNING -- NOT correcting for instrument response")
 
-        if ev_info.scale_factor > 0:
-            amp_rescale(st2, ev_info.scale_factor)
-            if ev_info.idb ==3:
-                amp_rescale_llnl(st2, ev_info.scale_factor)
+        if self.scale_factor > 0:
+            amp_rescale(st2, self.scale_factor)
+            if self.idb ==3:
+                amp_rescale_llnl(st2, self.scale_factor)
 
 
         # Set the sac header KEVNM with event name
@@ -241,46 +237,46 @@ class getwaveform:
         stalist = list(set(stalist))
 
         # match start and end points for all traces
-        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, ev_info.resample_TF, ev_info.resample_freq, ev_info.tbefore_sec, ev_info.tafter_sec)
+        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, self.resample_TF, self.resample_freq, self.tbefore_sec, self.tafter_sec)
         if len(st2) == 0:
             raise ValueError("no waveforms left to process!")
 
-        if ev_info.resample_TF == True:
+        if self.resample_TF == True:
             # NOTE !!! tell the user if BOTH commands are disabled NOTE !!!
             if (client_name == "IRIS"):
-                resample(st2, freq=ev_info.resample_freq)
+                resample(st2, freq=self.resample_freq)
             elif (client_name == "LLNL"):
-                resample_cut(st2, ev_info.resample_freq, evtime, ev_info.tbefore_sec, ev_info.tafter_sec)
+                resample_cut(st2, self.resample_freq, evtime, self.tbefore_sec, self.tafter_sec)
         else:
             print("WARNING. Will not resample. Using original rate from the data")
 
         # save raw waveforms in SAC format
         path_to_waveforms = evname_key + "/RAW"
-        write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, ev_info.idb, event, stations=inventory)
+        write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, self.idb, event, stations=inventory)
 
         # Taper waveforms (optional; Generally used when data is noisy- example: HutchisonGhosh2016)
         # https://docs.obspy.org/master/packages/autogen/obspy.core.trace.Trace.taper.html
         # To get the same results as the default taper in SAC, use max_percentage=0.05 and leave type as hann.
-        if ev_info.taper:
-            st2.taper(max_percentage=ev_info.taper, type='hann',max_length=None, side='both')
+        if self.taper:
+            st2.taper(max_percentage=self.taper, type='hann',max_length=None, side='both')
 
         # save processed waveforms in SAC format
         path_to_waveforms = evname_key 
         write_stream_sac(st2, path_to_waveforms, evname_key)
         
-        if ev_info.rotateRTZ:
-            rotate_and_write_stream(st2, evname_key, ev_info.icreateNull, ev_info.rotateUVW)
+        if self.rotateRTZ:
+            rotate_and_write_stream(st2, evname_key, self.icreateNull, self.rotateUVW)
 
-        if ev_info.output_cap_weight_file:
+        if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event)
 
-        if ev_info.ifEvInfo:
+        if self.ifEvInfo:
             write_ev_info(event, evname_key)
 
-        if ev_info.ifplot_spectrogram:
+        if self.ifplot_spectrogram:
             plot_spectrogram(st2, evname_key)
 
-        if ev_info.ifsave_sacpaz:
+        if self.ifsave_sacpaz:
             write_resp(inventory,evname_key)
 
         # save station inventory as XML file
