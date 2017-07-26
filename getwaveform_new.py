@@ -6,6 +6,7 @@ Tools for interfacing IRIS data, ObsPy, and SAC input/output.
 from __future__ import print_function
 
 import os
+from copy import deepcopy
 
 import obspy
 from obspy.clients.fdsn import Client
@@ -282,3 +283,11 @@ class getwaveform:
         # save station inventory as XML file
         xmlfilename = evname_key + "/stations.xml"
         stations.write(xmlfilename, format="stationxml", validate=True)
+
+    def copy(self):
+        '''
+        create of copy of itself
+        '''
+        return deepcopy(self)
+
+    
