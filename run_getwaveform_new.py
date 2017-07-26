@@ -35,7 +35,7 @@ from getwaveform_new import *
 
 # EXAMPLES (choose one)
 iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 215                            # example number within iproject.py script
+iex = 100                            # example number within iproject.py script
                                      # iex = 215 (for looping over multiple events)
 
 print("Running example iex =", iex)
@@ -68,7 +68,6 @@ else:
 
 for ii in range(0,len(ev_info_list)):
     ev_info = ev_info_list[ii]
-    print(ev_info)
     if ev_info.idb == 1:
         # import functions to access waveforms
         from obspy.clients.fdsn import Client
@@ -79,46 +78,14 @@ for ii in range(0,len(ev_info_list)):
             client = Client("IRIS",user=user,password=password)
             # will only work for events in the 'IRIS' catalog
             # (future: for Alaska events, read the AEC catalog)
-        if ev_info.use_catalog==1:
-            print("WARNING using event data from the IRIS catalog")
-            cat = client.get_events(starttime = ev_info.otime - ev_info.sec_before_after_event,\
-                                        endtime = ev_info.otime + ev_info.sec_before_after_event)
-            ev = cat[0]
-            
-            ref_time_place = ev
-            if ev_info.rlat != ev_info.dummyval:
-                ref_time_place.origins[0].latitude = ev_info.rlat
-                ref_time_place.origins[0].longitude = ev_info.rlon
-                ref_time_place.origins[0].time = ev_info.rtime 
-        else:
-            print("WARNING using event data from user-defined catalog")
-            ev = Event()
-            org = Origin()
-            org.latitude = ev_info.elat
-            org.longitude = ev_info.elon
-            org.depth = ev_info.edep
-            org.time = ev_info.otime
-            mag = Magnitude()
-            mag.mag = ev_info.emag
-            mag.magnitude_type = "Mw"
-            ev.origins.append(org)
-            ev.magnitudes.append(mag)
 
-            if ev_info.rlat == ev_info.dummyval:
-                # By default this should be the event time and location unless we want to grab stations centered at another location
-                ev_info.rlat = ev_info.elat
-                ev_info.rlon = ev_info.elon
-                ev_info.rtime = ev_info.otime
+        # get event object
+        ev = ev_info.get_event_object(c=client)
+        ref_time_place = ev.copy()
+        # use a different reference time and place for station subsetting
+        if ev_info.rlat is not None:
+            ref_time_place = ev_info.reference_time_place(ev)
         
-            ref_time_place = Event()
-            ref_org = Origin()
-            ref_org.latitude = ev_info.rlat
-            ref_org.longitude = ev_info.rlon
-            ref_org.time = ev_info.rtime
-            ref_org.depth = 0 # dummy value
-            ref_time_place.origins.append(ref_org)
-            ref_time_place.magnitudes.append(mag) # more dummies
-
 # LLNL
     if ev_info.idb == 3:
         import llnl_db_client

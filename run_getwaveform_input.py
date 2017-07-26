@@ -467,6 +467,7 @@ def get_ev_info(ev_info,iex):
 #=================================================================================
 # SilwalTape2016 example event (Anchorage)
     if iex == 100:
+        ev_info.use_catalog = 1
         ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.min_dist = 0 
         ev_info.max_dist = 500
@@ -478,9 +479,11 @@ def get_ev_info(ev_info,iex):
         ev_info.elat = 61.45420
         ev_info.elon = -149.7428
         ev_info.edep = 33033.60
+        #ev_info.rlat = 61.45420
+        #ev_info.rlon = -149.7428
+        #ev_info.rtime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.emag = 4.6
         ev_info.resample_freq = 50
-
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations

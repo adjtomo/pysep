@@ -14,6 +14,8 @@ from scipy import signal
 
 from util_write_cap import *
 
+from obspy.core.event import Event, Origin, Magnitude
+
 class getwaveform:
     def __init__(self):
         """
@@ -123,10 +125,9 @@ class getwaveform:
         self.ifplot_spectrogram = False   # plot spectrograms 
 
         # Refernce origin (dummy values)
-        self.dummyval = -9999
-        self.rlat = self.dummyval
-        self.rlon = self.dummyval
-        self.rtime = self.dummyval
+        self.rlat = None
+        self.rlon = None
+        self.rtime = None
 
     def run_get_waveform(self,c, event, ref_time_place):
         """
@@ -296,22 +297,29 @@ class getwaveform:
         '''
         return deepcopy(self)
 
-    # XXX: Pending
-    def use_cata(self):
+    def reference_time_place(self,ev):
+        '''
+        returns an event object with different origin time and location (i.e. not centered around the earthquake). 
+        Stations will be subsetted based on reference origin time and location
+        '''
+
+        ref_time_place = ev
+        ref_time_place.origins[0].latitude = self.rlat
+        ref_time_place.origins[0].longitude = self.rlon
+        ref_time_place.origins[0].time = self.rtime
+
+        return(ref_time_place)
+
+    def get_event_object(self,c):
         '''
         update events otime,lat,lon and mag with IRIS (or any other clients) catalog
         '''
-        if self.idb == 1:
-            if not user and not password:
-                client = Client("IRIS")
-            else:
-                client = Client("IRIS",user=user,password=password)
-                # will only work for events in the 'IRIS' catalog
-                # (future: for Alaska events, read the AEC catalog)
-
+        
+        # get parameters from the cataog
+        if self.use_catalog == 1:
             print("WARNING using event data from the IRIS catalog")
-            cat = client.get_events(starttime = ev_info.otime - ev_info.sec_before_after_event,\
-                                        endtime = ev_info.otime + ev_info.sec_before_after_event)
+            cat = client.get_events(starttime = self.otime - self.sec_before_after_event,\
+                                        endtime = self.otime + self.sec_before_after_event)
             ev = cat[0]
             
             # use catalog parameters
@@ -320,6 +328,23 @@ class getwaveform:
             self.elon = ev.origins[0].longitude
             self.edep = ev.origins[0].depth
             self.emag = ev.origins[0].magnitudes[0].mag
+            
+        # use parameters from the input file
+        else:
+            print("WARNING using event data from user-defined catalog")
+            ev = Event()
+            org = Origin()
+            org.latitude = self.elat
+            org.longitude = self.elon
+            org.depth = self.edep
+            org.time = self.otime
+            mag = Magnitude()
+            mag.mag = self.emag
+            mag.magnitude_type = "Mw"
+            ev.origins.append(org)
+            ev.magnitudes.append(mag)
+
+        return(ev)
 
 
                     
