@@ -66,6 +66,8 @@ def get_ev_info(ev_info,iex):
         ev_info.tafter_sec = 600
         ev_info.network = 'AK,ZE'   # ZE waveforms not returned (only ZE.MPEN)
         ev_info.channel = 'BH?,HH?'
+        ev_info.user = None
+        ev_info.password = None
         
 # ROTATION example for components 1,2,Z
 #    All rotations should be based on the azimuth of the sensor
@@ -338,6 +340,7 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'HH?,BH?,BN?,HN?,EN?'
         ev_info.resample_freq = 0        # no resampling
         ev_info.scale_factor = 1         # no scale factor
+        
 
 # PROBLEM data arrays not of the same length
 # Traceback (most recent call last):
@@ -479,9 +482,9 @@ def get_ev_info(ev_info,iex):
         ev_info.elat = 61.45420
         ev_info.elon = -149.7428
         ev_info.edep = 33033.60
-        #ev_info.rlat = 61.45420
-        #ev_info.rlon = -149.7428
-        #ev_info.rtime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
+        # ev_info.rlat = 61.45420
+        # ev_info.rlon = -149.7428
+        # ev_info.rtime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.emag = 4.6
         ev_info.resample_freq = 50
 
@@ -519,6 +522,9 @@ def get_ev_info(ev_info,iex):
         ev_info.ipre_filt = 0
         ev_info.demean = False
         ev_info.detrend = False
+
+        ev_info.user = None
+        ev_info.password = None
 
 # Iniskin earthquake - all strong motion
     if iex == 103:

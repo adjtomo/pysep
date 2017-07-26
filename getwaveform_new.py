@@ -43,6 +43,7 @@ class getwaveform:
         """
         # DEFAULT SETTINGS (see getwaveform.py)
         self.idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
+        self.client = Client()
 
         # event parameters
         self.use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
@@ -59,13 +60,20 @@ class getwaveform:
         self.elon = None
         self.edep = None
         self.emag = None
+        # Refernce origin (dummy values)
+        self.rlat = None
+        self.rlon = None
+        self.rtime = None
+        # event objects
+        self.ev = Event()
+        self.ref_time_place = Event()
 
         # station parameters
-        self.network = '*'                # all networks
-        self.station = '*,-PURD,-NV33,-GPO'  # all stations
-        self.channel = '*'                # all channels     
-        self.overwrite_ddir = 1           # 1 = delete data directory if it already exists
-        self.icreateNull = 1              # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
+        self.network = '*'                   # all networks
+        self.station = '*,-PURD,-NV33,-GPO'  # all stations except -(these)
+        self.channel = '*'                   # all channels     
+        self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
+        self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
         
         # Filter parameters
         self.ifFilter = False 
@@ -110,26 +118,25 @@ class getwaveform:
         self.scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
 
         # Pre-processing (manily for CAP)
-        self.rotateRTZ = True
+        self.rotateRTZ = True             # Also generate rotated to RTZ waveforms
         self.rotateUVW = False            # This option works only if 'rotateRTZ = True'
-        self.output_cap_weight_file = True
-        self.detrend = True
-        self.demean = True
+        self.output_cap_weight_file = True# output cap weight files
+        self.detrend = True               # detrend waveforms
+        self.demean = True                # demean waveforms
         self.taper = False                # this could also be a fraction between 0 and 1 (fraction to be tapered from both sides)
-        self.output_event_info = True
+        self.output_event_info = True     # output event info file
         self.outformat = 'VEL'            # Intrument response removed waveforms could be saved as 'VEL' 'DISP' 'ACC'
         self.ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
-        self.ifEvInfo=True
         self.remove_response = True       # remove instrument response 
         self.iplot_response = False       # plot response function
         self.ifplot_spectrogram = False   # plot spectrograms 
 
-        # Refernce origin (dummy values)
-        self.rlat = None
-        self.rlon = None
-        self.rtime = None
+        # username and password for embargoed IRIS data
+        # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
+        self.user = None
+        self.password = None
 
-    def run_get_waveform(self,c, event, ref_time_place):
+    def run_get_waveform(self):
         """
         Get SAC waveforms for an event
         
@@ -141,6 +148,10 @@ class getwaveform:
         ref_time_place -  reference time and place (other than origin time and place - for station subsetting)
         """
         
+        c = self.client
+        event = self.ev
+        ref_time_place = self.ref_time_place
+
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
         
@@ -278,7 +289,7 @@ class getwaveform:
         if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event)
 
-        if self.ifEvInfo:
+        if self.output_event_info:
             write_ev_info(event, evname_key)
 
         if self.ifplot_spectrogram:
@@ -297,20 +308,18 @@ class getwaveform:
         '''
         return deepcopy(self)
 
-    def reference_time_place(self,ev):
+    def reference_time_place(self):
         '''
         returns an event object with different origin time and location (i.e. not centered around the earthquake). 
         Stations will be subsetted based on reference origin time and location
         '''
 
-        ref_time_place = ev
-        ref_time_place.origins[0].latitude = self.rlat
-        ref_time_place.origins[0].longitude = self.rlon
-        ref_time_place.origins[0].time = self.rtime
+        self.ref_time_place = self.ev.copy()
+        self.ref_time_place.origins[0].latitude = self.rlat
+        self.ref_time_place.origins[0].longitude = self.rlon
+        self.ref_time_place.origins[0].time = self.rtime
 
-        return(ref_time_place)
-
-    def get_event_object(self,c):
+    def get_event_object(self):
         '''
         update events otime,lat,lon and mag with IRIS (or any other clients) catalog
         '''
@@ -318,21 +327,21 @@ class getwaveform:
         # get parameters from the cataog
         if self.use_catalog == 1:
             print("WARNING using event data from the IRIS catalog")
-            cat = c.get_events(starttime = self.otime - self.sec_before_after_event,\
+            cat = self.client.get_events(starttime = self.otime - self.sec_before_after_event,\
                                         endtime = self.otime + self.sec_before_after_event)
-            ev = cat[0]
+            self.ev = cat[0]
             
             # use catalog parameters
-            self.otime = ev.origins[0].time
-            self.elat = ev.origins[0].latitude
-            self.elon = ev.origins[0].longitude
-            self.edep = ev.origins[0].depth
-            self.emag = ev.magnitudes[0].mag
+            self.otime = self.ev.origins[0].time
+            self.elat = self.ev.origins[0].latitude
+            self.elon = self.ev.origins[0].longitude
+            self.edep = self.ev.origins[0].depth
+            self.emag = self.ev.magnitudes[0].mag
             
         # use parameters from the input file
         else:
             print("WARNING using event data from user-defined catalog")
-            ev = Event()
+            #self.ev = Event()
             org = Origin()
             org.latitude = self.elat
             org.longitude = self.elon
@@ -341,11 +350,53 @@ class getwaveform:
             mag = Magnitude()
             mag.mag = self.emag
             mag.magnitude_type = "Mw"
-            ev.origins.append(org)
-            ev.magnitudes.append(mag)
+            self.ev.origins.append(org)
+            self.ev.magnitudes.append(mag)
+    
+    def get_events_client(self):
+        '''
+        get absolute and reference event object
+        '''
 
-        return(ev)
+        # IRIS
+        if self.idb == 1:
+            # import functions to access waveforms
+            if not self.user and not self.password:
+                self.client = Client("IRIS")
+            else:
+                self.client = Client("IRIS",user=self.user,password=self.password)
+                # will only work for events in the 'IRIS' catalog
+                # (future: for Alaska events, read the AEC catalog)
 
+            # get event object
+            self.get_event_object()
 
-                    
-            
+            # use a different reference time and place for station subsetting
+            if self.rlat is not None:
+                self.reference_time_place()
+            # or use reference same as the origin
+            else:
+                self.ref_time_place = self.ev
+        
+        # LLNL
+        if self.idb == 3:
+            import llnl_db_client
+            self.client = llnl_db_client.LLNLDBClient(
+                "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
+
+            # get event time and event ID
+            cat = client.get_catalog()
+            mintime_str = "time > %s" % (self.otime - self.sec_before_after_event)
+            maxtime_str = "time < %s" % (self.otime + self.sec_before_after_event)
+            print(mintime_str + "\n" + maxtime_str)
+
+            self.ev = cat.filter(mintime_str, maxtime_str)
+        
+            if len(self.ev) > 0:
+                self.ev = self.ev[0]
+                # Nothing happens here.  We can change later
+                self.ref_time_place = self.ev
+                print(len(self.ev))
+            else:
+                print("No events in the catalog for the given time period. Stop.")
+                sys.exit(0)

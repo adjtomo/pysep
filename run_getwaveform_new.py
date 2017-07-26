@@ -35,22 +35,14 @@ from getwaveform_new import *
 
 # EXAMPLES (choose one)
 iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 0                            # example number within iproject.py script
+iex = 100                            # example number within iproject.py script
                                      # iex = 215 (for looping over multiple events)
 
 print("Running example iex =", iex)
 
 #================================================================
-# username and password for accessing embargoed data from IRIS
-# Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
-
-# Run example iex = 4 to check
-user = ''
-password = ''
-
-#================================================================
-# Get event info
-# see getwaveform_new.py
+# Get extraction info
+# see getwaveform_new.py for input parameters dedcription
 ev_info = getwaveform()              # create event object (contains default extraction parameters)
 iproject = __import__(iproject)      # file containing all the examples
 ev_info = iproject.get_ev_info(ev_info, iex)   # update default extraction parameters with inputted event extarction parameters
@@ -68,56 +60,20 @@ else:
 
 for ii in range(0,len(ev_info_list)):
     ev_info = ev_info_list[ii]
-    if ev_info.idb == 1:
-        # import functions to access waveforms
-        from obspy.clients.fdsn import Client
-        from obspy.core.event import Event, Origin, Magnitude
-        if not user and not password:
-            client = Client("IRIS")
-        else:
-            client = Client("IRIS",user=user,password=password)
-            # will only work for events in the 'IRIS' catalog
-            # (future: for Alaska events, read the AEC catalog)
-
-        # get event object
-        ev = ev_info.get_event_object(c=client)
-        ref_time_place = ev.copy()
-        # use a different reference time and place for station subsetting
-        if ev_info.rlat is not None:
-            ref_time_place = ev_info.reference_time_place(ev)
-        
-# LLNL
-    if ev_info.idb == 3:
-        import llnl_db_client
-        client = llnl_db_client.LLNLDBClient(
-            "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
-
-        # get event time and event ID
-        cat = client.get_catalog()
-        mintime_str = "time > %s" % (ev_info.otime - ev_info.sec_before_after_event)
-        maxtime_str = "time < %s" % (ev_info.otime + ev_info.sec_before_after_event)
-        print(mintime_str + "\n" + maxtime_str)
-        # ev = cat.filter(mintime_str, maxtime_str)[0]
-        ev = cat.filter(mintime_str, maxtime_str)
-        
-        if len(ev) > 0:
-            ev = ev[0]
-            # Nothing happens here.  We can change later
-            ref_time_place = ev
-            print(len(ev))
-        else:
-            print("No events in the catalog for the given time period. Stop.")
-            sys.exit(0)
+    
+    # Get event and client info
+    # create event objects and reference origin object (same type as event object) for station selection
+    ev_info.get_events_client()
 
     # Delete existing data directory
-    eid = util_helpers.otime2eid(ev.origins[0].time)
+    eid = util_helpers.otime2eid(ev_info.ev.origins[0].time)
     ddir = './'+ eid
     if ev_info.overwrite_ddir and os.path.exists(ddir):
         print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
 
     # Extract waveforms, IRIS
-    ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place)
+    ev_info.run_get_waveform()
 
     # track git commit
     os.system('git log | head -12 > ./' + eid + '/' + eid + '_last_2git_commits.txt')
