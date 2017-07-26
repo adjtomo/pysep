@@ -318,7 +318,7 @@ class getwaveform:
         # get parameters from the cataog
         if self.use_catalog == 1:
             print("WARNING using event data from the IRIS catalog")
-            cat = client.get_events(starttime = self.otime - self.sec_before_after_event,\
+            cat = c.get_events(starttime = self.otime - self.sec_before_after_event,\
                                         endtime = self.otime + self.sec_before_after_event)
             ev = cat[0]
             
@@ -327,7 +327,7 @@ class getwaveform:
             self.elat = ev.origins[0].latitude
             self.elon = ev.origins[0].longitude
             self.edep = ev.origins[0].depth
-            self.emag = ev.origins[0].magnitudes[0].mag
+            self.emag = ev.magnitudes[0].mag
             
         # use parameters from the input file
         else:

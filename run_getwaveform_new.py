@@ -35,7 +35,7 @@ from getwaveform_new import *
 
 # EXAMPLES (choose one)
 iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 100                            # example number within iproject.py script
+iex = 0                            # example number within iproject.py script
                                      # iex = 215 (for looping over multiple events)
 
 print("Running example iex =", iex)
@@ -116,8 +116,8 @@ for ii in range(0,len(ev_info_list)):
         print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
 
-    # track git commit
-    os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
-
     # Extract waveforms, IRIS
     ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place)
+
+    # track git commit
+    os.system('git log | head -12 > ./' + eid + '/' + eid + '_last_2git_commits.txt')
