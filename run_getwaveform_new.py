@@ -23,7 +23,7 @@
 #   probably the best approach is to write the spill-over character into another field
 #   (or reconstruct the EID from the origin time, if that is your convention)
 #
-#=============================================================
+#================================================================
 
 import obspy
 import copy
@@ -35,7 +35,8 @@ from getwaveform_new import *
 
 # EXAMPLES (choose one)
 iproject = 'run_getwaveform_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 0                              # example number within iproject.py script
+iex = 215                            # example number within iproject.py script
+                                     # iex = 215 (for looping over multiple events)
 
 print("Running example iex =", iex)
 
@@ -46,105 +47,110 @@ print("Running example iex =", iex)
 # Run example iex = 4 to check
 user = ''
 password = ''
-#================================================================
 
+#================================================================
 # Get event info
 # see getwaveform_new.py
 ev_info = getwaveform()              # create event object (contains default extraction parameters)
 iproject = __import__(iproject)      # file containing all the examples
-iproject.get_ev_info(ev_info, iex)   # update default extraction parameters with inputted event extarction parameters
+ev_info = iproject.get_ev_info(ev_info, iex)   # update default extraction parameters with inputted event extarction parameters
+
+# For looping over events
+# create list if ev_info is a getwaveform object
+if type(ev_info ) == getwaveform:
+    ev_info_list = [ev_info]
+else:
+    ev_info_list  = ev_info
 
 #================================================================
 # fetch and process waveforms
 # IRIS
-if ev_info.idb == 1:
-    # import functions to access waveforms
-    #import getwaveform_iris
-    from obspy.clients.fdsn import Client
-    from obspy.core.event import Event, Origin, Magnitude
-    if not user and not password:
-        client = Client("IRIS")
-    else:
-        client = Client("IRIS",user=user,password=password)
-    # will only work for events in the 'IRIS' catalog
-    # (future: for Alaska events, read the AEC catalog)
-    if ev_info.use_catalog==1:
-        print("WARNING using event data from the IRIS catalog")
-        cat = client.get_events(starttime = ev_info.otime - ev_info.sec_before_after_event,\
-                                endtime = ev_info.otime + ev_info.sec_before_after_event)
-        ev = cat[0]
-        
-        ref_time_place = ev
-        if ev_info.rlat != ev_info.dummyval:
-            ref_time_place.origins[0].latitude = ev_info.rlat
-            ref_time_place.origins[0].longitude = ev_info.rlon
-            ref_time_place.origins[0].time = ev_info.rtime 
-    else:
-        print("WARNING using event data from user-defined catalog")
-        ev = Event()
-        org = Origin()
-        org.latitude = ev_info.elat
-        org.longitude = ev_info.elon
-        org.depth = ev_info.edep
-        org.time = ev_info.otime
-        mag = Magnitude()
-        mag.mag = ev_info.emag
-        mag.magnitude_type = "Mw"
-        ev.origins.append(org)
-        ev.magnitudes.append(mag)
 
-        if ev_info.rlat == ev_info.dummyval:
-            # By default this should be the event time and location unless we want to grab stations centered at another location
-            ev_info.rlat = ev_info.elat
-            ev_info.rlon = ev_info.elon
-            ev_info.rtime = ev_info.otime
+for ii in range(0,len(ev_info_list)):
+    ev_info = ev_info_list[ii]
+    print(ev_info)
+    if ev_info.idb == 1:
+        # import functions to access waveforms
+        from obspy.clients.fdsn import Client
+        from obspy.core.event import Event, Origin, Magnitude
+        if not user and not password:
+            client = Client("IRIS")
+        else:
+            client = Client("IRIS",user=user,password=password)
+            # will only work for events in the 'IRIS' catalog
+            # (future: for Alaska events, read the AEC catalog)
+        if ev_info.use_catalog==1:
+            print("WARNING using event data from the IRIS catalog")
+            cat = client.get_events(starttime = ev_info.otime - ev_info.sec_before_after_event,\
+                                        endtime = ev_info.otime + ev_info.sec_before_after_event)
+            ev = cat[0]
+            
+            ref_time_place = ev
+            if ev_info.rlat != ev_info.dummyval:
+                ref_time_place.origins[0].latitude = ev_info.rlat
+                ref_time_place.origins[0].longitude = ev_info.rlon
+                ref_time_place.origins[0].time = ev_info.rtime 
+        else:
+            print("WARNING using event data from user-defined catalog")
+            ev = Event()
+            org = Origin()
+            org.latitude = ev_info.elat
+            org.longitude = ev_info.elon
+            org.depth = ev_info.edep
+            org.time = ev_info.otime
+            mag = Magnitude()
+            mag.mag = ev_info.emag
+            mag.magnitude_type = "Mw"
+            ev.origins.append(org)
+            ev.magnitudes.append(mag)
+
+            if ev_info.rlat == ev_info.dummyval:
+                # By default this should be the event time and location unless we want to grab stations centered at another location
+                ev_info.rlat = ev_info.elat
+                ev_info.rlon = ev_info.elon
+                ev_info.rtime = ev_info.otime
         
-        ref_time_place = Event()
-        ref_org = Origin()
-        ref_org.latitude = ev_info.rlat
-        ref_org.longitude = ev_info.rlon
-        ref_org.time = ev_info.rtime
-        ref_org.depth = 0 # dummy value
-        ref_time_place.origins.append(ref_org)
-        ref_time_place.magnitudes.append(mag) # more dummies
+            ref_time_place = Event()
+            ref_org = Origin()
+            ref_org.latitude = ev_info.rlat
+            ref_org.longitude = ev_info.rlon
+            ref_org.time = ev_info.rtime
+            ref_org.depth = 0 # dummy value
+            ref_time_place.origins.append(ref_org)
+            ref_time_place.magnitudes.append(mag) # more dummies
 
 # LLNL
-if ev_info.idb == 3:
-    import llnl_db_client
-    #import getwaveform_llnl
-    client = llnl_db_client.LLNLDBClient(
+    if ev_info.idb == 3:
+        import llnl_db_client
+        client = llnl_db_client.LLNLDBClient(
             "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
-    # get event time and event ID
-    cat = client.get_catalog()
-    mintime_str = "time > %s" % (ev_info.otime - ev_info.sec_before_after_event)
-    maxtime_str = "time < %s" % (ev_info.otime + ev_info.sec_before_after_event)
-    print(mintime_str + "\n" + maxtime_str)
-    #ev = cat.filter(mintime_str, maxtime_str)[0]
-    ev = cat.filter(mintime_str, maxtime_str)
-    
-    if len(ev) > 0:
-        ev = ev[0]
-        # Nothing happens here.  We can change later
-        ref_time_place = ev
-        print(len(ev))
-    else:
-        print("No events in the catalog for the given time period. Stop.")
-        sys.exit(0)
+        # get event time and event ID
+        cat = client.get_catalog()
+        mintime_str = "time > %s" % (ev_info.otime - ev_info.sec_before_after_event)
+        maxtime_str = "time < %s" % (ev_info.otime + ev_info.sec_before_after_event)
+        print(mintime_str + "\n" + maxtime_str)
+        # ev = cat.filter(mintime_str, maxtime_str)[0]
+        ev = cat.filter(mintime_str, maxtime_str)
+        
+        if len(ev) > 0:
+            ev = ev[0]
+            # Nothing happens here.  We can change later
+            ref_time_place = ev
+            print(len(ev))
+        else:
+            print("No events in the catalog for the given time period. Stop.")
+            sys.exit(0)
 
-# Delete existing data directory
-eid = util_helpers.otime2eid(ev.origins[0].time)
-ddir = './'+ eid
-#if os.path.exists('RAW'):
-#    print("WARNING. %s already exists. Deleting ..." % ddir)
-#    shutil.rmtree('RAW')
-if ev_info.overwrite_ddir and os.path.exists(ddir):
-    print("WARNING. %s already exists. Deleting ..." % ddir)
-    shutil.rmtree(ddir)
+    # Delete existing data directory
+    eid = util_helpers.otime2eid(ev.origins[0].time)
+    ddir = './'+ eid
+    if ev_info.overwrite_ddir and os.path.exists(ddir):
+        print("WARNING. %s already exists. Deleting ..." % ddir)
+        shutil.rmtree(ddir)
 
+    # track git commit
+    os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
 
-# track git commit
-os.system('git log | head -12 > ./' + eid + '_last_2git_commits.txt')
-
-# Extract waveforms, IRIS
-ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place)
+    # Extract waveforms, IRIS
+    ev_info.run_get_waveform(c = client, event = ev, ref_time_place = ref_time_place)
