@@ -166,22 +166,26 @@ class getwaveform:
             else:
                 client_name = "IRIS" 
                 
-                print("Download stations...")
-                stations = c.get_stations(network=self.network, station=self.station, 
-                                          channel=self.channel,
-                                          starttime=reftime - self.tbefore_sec, endtime=reftime + self.tafter_sec,
-                                          level="response")
-                inventory = stations    # so that llnl and iris scripts can be combined
-                print("Printing stations")
-                print(stations)
-                print("Done Printing stations...")
-                sta_limit_distance(ref_time_place, stations, min_dist=self.min_dist, max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az)
-                
-                print("Downloading waveforms...")
-                bulk_list = make_bulk_list_from_stalist(
-                    stations, reftime - self.tbefore_sec, reftime + self.tafter_sec, channel=self.channel)
-                stream_raw = c.get_waveforms_bulk(bulk_list)
-                
+            print("Download stations...")
+            stations = c.get_stations(network=self.network, station=self.station, 
+                                      channel=self.channel,
+                                      starttime=reftime - self.tbefore_sec, endtime=reftime + self.tafter_sec,
+                                      level="response")
+            inventory = stations    # so that llnl and iris scripts can be combined
+            print("Printing stations")
+            print(stations)
+            print("Done Printing stations...")
+            sta_limit_distance(ref_time_place, stations, min_dist=self.min_dist, max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az)
+            
+            print("Downloading waveforms...")
+            bulk_list = make_bulk_list_from_stalist(stations, reftime - self.tbefore_sec, 
+                                                    reftime + self.tafter_sec, channel=self.channel)
+            stream_raw = c.get_waveforms_bulk(bulk_list)
+
+            # save station inventory as XML file
+            xmlfilename = evname_key + "/stations.xml"
+            inventory.write(xmlfilename, format="stationxml", validate=True)
+         
         elif self.idb==3:
             client_name = "LLNL"
             print("Preparing request for LLNL ...")
@@ -298,10 +302,6 @@ class getwaveform:
         if self.ifsave_sacpaz:
             write_resp(inventory,evname_key)
 
-        # save station inventory as XML file
-        xmlfilename = evname_key + "/stations.xml"
-        stations.write(xmlfilename, format="stationxml", validate=True)
-
     def copy(self):
         '''
         create of copy of itself
@@ -385,7 +385,7 @@ class getwaveform:
                 "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
 
             # get event time and event ID
-            cat = client.get_catalog()
+            cat = self.client.get_catalog()
             mintime_str = "time > %s" % (self.otime - self.sec_before_after_event)
             maxtime_str = "time < %s" % (self.otime + self.sec_before_after_event)
             print(mintime_str + "\n" + maxtime_str)

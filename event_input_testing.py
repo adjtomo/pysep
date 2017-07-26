@@ -1,6 +1,6 @@
 import obspy
 import read_event_obspy_file as reof
-from getwaveform_new import *
+from getwaveform import *
 
 def get_ev_info(ev_info,iex):
 

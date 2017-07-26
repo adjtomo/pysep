@@ -31,7 +31,7 @@ import util_helpers
 import shutil   # only used for deleting data directory
 import os
 import sys
-from getwaveform_new import *
+from getwaveform import *
 
 # EXAMPLES (choose one)
 # event_input             -- 10 default examples (including CAP examples)
@@ -40,7 +40,7 @@ from getwaveform_new import *
 # event_input_flats       -- Minto Flats
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
 iex = 100                            # example number within iproject.py script
-                                     # iex = 215 (for looping over multiple events)
+                                     # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
 
 print("Running example iex =", iex)
 
