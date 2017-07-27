@@ -181,10 +181,6 @@ class getwaveform:
             bulk_list = make_bulk_list_from_stalist(stations, reftime - self.tbefore_sec, 
                                                     reftime + self.tafter_sec, channel=self.channel)
             stream_raw = c.get_waveforms_bulk(bulk_list)
-
-            # save station inventory as XML file
-            xmlfilename = evname_key + "/stations.xml"
-            inventory.write(xmlfilename, format="stationxml", validate=True)
          
         elif self.idb==3:
             client_name = "LLNL"
@@ -302,6 +298,10 @@ class getwaveform:
         if self.ifsave_sacpaz:
             write_resp(inventory,evname_key)
 
+        # save station inventory as XML file
+        xmlfilename = evname_key + "/stations.xml"
+        inventory.write(xmlfilename, format="stationxml", validate=True)
+
     def copy(self):
         '''
         create of copy of itself
@@ -400,3 +400,6 @@ class getwaveform:
             else:
                 print("No events in the catalog for the given time period. Stop.")
                 sys.exit(0)
+
+        # print client and event info
+        print(self.ev)
