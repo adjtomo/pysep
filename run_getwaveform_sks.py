@@ -13,6 +13,7 @@ ev_info.min_dist = 0
 ev_info.max_dist = .1 # hoping there is no other station within 100 mt radius 
 ev_info.tbefore_sec = 100
 ev_info.tafter_sec = 300
+out_dir = './' + 'sks_events' + '/'
 
 # event selection info
 clat = 66.160507
@@ -29,20 +30,30 @@ channel = 'BH?'
 station = ''
 st_minradius = ev_minradius
 st_maxradius = ev_maxradius
-
 client = Client("IRIS")
 
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
+
+# -------------------------------------------------------------------------------
 # extract catalog of all events around the CENTER
 cat = client.get_events(starttime = starttime, endtime = endtime, 
                         minradius = ev_minradius, maxradius = ev_maxradius, 
                         latitude = clat, longitude = clon, minmagnitude  = minmagnitude)
 print(cat)
+# save catalog subset for this station
+fname =  out_dir + 'sks_event_catalog'
+cat.write(fname,'cnv')
+fname =  out_dir + 'sks_event_catalog.eps'
+cat.plot(outfile = fname)
 
+# -------------------------------------------------------------------------------
 # get stations
 inventory = client.get_stations(network = network, station = station, channel = channel,
                     starttime = starttime, endtime = endtime, level="response")
 print(inventory)
 
+# -------------------------------------------------------------------------------
 # Loop over networks
 for ii in range(0,len(inventory)):
     ev_info.network = inventory[ii].code
@@ -55,6 +66,7 @@ for ii in range(0,len(inventory)):
         ev_info.rlon = inventory[ii][jj].longitude
         ev_info.rtime
 
+        # -------------------------------------------------------------------------------
         # subset_events = Find events common in alaska centroid ring (cat_0) and station ring (cat_ij)
         cat_subset = Catalog()
         for kk in range(0,len(cat)):
@@ -62,12 +74,21 @@ for ii in range(0,len(inventory)):
             if dist >= st_minradius and dist <= st_maxradius:
                 cat_subset.append(cat[kk])
         print(cat_subset)
+        # -------------------------------------------------------------------------------
 
         # Create station directory
-        sta_dir = './' + ev_info.network + '_' + ev_info.station
-        if not os.path.exists(sta_dir):
-            os.makedirs(sta_dir)
+        sta_dir = ev_info.network + '_' + ev_info.station
+        odir = out_dir + sta_dir
+        if not os.path.exists(odir):
+            os.makedirs(odir)
 
+        # save catalog subset for this station
+        fname = odir + 'event_subset'
+        cat_subset.write(fname,'cnv')
+        fname = odir + 'event_subset.eps'
+        cat_subset.plot(outfile = fname)
+
+        # -------------------------------------------------------------------------------
         # Loop over subset_events
         for kk in range(0,len(cat_subset)):
             ev_info.otime = cat_subset[kk].origins[0].time
@@ -97,7 +118,7 @@ for ii in range(0,len(inventory)):
                 continue
 
             # move contents from event directory to station directory
-            new_path =  sta_dir + '/' + eid
+            new_path =  odir + '/' + eid
             if ev_info.overwrite_ddir and os.path.exists(new_path):
                 print("WARNING. %s already exists. Deleting ..." % new_path)
                 shutil.rmtree(new_path)
