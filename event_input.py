@@ -227,6 +227,27 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,LH?' 
         ev_info.overwrite_ddir = 0
 
+# Alaska data from far away event
+    if iex == 8:
+        ev_info.use_catalog = 0
+        # Mariana Event observed by FLATS
+        ev_info.otime = obspy.UTCDateTime("2016-07-29T21:18:26.000")
+        ev_info.elat = 18.5439
+        ev_info.elon = 145.541
+        ev_info.edep = 207620.0
+        ev_info.emag = 7.7
+        ev_info.rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
+        # center at F3TN
+        ev_info.rlat =  64.7716
+        ev_info.rlon = -149.1465
+        ev_info.scale_factor = 1
+        ev_info.min_dist = 0
+        ev_info.max_dist = 150
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 400
+        ev_info.network = 'AK,AT,II,IU,US,XM,XV,XZ,TA' # no CN,AV,YV,ZE
+        ev_info.channel = 'BH?,HH?'
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
