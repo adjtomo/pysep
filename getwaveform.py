@@ -85,7 +85,7 @@ class getwaveform:
         # EXAMPLES
         #                                   ifFilter  zerophase  remove_response  ipre_filt
         # A. CAP-ready waveforms [DEFAULT]: False     NA         True             1
-        # B. plot-ready waveforms:          True      True       True             2
+        # B. plot-ready waveforms, acausal: True      True       True             2
         # C. plot-ready, causal waveforms:  True      False      True             0
         # D. possible sensor issues:        True      False      False            NA
         #

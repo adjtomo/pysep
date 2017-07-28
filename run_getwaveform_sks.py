@@ -8,6 +8,77 @@ from getwaveform import *
 from obspy.clients.fdsn import Client
 from obspy.core.event import Event, Origin, Magnitude, Catalog
 
+from mpl_toolkits.basemap import Basemap
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plotme(clat,clon,slat,slon,cat,cat_subset,st_minradius,st_maxradius,sta_dir):
+    # plot basemap
+    #map = Basemap(projection='ortho',lat_0=clat,lon_0=clon,resolution='l') # Orthographic Projection
+    map = Basemap(projection='aeqd',lat_0=clat,lon_0=clon,resolution='l') # Azimuthal Equidistant Projection
+    map.drawcoastlines(linewidth=0.25)
+    map.drawcoastlines(linewidth=0.25)
+    map.drawcountries(linewidth=0.25)
+    map.fillcontinents(color='coral',lake_color='aqua')
+    # draw the edge of the map projection region (the projection limb)
+    map.drawmapboundary(fill_color='aqua')
+    # draw lat/lon grid lines every 30 degrees.
+    #map.drawmeridians(np.arange(0,360,30))
+    map.drawparallels(np.arange(-90,90,30))
+
+    # Plot center of Alaska and station
+    markersize = 7
+    x,y = map(clon,clat) # convert lon-lat to map cooridates
+    map.plot(x,y,'b*', markersize=markersize) # plot center
+    x,y = map(slon,slat)
+    map.plot(x,y,'rv', markersize=markersize) # plot station
+    plt.title(sta_dir + ' - event selection_plot')
+
+    # Plot circle for event selection
+    # tissot should ideally make circle BUT there is a bug when longitude change from -179 to +179
+    # plot circle around the center of Alaska
+    npts = 250
+    xy=[]
+    poly = map.tissot(clon, clat, st_minradius,npts,edgecolor='none',facecolor='none')
+    xy = poly.xy
+    circle_lon = xy.T.tolist()[0]
+    circle_lat = xy.T.tolist()[1]
+    poly = map.tissot(clon, clat, st_maxradius,npts,edgecolor='none',facecolor='none')
+    xy = poly.xy
+    circle_lon = circle_lon + xy.T.tolist()[0]
+    circle_lat = circle_lat + xy.T.tolist()[1]
+    map.plot(circle_lon,circle_lat,'bo', markersize=2)
+    # plot circle around the station
+    poly = map.tissot(slon, slat, st_minradius,npts,edgecolor='none',facecolor='none')
+    xy = poly.xy
+    circle_lon = xy.T.tolist()[0]
+    circle_lat = xy.T.tolist()[1]
+    poly = map.tissot(slon, slat, st_maxradius,npts,edgecolor='none',facecolor='none')
+    xy = poly.xy
+    circle_lon = circle_lon + xy.T.tolist()[0]
+    circle_lat = circle_lat + xy.T.tolist()[1]
+    map.plot(circle_lon,circle_lat,'ro', markersize=2)
+    
+    # Plot All events (cat) and selected events (cat_subset)
+    x1,x2,y1,y2=[],[],[],[]
+    for ii in range(0,len(cat)):
+        x1.append(cat[ii].origins[0].longitude)
+        y1.append(cat[ii].origins[0].latitude)
+    for ii in range(0,len(cat_subset)):
+        x2.append(cat_subset[ii].origins[0].longitude)
+        y2.append(cat_subset[ii].origins[0].latitude)
+    x,y = map(x1,y1) 
+    map.plot(x,y,'bo', markersize=markersize)
+    x,y = map(x2,y2)
+    map.plot(x,y,'ro', markersize=markersize)
+
+    # Plot and save figure
+    # plt.show()
+    fname = './sks_events/' + sta_dir + '_event_selection.eps'
+    plt.savefig(fname)
+    plt.clf()
+
+# -------------------------------------------------------------------------------
 ev_info = getwaveform()
 ev_info.min_dist = 0 
 ev_info.max_dist = .1 # hoping there is no other station within 100 mt radius 
@@ -83,10 +154,13 @@ for ii in range(0,len(inventory)):
             os.makedirs(odir)
 
         # save catalog subset for this station
-        fname = odir + 'event_subset'
+        fname = odir + '_event_subset'
         cat_subset.write(fname,'cnv')
-        fname = odir + 'event_subset.eps'
+        fname = odir + '_event_subset.eps'
         cat_subset.plot(outfile = fname)
+
+        # Event selection plot
+        plotme(clat,clon,ev_info.rlat,ev_info.rlon,cat,cat_subset,st_minradius,st_maxradius,sta_dir)
 
         # -------------------------------------------------------------------------------
         # Loop over subset_events
