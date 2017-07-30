@@ -10,11 +10,12 @@ from copy import deepcopy
 
 import obspy
 from obspy.clients.fdsn import Client
+from obspy.core.event import Event, Origin, Magnitude
+
 from scipy import signal
 
 from util_write_cap import *
 
-from obspy.core.event import Event, Origin, Magnitude
 
 class getwaveform:
     def __init__(self):
@@ -167,19 +168,27 @@ class getwaveform:
                 client_name = "IRIS" 
                 
             print("Download stations...")
-            stations = c.get_stations(network=self.network, station=self.station, 
-                                      channel=self.channel,
-                                      starttime=reftime - self.tbefore_sec, endtime=reftime + self.tafter_sec,
-                                      level="response")
+            stations = c.get_stations(network=self.network, 
+                    station=self.station, channel=self.channel,
+                    starttime=reftime - self.tbefore_sec, 
+                    endtime=reftime + self.tafter_sec,
+                    level="response")
             inventory = stations    # so that llnl and iris scripts can be combined
             print("Printing stations")
             print(stations)
             print("Done Printing stations...")
-            sta_limit_distance(ref_time_place, stations, min_dist=self.min_dist, max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az)
+            sta_limit_distance(ref_time_place, 
+                    stations, 
+                    min_dist=self.min_dist, 
+                    max_dist=self.max_dist, 
+                    min_az=self.min_az, 
+                    max_az=self.max_az)
             
             print("Downloading waveforms...")
-            bulk_list = make_bulk_list_from_stalist(stations, reftime - self.tbefore_sec, 
-                                                    reftime + self.tafter_sec, channel=self.channel)
+            bulk_list = make_bulk_list_from_stalist(stations, 
+                    reftime - self.tbefore_sec, 
+                    reftime + self.tafter_sec, 
+                    channel=self.channel)
             stream_raw = c.get_waveforms_bulk(bulk_list)
          
         elif self.idb==3:
@@ -190,10 +199,14 @@ class getwaveform:
             event_number = int(event.event_descriptions[0].text)
             # event = llnl_db_client.get_obspy_event(event)
             inventory = c.get_inventory()
-            
-            print("--> Total stations in LLNL DB: %i" % (
-                    len(inventory.get_contents()["stations"])))
-            sta_limit_distance(event, inventory, min_dist=self.min_dist, max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az)
+ 
+            nsta_llnl = len(inventory.get_contents()["stations"])
+            print("--> Total stations in LLNL DB: %i" % nsta_llnl)
+            sta_limit_distance(event, inventory, 
+                    min_dist=self.min_dist, 
+                    max_dist=self.max_dist, 
+                    min_az=self.min_az, 
+                    max_az=self.max_az)
             print("--> Stations after filtering for distance: %i" % (
                     len(inventory.get_contents()["stations"])))
             
@@ -225,10 +238,14 @@ class getwaveform:
             st2.detrend('linear')
             
         if self.ifFilter:
-            prefilter(st2, self.f1, self.f2, self.zerophase, self.corners, self.filter_type)
+            prefilter(st2, self.f1, self.f2, 
+                    self.zerophase, self.corners, self.filter_type)
             
         if self.remove_response:
-            resp_plot_remove(st2, self.ipre_filt, self.pre_filt, self.iplot_response, self.scale_factor, stations, self.outformat)
+            resp_plot_remove(st2, self.ipre_filt, self.pre_filt, 
+                    self.iplot_response, 
+                    self.scale_factor, 
+                    stations, self.outformat)
         else:
             # output RAW waveforms
             decon=False
@@ -250,13 +267,17 @@ class getwaveform:
         stalist = []
         for tr in st2.traces:
             # stalist.append(tr.stats.station)
-            stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+            netstaloch = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station, 
+                    tr.stats.location, tr.stats.channel[:-1])
+            stalist.append(netstaloch)
 
         # Crazy way of getting a unique list of stations
         stalist = list(set(stalist))
 
         # match start and end points for all traces
-        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, self.resample_TF, self.resample_freq, self.tbefore_sec, self.tafter_sec)
+        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, 
+                self.resample_TF, self.resample_freq, 
+                self.tbefore_sec, self.tafter_sec)
         if len(st2) == 0:
             raise ValueError("no waveforms left to process!")
 
