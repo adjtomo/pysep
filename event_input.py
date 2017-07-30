@@ -268,6 +268,19 @@ def get_ev_info(ev_info,iex):
         ev_info.emag = 3.35
         ev_info.rtime = ev_info.otime
 
+# Illinois main event
+    if iex == 88:
+        ev_info.otime = obspy.UTCDateTime("2008-04-18T09:36:59.110")
+        ev_info.rlat = 38.452 
+        ev_info.rlon = -87.886 
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 300
+        ev_info.network = 'IU,NM'
+        ev_info.station = '*'
+        ev_info.channel = 'LH?,BH?'
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES

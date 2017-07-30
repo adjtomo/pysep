@@ -39,7 +39,7 @@ from getwaveform import *
 # event_input_scak        -- southern Alaska
 # event_input_flats       -- Minto Flats
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 100                            # example number within iproject.py script
+iex = 88                            # example number within iproject.py script
                                      # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
 
 print("Running example iex =", iex)
@@ -62,7 +62,8 @@ else:
 # fetch and process waveforms
 # IRIS
 
-for ii in range(0,len(ev_info_list)):
+nev = len(ev_info_list)
+for ii in range(nev):
     ev_info = ev_info_list[ii]
     
     # Get event and client info
