@@ -125,7 +125,7 @@ for iex in range(17,18):
 
     print("my iex is %d" %(iex))
     # Kyle Nenana basin earthquakes for basin amplification
-    if iex == 1:
+    if iex == 0:
         # AEC source parameters
         otime = obspy.UTCDateTime("2015-11-20T10:53:48.168") 
         elat = 64.6210
@@ -134,7 +134,7 @@ for iex in range(17,18):
         emag = 2.67
         rtime = otime
 
-    if iex == 2:
+    if iex == 1:
         # AEC source parameters
         otime = obspy.UTCDateTime("2015-10-22T13:16:15.794") 
         elat = 64.7334
@@ -143,7 +143,7 @@ for iex in range(17,18):
         emag = 2.74
         rtime = otime   
 
-    if iex == 3:
+    if iex == 2:
         # AEC source parameters
         otime = obspy.UTCDateTime("2014-12-13T15:47:31.423") 
         elat = 64.4325
@@ -152,7 +152,7 @@ for iex in range(17,18):
         emag = 3.25    
         rtime = otime
 
-    if iex == 4:
+    if iex == 3:
         # AEC source parameters
         otime = obspy.UTCDateTime("2015-10-31T02:56:35.572") 
         elat = 64.4285
@@ -161,7 +161,7 @@ for iex in range(17,18):
         emag = 3.47
         rtime = otime
 
-    if iex == 5:
+    if iex == 4:
         # AEC source parameters
         otime = obspy.UTCDateTime("2015-11-06T01:20:12.712") 
         elat = 64.7552
@@ -170,7 +170,7 @@ for iex in range(17,18):
         emag = 3.35
         rtime = otime
 
-    if iex == 6:
+    if iex == 5:
         # AEC source parameters
         otime = obspy.UTCDateTime("2014-10-21T00:36:58.333") 
         elat = 65.1489
@@ -179,7 +179,7 @@ for iex in range(17,18):
         emag = 4.90
         rtime = otime
 
-    if iex == 7:
+    if iex == 6:
         # AEC source parameters
         otime = obspy.UTCDateTime("2014-10-23T16:30:23.968") 
         elat = 65.1644
@@ -188,7 +188,7 @@ for iex in range(17,18):
         emag = 5.00
         rtime = otime
 
-    if iex == 8:
+    if iex == 7:
         # AEC source parameters
         otime = obspy.UTCDateTime("2016-01-14T19:04:10.727") 
         elat = 64.6827
@@ -197,7 +197,7 @@ for iex in range(17,18):
         emag = 3.80
         rtime = otime
 
-    if iex == 9:
+    if iex == 8:
         # AEC source parameters
         otime = obspy.UTCDateTime("2015-09-28T11:50:12.949") 
         elat = 64.7148
@@ -206,7 +206,7 @@ for iex in range(17,18):
         emag = 2.91
         rtime = otime
 
-    if iex == 10:
+    if iex == 9:
         # Big Minto Event
         # AEC source parameters
         otime = obspy.UTCDateTime("2016-11-06T09:29:10.579") 
@@ -217,7 +217,7 @@ for iex in range(17,18):
         #max_dist = 150
         rtime = otime
 
-    if iex == 11:
+    if iex == 10:
         # Big Minto Event
         # AEC source parameters
         otime = obspy.UTCDateTime("2016-12-08T10:18:13.868") 
@@ -228,7 +228,7 @@ for iex in range(17,18):
         #max_dist = 150
         rtime = otime
 
-    if iex == 12:
+    if iex == 11:
         # Iniskin Event
         otime = obspy.UTCDateTime("2016-01-24T10:30:29.557") 
         elat = 59.6204
@@ -240,7 +240,7 @@ for iex in range(17,18):
         rtime = otime
         tafter_sec = 600
 
-    if iex == 13:
+    if iex == 12:
         # Chile Event
         otime = obspy.UTCDateTime("2015-09-16T22:54:33.000")
         elat = -31.5695
@@ -252,7 +252,7 @@ for iex in range(17,18):
         rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
         tafter_sec = 200
     
-    if iex == 14:
+    if iex == 13:
         # Mariana Event
         otime = obspy.UTCDateTime("2016-07-29T21:18:26.000")
         elat = 18.5439
@@ -266,7 +266,7 @@ for iex in range(17,18):
         rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
         tafter_sec = 250
         
-    if iex == 15:
+    if iex == 14:
         otime = obspy.UTCDateTime("2017-01-31T09:38:37.576")
         #otime = obspy.UTCDateTime("2017-01-31T09:38:37.000")
         elat = 63.0817
@@ -275,7 +275,7 @@ for iex in range(17,18):
         emag = 5.2
         rtime = otime
 
-    if iex == 16:
+    if iex == 15:
         otime = obspy.UTCDateTime("2017-04-29T11:15:48.000")
         elat = 63.1296
         elon = -151.1517
@@ -283,7 +283,7 @@ for iex in range(17,18):
         emag = 5.2
         rtime = otime
     
-    if iex == 17:
+    if iex == 16:
         otime = obspy.UTCDateTime("2017-06-28T12:58:52")
         elat = 64.7569
         elon = -148.8883
