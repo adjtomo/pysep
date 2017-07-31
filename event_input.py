@@ -155,7 +155,7 @@ def get_ev_info(ev_info,iex):
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
         ev_info_list = []
-        for xx in range(0,2):
+        for xx in range(8,9):
             ev_info_temp = ev_info.copy()
             ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
             ev_info_temp.elat = elats[xx]
@@ -166,13 +166,14 @@ def get_ev_info(ev_info,iex):
             
             # subset of stations
             ev_info_temp.min_dist = 0
-            ev_info_temp.max_dist = 500
+            ev_info_temp.max_dist = 200
             ev_info_temp.tbefore_sec = 100
             ev_info_temp.tafter_sec = 500
             ev_info_temp.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
             ev_info_temp.channel = 'BH?,HH?'
-            ev_info_temp.resample_freq = 50        
+            ev_info_temp.resample_freq = 40        
             ev_info_temp.scale_factor = 100 
+            ev_info_temp.resample_TF = False
 
             # append getwaveform objects
             ev_info_list.append(ev_info_temp)
@@ -248,7 +249,7 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'AK,AT,II,IU,US,XM,XV,XZ,TA' # no CN,AV,YV,ZE
         ev_info.channel = 'BH?,HH?'
     
-    if iex ==9:
+    if iex == 9:
         ev_info.rlat = 64.7716  
         ev_info.rlon = -149.1465 
         ev_info.scale_factor = 1
@@ -267,6 +268,8 @@ def get_ev_info(ev_info,iex):
         ev_info.edep = 1502.1
         ev_info.emag = 3.35
         ev_info.rtime = ev_info.otime
+        # ev_info.resample_TF = False
+        # ev_info.resample_freq = 50
 
     return(ev_info)
 #=================================================================================
