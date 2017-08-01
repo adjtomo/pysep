@@ -287,6 +287,22 @@ def get_ev_info(ev_info,iex):
         ev_info.station = '*'
         ev_info.channel = 'LH?,BH?'
 
+    # Uturuncu main event, AlvizuriTape2016
+    if iex == 11:
+        ev_info.use_catalog=0
+        ev_info.otime = obspy.UTCDateTime("2010-05-16T06:34:54.464")
+        ev_info.elon = -67.1856
+        ev_info.elat = -22.2600
+        ev_info.edep = -0.6
+        ev_info.emag = 2.8
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 300
+        ev_info.network = 'XP'
+        ev_info.station = '*'
+        ev_info.channel = 'HH?'
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
