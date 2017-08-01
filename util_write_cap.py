@@ -951,7 +951,7 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
             print('WARNING station %s: starttime > endtime. Skipping' % station_key)
             continue
 
-        print("New endpoints   %s - %s (%d samples)" % (max_starttime, min_endtime, npts))
+        print("New endpoints  %s - %s (%d samples)" % (max_starttime, min_endtime, npts))
 
         # APPLY TRIM COMMAND
         try:
@@ -1098,9 +1098,13 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
     Remove instrument response. Or plot (but not both)
     TODO consider separating the remove and plot functions
     """
+
+    print("\nApply instrument corrections")
     for tr in st:
-        station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
-                tr.stats.location + '.' + tr.stats.channel
+        #station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
+        #        tr.stats.location + '.' + tr.stats.channel
+        station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
+                tr.stats.location, tr.stats.channel)
 
         if ipre_filt == 0:
             pre_filt = None
@@ -1116,10 +1120,8 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
             f0 = 0.5*f1
             f3 = 2.0*f2
             pre_filt = (f0, f1, f2, f3)
-            print('pre_filter: (%f %f %f %f) seconds' % (1/f3, 1/f2, 1/f1, 1/f0))
+            #print('pre_filter: (%f %f %f %f) seconds' % (1/f3, 1/f2, 1/f1, 1/f0))
 
-        print('--> station %14s Correcting instrument response' %\
-                station_key)
 
         # Plot or remove instrument response but not both.
         # (It seems this should be a separate function)
@@ -1131,6 +1133,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
             resp_plot = resp_plot_dir + '/' + station_key + '_resp.eps'
 
             try:
+                print('%s: Plotting instrument response' % station_key)
                 tr.remove_response(inventory=stations, pre_filt=pre_filt, \
                         output=outformat, plot = resp_plot)
                 continue
@@ -1138,6 +1141,8 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
                 print('Could not generate response plot for %s' % station_key)
         else:
             try:
+                print('%s: Correcting instrument response, pre-filter (%6.3f, %6.3f, %6.3f, %6.3f)' %\
+                        (station_key, f0, f1, f2, f3))
                 tr.remove_response(inventory=stations, pre_filt=pre_filt, \
                         output=outformat)
             except Exception as e:
@@ -1160,14 +1165,14 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     - fill in missing data
     """
 
-    print("\nQUALITY CHECK!\n")
+    print("\nQUALITY CHECK!")
 
     output_log = ("data_processing_status_%s.log" % client_name)
     fid = open(output_log, "w")
     fid.write("\n--------------------\n%s\n" % event.short_str())
     fid.write("evtime net sta loc cha starttime endtime npts length (sec)\n")
 
-    # Remove traces that are too short
+    print("Removing traces that are too short ...")
     min_tlen_sec = 1  # minimum duration of signal in seconds
     for tr in stream:
         station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
@@ -1186,7 +1191,8 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
                     (station_key))
             stream.remove(tr)
 
-    # Cleanup channel name. Cases:
+    print("Cleaning up channel names ...")
+    # Cases:
     # BHX00 --> channel = BHX, location = 00
     # SHZ1 --> channel = SHZ, location = 1  
     for tr in stream:
@@ -1214,7 +1220,7 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     # If number of channels is not 3, then remove
     # If ...
 
-    # Remove station if number of channels is less than 3 and network is LL
+    print("Removing LLNL stations with less than 3 channels ...")
     thr_ncha = 3
     for tr in stream:
         net = tr.stats.network
@@ -1234,10 +1240,11 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     #stream.merge(method=0,fill_value=0)
 
     # OPTION 2 interpolate
-    print("WARNING. applying merge/interpolate to the data")
+    print("Applying merge/interpolate to all the data ...")
     stream.merge(fill_value='interpolate')
 
     # remove stations (part 2 of 2), this time if npts_actual < npts_expected
+    print("Checking stations where npts_actual < npts_expected ...")
     for tr in stream:
         station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
                 tr.stats.location, tr.stats.channel)
