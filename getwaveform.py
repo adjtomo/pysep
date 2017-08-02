@@ -274,13 +274,7 @@ class getwaveform:
         # Crazy way of getting a unique list of stations
         stalist = list(set(stalist))
 
-        # match start and end points for all traces
-        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, 
-                self.resample_TF, self.resample_freq, 
-                self.tbefore_sec, self.tafter_sec)
-        if len(st2) == 0:
-            raise ValueError("no waveforms left to process!")
-
+        #  Resample
         if self.resample_TF == True:
             # NOTE !!! tell the user if BOTH commands are disabled NOTE !!!
             if (client_name == "IRIS"):
@@ -289,6 +283,13 @@ class getwaveform:
                 resample_cut(st2, self.resample_freq, evtime, self.tbefore_sec, self.tafter_sec)
         else:
             print("WARNING. Will not resample. Using original rate from the data")
+
+        # match start and end points for all traces
+        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, 
+                self.resample_TF, self.resample_freq, 
+                self.tbefore_sec, self.tafter_sec)
+        if len(st2) == 0:
+            raise ValueError("no waveforms left to process!")
 
         # save raw waveforms in SAC format
         path_to_waveforms = evname_key + "/RAW"

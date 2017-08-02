@@ -945,13 +945,14 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
             min_endtime = min(select_st[0].stats.endtime,\
                     select_st[1].stats.endtime,\
                     select_st[2].stats.endtime) 
-        npts = int((min_endtime - max_starttime) * samprate)
 
         if max_starttime > min_endtime:
             print('WARNING station %s: starttime > endtime. Skipping' % station_key)
             continue
-
-        print("New endpoints  %s - %s (%d samples)" % (max_starttime, min_endtime, npts))
+        npts = int((min_endtime - max_starttime) * samprate)
+        print("Old endpoints  %s - %s | %f Hz, %d samples" % (max_starttime, min_endtime, samprate, npts))
+        npts = int((min_endtime - max_starttime) * resample_freq)
+        print("New endpoints  %s - %s | %f Hz, %d samples" % (max_starttime, min_endtime, resample_freq, npts))
 
         # APPLY TRIM COMMAND
         try:
