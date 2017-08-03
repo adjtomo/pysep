@@ -433,3 +433,13 @@ class getwaveform:
 
         # print client and event info
         print(self.ev)
+
+    def save_extraction_info(self):
+        # track git commit
+        os.system('git log | head -12 > ./' + self.evname + '/' + self.evname + '_last_2git_commits.txt')
+         # save filenames in a file for checking
+        fname = self.evname + '/' + self.evname + '_all_filenames'
+        fcheck = open(fname,'w')
+        for file in sorted(os.listdir(self.evname)):
+            if file.endswith(('.e','.n','.z','.r','.t')):
+                fcheck.write('%s\n' % file)
