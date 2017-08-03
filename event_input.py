@@ -209,6 +209,7 @@ def get_ev_info(ev_info,iex):
         # ev_info.scale_factor = 10.0**2  # original
         ev_info.scale_factor = 2e-1     # Hoya  
         ev_info.overwrite_ddir = 0
+        ev_info.ifsave_stationxml = False
 
 # same as iex=6 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
@@ -227,6 +228,7 @@ def get_ev_info(ev_info,iex):
         ev_info.network = '*'         # * will give all at IRIS DMC
         ev_info.channel = 'BH?,LH?' 
         ev_info.overwrite_ddir = 0
+        ev_info.ifsave_stationxml = False
 
 # Alaska data from far away event
     if iex == 8:

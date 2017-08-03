@@ -32,6 +32,7 @@ import shutil   # only used for deleting data directory
 import os
 import sys
 from getwaveform import *
+import pickle
 
 # EXAMPLES (choose one)
 # event_input             -- 10 default examples (including CAP examples)
@@ -39,8 +40,13 @@ from getwaveform import *
 # event_input_scak        -- southern Alaska
 # event_input_flats       -- Minto Flats
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 10                            # example number within iproject.py script
-                                     # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
+iex = 11                    # example number within iproject.py script
+                           # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
+
+# Or parse command line input arguments
+if len(sys.argv)==3:
+    iproject = str(sys.argv[1])
+    iex = int(sys.argv[2])
 
 print("Running example iex =", iex)
 
@@ -71,8 +77,8 @@ for ii in range(nev):
     ev_info.get_events_client()
 
     # Delete existing data directory
-    eid = util_helpers.otime2eid(ev_info.ev.origins[0].time)
-    ddir = './'+ eid
+    ev_info.evname = util_helpers.otime2eid(ev_info.ev.origins[0].time)
+    ddir = './'+ ev_info.evname
     if ev_info.overwrite_ddir and os.path.exists(ddir):
         print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
@@ -81,4 +87,4 @@ for ii in range(nev):
     ev_info.run_get_waveform()
 
     # track git commit
-    os.system('git log | head -12 > ./' + eid + '/' + eid + '_last_2git_commits.txt')
+    os.system('git log | head -12 > ./' + ev_info.evname + '/' + ev_info.evname + '_last_2git_commits.txt')
