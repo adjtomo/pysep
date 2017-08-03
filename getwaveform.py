@@ -13,6 +13,7 @@ from obspy.clients.fdsn import Client
 from obspy.core.event import Event, Origin, Magnitude
 
 from scipy import signal
+import pickle
 
 from util_write_cap import *
 
@@ -56,6 +57,7 @@ class getwaveform:
         self.tbefore_sec = 100
         self.tafter_sec = 300
         # These are used only if self.use_catalog = 0
+        self.evname = None
         self.otime = None
         self.elat = None
         self.elon = None
@@ -131,6 +133,7 @@ class getwaveform:
         self.remove_response = True       # remove instrument response 
         self.iplot_response = False       # plot response function
         self.ifplot_spectrogram = False   # plot spectrograms 
+        self.ifsave_stationxml = True     # save station xml file (for adjoint tomo)
 
         # username and password for embargoed IRIS data
         # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -190,6 +193,9 @@ class getwaveform:
                     reftime + self.tafter_sec, 
                     channel=self.channel)
             stream_raw = c.get_waveforms_bulk(bulk_list)
+
+            # save ev_info object
+            pickle.dump(self,open(self.evname + '/' + self.evname + '_ev_info.obj', 'wb'))    
          
         elif self.idb==3:
             client_name = "LLNL"
@@ -262,6 +268,7 @@ class getwaveform:
         # NOTE this command is needed at the time of writing files, so it has to
         # be set early
         st2, evname_key = rename_if_LLNL_event(st2, evtime)
+        self.evname = evname_key
 
         # Get list of unique stations + locaiton (example: 'KDAK.00')
         stalist = []
@@ -321,8 +328,9 @@ class getwaveform:
             write_resp(inventory,evname_key)
 
         # save station inventory as XML file
-        xmlfilename = evname_key + "/stations.xml"
-        inventory.write(xmlfilename, format="stationxml", validate=True)
+        if self.ifsave_stationxml:
+            xmlfilename = evname_key + "/stations.xml"
+            inventory.write(xmlfilename, format="stationxml", validate=True)
 
     def copy(self):
         '''
@@ -425,3 +433,13 @@ class getwaveform:
 
         # print client and event info
         print(self.ev)
+
+    def save_extraction_info(self):
+        # track git commit
+        os.system('git log | head -12 > ./' + self.evname + '/' + self.evname + '_last_2git_commits.txt')
+         # save filenames in a file for checking
+        fname = self.evname + '/' + self.evname + '_all_filenames'
+        fcheck = open(fname,'w')
+        for file in sorted(os.listdir(self.evname)):
+            if file.endswith(('.e','.n','.z','.r','.t')):
+                fcheck.write('%s\n' % file)

@@ -39,8 +39,13 @@ from getwaveform import *
 # event_input_scak        -- southern Alaska
 # event_input_flats       -- Minto Flats
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 10                            # example number within iproject.py script
-                                     # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
+iex = 0                    # example number within iproject.py script
+                           # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
+
+# Or parse command line input arguments
+if len(sys.argv)==3:
+    iproject = str(sys.argv[1])
+    iex = int(sys.argv[2])
 
 print("Running example iex =", iex)
 
@@ -71,14 +76,14 @@ for ii in range(nev):
     ev_info.get_events_client()
 
     # Delete existing data directory
-    eid = util_helpers.otime2eid(ev_info.ev.origins[0].time)
-    ddir = './'+ eid
+    ev_info.evname = util_helpers.otime2eid(ev_info.ref_time_place.origins[0].time)
+    ddir = './'+ ev_info.evname
     if ev_info.overwrite_ddir and os.path.exists(ddir):
         print("WARNING. %s already exists. Deleting ..." % ddir)
         shutil.rmtree(ddir)
 
-    # Extract waveforms, IRIS
+    # KEY COMMAND: Extract waveforms, IRIS
     ev_info.run_get_waveform()
 
-    # track git commit
-    os.system('git log | head -12 > ./' + eid + '/' + eid + '_last_2git_commits.txt')
+    # save extraction info (git commit and filenames)
+    ev_info.save_extraction_info()

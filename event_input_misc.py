@@ -43,6 +43,24 @@ def get_ev_info(ev_info,iex):
         ev_info.detrend = True
         ev_info.taper = True
 
+# Kashmir earthquake
+    if iex == 1:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 1          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2005-10-08T03:50:39") 
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 1000
+        ev_info.tbefore_sec = 300
+        ev_info.tafter_sec = 500
+        ev_info.network = 'XF'
+        ev_info.channel = 'LH?,BH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
