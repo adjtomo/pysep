@@ -15,7 +15,7 @@ import numpy as np
 def plotme(clat,clon,slat,slon,cat,cat_subset,st_minradius,st_maxradius,sta_dir):
     # plot basemap
     #map = Basemap(projection='ortho',lat_0=clat,lon_0=clon,resolution='l') # Orthographic Projection
-    map = Basemap(projection='aeqd',lat_0=clat,lon_0=clon,resolution='l') # Azimuthal Equidistant Projection
+    map = Basemap(projection='aeqd',lat_0=clat,lon_0=clon,resolution='c') # Azimuthal Equidistant Projection
     map.drawcoastlines(linewidth=0.25)
     map.drawcoastlines(linewidth=0.25)
     map.drawcountries(linewidth=0.25)
@@ -24,7 +24,7 @@ def plotme(clat,clon,slat,slon,cat,cat_subset,st_minradius,st_maxradius,sta_dir)
     map.drawmapboundary(fill_color='aqua')
     # draw lat/lon grid lines every 30 degrees.
     #map.drawmeridians(np.arange(0,360,30))
-    map.drawparallels(np.arange(-90,90,30))
+    #map.drawparallels(np.arange(-90,90,30))
 
     # Plot center of Alaska and station
     markersize = 7
@@ -32,7 +32,7 @@ def plotme(clat,clon,slat,slon,cat,cat_subset,st_minradius,st_maxradius,sta_dir)
     map.plot(x,y,'b*', markersize=markersize) # plot center
     x,y = map(slon,slat)
     map.plot(x,y,'rv', markersize=markersize) # plot station
-    plt.title(sta_dir + ' - event selection_plot')
+    plt.title(sta_dir + ' - event selection plot')
 
     # Plot circle for event selection
     # tissot should ideally make circle BUT there is a bug when longitude change from -179 to +179
