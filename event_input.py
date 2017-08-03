@@ -4,21 +4,8 @@ from getwaveform import *
 
 def get_ev_info(ev_info,iex):
 # ===============================================================
-# EXAMPLE TEMPLATE -- USE THIS ONLY FOR QUICK TESTING
-# This is a template for testing before creating an example.
-# We can delete this if it creates more issues.
-    if iex == 0:
-        ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55")
-        ev_info.min_dist = 0 
-        ev_info.max_dist = 500
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 300
-        ev_info.network = 'II,IU'
-        ev_info.station = 'KDAK,COLA'
-        ev_info.channel = '*'
-        
 # SilwalTape2016 example event (Anchorage)
-    if iex == 1:
+    if iex == 0:
         ev_info.use_catalog = 1
         ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.min_dist = 0 
@@ -39,7 +26,7 @@ def get_ev_info(ev_info,iex):
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations
-    if iex == 2:
+    if iex == 1:
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
@@ -58,6 +45,7 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 0        # no resampling
+        ev_info.resample_TF = False
         ev_info.scale_factor = 1         # no scale factor
         
         # parameters for examining step response (causal low-pass filter on raw waveforms)
@@ -75,33 +63,10 @@ def get_ev_info(ev_info,iex):
         # For SALMON data
         ev_info.user = None
         ev_info.password = None
-
-# Cook Inlet earthquake
-    if iex == 3:
-        ev_info.idb = 1
-        ev_info.overwrite_ddir = 1       # delete data dir if it exists
-        ev_info.use_catalog = 0          # do not use event catalog for source parameters
-        # GCMT source parameters
-        # the otime is the centroid time and accounts for tshift
-        ev_info.otime = obspy.UTCDateTime("2017-05-07T04:25:19.000") 
-        ev_info.elat = 60.1945
-        ev_info.elon = -151.6743
-        ev_info.edep = 64000
-        ev_info.emag = 5.2
-    
-        # subset of stations
-        ev_info.min_dist = 0
-        ev_info.max_dist = 500
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 500
-        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
-        ev_info.channel = 'BH?,HH?'
-        ev_info.resample_freq = 50        # no resampling
-        ev_info.scale_factor = 100         # no scale factor
             
 # MFFZ earthquakes for investigating the step response
 # copied from event_input_flats
-    if iex == 4:
+    if iex == 2:
         ev_info.idb = 1
         ev_info.use_catalog = 0
         # -------------------------------------------------
@@ -121,6 +86,7 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.scale_factor = 1
         ev_info.resample_freq = 0
+        ev_info.resample_TF = False
         # for CAP
         # ev_info.scale_factor = 10.0**2
         # ev_info.resample_freq = 50 
@@ -146,7 +112,7 @@ def get_ev_info(ev_info,iex):
         ev_info.taper = 0.2
         
 # Loop over multiple event       
-    if iex == 5:
+    if iex == 3:
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
@@ -188,7 +154,7 @@ def get_ev_info(ev_info,iex):
 # DEBUGGING HELPER LINE:
 #   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
 # (This will show clearly that the reference time is NOT the origin time.)
-    if iex == 6:
+    if iex == 4:
         # to get the LLNL client, which is a private repo from Lion Krischer:
         # cd $REPOS
         # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
@@ -211,27 +177,8 @@ def get_ev_info(ev_info,iex):
         ev_info.overwrite_ddir = 0
         ev_info.ifsave_stationxml = False
 
-# same as iex=6 but for the IRIS database
-# GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
-#       origin time, hypocenter, magnitude.
-    if iex == 7:
-        ev_info.idb = 1            # IRIS database
-        # ev_info.resample_freq = 0  # no resampling
-        # ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya actual
-        ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
-        ev_info.min_dist = 0 
-        ev_info.max_dist = 1200
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 600
-        # needs to be run TWICE to get BK stations and IRIS stations
-        # ev_info.network = 'BK'        # BK will go to NCEDC
-        ev_info.network = '*'         # * will give all at IRIS DMC
-        ev_info.channel = 'BH?,LH?' 
-        ev_info.overwrite_ddir = 0
-        ev_info.ifsave_stationxml = False
-
 # Alaska data from far away event
-    if iex == 8:
+    if iex == 5:
         ev_info.use_catalog = 0
         # Mariana Event observed by FLATS
         ev_info.otime = obspy.UTCDateTime("2016-07-29T21:18:26.000")
@@ -250,8 +197,9 @@ def get_ev_info(ev_info,iex):
         ev_info.tafter_sec = 400
         ev_info.network = 'AK,AT,II,IU,US,XM,XV,XZ,TA' # no CN,AV,YV,ZE
         ev_info.channel = 'BH?,HH?'
-    
-    if iex == 9:
+ 
+# Kyle (which event is this?)   
+    if iex == 6:
         ev_info.rlat = 64.7716  
         ev_info.rlon = -149.1465 
         ev_info.scale_factor = 1
@@ -274,7 +222,7 @@ def get_ev_info(ev_info,iex):
         # ev_info.resample_freq = 50
 
 # Illinois main event
-    if iex == 10:
+    if iex == 7:
         ev_info.use_catalog=0
         ev_info.otime = obspy.UTCDateTime("2008-04-18T09:36:59.110")
         ev_info.elon = -87.886 
@@ -289,8 +237,8 @@ def get_ev_info(ev_info,iex):
         ev_info.station = '*'
         ev_info.channel = 'LH?,BH?'
 
-    # Uturuncu main event, AlvizuriTape2016
-    if iex == 11:
+# Uturuncu main event, AlvizuriTape2016
+    if iex == 8:
         ev_info.use_catalog=0
         ev_info.otime = obspy.UTCDateTime("2010-05-16T06:34:54.464")
         ev_info.elon = -67.1856
@@ -304,6 +252,25 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'XP'
         ev_info.station = '*'
         ev_info.channel = 'HH?'
+
+# same as iex=6 but for the IRIS database
+# GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
+#       origin time, hypocenter, magnitude.
+#    if iex == 9:
+#        ev_info.idb = 1            # IRIS database
+#       # ev_info.resample_freq = 0  # no resampling
+#        # ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya actual
+#        ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
+#        ev_info.min_dist = 0 
+#        ev_info.max_dist = 1200
+#        ev_info.tbefore_sec = 100
+#        ev_info.tafter_sec = 600
+#        # needs to be run TWICE to get BK stations and IRIS stations
+#        # ev_info.network = 'BK'        # BK will go to NCEDC
+#        ev_info.network = '*'         # * will give all at IRIS DMC
+#        ev_info.channel = 'BH?,LH?' 
+#        ev_info.overwrite_ddir = 0
+#        ev_info.ifsave_stationxml = False
 
     return(ev_info)
 #=================================================================================
