@@ -272,6 +272,18 @@ def get_ev_info(ev_info,iex):
 #        ev_info.overwrite_ddir = 0
 #        ev_info.ifsave_stationxml = False
 
+    if iex == 10:
+        ev_info.otime = obspy.UTCDateTime("2016-05-18T03:25:48")
+        #ev_info.elat = 65.2466
+        #ev_info.elon = -151.0651
+        #ev_info.edep = 151562
+        #ev_info.emag = 4.2
+        ev_info.rtime = ev_info.otime
+        ev_info.max_dist = 400
+        ev_info.tbefore_sec = 50
+        ev_info.tafter_sec = 600
+        ev_info.channel = 'BH?,HH?'
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
