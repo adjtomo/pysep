@@ -10,11 +10,11 @@ def get_ev_info(ev_info,iex):
     ev_info.min_dist = 0
     ev_info.max_dist = 150
     ev_info.tbefore_sec = 100
-    ev_info.tafter_sec = 200 
+    ev_info.tafter_sec = 400 
     ev_info.network = 'AK,AT,II,IU,US,XM,XV,XZ,TA'
     ev_info.channel = 'BH?,HH?'
     ev_info.use_catalog = 0
-    ev_info.station = 'I23K'
+    #ev_info.station = 'I23K'
 
     if iex == 0:
         # AEC parameters
@@ -171,4 +171,11 @@ def get_ev_info(ev_info,iex):
         ev_info.emag = 3.5
         ev_info.rtime = ev_info.otime
 
+    if iex == 17:
+        ev_info.otime = obspy.UTCDateTime("2016-05-18T03:25:48")
+        ev_info.elat = 65.2466
+        ev_info.elon = -151.0651
+        ev_info.edep = 151562
+        ev_info.emag = 4.2
+        ev_info.rtime = ev_info.otime
     return(ev_info)
