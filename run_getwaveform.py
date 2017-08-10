@@ -39,7 +39,7 @@ from getwaveform import *
 # event_input_scak        -- southern Alaska
 # event_input_flats       -- Minto Flats
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 0                    # example number within iproject.py script
+iex = 10                    # example number within iproject.py script
                            # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
 
 # Or parse command line input arguments
@@ -55,7 +55,6 @@ print("Running example iex =", iex)
 ev_info = getwaveform()              # create event object (contains default extraction parameters)
 iproject = __import__(iproject)      # file containing all the examples
 ev_info = iproject.get_ev_info(ev_info, iex)   # update default extraction parameters with inputted event extarction parameters
-
 # For looping over events
 # create list if ev_info is a getwaveform object
 if type(ev_info ) == getwaveform:
