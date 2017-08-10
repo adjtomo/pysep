@@ -39,7 +39,7 @@ from getwaveform import *
 # event_input_scak        -- southern Alaska
 # event_input_flats       -- Minto Flats
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
-iex = 10                    # example number within iproject.py script
+iex = 0                    # example number within iproject.py script
                            # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
 
 # Or parse command line input arguments
