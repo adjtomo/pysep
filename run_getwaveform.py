@@ -42,6 +42,8 @@ iproject = 'event_input'   # this is the name of file containing event info (See
 iex = 0                    # example number within iproject.py script
                            # iproject = 'event_input_flats', iex = 6  (for looping over multiple events)
 
+iproject = 'gw_fmtu'    # llnl paper. NOTE iex doesnt work here
+
 # Or parse command line input arguments
 if len(sys.argv)==3:
     iproject = str(sys.argv[1])
