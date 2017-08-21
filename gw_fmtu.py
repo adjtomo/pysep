@@ -90,7 +90,8 @@ def get_ev_info(ev_info, iex):
         iev_info.elat = line[3]
         iev_info.edep = line[4]
         iev_info.emag = line[6]
-        iev_info.evname = util_helpers.otime2eid(iev_info.otime)
+        #iev_info.evname = util_helpers.otime2eid(iev_info.otime)
+        iev_info.evname = line[0]
         iev_info.get_events_client()
 
         client2ev_info(iev_info, 'IRIS'); ev_info_list.append(iev_info)
