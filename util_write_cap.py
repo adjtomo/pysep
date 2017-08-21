@@ -47,7 +47,7 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = False):
+def rotate_and_write_stream(stream, evname_key, stalist, icreateNull=1, ifrotateUVW = False):
     """
     Rotate an obspy stream to backazimuth
 
@@ -107,18 +107,11 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
 #                       subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
 #                       ' Number of traces: ', len(substr))
 
-    # Get list of unique stations + locaiton (example: 'KDAK.00')
-    stalist = []
-    for tr in stream.traces:
-        #stalist.append(tr.stats.station)
-        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
-        
+    
     # Initialize stream object
     # For storing extra traces in case there are less than 3 compnents   
     st_new = obspy.Stream()
 
-    # Crazy way of getting a unique list of stations
-    stalist = list(set(stalist))
     #print(stalist)
     for stn in stalist:
         # split STNM.LOC
@@ -168,7 +161,7 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
         #print('=R==>',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
         #          substr[1].stats.channel, substr[1].stats.sac['cmpinc'],substr[1].stats.sac['cmpaz'], \
         #          substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
-        print('--> Station ' + netw + '.' + station + '.' + location + \
+        print('--> Station ' + netw + '.' + station + '.' + location + '.' + chan + \
                   ' Rotating random orientation to NEZ.')
         #try:
         #print(len(d1),len(d2),len(d3))
@@ -221,7 +214,7 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
             print(tr.stats.channel)
 
         try:
-            print('--> Station ' + netw + '.' + station + '.' + location + \
+            print('--> Station ' + netw + '.' + station + '.' + location + '.' + chan + \
                       ' Rotating ENZ to RTZ.')
             substr.rotate('NE->RT')
             #print('=R==>',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
@@ -495,17 +488,17 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
         
         # match trace station info with the station inventory info
         for net in stalist:
-            for sta in net.stations:
-                for ch in sta.channels:
+            for stan in net.stations:
+                for ch in stan.channels:
                     # code for debugging. print stations names from traces and inventory
-                    # fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, sta.code, tr.stats.network, net.code))
+                    #fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code))
                     if tr.stats.channel == ch.code.upper() and \
                             tr.stats.location == ch.location_code and \
-                            tr.stats.station == sta.code and \
+                            tr.stats.station == stan.code and \
                             tr.stats.network == net.code:
-                        # fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, sta.code, tr.stats.network, net.code))
+                        #fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code))
                         # code for debugging. print azimuth and dip
-                        # print('--->', net.code, sta.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
+                        #print('--->', net.code, stan.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
                         # Note: LLNL database does not have instruement response info or the sensor info

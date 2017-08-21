@@ -273,13 +273,11 @@ class getwaveform:
         # Get list of unique stations + locaiton (example: 'KDAK.00')
         stalist = []
         for tr in st2.traces:
-            # stalist.append(tr.stats.station)
-            netstaloch = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station, 
-                    tr.stats.location, tr.stats.channel[:-1])
-            stalist.append(netstaloch)
-
+            #print(tr)
+            stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
         # Crazy way of getting a unique list of stations
         stalist = list(set(stalist))
+        #print(stalist)
 
         #  Resample
         if self.resample_TF == True:
@@ -313,7 +311,7 @@ class getwaveform:
         write_stream_sac(st2, path_to_waveforms, evname_key)
         
         if self.rotateRTZ:
-            rotate_and_write_stream(st2, evname_key, self.icreateNull, self.rotateUVW)
+            rotate_and_write_stream(st2, evname_key, stalist, self.icreateNull, self.rotateUVW)
 
         if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event)

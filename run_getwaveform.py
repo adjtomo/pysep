@@ -77,7 +77,7 @@ for ii in range(nev):
     ev_info.get_events_client()
 
     # Delete existing data directory
-    ev_info.evname = util_helpers.otime2eid(ev_info.ref_time_place.origins[0].time)
+    #ev_info.evname = util_helpers.otime2eid(ev_info.ref_time_place.origins[0].time)
     ddir = './'+ ev_info.evname
     if ev_info.overwrite_ddir and os.path.exists(ddir):
         print("WARNING. %s already exists. Deleting ..." % ddir)
