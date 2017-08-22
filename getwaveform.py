@@ -227,8 +227,19 @@ class getwaveform:
         # set reftime
         stream = obspy.Stream()
         stream = set_reftime(stream_raw, evtime)
+
+        # Get list of unique stations + locaiton (example: 'KDAK.00')
+        stalist = []
+        for tr in stream.traces:
+            print(tr)
+            stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+
+        # Crazy way of getting a unique list of stations
+        stalist = list(set(stalist))
+        #print(stalist)
         
         print("--> Adding SAC metadata...")
+        print(inventory)
         st2 = add_sac_metadata(stream,idb=self.idb, ev=event, stalist=inventory)
         
         # Do some waveform QA
@@ -269,15 +280,6 @@ class getwaveform:
         # be set early
         st2, evname_key = rename_if_LLNL_event(st2, evtime)
         self.evname = evname_key
-
-        # Get list of unique stations + locaiton (example: 'KDAK.00')
-        stalist = []
-        for tr in st2.traces:
-            #print(tr)
-            stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
-        # Crazy way of getting a unique list of stations
-        stalist = list(set(stalist))
-        #print(stalist)
 
         #  Resample
         if self.resample_TF == True:

@@ -487,6 +487,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
         tmp = tr.stats.channel
         
         # match trace station info with the station inventory info
+        print(tr)
         for net in stalist:
             for stan in net.stations:
                 for ch in stan.channels:
@@ -497,6 +498,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                             tr.stats.station == stan.code and \
                             tr.stats.network == net.code:
                         #fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code))
+                        print('--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code)
                         # code for debugging. print azimuth and dip
                         #print('--->', net.code, stan.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
