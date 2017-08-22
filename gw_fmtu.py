@@ -56,7 +56,9 @@ def get_ev_info(ev_info, iex):
         pass
 
     #events_file="/home/vipul/REPOSITORIES/manuscripts/alvizuri/papers/2016fmtu/data/event_info_llnl.txt"
-    events_file="/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/event_info_llnl_test.txt"
+    #events_file="/home/vipul/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/event_info_llnl_test.txt"
+    events_file="test_data/event_info_llnl.txt"
+    events_file="test_data/event_info_llnl2.txt"
     # KERNVILLE              , 1988-02-15T18:10:00.09, -116.472,  37.314,   542, Ford2009,      5.30, ml, NCSN 
     # AMARILLO               , 1989-06-27T15:30:00.02, -116.354,  37.275,   640, Ford2009,      4.90, ml, NCSN 
     # DISKO_ELM              , 1989-09-14T15:00:00.10, -116.164,  37.236,   261, Ford2009,      4.40, ml, NCSN 
