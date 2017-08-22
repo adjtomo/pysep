@@ -76,10 +76,10 @@ def get_ev_info(ev_info, iex):
     ev_info.tbefore_sec = 100
     ev_info.tafter_sec = 600
     ev_info.scale_factor = 100 
-    ev_info.resample_TF = False
+    ev_info.resample_TF = True
     ev_info.resample_freq = 20        
     ev_info.f1 = 1/200  # fmin
-    ev_info.f2 = 1/10  # fmax
+    ev_info.f2 = 10  # fmax
     ev_info.ifsave_stationxml = False
 
     dblist = [1, 3]
@@ -98,7 +98,7 @@ def get_ev_info(ev_info, iex):
         iev_info.get_events_client()
 
         client2ev_info(iev_info, 'IRIS'); ev_info_list.append(iev_info)
-        client2ev_info(iev_info, 'LLNL'); ev_info_list.append(iev_info)
-        client2ev_info(iev_info, 'BK'); ev_info_list.append(iev_info)
+        #client2ev_info(iev_info, 'LLNL'); ev_info_list.append(iev_info)
+        #client2ev_info(iev_info, 'BK'); ev_info_list.append(iev_info)
 
     return(ev_info_list)
