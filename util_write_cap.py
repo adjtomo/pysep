@@ -1190,7 +1190,7 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
         # remove stations (part 1 of 2) if tlen < threshold (currently 1 sec)
         tlen_sec = tr.stats.npts / tr.stats.sampling_rate
         if tlen_sec < min_tlen_sec:
-            print("WARNING station %14s Data available < (before + after). Removing this station" 
+            print("WARNING station %14s Data available < (before + after). Removing this station" % \
                     (station_key))
             stream.remove(tr)
 
