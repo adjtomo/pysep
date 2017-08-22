@@ -170,9 +170,9 @@ def get_ev_info(ev_info,iex):
         # GCMT source parameters
         # the otime is the centroid time and accounts for tshift
         ev_info.otime = obspy.UTCDateTime("2017-05-07T04:25:19.000") 
-        ev_info.elat = 60.1945
-        ev_info.elon = -151.6743
-        ev_info.edep = 64000
+        ev_info.elat = 60.1828
+        ev_info.elon = -151.6803
+        ev_info.edep = 41400
         ev_info.emag = 5.2
     
         # subset of stations
@@ -184,6 +184,8 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor
+        ev_info.user = ''
+        ev_info.password = ''
             
 # EXAMPLE TEMPLATE -- USE THIS ONLY FOR QUICK TESTING
 # This is a template for testing before creating an example.
