@@ -313,7 +313,7 @@ class getwaveform:
         write_stream_sac(st2, path_to_waveforms, evname_key)
         
         if self.rotateRTZ:
-            rotate_and_write_stream(st2, evname_key, stalist, self.icreateNull, self.rotateUVW)
+            rotate_and_write_stream(st2, evname_key, self.icreateNull, self.rotateUVW)
 
         if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event)

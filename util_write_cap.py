@@ -47,7 +47,7 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, evname_key, stalist, icreateNull=1, ifrotateUVW = False):
+def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = False):
     """
     Rotate an obspy stream to backazimuth
 
@@ -107,7 +107,14 @@ def rotate_and_write_stream(stream, evname_key, stalist, icreateNull=1, ifrotate
 #                       subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
 #                       ' Number of traces: ', len(substr))
 
+    # Get list of unique stations + locaiton (example: 'KDAK.00')
     
+    stalist = []
+    for tr in stream.traces:
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+    stalist = list(set(stalist))
+        
     # Initialize stream object
     # For storing extra traces in case there are less than 3 compnents   
     st_new = obspy.Stream()
