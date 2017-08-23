@@ -922,14 +922,7 @@ def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, r
         #temp_stream = stream.select(network=netw,station=station,location=location,channel=chan)
         select_st = st2.select(network = netw, station = station, \
                 location = location, channel = chan)
-        ncha = len(select_st)
-        if ncha < 1:
-            print("WARNING. %s has nchannels = %d. Continuing..." %\
-                    (station_key, ncha))
-            continue
-        else:
-            samprate = select_st[0].stats.sampling_rate
-        print(select_st)
+        samprate = select_st[0].stats.sampling_rate
 
         if ifresample == False:
             # NOTE the sampling rate is read from the SAC files
