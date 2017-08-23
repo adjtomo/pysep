@@ -5,7 +5,7 @@ Tools for interfacing IRIS data, ObsPy, and SAC input/output.
 """
 from __future__ import print_function
 
-import os
+import os, sys
 from copy import deepcopy
 
 import obspy
@@ -16,7 +16,6 @@ from scipy import signal
 import pickle
 
 from util_write_cap import *
-
 
 class getwaveform:
     def __init__(self):
@@ -232,7 +231,10 @@ class getwaveform:
         stalist = []
         for tr in stream.traces:
             print(tr)
-            stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+            station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,
+                    tr.stats.location, tr.stats.channel[:-1])
+            #stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+            stalist.append(station_key)
 
         # Crazy way of getting a unique list of stations
         stalist = list(set(stalist))
@@ -428,8 +430,8 @@ class getwaveform:
                 self.ref_time_place = self.ev
                 print(len(self.ev))
             else:
-                print("No events in the catalog for the given time period. Stop.")
-                sys.exit(0)
+                print("WARNING. No events in the catalog for the given time period")
+                #sys.exit()
 
         # print client and event info
         print(self.ev)
