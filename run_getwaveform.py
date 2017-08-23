@@ -84,7 +84,14 @@ for ii in range(nev):
         shutil.rmtree(ddir)
 
     # KEY COMMAND: Extract waveforms, IRIS
-    ev_info.run_get_waveform()
+    # use try to recover nicely when there are multiple event requests
+    try:
+        ev_info.run_get_waveform()
+    except Exception as e:
+        print("FATAL. Unable to get data for event", ev_info.evname)
+        print(e)
+        print("Continuing with next event\n")
+        continue
 
     # save extraction info (git commit and filenames)
     ev_info.save_extraction_info()
