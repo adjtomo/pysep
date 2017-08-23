@@ -69,6 +69,8 @@ else:
 # IRIS
 
 nev = len(ev_info_list)
+ndir=0
+dir_exists=False
 for ii in range(nev):
     ev_info = ev_info_list[ii]
     
@@ -80,8 +82,15 @@ for ii in range(nev):
     ev_info.evname = util_helpers.otime2eid(ev_info.ref_time_place.origins[0].time)
     ddir = './'+ ev_info.evname
     if ev_info.overwrite_ddir and os.path.exists(ddir):
-        print("WARNING. %s already exists. Deleting ..." % ddir)
-        shutil.rmtree(ddir)
+        # this command does not allow to keep data from multiple sources.
+        # replacing it with Warning message
+        #shutil.rmtree(ddir)
+
+        print("\n*** WARNING *** %s. This directory already exists.", ddir)
+        print("Consider deleting it and rerunning this script\n")
+        dir_exists=True
+        ndir+=1
+
 
     # KEY COMMAND: Extract waveforms, IRIS
     # use try to recover nicely when there are multiple event requests
@@ -95,3 +104,7 @@ for ii in range(nev):
 
     # save extraction info (git commit and filenames)
     ev_info.save_extraction_info()
+
+if dir_exists:
+    print("WARNING. There were %d pre-existing directories." % ndir)
+
