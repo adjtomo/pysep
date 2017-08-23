@@ -159,6 +159,8 @@ def get_ev_info(ev_info,iex):
         # cd $REPOS
         # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
         # then follow instructions for install
+        # NOTE: If you update your environment, then you need to reinstall
+        #       the llnl client from inside the new environment.
         ev_info.idb = 3              # LLNL database
         # resample_freq = 0    # no resampling and no cutting
         

@@ -1,19 +1,30 @@
 #!/bin/bash
 #
 # Run this scripts to compare the number of extracted files with those in the saved copy 
+#
+# Warning: If the example crashed before it writes out a file list,
+#          then no comparison of files can be made.
+#
 
+# all events
 events=("20080418093659110"  "20100516063454464"  "20150928115012000"  "20160124103037400" "20090407201255351"  "20140831030657111"  "20151106012012712"  "20160729211826000"  "HOYA")
 iex="7 8 6 1 0 2 3 5 4"
+# single event
+events=("HOYA")
+iex="4"
+
 save_dir='~/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/getwaveform_saved/check_filenames/'
 
 # Run example
-for ii in `seq 0 8`
+#for ii in `seq 0 8`
+for ii in 0
 do
     python run_getwaveform.py event_input $iex[$ii]
 done
 
 # Check number of files generated
-for ii in `seq 0 8`
+#for ii in `seq 0 8`
+for ii in 0
 do
     diff $save_dir/${events[$ii]}_all_filenames ${events[$ii]}/${events[$ii]}_all_filenames
     error=$?
