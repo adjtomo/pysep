@@ -36,7 +36,7 @@ do
 done
 
 # Check number of files generated
-for ii in `seq $nmax $nmax`
+for ii in `seq $nmin $nmax`
 do
     diff $save_dir/${events[$ii]}_all_filenames ${events[$ii]}/${events[$ii]}_all_filenames
     error=$?
