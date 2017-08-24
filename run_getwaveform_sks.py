@@ -84,31 +84,41 @@ ev_info.min_dist = 0
 ev_info.max_dist = .1 # hoping there is no other station within 100 mt radius 
 ev_info.tbefore_sec = 100
 ev_info.tafter_sec = 300
-out_dir = './' + 'sks_events' + '/'
+out_dir = './' + 'sks_events_test' + '/'
 
 # event selection info
 clat = 66.160507
 clon = -153.369141
-starttime = obspy.UTCDateTime("2010-01-01T00:00:00.000Z")
-endtime = obspy.UTCDateTime("2011-01-01T00:00:00.000Z")
+starttime = obspy.UTCDateTime("2016-01-01T00:00:00.000Z")
+endtime = obspy.UTCDateTime("2017-01-01T00:00:00.000Z")
 ev_minradius = 80
 ev_maxradius = 120
 minmagnitude = 7
 
 # station selection info
-network = 'AK'
-channel = 'BH?'
+network = 'ZE'
+channel = 'HH'
 station = ''
 st_minradius = ev_minradius
 st_maxradius = ev_maxradius
-client = Client("IRIS")
+
+# For restricted data
+ev_info.user = 'vsilwal@alaska.edu'
+ev_info.password = 'dmk3hjKl3Jnq'
+
+# Get client
+if not ev_info.user and not ev_info.password:
+    ev_info.client = Client("IRIS")
+else:
+    ev_info.client = Client("IRIS",user=ev_info.user,password=ev_info.password)
+
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
 # -------------------------------------------------------------------------------
 # extract catalog of all events around the CENTER
-cat = client.get_events(starttime = starttime, endtime = endtime, 
+cat = ev_info.client.get_events(starttime = starttime, endtime = endtime, 
                         minradius = ev_minradius, maxradius = ev_maxradius, 
                         latitude = clat, longitude = clon, minmagnitude  = minmagnitude)
 print(cat)
@@ -120,7 +130,7 @@ cat.plot(outfile = fname)
 
 # -------------------------------------------------------------------------------
 # get stations
-inventory = client.get_stations(network = network, station = station, channel = channel,
+inventory = ev_info.client.get_stations(network = network, station = station, channel = channel,
                     starttime = starttime, endtime = endtime, level="response")
 print(inventory)
 
@@ -160,7 +170,7 @@ for ii in range(0,len(inventory)):
         cat_subset.plot(outfile = fname)
 
         # Event selection plot
-        plotme(clat,clon,ev_info.rlat,ev_info.rlon,cat,cat_subset,st_minradius,st_maxradius,sta_dir)
+        #plotme(clat,clon,ev_info.rlat,ev_info.rlon,cat,cat_subset,st_minradius,st_maxradius,sta_dir)
 
         # -------------------------------------------------------------------------------
         # Loop over subset_events
@@ -178,8 +188,8 @@ for ii in range(0,len(inventory)):
             ev_info.overwrite_dir = 0
 
             # Delete existing data directory
-            eid = util_helpers.otime2eid(ev_info.ev.origins[0].time)
-            ddir = './'+ eid
+            ev_info.evname = util_helpers.otime2eid(ev_info.ev.origins[0].time)
+            ddir = './'+ ev_info.evname
             if ev_info.overwrite_ddir and os.path.exists(ddir):
                 print("WARNING. %s already exists. Deleting ..." % ddir)
                 shutil.rmtree(ddir)
@@ -192,7 +202,7 @@ for ii in range(0,len(inventory)):
                 continue
 
             # move contents from event directory to station directory
-            new_path =  odir + '/' + eid
+            new_path =  odir + '/' + ev_info.evname
             if ev_info.overwrite_ddir and os.path.exists(new_path):
                 print("WARNING. %s already exists. Deleting ..." % new_path)
                 shutil.rmtree(new_path)
@@ -200,3 +210,5 @@ for ii in range(0,len(inventory)):
             if os.path.exists(ddir):    
                 os.rename(ddir, new_path)
             
+            # save extraction info (git commit and filenames)
+            #ev_info.save_extraction_info()
