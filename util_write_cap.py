@@ -1006,16 +1006,20 @@ def amp_rescale_llnl(st, scale_factor):
 
     """
     # scales based on tests with events HOYA, BEXAR
-    scale_factor_BB = -1.0e-9 # flip
-    scale_factor_HF = 1.0e-4
-    scale_factor_LH = -1.0e-2 # flip
+    # *** NOTE sign flip ***
+    # HOYA LL.LH and LL.BB require a sign flip on the original LLNL data.
+    # Otherwise the surface waveform inversions produce a -ISO result.
+    # HOYA LL.LH and LL.BB body do not require flip.
+    scale_factor_LH = -1.0e-2 # flip!
+    scale_factor_BB = -1.0e-9 # flip!
+    scale_factor_HF = 1.0e-9
     scale_factor_VB = 1.0e-9
-    scale_factor_EH = 1.0e-9  # orig: 1e-7 but some amps are too large, eg FF2
+    scale_factor_EH = 1.0e-9 # orig 1e-7 but some amps are too large, eg FF2
     scale_factor_HH = 1.0e-9 # orig 1e-10. for FF2 some amps are small
     scale_factor_BH = 1.0e-9
     scale_factor_SH = 1.0e-9
     scale_factor_HG = 1.0e-5
-    scale_factor_XX = -1.0e-9
+    scale_factor_XX = -1.0e-9 # flip!
 
     for tr in st.traces:
         station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
