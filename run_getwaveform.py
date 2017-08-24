@@ -84,7 +84,7 @@ for ii in range(nev):
     if ev_info.overwrite_ddir and os.path.exists(ddir):
         # this command does not allow to keep data from multiple sources.
         # replacing it with Warning message
-        #shutil.rmtree(ddir)
+        shutil.rmtree(ddir)
 
         print("\n*** WARNING *** %s. This directory already exists.", ddir)
         print("Consider deleting it and rerunning this script\n")

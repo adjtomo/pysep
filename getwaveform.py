@@ -442,6 +442,7 @@ class getwaveform:
          # save filenames in a file for checking
         fname = self.evname + '/' + self.evname + '_all_filenames'
         fcheck = open(fname,'w')
-        for file in sorted(os.listdir(self.evname)):
-            if file.endswith(('.e','.n','.z','.r','.t')):
-                fcheck.write('%s\n' % file)
+        #for file in sorted(os.listdir(self.evname)):
+        #    if file.endswith(('*')):
+        #        fcheck.write('%s\n' % file)
+        os.system('ls -1 ' + self.evname + '/* > ' +  fname)
