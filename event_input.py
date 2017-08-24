@@ -12,7 +12,23 @@ def get_ev_info(ev_info,iex):
         ev_info.max_dist = 500
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 300
-        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+
+        # default list of Alaska networks
+        # note 1: cannot use '*' because of IM
+        # note 2: may want to exclude the mid-band AV network
+        # note 3: these are temporary:
+        # XE BEAAR 1999
+        # XR ARCTIC 2004
+        # XZ STEEP 2005
+        # YV MOOS 2006
+        # XV FLATS 2014
+        # ZE SALMON 2015
+        # XG WVF 2016
+        # [7C MMEP 2015]
+        # TA
+        #ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'
+        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
+
         ev_info.channel = 'BH?'
         ev_info.use_catalog = 0 
         ev_info.elat = 61.45420
@@ -147,6 +163,117 @@ def get_ev_info(ev_info,iex):
         # always return ev_info
         ev_info = ev_info_list
 
+# Alaska data from far away event
+    if iex == 4:
+        ev_info.use_catalog = 0
+        # Mariana Event observed by FLATS
+        ev_info.otime = obspy.UTCDateTime("2016-07-29T21:18:26.000")
+        ev_info.elat = 18.5439
+        ev_info.elon = 145.541
+        ev_info.edep = 207620.0
+        ev_info.emag = 7.7
+        ev_info.rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
+        # center at F3TN
+        ev_info.rlat =  64.7716
+        ev_info.rlon = -149.1465
+        ev_info.scale_factor = 1
+        ev_info.min_dist = 0
+        ev_info.max_dist = 150
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 400
+        ev_info.network = 'AK,AT,II,IU,US,XM,XV,XZ,TA' # no CN,AV,YV,ZE
+        ev_info.channel = 'BH?,HH?'
+ 
+# doublet event near Manley  
+    if iex == 5:
+        ev_info.rlat = 64.7716  
+        ev_info.rlon = -149.1465 
+        ev_info.scale_factor = 1
+        ev_info.min_dist = 0
+        ev_info.max_dist = 150
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 200 
+        ev_info.network = 'XV,TA'
+        ev_info.channel = 'BH?,HH?'
+        ev_info.use_catalog = 0
+        ev_info.station = 'I23K,F3TN'
+        # AEC source parameters
+        ev_info.otime = obspy.UTCDateTime("2015-11-06T01:20:12.712") 
+        ev_info.elat = 64.7552
+        ev_info.elon = -151.3103
+        ev_info.edep = 1502.1
+        ev_info.emag = 3.35
+        ev_info.rtime = ev_info.otime
+        # ev_info.resample_TF = False
+        # ev_info.resample_freq = 50
+
+# Illinois main event
+    if iex == 6:
+        ev_info.use_catalog=0
+        ev_info.otime = obspy.UTCDateTime("2008-04-18T09:36:59.110")
+        ev_info.elon = -87.886 
+        ev_info.elat = 38.452 
+        ev_info.edep = 14.3
+        ev_info.emag = 5.2
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 300
+        ev_info.network = 'IU,NM'
+        ev_info.station = '*'
+        ev_info.channel = 'LH?,BH?'
+
+# Uturuncu main event, AlvizuriTape2016
+    if iex == 7:
+        ev_info.use_catalog=0
+        ev_info.otime = obspy.UTCDateTime("2010-05-16T06:34:54.464")
+        ev_info.elon = -67.1856
+        ev_info.elat = -22.2600
+        ev_info.edep = -0.6
+        ev_info.emag = 2.8
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 300
+        ev_info.network = 'XP'
+        ev_info.station = '*'
+        ev_info.channel = 'HH?'
+
+# Manley earthquake (Kyle)
+    if iex == 8:
+        ev_info.use_catalog=0
+        ev_info.otime = obspy.UTCDateTime("2016-05-18T03:25:48.320")
+        ev_info.elat = 65.2466
+        ev_info.elon = -151.0651
+        ev_info.edep = 15156.2
+        ev_info.emag = 4.2
+        ev_info.rtime = ev_info.otime
+        ev_info.max_dist = 400
+        ev_info.tbefore_sec = 50
+        ev_info.tafter_sec = 600
+        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50   # for CAP
+
+# same as iex=11 but for the IRIS database
+# GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
+#       origin time, hypocenter, magnitude.
+    if iex == 9:
+        ev_info.idb = 1            # IRIS database
+        # ev_info.resample_freq = 0  # no resampling
+        # ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya actual
+        ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 1200
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 600
+        # needs to be run TWICE to get BK stations and IRIS stations
+        # ev_info.network = 'BK'        # BK will go to NCEDC
+        ev_info.network = '*'         # * will get all at IRIS DMC
+        ev_info.channel = 'BH?,LH?' 
+        ev_info.overwrite_ddir = 0
+        ev_info.ifsave_stationxml = False
+
 # nuclear event: LLNL (see also iex = 7)
 # GOAL: To find events in the LLNL database based on a target origin time, rather than an eid.
 #       (The reference time (NZYEAR, etc) should then be assigned as the actual origin time,
@@ -154,7 +281,7 @@ def get_ev_info(ev_info,iex):
 # DEBUGGING HELPER LINE:
 #   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
 # (This will show clearly that the reference time is NOT the origin time.)
-    if iex == 4:
+    if iex == 11:
         # to get the LLNL client, which is a private repo from Lion Krischer:
         # cd $REPOS
         # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
@@ -178,113 +305,6 @@ def get_ev_info(ev_info,iex):
         ev_info.scale_factor = 2e-1     # Hoya  
         ev_info.overwrite_ddir = 0
         ev_info.ifsave_stationxml = False
-
-# Alaska data from far away event
-    if iex == 5:
-        ev_info.use_catalog = 0
-        # Mariana Event observed by FLATS
-        ev_info.otime = obspy.UTCDateTime("2016-07-29T21:18:26.000")
-        ev_info.elat = 18.5439
-        ev_info.elon = 145.541
-        ev_info.edep = 207620.0
-        ev_info.emag = 7.7
-        ev_info.rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
-        # center at F3TN
-        ev_info.rlat =  64.7716
-        ev_info.rlon = -149.1465
-        ev_info.scale_factor = 1
-        ev_info.min_dist = 0
-        ev_info.max_dist = 150
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 400
-        ev_info.network = 'AK,AT,II,IU,US,XM,XV,XZ,TA' # no CN,AV,YV,ZE
-        ev_info.channel = 'BH?,HH?'
- 
-# Kyle (which event is this?)   
-    if iex == 6:
-        ev_info.rlat = 64.7716  
-        ev_info.rlon = -149.1465 
-        ev_info.scale_factor = 1
-        ev_info.min_dist = 0
-        ev_info.max_dist = 150
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 200 
-        ev_info.network = 'XV,TA'
-        ev_info.channel = 'BH?,HH?'
-        ev_info.use_catalog = 0
-        ev_info.station = 'I23K,F3TN'
-        # AEC source parameters
-        ev_info.otime = obspy.UTCDateTime("2015-11-06T01:20:12.712") 
-        ev_info.elat = 64.7552
-        ev_info.elon = -151.3103
-        ev_info.edep = 1502.1
-        ev_info.emag = 3.35
-        ev_info.rtime = ev_info.otime
-        # ev_info.resample_TF = False
-        # ev_info.resample_freq = 50
-
-# Illinois main event
-    if iex == 7:
-        ev_info.use_catalog=0
-        ev_info.otime = obspy.UTCDateTime("2008-04-18T09:36:59.110")
-        ev_info.elon = -87.886 
-        ev_info.elat = 38.452 
-        ev_info.edep = 14.3
-        ev_info.emag = 5.2
-        ev_info.min_dist = 0 
-        ev_info.max_dist = 500
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 300
-        ev_info.network = 'IU,NM'
-        ev_info.station = '*'
-        ev_info.channel = 'LH?,BH?'
-
-# Uturuncu main event, AlvizuriTape2016
-    if iex == 8:
-        ev_info.use_catalog=0
-        ev_info.otime = obspy.UTCDateTime("2010-05-16T06:34:54.464")
-        ev_info.elon = -67.1856
-        ev_info.elat = -22.2600
-        ev_info.edep = -0.6
-        ev_info.emag = 2.8
-        ev_info.min_dist = 0 
-        ev_info.max_dist = 500
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 300
-        ev_info.network = 'XP'
-        ev_info.station = '*'
-        ev_info.channel = 'HH?'
-
-# same as iex=6 but for the IRIS database
-# GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
-#       origin time, hypocenter, magnitude.
-#    if iex == 9:
-#        ev_info.idb = 1            # IRIS database
-#       # ev_info.resample_freq = 0  # no resampling
-#        # ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya actual
-#        ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
-#        ev_info.min_dist = 0 
-#        ev_info.max_dist = 1200
-#        ev_info.tbefore_sec = 100
-#        ev_info.tafter_sec = 600
-#        # needs to be run TWICE to get BK stations and IRIS stations
-#        # ev_info.network = 'BK'        # BK will go to NCEDC
-#        ev_info.network = '*'         # * will give all at IRIS DMC
-#        ev_info.channel = 'BH?,LH?' 
-#        ev_info.overwrite_ddir = 0
-#        ev_info.ifsave_stationxml = False
-
-    if iex == 10:
-        ev_info.otime = obspy.UTCDateTime("2016-05-18T03:25:48")
-        #ev_info.elat = 65.2466
-        #ev_info.elon = -151.0651
-        #ev_info.edep = 151562
-        #ev_info.emag = 4.2
-        ev_info.rtime = ev_info.otime
-        ev_info.max_dist = 400
-        ev_info.tbefore_sec = 50
-        ev_info.tafter_sec = 600
-        ev_info.channel = 'BH?,HH?'
 
     return(ev_info)
 #=================================================================================
