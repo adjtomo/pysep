@@ -28,7 +28,7 @@ imax=8
 ncheck=$(($imax - $imin + 1))
 echo "checking $ncheck events in check_getwaveform.bash (index $imin to $imax)"
 
-save_dir=$GEOTOOLS'/python_util/util_data_syn/getwaveform_saved/check_filenames/'
+save_dir=getwaveform_saved/check_filenames
 
 # Run example
 for ii in `seq $imin $imax`
@@ -39,12 +39,16 @@ done
 # Check number of files generated
 for ii in `seq $imin $imax`
 do
-    diff $save_dir/${events[$ii]}_all_filenames ${events[$ii]}/${events[$ii]}_all_filenames
+    file1=$save_dir/${events[$ii]}_all_filenames
+    file2=${events[$ii]}/${events[$ii]}_all_filenames
+    diff $file1 $file2
     error=$?
     if [ $error -eq 0 ]
     then
 	echo "$ii SUCCESS ${events[$ii]}: Extracted number of files match with the saved version"
     else
 	echo "$ii WARNING: file1 and file2 differ"
+        echo "file1: $file1"
+        echo "file2: $file2"
     fi
 done
