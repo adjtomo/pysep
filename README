@@ -1,6 +1,18 @@
-GEOTOOLS/python_util/util_data_syn/README
+pyseis
+fetching and extraching waveforms using obspy
 
-This folder contains tools to request seismic data, process data, and write out sac files.
+contributors:
+Celso Alvizuri
+Lion Krischer
+Vipul Silwal
+Kyle Smith
+Carl Tape
+
+git clone https://GITHUBUSERNAME@github.com/uafseismo/pyseis.git
+
+==============================
+
+This contains tools to request seismic data, process data, and write out sac files.
 Our motivation is to have files prepared for moment tensor inversions in CAP.
 However the sac files can be used for other purposes as well.
 
@@ -16,6 +28,5 @@ check_getwaveform     -- run example events and check the output files against a
                          
 getwaveform_saved
    check_filenames    -- directory of list of files for example events in event_input.py
-
 
 ==============================
