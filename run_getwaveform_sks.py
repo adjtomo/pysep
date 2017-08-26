@@ -83,7 +83,7 @@ ev_info = getwaveform()
 ev_info.min_dist = 0 
 ev_info.max_dist = .1 # hoping there is no other station within 100 mt radius 
 ev_info.tbefore_sec = 100
-ev_info.tafter_sec = 300
+ev_info.tafter_sec = 3000
 out_dir = './' + 'sks_events_test' + '/'
 
 # event selection info
@@ -97,7 +97,7 @@ minmagnitude = 7
 
 # station selection info
 network = 'ZE'
-channel = 'HH'
+channel = 'HH?'
 station = ''
 st_minradius = ev_minradius
 st_maxradius = ev_maxradius
