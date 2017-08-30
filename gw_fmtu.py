@@ -97,8 +97,8 @@ def get_ev_info(ev_info, iex):
         iev_info.evname = line[0]
         iev_info.get_events_client()
 
-        client2ev_info(iev_info, 'IRIS'); ev_info_list.append(iev_info)
+        #client2ev_info(iev_info, 'IRIS'); ev_info_list.append(iev_info)
         #client2ev_info(iev_info, 'LLNL'); ev_info_list.append(iev_info)
-        #client2ev_info(iev_info, 'BK'); ev_info_list.append(iev_info)
+        client2ev_info(iev_info, 'BK'); ev_info_list.append(iev_info)
 
     return(ev_info_list)
