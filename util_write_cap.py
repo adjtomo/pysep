@@ -79,33 +79,33 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
 # 
 #     print(stream)
 #     # Add backazimuth to metadata in a particular way...
-#     for tr in stream.traces:
-#         tr.stats.back_azimuth = tr.stats.sac['baz']
-#         # code for debugging. print station and backazimuth
-#         #print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
+#    for tr in stream.traces:
+#        tr.stats.back_azimuth = tr.stats.sac['baz']
+#        # code for debugging. print station and backazimuth
+#        # print(tr.stats.station, ' backazimuth: ', tr.stats.back_azimuth)   
 # 
-#         # Do some qc: throw out any stations without three components
-#         substr = stream.select(station=tr.stats.station)
+#        # Do some qc: throw out any stations without three components
+#        substr = stream.select(station=tr.stats.station)
 # 
-#         # Select the alphabetically lowest band code.
-#         band_code = sorted([tr.stats.channel[0] for tr in substr])[0]
-#         substr = substr.select(channel=band_code + "*")
+#        # Select the alphabetically lowest band code.
+#        band_code = sorted([tr.stats.channel[0] for tr in substr])[0]
+#        substr = substr.select(channel=band_code + "*")
 # 
 # #        # 20160805 cralvizuri@alaska.edu -- currently this option
 # #        # also skips if stream is not 3 (eg there is PFO.CI and PFO.TS -- i.e.
 # #        # 6 streams). We want all possible data, so change this to < 3
 # #        #if len(substr) != 3:
-#         if len(substr) < 3:
-#             for subtr in substr:
-#                 if icreateNull == 1:
-#                     print('One or more components missing: consider removing ',
-#                           subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
-#                           ' Number of traces: ', len(substr))
-#                 if icreateNull == 0:
-#                     stream.remove(subtr)
-#                     print('One or more components missing: Removing ',
-#                       subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
-#                       ' Number of traces: ', len(substr))
+#        if len(substr) < 3:
+#            for subtr in substr:
+#                if icreateNull == 1:
+#                    print('One or more components missing: consider removing ',
+#                          subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
+#                          ' Number of traces: ', len(substr))
+#                if icreateNull == 0:
+#                    stream.remove(subtr)
+#                    print('One or more components missing: Removing ',
+#                          subtr.stats.network +'.'+ subtr.stats.station +'.'+ subtr.stats.location +'.'+ subtr.stats.channel,
+#                          ' Number of traces: ', len(substr))
 
     # Get list of unique stations + locaiton (example: 'KDAK.00')
     
@@ -430,6 +430,9 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
     """
     fid = open('traces_inventory_log', "w")
     out_form = ('%s %s %s %s %s %s %s %s %s')
+
+    st_del= obspy.Stream() # stream for collecting traces that are to be removed - traces not in the inventory
+
     # Loop over each trace
     for tr in st.traces:
         # Write each one
@@ -494,7 +497,8 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
         tmp = tr.stats.channel
         
         # match trace station info with the station inventory info
-        print(tr)
+        #print(tr)
+        i=0
         for net in stalist:
             for stan in net.stations:
                 for ch in stan.channels:
@@ -510,6 +514,8 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                         #print('--->', net.code, stan.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
+                        i=1
+                        print('kkk',tr)
                         # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
                         if idb==1:
@@ -530,7 +536,11 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                                 header_tag = indx+3
                                 # print('-->', sensor[indx_start:indx_end])
                                 tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end]
-                
+        # Append all traces that DO NOT have inventory information                        
+        if i==0:
+            st_del.append(tr)
+            #print(st_del)
+
         # obspy has cmpinc for Z component as -90
         #if tmp == 'Z':
         #    tr.stats.sac['cmpinc'] = 0.0
@@ -556,6 +566,11 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
         # code for debugging.
         #print(tr.stats.station, tr.stats.sac['evlo'], tr.stats.sac['evla'],
         #      tr.stats.sac['stlo'], tr.stats.sac['stla'], tr.stats.sac['dist'])
+
+    # Remove traces without inventory info
+    for tr in st_del:
+        st.remove(tr)
+
     return st
 
 def check_if_LLNL_event(event_time):
