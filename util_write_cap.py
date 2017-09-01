@@ -498,7 +498,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
         
         # match trace station info with the station inventory info
         #print(tr)
-        i=0
+        stn_in_inventory=0 
         for net in stalist:
             for stan in net.stations:
                 for ch in stan.channels:
@@ -514,7 +514,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                         #print('--->', net.code, stan.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
-                        i=1
+                        stn_in_inventory=1   # trace does have inventory info
                         print('kkk',tr)
                         # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
@@ -536,8 +536,9 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                                 header_tag = indx+3
                                 # print('-->', sensor[indx_start:indx_end])
                                 tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end]
+
         # Append all traces that DO NOT have inventory information                        
-        if i==0:
+        if stn_in_inventory==0:
             st_del.append(tr)
             #print(st_del)
 
