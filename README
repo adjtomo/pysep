@@ -29,5 +29,3 @@ getwaveform_saved
    check_filenames     -- directory of list of files for example events in event_input.py
 
 ==============================
-
-See more documentation [here](./docs/_build/index.html)
