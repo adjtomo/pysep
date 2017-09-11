@@ -1,0 +1,15 @@
+# For documentation
+
+** Install sphinx
+```
+pip install sphinx
+```
+
+** generate sphinx directory
+```bash
+cd pyseis/docs
+sphinx-quickstart
+```
+
+
+** git checkout and pull
