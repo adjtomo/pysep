@@ -10,7 +10,7 @@ from copy import deepcopy
 
 import obspy
 from obspy.clients.fdsn import Client
-from obspy.core.event import Event, Origin, Magnitude
+from obspy.core.event import Event, Origin, Magnitude, Catalog
 
 from scipy import signal
 import pickle
@@ -53,6 +53,10 @@ class getwaveform:
         self.max_dist = 20000
         self.min_az = 0 
         self.max_az = 360
+        self.min_lat = None
+        self.max_lat = None
+        self.min_lon = None
+        self.max_lon = None
         self.tbefore_sec = 100
         self.tafter_sec = 300
         # These are used only if self.use_catalog = 0
@@ -171,20 +175,26 @@ class getwaveform:
                 
             print("Download stations...")
             stations = c.get_stations(network=self.network, 
-                    station=self.station, channel=self.channel,
-                    starttime=reftime - self.tbefore_sec, 
-                    endtime=reftime + self.tafter_sec,
-                    level="response")
+                                      station=self.station, channel=self.channel,
+                                      starttime=reftime - self.tbefore_sec, 
+                                      endtime=reftime + self.tafter_sec,
+                                      minlatitude=self.min_lat,
+                                      maxlatitude=self.max_lat,
+                                      minlongitude=self.min_lon,
+                                      maxlongitude=self.max_lon,
+                                      level="response")
             inventory = stations    # so that llnl and iris scripts can be combined
             print("Printing stations")
             print(stations)
             print("Done Printing stations...")
+
             sta_limit_distance(ref_time_place, 
                     stations, 
                     min_dist=self.min_dist, 
                     max_dist=self.max_dist, 
                     min_az=self.min_az, 
                     max_az=self.max_az)
+            
             
             print("Downloading waveforms...")
             bulk_list = make_bulk_list_from_stalist(stations, 
@@ -269,6 +279,12 @@ class getwaveform:
         # be set early
         st2, evname_key = rename_if_LLNL_event(st2, evtime)
         self.evname = evname_key
+
+        # save station plot
+        # Note: Plotted are stations in the inventory and NOT the ones with the traces
+        # It could be possible that there might not be waveforms for some of these stations.
+        fig = stations.plot(projection="local", resolution="i", label = False, show=False)
+        Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
        
         # Get list of unique stations + locaiton (example: 'KDAK.00')
         stalist = []

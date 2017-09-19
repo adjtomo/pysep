@@ -6,12 +6,17 @@ def get_ev_info(ev_info,iex):
 # ===============================================================
 # SilwalTape2016 example event (Anchorage)
     if iex == 0:
-        ev_info.use_catalog = 1
+        ev_info.use_catalog = 0
         ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.min_dist = 0 
         ev_info.max_dist = 500
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 300
+
+        #ev_info.min_lat = 59
+        #ev_info.max_lat = 62
+        #ev_info.min_lon = -152
+        #ev_info.max_lon = -147
 
         # default list of Alaska networks
         # note 1: cannot use '*' because of IM
