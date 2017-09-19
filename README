@@ -1,42 +1,50 @@
 pyseis
-fetching and processing waveforms using obspy
+a private github repository for fetching and processing waveforms using obspy
 
-contributors:
+pyseis uses obspy tools to request seismic data, process data, and write out sac files.
+Our motivation is to have files prepared for moment tensor inversions.
+However the sac files can be used for other purposes as well.
+
+download:
+git clone https://GITHUBUSERNAME@github.com/uafseismo/pyseis.git
+
+What pyseis does:
++ input event information or get it from IRIS. You can also loop over multiple events.
++ extract waveforms using get_waveforms_bulk
++ makes sure that the three-component waveforms for a station are of equal length
++ write sets of sac files with headers
++ plot station map
++ save station .xml file 
+
+OPTIONAL STEPS
++ demean or detrend the waveforms
++ prefilter option (prior to removing instrument response)
+    (a) none
+    (b) based on window length and sample rate
+    (c) input filter periods, checked according to window length and sample rate
++ filter extracted waveforms (causal, acausal, low-pass, etc)
++ remove instrument response
++ scale amplitude of the waveforms
++ resample
++ input taper fraction (useful for short time-windows)
++ add null traces so that there are always 3 components (required when rotating)
++ rotate to RTZ, taking the sensor orientation into consideration
++ rotate to UVW triaxial orthogonal frame of the T120PH Nanometrics sensor
+  (useful for isolating spurious signals to sensor components)
++ debugging plots plots: spectrograms, instrument response
+
+Additonal features
++ access nuclear explosion and earthquake waveforms from custom LLNL database
++ access embargoed data sets from IRIS (requires user name and password)
+
+contributors (alphabetical):
 Celso Alvizuri
 Lion Krischer
 Vipul Silwal
 Kyle Smith
 Carl Tape
 
-git clone https://GITHUBUSERNAME@github.com/uafseismo/pyseis.git
-
-What pyseis can do for you:
-1. Input event information or get it from IRIS. You can also loop over multiple events.
-2. extract waveforms using get_waveforms_bulk 
-3. demean or detrend the waveforms (optional)
-4. prefilter options (a) None (b) based on window length (c) input filter periods (optional)
-5. filter extracted wavefroms (optional)
-6. remove instrument response (optional)
-7. Scale amplitude of the waveforms (optional)
-8. Resample (optional)
-9. Makes sure that ENZ waveforms for a stations are of equal length
-10. Input taper fraction (optional; useful for short time-windows)
-11. Add null traces so that there are always 3 components (optional; required when rotating)
-12. Rotate to RTZ (optional)
-13. Rotate to UVW triaxial orthogonal frame (optional)
-14. Plots (spectrograms, instrument response, station map plot)
-15. Save station .xml file 
-
-
-Optional:
-1. Use LLNL data (to extract data from LLNL database):
-git clone https://github.com/krischer/llnl_db_client
-
 ==============================
-
-This contains tools to request seismic data, process data, and write out sac files.
-Our motivation is to have files prepared for moment tensor inversions.
-However the sac files can be used for other purposes as well.
 
 MAIN SCRIPTS:
 run_getwaveform.py
