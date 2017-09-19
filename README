@@ -10,6 +10,28 @@ Carl Tape
 
 git clone https://GITHUBUSERNAME@github.com/uafseismo/pyseis.git
 
+What pyseis can do for you:
+1. Input event information or get it from IRIS. You can also loop over multiple events.
+2. extract waveforms using get_waveforms_bulk 
+3. demean or detrend the waveforms (optional)
+4. prefilter options (a) None (b) based on window length (c) input filter periods (optional)
+5. filter extracted wavefroms (optional)
+6. remove instrument response (optional)
+7. Scale amplitude of the waveforms (optional)
+8. Resample (optional)
+9. Makes sure that ENZ waveforms for a stations are of equal length
+10. Input taper fraction (optional; useful for short time-windows)
+11. Add null traces so that there are always 3 components (optional; required when rotating)
+12. Rotate to RTZ (optional)
+13. Rotate to UVW triaxial orthogonal frame (optional)
+14. Plots (spectrograms, instrument response, station map plot)
+15. Save station .xml file 
+
+
+Optional:
+1. Use LLNL data (to extract data from LLNL database):
+git clone https://github.com/krischer/llnl_db_client
+
 ==============================
 
 This contains tools to request seismic data, process data, and write out sac files.
