@@ -304,7 +304,7 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.tbefore_sec = 20
             ev_info_temp.tafter_sec = 200
             #ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
-            ev_info.network = 'AK'
+            ev_info_temp.network = "AK"
             ev_info_temp.channel = 'BH?,HH?'
 
             # append getwaveform objects

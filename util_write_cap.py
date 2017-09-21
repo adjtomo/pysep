@@ -515,7 +515,6 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
                         stn_in_inventory=1   # trace does have inventory info
-                        print('kkk',tr)
                         # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
                         if idb==1:

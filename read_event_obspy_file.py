@@ -20,4 +20,6 @@ def read_events_obspy_file(filename):
         elats.append(line_elements[4])
         edeps.append(line_elements[5])
         emags.append(line_elements[6])
+        print(line_elements[1],line_elements[2],line_elements[3],
+              line_elements[4],line_elements[5],line_elements[6])
     return eids,otimes,elons,elats,edeps,emags
