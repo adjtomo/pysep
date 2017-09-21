@@ -157,9 +157,10 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.tbefore_sec = 100
             ev_info_temp.tafter_sec = 500
             ev_info_temp.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+            #ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
             ev_info_temp.channel = 'BH?,HH?'
-            ev_info_temp.resample_freq = 40        
-            ev_info_temp.scale_factor = 100 
+            ev_info_temp.resample_freq = 40
+            ev_info_temp.scale_factor = 100
             ev_info_temp.resample_TF = False
 
             # append getwaveform objects
@@ -278,6 +279,39 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,LH?' 
         ev_info.overwrite_ddir = 0
         ev_info.ifsave_stationxml = False
+
+# tomoDD events for Melissa (and local splitting?)     
+    if iex == 10:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        events_file = "/home/carltape/PROJECTS/SALMON/data/salmon_tomodd_obspy_sub.txt"
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+
+        ev_info_list = []
+        for xx in range(8,9):
+            ev_info_temp = ev_info.copy()
+            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
+            ev_info_temp.elat = elats[xx]
+            ev_info_temp.elon = elons[xx]
+            ev_info_temp.edep = edeps[xx]
+            ev_info_temp.emag = emags[xx]
+            ev_info_temp.eid = eids[xx]
+            
+            # subset of stations
+            ev_info_temp.min_dist = 0
+            ev_info_temp.max_dist = 200
+            ev_info_temp.tbefore_sec = 20
+            ev_info_temp.tafter_sec = 200
+            #ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
+            ev_info.network = 'AK'
+            ev_info_temp.channel = 'BH?,HH?'
+
+            # append getwaveform objects
+            ev_info_list.append(ev_info_temp)
+        
+        # always return ev_info
+        ev_info = ev_info_list
 
 # nuclear event: LLNL (see also iex = 7)
 # GOAL: To find events in the LLNL database based on a target origin time, rather than an eid.
