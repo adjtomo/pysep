@@ -129,6 +129,7 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
         chan = tmp[3] + '*'
         # Get 3 traces (subset based on matching station name and location code)
         substr = stream.select(network=netw,station=station,location=location,channel=chan)
+        substr.sort()
         #print(substr)   # code for debugging. print stream information
         if len(substr) < 3:
             print('WARNING:', len(substr), 'traces available for rotation. Adding NULL traces - ', \
