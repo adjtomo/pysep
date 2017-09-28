@@ -43,7 +43,7 @@ class getwaveform:
         a good idea when deconvolving (ifRemoveResponse=True)
         """
         # DEFAULT SETTINGS (see getwaveform.py)
-        self.idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL
+        self.idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL; =4-Geoscope
         self.client = Client()
 
         # event parameters

@@ -38,10 +38,10 @@ from getwaveform import *
 # event_input_testing     -- examples used to isolate bugs or special cases
 # event_input_scak        -- southern Alaska
 # event_input_flats       -- Minto Flats (iex=3; multiple events)
+# gw_fmtu                 -- llnl paper. NOTE iex doesnt work here
+# event_input_mtuq        -- Test events for MTUQ project
 iproject = 'event_input'   # this is the name of file containing event info (See run_getwaveform_input.py for example)
 iex = 0                    # example number within iproject.py script
-
-#iproject = 'gw_fmtu'    # llnl paper. NOTE iex doesnt work here
 
 # Or parse command line input arguments
 if len(sys.argv)==3:
