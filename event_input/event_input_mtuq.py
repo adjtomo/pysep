@@ -13,8 +13,9 @@ def get_ev_info(ev_info,iex):
         ev_info.max_dist = 10000
         ev_info.tbefore_sec = 0
         ev_info.tafter_sec = 1500
-        ev_info.network = 'II,IU'  
-        ev_info.channel = 'BH?'
+        #ev_info.network = 'II,IU'
+        ev_info.network = 'G'
+        ev_info.channel = '*'
         ev_info.use_catalog = 1 
         #ev_info.elat = 37.94
         #ev_info.elon = -77.93

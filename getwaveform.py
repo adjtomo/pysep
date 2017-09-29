@@ -121,7 +121,7 @@ class getwaveform:
         # For CAP
         self.resample_TF = True           # if False then resample_freq is taken from SAC files
         self.resample_freq = 50           # 0 causes errors. Use resample_TF instead
-        self.scale_factor = 10**2         # for CAP use 10**2  (to convert m/s to cm/s)
+        self.scale_factor = 1             # for CAP use 10**2  (to convert m/s to cm/s)
 
         # Pre-processing (manily for CAP)
         self.rotateRTZ = True             # Also generate rotated to RTZ waveforms
@@ -353,7 +353,10 @@ class getwaveform:
         # save station inventory as XML file
         if self.ifsave_stationxml:
             xmlfilename = evname_key + "/stations.xml"
-            inventory.write(xmlfilename, format="stationxml", validate=True)
+            try:
+                inventory.write(xmlfilename, format="stationxml", validate=True)
+            except:
+                print('Could not create stationxml file')
 
     def copy(self):
         '''
