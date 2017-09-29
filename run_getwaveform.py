@@ -34,7 +34,7 @@ import util_helpers
 import shutil
 import os
 import sys
-import getwaveform
+from getwaveform import getwaveform
 
 '''
 EXAMPLES (choose one)
@@ -95,6 +95,8 @@ for ii in range(nev):
 
     # KEY: Extract waveforms, IRIS
     # use try to recover nicely when there are multiple event requests
+    ev_info.run_get_waveform()
+    '''
     try:
         ev_info.run_get_waveform()
     except Exception as e:
@@ -105,3 +107,4 @@ for ii in range(nev):
 
     # save extraction info (git commit and filenames)
     ev_info.save_extraction_info()
+'''

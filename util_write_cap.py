@@ -47,7 +47,8 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = False):
+def rotate_and_write_stream(stream, evname_key, 
+                            icreateNull=True, ifrotateUVW = False):
     """
     Rotate an obspy stream to backazimuth
 
@@ -119,7 +120,6 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
     # For storing extra traces in case there are less than 3 compnents   
     st_new = obspy.Stream()
 
-    #print(stalist)
     for stn in stalist:
         # split STNM.LOC
         tmp = stn.split('.')
@@ -128,10 +128,10 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
         location = tmp[2]
         chan = tmp[3] + '*'
         # Get 3 traces (subset based on matching station name and location code)
-        substr = stream.select(network=netw,station=station,location=location,channel=chan)
+        substr = stream.select(network=netw,station=station,
+                               location=location,channel=chan)
         substr.sort()
-        #print(substr)   # code for debugging. print stream information
-        if len(substr) < 3:
+        if len(substr) < 3 and icreateNull:
             print('WARNING:', len(substr), 'traces available for rotation. Adding NULL traces - ', \
                       netw + '.' + station + '.' + location + '.' + chan)
             d1 = substr[0].data
@@ -169,8 +169,8 @@ def rotate_and_write_stream(stream, evname_key, icreateNull=1, ifrotateUVW = Fal
         #print('=R==>',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
         #          substr[1].stats.channel, substr[1].stats.sac['cmpinc'],substr[1].stats.sac['cmpaz'], \
         #          substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
-        print('--> Station ' + netw + '.' + station + '.' + location + '.' + chan + \
-                  ' Rotating random orientation to NEZ.')
+        print('--> Station ' + netw + '.' + station + '.' + location + '.' + chan +
+              ' Rotating random orientation to NEZ.')
         #try:
         #print(len(d1),len(d2),len(d3))
         data_array = rotate.rotate2zne(d1, az1, dip1, d2, az2, dip2, d3, az3, dip3)
@@ -425,7 +425,7 @@ def write_ev_info(ev, evname_key):
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
-def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
+def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False):
     """
     Add event and station metadata to an Obspy stream
     """
@@ -469,10 +469,12 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
             else: # assuming component information is the channel code. Sometimes stations are named R,T,V!
                 chan_code = pick.waveform_id.channel_code.upper()
             #print(pick.waveform_id.channel_code)
-            if (pick.waveform_id.network_code == tr.stats.network and pick.waveform_id.station_code == tr.stats.station \
-                    and (chan_code == 'Z' or chan_code == 'V') \
-                    #and pick.waveform_id.channel_code.upper() == 'V' \
-                    and pick.waveform_id.location_code == tr.stats.location and pick.phase_hint == 'Pn'):
+            if (pick.waveform_id.network_code == tr.stats.network and 
+                pick.waveform_id.station_code == tr.stats.station and 
+                (chan_code == 'Z' or chan_code == 'V') and
+                # pick.waveform_id.channel_code.upper() == 'V' and
+                pick.waveform_id.location_code == tr.stats.location and 
+                pick.phase_hint == 'Pn'):
                 Ptime = pick.time - ev.origins[0].time
                 tr.stats.sac['a'] = Ptime
 
@@ -510,9 +512,10 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[]):
                             tr.stats.station == stan.code and \
                             tr.stats.network == net.code:
                         #fid.write(out_form % ('\n--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code))
-                        print('--->', tr.stats.channel, ch.code, tr.stats.location, ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code)
-                        # code for debugging. print azimuth and dip
-                        #print('--->', net.code, stan.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
+                        if ifverbose:
+                            print('--->', tr.stats.channel, ch.code, tr.stats.location, 
+                                  ch.location_code, tr.stats.station, stan.code, tr.stats.network, net.code)
+                            print('--->', net.code, stan.code, ch.location_code, ch.code, 'Azimuth:', ch.azimuth, 'Dip:', ch.dip) 
                         tr.stats.sac['cmpinc'] = ch.dip
                         tr.stats.sac['cmpaz'] = ch.azimuth
                         stn_in_inventory=1   # trace does have inventory info
@@ -704,8 +707,8 @@ def make_bulk_list_from_stalist(stations, t1, t2, loc='*', channel='BH*'):
             bulk_list.append((net.code, sta.code, loc, channel, t1, t2))
     return bulk_list
 
-def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000, min_az=0, max_az=360,
-                       ifverbose=True):
+def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000, 
+                       min_az=0, max_az=360, ifverbose=True):
     # Remove stations greater than a certain distance from event
     elat = ev.origins[0].latitude
     elon = ev.origins[0].longitude
@@ -754,7 +757,8 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000, min_az=0, max_
                     elat, elon, sta.latitude, sta.longitude)
                 print(sta.code, elon, elat, sta.longitude, sta.latitude,
                       dist / 1000)
-                f.write(outform % (sta.code, net.code, sta.latitude, sta.longitude, dist / 1000, az))
+                f.write(outform % (sta.code, net.code, sta.latitude, 
+                                   sta.longitude, dist / 1000, az))
 
 def write_stream_sac(st, path_to_waveforms, evname_key):
     """
@@ -775,7 +779,8 @@ def write_stream_sac(st, path_to_waveforms, evname_key):
         outfile = path_to_waveforms + "/" + filename 
         tr.write(outfile, format='SAC')
 
-def write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, stations):
+def write_stream_sac_raw(stream_raw, path_to_waveforms, 
+                         evname_key, idb, event, stations):
     """
     write unprocessed (raw) waveforms in SAC format
     """
@@ -791,7 +796,8 @@ def write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, idb, event, 
         # sac header is COUNTS when response is not removed
         tr.stats.sac['kuser0'] = 'RAW'
 
-    stream_raw = add_sac_metadata(stream_raw, idb=idb, ev=event, stalist=stations) 
+    stream_raw = add_sac_metadata(stream_raw, idb=idb, 
+                                  ev=event, stalist=stations)
 
     # write raw waveforms
     write_stream_sac(stream_raw, path_to_waveforms, evname_key)
@@ -906,7 +912,8 @@ def resample_cut(st, freq, evtime, before, after):
         #    st.remove(tr)
         #    continue
 
-def trim_maxstart_minend(stalist, st2, client_name, event, evtime, ifresample, resample_freq, before, after):
+def trim_maxstart_minend(stalist, st2, client_name, event, evtime, 
+                         ifresample, resample_freq, before, after):
     """
     Function to cut the start and end points of a stream.
     The starttime and endtime are set to the latest starttime and earliest
@@ -1115,7 +1122,61 @@ def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
             tr.filter(filter_type, freq=fmin, zerophase=zerophase, \
                     corners=corners)
 
-def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stations, outformat):
+def _units_after_response(tr, scale_factor, outformat):
+    '''
+    Update sac headers after instrument response is removed
+    '''
+    # Change the units if instrument response is removed
+    tr.stats.sac['scale'] = str(scale_factor)
+    if outformat.upper() == 'VEL':
+        tr.stats.sac['kuser0'] = 'M/S'
+    elif outformat.upper() == 'DISP':
+        tr.stats.sac['kuser0'] = 'M'
+    elif outformat.upper() == 'ACC':
+        tr.stats.sac['kuser0'] = 'M/S/S'
+
+def _plot_response():
+    # out directory and filename
+    resp_plot_dir = evname_key + '/' + 'resp_plots'
+    if not os.path.exists(resp_plot_dir):
+        os.makedirs(evname_key + '/' + 'resp_plots')
+    resp_plot = resp_plot_dir + '/' + station_key + '_resp.eps'
+        
+    try:
+        print('%s: Plotting instrument response' % station_key)
+        tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                               output=outformat, plot = resp_plot)
+    except:
+        print('Could not generate response plot for %s' % station_key)
+
+
+def get_pre_filt(ipre_filt, tr):
+    '''
+    Compute pre-filter
+
+    :param ipre_filt: pre-filter type; 0 for no-prefiltering; 1 for
+           pre-filter based on trace length
+    :param tr: obspy trace
+    '''
+    if ipre_filt == 0:
+        pre_filt = None
+    elif ipre_filt == 1:
+        # default
+        # See here: https://ds.iris.edu/files/sac-manual/commands/transfer.html
+        FCUT1_PAR = 4.0 # comments
+        FCUT2_PAR = 0.5
+        fnyq = tr.stats.sampling_rate/2
+        f2 = fnyq * FCUT2_PAR
+        f1 = FCUT1_PAR/(tr.stats.endtime - tr.stats.starttime)
+        f0 = 0.5*f1
+        f3 = 2.0*f2
+        pre_filt = (f0, f1, f2, f3)
+
+    return pre_filt
+
+
+def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, 
+                     scale_factor, stations, outformat):
     """
     Remove instrument response. Or plot (but not both)
     TODO consider separating the remove and plot functions
@@ -1123,27 +1184,11 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
 
     print("\nApply instrument corrections")
     for tr in st:
-        #station_key = tr.stats.network + '.' + tr.stats.station + '.' + \
-        #        tr.stats.location + '.' + tr.stats.channel
         station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
                 tr.stats.location, tr.stats.channel)
 
-        if ipre_filt == 0:
-            pre_filt = None
-        elif ipre_filt == 1:
-
-            # See here: https://ds.iris.edu/files/sac-manual/commands/transfer.html
-            FCUT1_PAR = 4.0 # comments
-            FCUT2_PAR = 0.5
-            fnyq = tr.stats.sampling_rate/2
-            f2 = fnyq * FCUT2_PAR
-            # f1 = 4.0 / trace_length ?
-            f1 = FCUT1_PAR/(tr.stats.endtime - tr.stats.starttime)
-            f0 = 0.5*f1
-            f3 = 2.0*f2
-            pre_filt = (f0, f1, f2, f3)
-            #print('pre_filter: (%f %f %f %f) seconds' % (1/f3, 1/f2, 1/f1, 1/f0))
-
+        if ipre_filt is 0 or ipre_filt is 1:
+            pre_filt = get_pre_filt(ipre_filt, tr) 
 
         # Plot or remove instrument response but not both.
         # (It seems this should be a separate function)
@@ -1163,21 +1208,15 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, scale_factor, stat
                 print('Could not generate response plot for %s' % station_key)
         else:
             try:
-                print('%s: Correcting instrument response, pre-filter (%6.3f, %6.3f, %6.3f, %6.3f)' %\
-                        (station_key, f0, f1, f2, f3))
+                print('%s: Correcting instrument response, pre-filter %s' %\
+                        (station_key, pre_filt))
                 tr.remove_response(inventory=stations, pre_filt=pre_filt, \
                         output=outformat)
             except Exception as e:
                 print("Failed to correct %s due to: %s" % (tr.id, str(e)))
 
-        # Change the units if instrument response is removed
-        tr.stats.sac['scale'] = str(scale_factor)
-        if outformat.upper() == 'VEL':
-            tr.stats.sac['kuser0'] = 'M/S'
-        elif outformat.upper() == 'DISP':
-            tr.stats.sac['kuser0'] = 'M'
-        elif outformat.upper() == 'ACC':
-            tr.stats.sac['kuser0'] = 'M/S/S'
+        # update units after scale factor is removed
+        _units_after_response(tr, scale_factor, outformat)
 
 def do_waveform_QA(stream, client_name, event, evtime, before, after):
     """
