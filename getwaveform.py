@@ -143,6 +143,9 @@ class getwaveform:
         self.user = None
         self.password = None
 
+        # To output lots of processing info
+        self.verbose = False
+
     def run_get_waveform(self):
         """
         Get SAC waveforms for an event
@@ -184,16 +187,18 @@ class getwaveform:
                                       maxlongitude=self.max_lon,
                                       level="response")
             inventory = stations    # so that llnl and iris scripts can be combined
-            print("Printing stations")
-            print(stations)
-            print("Done Printing stations...")
+            if self.verbose:
+                print("Printing stations")
+                print(stations)
+                print("Done Printing stations...")
 
             sta_limit_distance(ref_time_place, 
-                    stations, 
-                    min_dist=self.min_dist, 
-                    max_dist=self.max_dist, 
-                    min_az=self.min_az, 
-                    max_az=self.max_az)
+                               stations, 
+                               min_dist=self.min_dist, 
+                               max_dist=self.max_dist, 
+                               min_az=self.min_az, 
+                               max_az=self.max_az,
+                               ifverbose=self.verbose)
             
             
             print("Downloading waveforms...")
@@ -204,7 +209,8 @@ class getwaveform:
             stream_raw = c.get_waveforms_bulk(bulk_list)
 
             # save ev_info object
-            pickle.dump(self,open(self.evname + '/' + self.evname + '_ev_info.obj', 'wb'))    
+            pickle.dump(self,open(self.evname + '/' + 
+                                  self.evname + '_ev_info.obj', 'wb'))    
          
         elif self.idb==3:
             client_name = "LLNL"
@@ -238,14 +244,13 @@ class getwaveform:
         stream = set_reftime(stream_raw, evtime)
         
         print("--> Adding SAC metadata...")
-        print(inventory)
-        st2 = add_sac_metadata(stream,idb=self.idb, ev=event, stalist=inventory)
+        if self.verbose: print(inventory)
+        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, 
+                               stalist=inventory)
         
         # Do some waveform QA
-        # - (disabled) Throw out traces with missing data
-        # - log waveform lengths and discrepancies
-        # - Fill-in missing data -- Carl request
-        do_waveform_QA(st2, client_name, event, evtime, self.tbefore_sec, self.tafter_sec)
+        do_waveform_QA(st2, client_name, event, evtime, 
+                       self.tbefore_sec, self.tafter_sec)
         
         if self.demean:
             st2.detrend('demean')
@@ -292,12 +297,10 @@ class getwaveform:
             print(tr)
             station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,
                     tr.stats.location, tr.stats.channel[:-1])
-            #stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
             stalist.append(station_key)
 
         # Crazy way of getting a unique list of stations
         stalist = list(set(stalist))
-        #print(stalist)
 
         #  Resample
         if self.resample_TF == True:
@@ -318,7 +321,8 @@ class getwaveform:
 
         # save raw waveforms in SAC format
         path_to_waveforms = evname_key + "/RAW"
-        write_stream_sac_raw(stream_raw, path_to_waveforms, evname_key, self.idb, event, stations=inventory)
+        write_stream_sac_raw(stream_raw, path_to_waveforms, 
+                             evname_key, self.idb, event, stations=inventory)
 
         # Taper waveforms (optional; Generally used when data is noisy- example: HutchisonGhosh2016)
         # https://docs.obspy.org/master/packages/autogen/obspy.core.trace.Trace.taper.html
@@ -331,7 +335,8 @@ class getwaveform:
         write_stream_sac(st2, path_to_waveforms, evname_key)
         
         if self.rotateRTZ:
-            rotate_and_write_stream(st2, evname_key, self.icreateNull, self.rotateUVW)
+            rotate_and_write_stream(st2, evname_key, 
+                                    self.icreateNull, self.rotateUVW)
 
         if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event)
@@ -358,8 +363,9 @@ class getwaveform:
 
     def reference_time_place(self):
         '''
-        returns an event object with different origin time and location (i.e. not centered around the earthquake). 
-        Stations will be subsetted based on reference origin time and location
+        returns an event object with different origin time and location 
+        (i.e. not centered around the earthquake). Stations will be subsetted
+        based on reference origin time and location
         '''
 
         self.ref_time_place = self.ev.copy()
@@ -375,8 +381,9 @@ class getwaveform:
         # get parameters from the cataog
         if self.use_catalog == 1:
             print("WARNING using event data from the IRIS catalog")
-            cat = self.client.get_events(starttime = self.otime - self.sec_before_after_event,\
-                                        endtime = self.otime + self.sec_before_after_event)
+            cat = self.client.get_events(
+                starttime = self.otime - self.sec_before_after_event,
+                endtime = self.otime + self.sec_before_after_event)
             self.ev = cat[0]
             
             # use catalog parameters
@@ -412,7 +419,8 @@ class getwaveform:
             if not self.user and not self.password:
                 self.client = Client("IRIS")
             else:
-                self.client = Client("IRIS",user=self.user,password=self.password)
+                self.client = Client("IRIS", user=self.user, 
+                                     password=self.password)
                 # will only work for events in the 'IRIS' catalog
                 # (future: for Alaska events, read the AEC catalog)
 
@@ -434,8 +442,10 @@ class getwaveform:
 
             # get event time and event ID
             cat = self.client.get_catalog()
-            mintime_str = "time > %s" % (self.otime - self.sec_before_after_event)
-            maxtime_str = "time < %s" % (self.otime + self.sec_before_after_event)
+            mintime_str = "time > %s" % (self.otime - 
+                                         self.sec_before_after_event)
+            maxtime_str = "time < %s" % (self.otime + 
+                                         self.sec_before_after_event)
             print(mintime_str + "\n" + maxtime_str)
 
             self.ev = cat.filter(mintime_str, maxtime_str)
@@ -454,8 +464,9 @@ class getwaveform:
 
     def save_extraction_info(self):
         # track git commit
-        os.system('git log | head -12 > ./' + self.evname + '/' + self.evname + '_last_2git_commits.txt')
-         # save filenames in a file for checking
+        os.system('git log | head -12 > ./' + self.evname + 
+                  '/' + self.evname + '_last_2git_commits.txt')
+        # save filenames in a file for checking
         fname = self.evname + '/' + self.evname + '_all_filenames'
         fcheck = open(fname,'w')
         #for file in sorted(os.listdir(self.evname)):
