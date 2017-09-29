@@ -144,7 +144,7 @@ class getwaveform:
         self.password = None
 
         # To output lots of processing info
-        self.verbose = False
+        self.ifverbose = False
 
     def run_get_waveform(self):
         """
@@ -187,7 +187,7 @@ class getwaveform:
                                       maxlongitude=self.max_lon,
                                       level="response")
             inventory = stations    # so that llnl and iris scripts can be combined
-            if self.verbose:
+            if self.ifverbose:
                 print("Printing stations")
                 print(stations)
                 print("Done Printing stations...")
@@ -198,7 +198,7 @@ class getwaveform:
                                max_dist=self.max_dist, 
                                min_az=self.min_az, 
                                max_az=self.max_az,
-                               ifverbose=self.verbose)
+                               ifverbose=self.ifverbose)
             
             
             print("Downloading waveforms...")
@@ -244,7 +244,7 @@ class getwaveform:
         stream = set_reftime(stream_raw, evtime)
         
         print("--> Adding SAC metadata...")
-        if self.verbose: print(inventory)
+        if self.ifverbose: print(inventory)
         st2 = add_sac_metadata(stream, idb=self.idb, ev=event, 
                                stalist=inventory)
         
@@ -266,7 +266,7 @@ class getwaveform:
             resp_plot_remove(st2, self.ipre_filt, self.pre_filt, 
                     self.iplot_response, 
                     self.scale_factor, 
-                    stations, self.outformat)
+                    stations, self.outformat, self.ifverbose)
         else:
             # output RAW waveforms
             decon=False
@@ -294,7 +294,7 @@ class getwaveform:
         # Get list of unique stations + locaiton (example: 'KDAK.00')
         stalist = []
         for tr in stream.traces:
-            print(tr)
+            if self.ifverbose: print(tr)
             station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,
                     tr.stats.location, tr.stats.channel[:-1])
             stalist.append(station_key)
@@ -315,7 +315,7 @@ class getwaveform:
         # match start and end points for all traces
         st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, 
                 self.resample_TF, self.resample_freq, 
-                self.tbefore_sec, self.tafter_sec)
+                self.tbefore_sec, self.tafter_sec, self.ifverbose)
         if len(st2) == 0:
             raise ValueError("no waveforms left to process!")
 
@@ -336,10 +336,10 @@ class getwaveform:
         
         if self.rotateRTZ:
             rotate_and_write_stream(st2, evname_key, 
-                                    self.icreateNull, self.rotateUVW)
+                                    self.icreateNull, self.rotateUVW, self.ifverbose)
 
         if self.output_cap_weight_file:
-            write_cap_weights(st2, evname_key, client_name, event)
+            write_cap_weights(st2, evname_key, client_name, event, self.ifverbose)
 
         if self.output_event_info:
             write_ev_info(event, evname_key)
@@ -469,7 +469,5 @@ class getwaveform:
         # save filenames in a file for checking
         fname = self.evname + '/' + self.evname + '_all_filenames'
         fcheck = open(fname,'w')
-        #for file in sorted(os.listdir(self.evname)):
-        #    if file.endswith(('*')):
-        #        fcheck.write('%s\n' % file)
+
         os.system('ls -1 ' + self.evname + '/* > ' +  fname)
