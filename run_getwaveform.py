@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     # For looping over events
     # create list if ev_info is a getwaveform object
-    if type(ev_info) == getwaveform:
+    if type(ev_info) not in [list, tuple]: 
         ev_info_list = [ev_info]
     else:
         ev_info_list = ev_info
