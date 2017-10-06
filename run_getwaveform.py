@@ -34,6 +34,7 @@ import util_helpers
 import shutil
 import os
 import sys
+import argparse
 from getwaveform import getwaveform
 
 '''
@@ -45,26 +46,37 @@ event_input_flats         -- Minto Flats (iex=3; multiple events)
 gw_fmtu                   -- llnl paper. NOTE iex doesnt work here
 event_input_mtuq          -- Test events for MTUQ project
 '''
-iproject = 'event_input'   # this is the name of file containing event info
-iex = 0                    # example number within iproject.py script
 
-# Or parse command line input arguments
-if len(sys.argv) == 3:
-    iproject = str(sys.argv[1])
-    iex = int(sys.argv[2])
+
+
+def getargs():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('iproject', nargs='?',
+        help='name of file containing event info',
+        default='event_input')
+
+    parser.add_argument('iex', type=int, nargs='?',
+        help='example number within iproject.py script',
+        default='0')
+
+    return parser.parse_args()
+
 
 
 if __name__ == '__main__':
-    print("Running example iex =", iex)
+    args = getargs()
+
+    print("Running example iex =", args.iex)
 
     # =============================================================================
     # Get extraction info
     # see getwaveform_new.py for input parameters dedcription
     ev_info = getwaveform()              # create getwaveforms object
-    iproject = __import__(iproject)      # file containing all the examples
+    iproject = __import__(args.iproject)      # file containing all the examples
 
     # update default extraction parameters with inputted parameters
-    ev_info = iproject.get_ev_info(ev_info, iex)
+    ev_info = iproject.get_ev_info(ev_info, args.iex)
 
     # For looping over events
     # create list if ev_info is a getwaveform object
