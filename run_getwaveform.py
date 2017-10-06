@@ -53,58 +53,60 @@ if len(sys.argv) == 3:
     iproject = str(sys.argv[1])
     iex = int(sys.argv[2])
 
-print("Running example iex =", iex)
 
-# =============================================================================
-# Get extraction info
-# see getwaveform_new.py for input parameters dedcription
-ev_info = getwaveform()              # create getwaveforms object
-iproject = __import__(iproject)      # file containing all the examples
+if __name__ == '__main__':
+    print("Running example iex =", iex)
 
-# update default extraction parameters with inputted parameters
-ev_info = iproject.get_ev_info(ev_info, iex)
+    # =============================================================================
+    # Get extraction info
+    # see getwaveform_new.py for input parameters dedcription
+    ev_info = getwaveform()              # create getwaveforms object
+    iproject = __import__(iproject)      # file containing all the examples
 
-# For looping over events
-# create list if ev_info is a getwaveform object
-if type(ev_info) == getwaveform:
-    ev_info_list = [ev_info]
-else:
-    ev_info_list = ev_info
+    # update default extraction parameters with inputted parameters
+    ev_info = iproject.get_ev_info(ev_info, iex)
 
-# =============================================================================
-# fetch and process waveforms
+    # For looping over events
+    # create list if ev_info is a getwaveform object
+    if type(ev_info) == getwaveform:
+        ev_info_list = [ev_info]
+    else:
+        ev_info_list = ev_info
 
-nev = len(ev_info_list)
+    # =============================================================================
+    # fetch and process waveforms
 
-for ii in range(nev):
-    ev_info = ev_info_list[ii]
+    nev = len(ev_info_list)
 
-    # Get event and client info
-    # create event objects and reference origin object
-    # (same type as event object) for station selection
-    ev_info.get_events_client()
+    for ii in range(nev):
+        ev_info = ev_info_list[ii]
 
-    # Delete existing data directory
-    # set ev_info.overwrite_ddir=false to extract data from multiple clients
-    ev_info.evname = util_helpers.otime2eid(
-        ev_info.ref_time_place.origins[0].time)
-    ddir = './' + ev_info.evname
-    if ev_info.overwrite_ddir and os.path.exists(ddir):
-        print("\n*** WARNING *** . Deleted existing directory", ddir)
-        shutil.rmtree(ddir)
+        # Get event and client info
+        # create event objects and reference origin object
+        # (same type as event object) for station selection
+        ev_info.get_events_client()
 
-    # KEY: Extract waveforms, IRIS
-    # use try to recover nicely when there are multiple event requests
-    ev_info.run_get_waveform()
-    '''
-    try:
+        # Delete existing data directory
+        # set ev_info.overwrite_ddir=false to extract data from multiple clients
+        ev_info.evname = util_helpers.otime2eid(
+            ev_info.ref_time_place.origins[0].time)
+        ddir = './' + ev_info.evname
+        if ev_info.overwrite_ddir and os.path.exists(ddir):
+            print("\n*** WARNING *** . Deleted existing directory", ddir)
+            shutil.rmtree(ddir)
+
+        # KEY: Extract waveforms, IRIS
+        # use try to recover nicely when there are multiple event requests
         ev_info.run_get_waveform()
-    except Exception as e:
-        print("FATAL. Unable to get data for event", ev_info.evname)
-        print(e)
-        print("Continuing with next event\n")
-        continue
+        '''
+        try:
+            ev_info.run_get_waveform()
+        except Exception as e:
+            print("FATAL. Unable to get data for event", ev_info.evname)
+            print(e)
+            print("Continuing with next event\n")
+            continue
 
-    # save extraction info (git commit and filenames)
-    ev_info.save_extraction_info()
-'''
+        # save extraction info (git commit and filenames)
+        ev_info.save_extraction_info()
+    '''
