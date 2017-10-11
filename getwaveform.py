@@ -16,6 +16,9 @@ from scipy import signal
 import pickle
 
 from util_write_cap import *
+from obspy.taup import TauPyModel
+from obspy.geodetics import kilometer2degrees
+import math
 
 class getwaveform:
     def __init__(self):
@@ -80,7 +83,7 @@ class getwaveform:
         self.channel = '*'                   # all channels     
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
         self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
-        
+        self.pwindow = False
         # Filter parameters
         self.ifFilter = False 
         #------Filter--------------
@@ -164,6 +167,7 @@ class getwaveform:
 
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
+        taupmodel = "ak135"
         
         if self.idb==1:
             print("Preparing request for IRIS ...")
@@ -187,6 +191,7 @@ class getwaveform:
                                       maxlongitude=self.max_lon,
                                       level="response")
             inventory = stations    # so that llnl and iris scripts can be combined
+
             if self.ifverbose:
                 print("Printing stations")
                 print(stations)
@@ -199,15 +204,44 @@ class getwaveform:
                                min_az=self.min_az, 
                                max_az=self.max_az,
                                ifverbose=self.ifverbose)
+            #print("Printing stations NEW")
+            #print(stations)
+            #print("Done Printing stations...")
             
+            #stations.plotprojection="local")
+            # Find P and S arrival times
+            t1s = []
+            t2s = []
+
+            if self.pwindow:
+                model = TauPyModel(model=taupmodel)
+                
+                for net in stations:
+                    for sta in net:
+                        dist, az, baz = obspy.geodetics.gps2dist_azimuth(
+                        event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
+                        dist_deg = kilometer2degrees(dist/1000,radius=6371)
+                        Parrivals1 = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["P"])
+                        Sarrivals1 = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["S"])
+                    
+                        try:
+                            # You are assuming that the first index is the first arrival.  Check this later.
+                            t1s.append(event.origins[0].time + Parrivals1[0].time - self.tbefore_sec)
+                            t2s.append(event.origins[0].time + Parrivals1[0].time + self.tafter_sec)
+                        except:
+                            t1s.append(reftime - self.tbefore_sec)
+                            t2s.append(reftime + self.tafter_sec)
+
+            else:
+                t1s = [reftime - self.tbefore_sec]
+                t2s = [reftime + self.tafter_sec]
             
             print("Downloading waveforms...")
-            bulk_list = make_bulk_list_from_stalist(stations, 
-                    reftime - self.tbefore_sec, 
-                    reftime + self.tafter_sec, 
+            # this needs to change
+            bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 
                     channel=self.channel)
-            stream_raw = c.get_waveforms_bulk(bulk_list)
 
+            stream_raw = c.get_waveforms_bulk(bulk_list)
             # save ev_info object
             pickle.dump(self,open(self.evname + '/' + 
                                   self.evname + '_ev_info.obj', 'wb'))    
@@ -245,8 +279,7 @@ class getwaveform:
         
         print("--> Adding SAC metadata...")
         if self.ifverbose: print(inventory)
-        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, 
-                               stalist=inventory)
+        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory,taup_model= taupmodel)
         
         # Do some waveform QA
         do_waveform_QA(st2, client_name, event, evtime, 

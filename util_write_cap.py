@@ -19,6 +19,10 @@ import util_helpers
 import json
 import matplotlib.pyplot as plt
 import shutil
+from obspy.taup import TauPyModel
+from obspy.geodetics import kilometer2degrees
+import math
+from obspy.core import UTCDateTime
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -383,7 +387,7 @@ def write_ev_info(ev, evname_key):
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
-def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False):
+def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model = "ak135"):
     """
     Add event and station metadata to an Obspy stream
     """
@@ -391,7 +395,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False):
     out_form = ('%s %s %s %s %s %s %s %s %s')
 
     st_del= obspy.Stream() # stream for collecting traces that are to be removed - traces not in the inventory
-
+    totct = 0
     # Loop over each trace
     for tr in st.traces:
         # Write each one
@@ -493,6 +497,30 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False):
                                 header_tag = indx+3
                                 # print('-->', sensor[indx_start:indx_end])
                                 tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end]
+        
+        model = TauPyModel(model=taup_model)
+        dist_deg = kilometer2degrees(tr.stats.sac['dist'],radius=6371)
+        Parrivals1 = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["P"])
+        Sarrivals1 = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["S"])
+
+        try:
+            tr.stats.sac['t5'] = Parrivals1[0].time + (ev.origins[0].time-tr.stats.starttime)
+            tr.stats.sac['t7'] = Parrivals1[0].incident_angle
+
+        except:
+            tr.stats.sac['t5'] = math.nan
+            tr.stats.sac['t7'] = math.nan
+        try:
+            tr.stats.sac['t6'] = Sarrivals1[0].time + (ev.origins[0].time-tr.stats.starttime)
+            tr.stats.sac['t8'] = Sarrivals1[0].incident_angle
+        except:
+            tr.stats.sac['t6'] = math.nan
+            tr.stats.sac['t8'] = math.nan
+            
+        tr.stats.sac['kt5'] = 'P_'+taup_model
+        tr.stats.sac['kt6'] = 'S_'+taup_model
+        tr.stats.sac['kt7'] = 'P_ia_'+taup_model
+        tr.stats.sac['kt8'] = 'S_ia_'+taup_model
 
         # Append all traces that DO NOT have inventory information                        
         if stn_in_inventory==0:
@@ -637,9 +665,16 @@ class Stalist(list):
 
 def make_bulk_list_from_stalist(stations, t1, t2, loc='*', channel='BH*'):
     bulk_list = []
-    for net in stations:
-        for sta in net:
-            bulk_list.append((net.code, sta.code, loc, channel, t1, t2))
+    if len(list(t1))==1:
+        for net in stations:
+            for sta in net:
+                bulk_list.append((net.code, sta.code, loc, channel, t1[0], t2[0]))
+    else:
+        counter = 0
+        for net in stations:
+            for sta in net:
+                bulk_list.append((net.code, sta.code, loc, channel, t1[counter], t2[counter]))
+                counter = counter + 1
     return bulk_list
 
 def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000, 
