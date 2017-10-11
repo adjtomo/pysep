@@ -395,7 +395,6 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
     out_form = ('%s %s %s %s %s %s %s %s %s')
 
     st_del= obspy.Stream() # stream for collecting traces that are to be removed - traces not in the inventory
-    totct = 0
     # Loop over each trace
     for tr in st.traces:
         # Write each one
