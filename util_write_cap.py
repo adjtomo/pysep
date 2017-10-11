@@ -504,22 +504,22 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
 
         try:
             tr.stats.sac['t5'] = Parrivals1[0].time + (ev.origins[0].time-tr.stats.starttime)
-            tr.stats.sac['t7'] = Parrivals1[0].incident_angle
+            tr.stats.sac['user1'] = Parrivals1[0].incident_angle
 
         except:
             tr.stats.sac['t5'] = math.nan
-            tr.stats.sac['t7'] = math.nan
+            tr.stats.sac['user1'] = math.nan
         try:
             tr.stats.sac['t6'] = Sarrivals1[0].time + (ev.origins[0].time-tr.stats.starttime)
-            tr.stats.sac['t8'] = Sarrivals1[0].incident_angle
+            tr.stats.sac['user2'] = Sarrivals1[0].incident_angle
         except:
             tr.stats.sac['t6'] = math.nan
-            tr.stats.sac['t8'] = math.nan
+            tr.stats.sac['user2'] = math.nan
             
         tr.stats.sac['kt5'] = 'P_'+taup_model
         tr.stats.sac['kt6'] = 'S_'+taup_model
-        tr.stats.sac['kt7'] = 'P_ia_'+taup_model
-        tr.stats.sac['kt8'] = 'S_ia_'+taup_model
+        tr.stats.sac['kuser1'] = 'P_ia_'+taup_model
+        tr.stats.sac['kuser2'] = 'S_ia_'+taup_model
 
         # Append all traces that DO NOT have inventory information                        
         if stn_in_inventory==0:
