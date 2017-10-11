@@ -503,14 +503,14 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
         Sarrivals1 = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["S"])
 
         try:
-            tr.stats.sac['t5'] = Parrivals1[0].time + (ev.origins[0].time-tr.stats.starttime)
+            tr.stats.sac['t5'] = Parrivals1[0].time
             tr.stats.sac['user1'] = Parrivals1[0].incident_angle
 
         except:
             tr.stats.sac['t5'] = math.nan
             tr.stats.sac['user1'] = math.nan
         try:
-            tr.stats.sac['t6'] = Sarrivals1[0].time + (ev.origins[0].time-tr.stats.starttime)
+            tr.stats.sac['t6'] = Sarrivals1[0].time
             tr.stats.sac['user2'] = Sarrivals1[0].incident_angle
         except:
             tr.stats.sac['t6'] = math.nan
