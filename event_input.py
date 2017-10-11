@@ -44,6 +44,7 @@ def get_ev_info(ev_info,iex):
         # ev_info.rtime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.emag = 4.6
         ev_info.resample_freq = 50
+        #ev_info.pwindow = False
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations
