@@ -32,6 +32,7 @@ def get_ev_info(ev_info,iex):
         # [7C MMEP 2015]
         # TA
         #ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'
+        #ev_info.network = 'AK' # for testing
         ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
 
         ev_info.channel = 'BH?'
