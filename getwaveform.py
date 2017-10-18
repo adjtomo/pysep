@@ -364,9 +364,19 @@ class getwaveform:
             st2.taper(max_percentage=self.taper, type='hann',max_length=None, side='both')
 
         # save processed waveforms in SAC format
-        path_to_waveforms = evname_key 
+        # evname_key/RAW_processed = traces after waveform_QA + demean + detrend +
+        #                            resample + remove response + filtering +
+        #                            resampling + scaling + tapering
+        # NOTE: The orientation is same as that of extracted waveforms
+        #       Waveforms are rotated to ENZ, in case they are not already orientated,
+        #       in the next step (self.rotateRTZ)
+        path_to_waveforms = os.path.join(evname_key, 'RAW_processed')
         write_stream_sac(st2, path_to_waveforms, evname_key)
         
+        # Rotate to ENZ, RTZ and UVW
+        # Saves :
+        # ENZ files: evname_key/ENZ/
+        # ETZ files: evname_key
         if self.rotateRTZ:
             rotate_and_write_stream(st2, evname_key, 
                                     self.icreateNull, self.rotateUVW, self.ifverbose)

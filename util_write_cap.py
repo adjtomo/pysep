@@ -172,15 +172,20 @@ def rotate_and_write_stream(stream, evname_key,
         substr[1].stats.sac['kcmpnm'] = substr[1].stats.channel
         substr[2].stats.sac['kcmpnm'] = substr[2].stats.channel
  
+        # Create output directory if it doesn't exist
+        outdir_enz =  os.path.join(outdir, 'ENZ')
+        if not(os.path.exists(outdir_enz)):
+            os.makedirs(outdir_enz)
+
         # save NEZ waveforms
         for tr in substr:
-            #outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
-            outfnam = outdir + '/' + evname_key + '.' \
-                + tr.stats.network + '.' + tr.stats.station + '.' \
-                + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
-                + tr.stats.channel[-1].lower()
+            outfnam = os.path.join(outdir_enz, evname_key + '.' \
+                                       + tr.stats.network + '.' + tr.stats.station + '.' \
+                                       + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+                                       + tr.stats.channel[-1].lower())
             tr.write(outfnam, format='SAC')
 
+        # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
         try:
             if ifverbose:
                 print('--> Station ' + netw + '.' + station + '.' + location + '.' + chan + \
@@ -203,7 +208,6 @@ def rotate_and_write_stream(stream, evname_key,
     # replace stream object
     stream = st_new
 
-    # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
     # Fix cmpaz metadata for Radial and Transverse components
     for tr in stream.traces:
         if tr.stats.channel[-1] == 'R':
@@ -223,10 +227,10 @@ def rotate_and_write_stream(stream, evname_key,
         #outfnam = outdir + tr.stats.station + '_' + tr.stats.network + '.' + \
         #    tr.stats.channel[-1].lower()
         #outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
-        outfnam = outdir + '/' + evname_key + '.' \
-                + tr.stats.network + '.' + tr.stats.station + '.' \
-                + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
-                + tr.stats.channel[-1].lower()
+        outfnam = os.path.join(outdir, evname_key + '.' \
+                                   + tr.stats.network + '.' + tr.stats.station + '.' \
+                                   + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+                                   + tr.stats.channel[-1].lower())
         tr.write(outfnam, format='SAC')
 
 def write_cap_weights(stream, evname_key, client_name='', event='', ifverbose=False):

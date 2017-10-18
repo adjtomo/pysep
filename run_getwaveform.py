@@ -46,7 +46,7 @@ gw_fmtu                   -- llnl paper. NOTE iex doesnt work here
 event_input_mtuq          -- Test events for MTUQ project
 '''
 iproject = 'event_input'   # this is the name of file containing event info
-iex = 11                    # example number within iproject.py script
+iex = 0                    # example number within iproject.py script
 
 # Or parse command line input arguments
 if len(sys.argv) == 3:
@@ -95,8 +95,6 @@ for ii in range(nev):
 
     # KEY: Extract waveforms, IRIS
     # use try to recover nicely when there are multiple event requests
-    ev_info.run_get_waveform()
-    '''
     try:
         ev_info.run_get_waveform()
     except Exception as e:
@@ -107,4 +105,4 @@ for ii in range(nev):
 
     # save extraction info (git commit and filenames)
     ev_info.save_extraction_info()
-'''
+
