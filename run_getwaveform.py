@@ -46,7 +46,7 @@ gw_fmtu                   -- llnl paper. NOTE iex doesnt work here
 event_input_mtuq          -- Test events for MTUQ project
 '''
 iproject = 'event_input'   # this is the name of file containing event info
-iex = 0                    # example number within iproject.py script
+iex = 11                    # example number within iproject.py script
 
 # Or parse command line input arguments
 if len(sys.argv) == 3:

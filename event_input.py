@@ -45,6 +45,7 @@ def get_ev_info(ev_info,iex):
         # ev_info.rtime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.emag = 4.6
         ev_info.resample_freq = 50
+        ev_info.scale_factor = 100
         #ev_info.pwindow = False
 
 # Iniskin earthquake
@@ -281,86 +282,7 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,LH?' 
         ev_info.overwrite_ddir = 0
         ev_info.ifsave_stationxml = False
-
-# tomoDD events for Melissa (and local splitting?)     
-    if iex == 10:
-        ev_info.idb = 1
-        ev_info.overwrite_ddir = 1       # delete data dir if it exists
-        ev_info.use_catalog = 0          # do not use event catalog for source parameters
-        ev_info.resample_TF = False
-        ev_info.scale_factor = 1         # no scale factor
-        ev_info.output_cap_weight_file = False
-        ev_info.ifsave_stationxml = False
-
-        events_file = "/home/carltape/PROJECTS/SALMON/data/salmon_tomodd_obspy_sub.txt"
-        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
-        
-        ev_info.ifFilter = True
-        ev_info.filter_type = 'highpass'
-        ev_info.f1 = 1.0
-
-        # subset of stations
-        #ev_info.min_dist = 0
-        #ev_info.max_dist = 200
-        ev_info.min_lat = 59
-        ev_info.max_lat = 62
-        ev_info.min_lon = -156
-        ev_info.max_lon = -148
-
-        ev_info.tbefore_sec = 20
-        ev_info.tafter_sec = 140
-        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
-        #ev_info.network = "AK"
-        ev_info.channel = 'BH?,HH?'
-
-        ev_info_list = []
-        #for xx in range(5,10):
-        for xx in range(len(eids)):
-            ev_info_temp = ev_info.copy()
-            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
-            ev_info_temp.elat = elats[xx]
-            ev_info_temp.elon = elons[xx]
-            ev_info_temp.edep = edeps[xx]
-            ev_info_temp.emag = emags[xx]
-            ev_info_temp.eid = eids[xx]
-            # append getwaveform objects
-            ev_info_list.append(ev_info_temp)
-        
-        # always return ev_info
-        ev_info = ev_info_list
-
-# nuclear event: LLNL (see also iex = 7)
-# GOAL: To find events in the LLNL database based on a target origin time, rather than an eid.
-#       (The reference time (NZYEAR, etc) should then be assigned as the actual origin time,
-#       not the target origin time.)
-# DEBUGGING HELPER LINE:
-#   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
-# (This will show clearly that the reference time is NOT the origin time.)
-    if iex == 11:
-        # to get the LLNL client, which is a private repo from Lion Krischer:
-        # cd $REPOS
-        # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
-        # then follow instructions for install
-        # NOTE: If you update your environment, then you need to reinstall
-        #       the llnl client from inside the new environment.
-        ev_info.idb = 3              # LLNL database
-        # resample_freq = 0    # no resampling and no cutting
-        
-        # TARGET origin time (8.031 s from actual origin time)
-        ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")
-        # evid = 635527        # Hoya event id in LLNL database
-        
-        ev_info.min_dist = 0 
-        ev_info.max_dist = 1200
-        ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 600
-        ev_info.network = '*'        # note that the client will look for BK stations in the list
-        ev_info.channel = 'BH?'      # ALL channels from LLNL are returned
-        # ev_info.scale_factor = 10.0**2  # original
-        ev_info.scale_factor = 2e-1     # Hoya  
-        ev_info.overwrite_ddir = 0
-        ev_info.ifsave_stationxml = False
-
+    
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
