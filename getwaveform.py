@@ -83,7 +83,9 @@ class getwaveform:
         self.channel = '*'                   # all channels     
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
         self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
-        self.pwindow = False
+        self.phase_window = False            # Grab waveforms using phases
+        self.phases = ["P","P"]              # Phases to write to sac files or grab data from
+        self.write_sac_phase = False         # put phase information in sac files
         # Filter parameters
         self.ifFilter = False 
         #------Filter--------------
@@ -167,7 +169,7 @@ class getwaveform:
 
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
-        taupmodel = "ak135"
+        taupmodel = "iasp91"
         
         if self.idb==1:
             print("Preparing request for IRIS ...")
@@ -212,8 +214,8 @@ class getwaveform:
             # Find P and S arrival times
             t1s = []
             t2s = []
-
-            if self.pwindow:
+            phases = self.phases
+            if self.phase_window:
                 model = TauPyModel(model=taupmodel)
                 
                 for net in stations:
@@ -221,13 +223,17 @@ class getwaveform:
                         dist, az, baz = obspy.geodetics.gps2dist_azimuth(
                         event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
                         dist_deg = kilometer2degrees(dist/1000,radius=6371)
-                        Parrivals1 = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["P"])
-                        Sarrivals1 = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["S"])
+                        Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+                        Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
                     
                         try:
-                            # You are assuming that the first index is the first arrival.  Check this later.
-                            t1s.append(event.origins[0].time + Parrivals1[0].time - self.tbefore_sec)
-                            t2s.append(event.origins[0].time + Parrivals1[0].time + self.tafter_sec)
+                            if Phase2arrivals[0].time < Phase1arrivals[0].time:
+                                # You are assuming that the first index is the first arrival.  Check this later.
+                                t1s.append(event.origins[0].time + Phase2arrivals[0].time - self.tbefore_sec)
+                                t2s.append(event.origins[0].time + Phase1arrivals[0].time + self.tafter_sec)
+                            else:
+                                t1s.append(event.origins[0].time + Phase1arrivals[0].time - self.tbefore_sec)
+                                t2s.append(event.origins[0].time + Phase2arrivals[0].time + self.tafter_sec)
                         except:
                             t1s.append(reftime - self.tbefore_sec)
                             t2s.append(reftime + self.tafter_sec)
@@ -279,7 +285,7 @@ class getwaveform:
         
         print("--> Adding SAC metadata...")
         if self.ifverbose: print(inventory)
-        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory,taup_model= taupmodel)
+        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory,taup_model= taupmodel,phases=phases,phase_write = self.write_sac_phase)
         
         # Do some waveform QA
         do_waveform_QA(st2, client_name, event, evtime, 

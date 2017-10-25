@@ -391,7 +391,7 @@ def write_ev_info(ev, evname_key):
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
-def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model = "ak135"):
+def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model = "ak135",phases=["P","P"], phase_write=False):
     """
     Add event and station metadata to an Obspy stream
     """
@@ -501,29 +501,34 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
                                 # print('-->', sensor[indx_start:indx_end])
                                 tr.stats.sac['kt'+str(header_tag)] = sensor[indx_start:indx_end]
         
-        model = TauPyModel(model=taup_model)
-        dist_deg = kilometer2degrees(tr.stats.sac['dist'],radius=6371)
-        Parrivals1 = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["P"])
-        Sarrivals1 = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=["S"])
-
-        try:
-            tr.stats.sac['t5'] = Parrivals1[0].time
-            tr.stats.sac['user1'] = Parrivals1[0].incident_angle
-
-        except:
-            tr.stats.sac['t5'] = math.nan
-            tr.stats.sac['user1'] = math.nan
-        try:
-            tr.stats.sac['t6'] = Sarrivals1[0].time
-            tr.stats.sac['user2'] = Sarrivals1[0].incident_angle
-        except:
-            tr.stats.sac['t6'] = math.nan
-            tr.stats.sac['user2'] = math.nan
+        if phase_write:
+            model = TauPyModel(model=taup_model)
+            dist_deg = kilometer2degrees(tr.stats.sac['dist'],radius=6371)
             
-        tr.stats.sac['kt5'] = 'P_'+taup_model
-        tr.stats.sac['kt6'] = 'S_'+taup_model
-        tr.stats.sac['kuser1'] = 'P_ia_'+taup_model
-        tr.stats.sac['kuser2'] = 'S_ia_'+taup_model
+            Phase1arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+            try:
+                tr.stats.sac['t5'] = Phase1arrivals[0].time
+                tr.stats.sac['user1'] = Phase1arrivals[0].incident_angle
+
+            except:
+                tr.stats.sac['t5'] = math.nan
+                tr.stats.sac['user1'] = math.nan
+
+            tr.stats.sac['kt5'] = phases[0] + '_' + taup_model
+            tr.stats.sac['kuser1'] = phases[0] + '_ia_' + taup_model
+
+            if phases[0] != phases[1]:
+                Phase2arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
+
+                try:
+                    tr.stats.sac['t6'] = Phase2arrivals[0].time
+                    tr.stats.sac['user2'] = Phase2arrivals[0].incident_angle
+                except:
+                    tr.stats.sac['t6'] = math.nan
+                    tr.stats.sac['user2'] = math.nan
+            
+                tr.stats.sac['kt6'] = phases[1] + '_' + taup_model
+                tr.stats.sac['kuser2'] = phases[1] + '_ia_' + taup_model
 
         # Append all traces that DO NOT have inventory information                        
         if stn_in_inventory==0:
