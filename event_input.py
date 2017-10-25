@@ -46,7 +46,7 @@ def get_ev_info(ev_info,iex):
         ev_info.emag = 4.6
         ev_info.resample_freq = 50
         ev_info.scale_factor = 100
-        #ev_info.pwindow = False
+        #ev_info.phase_window = False
 
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations

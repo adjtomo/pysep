@@ -61,7 +61,7 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor
 
-# Icy Bay M3.0
+# Gulf of Alaska M3.0
     if iex == 2:
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
@@ -77,8 +77,9 @@ def get_ev_info(ev_info,iex):
         ev_info.min_dist = 0
         ev_info.max_dist = 500
         ev_info.tbefore_sec = 50
-        ev_info.tafter_sec = 200
+        ev_info.tafter_sec = 600
         ev_info.network = 'AK'
+        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
         ev_info.channel = 'BH?'
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100        # no scale factor
