@@ -1,0 +1,54 @@
+import obspy
+import read_event_obspy_file as reof
+from getwaveform import *
+
+def get_ev_info(ev_info,iex):
+# ===============================================================
+# southern Minto Flats fault
+    if iex == 0:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 1          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2016-11-06T09:29:10.000") 
+        #ev_info.elat = 60.1945
+        #ev_info.elon = -151.6743
+        #ev_info.edep = 64000
+        #ev_info.emag = 5.2
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor
+
+    if iex == 1:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 1          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        #ev_info.otime = obspy.UTCDateTime("2008-09-25T19:34:10.05") 
+        ev_info.otime = obspy.UTCDateTime("2007-02-17T14:51:40.16") 
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor
+
+
+        
+    return(ev_info)
+#=================================================================================
+# END EXAMPLES
+#=================================================================================
