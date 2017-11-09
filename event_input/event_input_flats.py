@@ -70,6 +70,14 @@ def get_ev_info(ev_info,iex):
         ev_info.edep = 18000  # Vipul
         ev_info.emag = 3.50   # Vipul
         # -------------------------------------------------
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2017-11-08T06:49:11")  # AEC prelim
+        ev_info.elat = 64.8632    # AEC Info release
+        ev_info.elon = -148.6255  # AEC Info release
+        ev_info.edep = 16000      # AEC Info release
+        ev_info.emag = 3.6        # AEC Info release
+
+        # -------------------------------------------------
         # VIPUL: WHAT ARE THESE? OTHER EVENTS?
         # ev_info.otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
         # ev_info.otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")

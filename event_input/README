@@ -1,0 +1,3 @@
+pyseis event input files
+
+At the top of each event_input_XXXX.py file, please explain what the set of events is for.
