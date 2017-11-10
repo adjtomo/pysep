@@ -91,8 +91,8 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
         # ev_info.network = 'XV,AK'
         ev_info.channel = 'BH?,HH?'
-        ev_info.scale_factor = 1
-        ev_info.resample_freq = 0
+        #ev_info.scale_factor = 1
+        ev_info.resample_TF = False
         # for CAP
         # ev_info.scale_factor = 10.0**2
         # ev_info.resample_freq = 50 
