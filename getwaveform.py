@@ -16,6 +16,9 @@ from scipy import signal
 import pickle
 
 from util_write_cap import *
+from obspy.taup import TauPyModel
+from obspy.geodetics import kilometer2degrees
+import math
 
 class getwaveform:
     def __init__(self):
@@ -80,7 +83,9 @@ class getwaveform:
         self.channel = '*'                   # all channels     
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
         self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
-        
+        self.phase_window = False            # Grab waveforms using phases
+        self.phases = ["P","P"]              # Phases to write to sac files or grab data from
+        self.write_sac_phase = False         # put phase information in sac files
         # Filter parameters
         self.ifFilter = False 
         #------Filter--------------
@@ -164,6 +169,7 @@ class getwaveform:
 
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
+        taupmodel = "iasp91"
         
         if self.idb==1:
             print("Preparing request for IRIS ...")
@@ -187,6 +193,7 @@ class getwaveform:
                                       maxlongitude=self.max_lon,
                                       level="response")
             inventory = stations    # so that llnl and iris scripts can be combined
+
             if self.ifverbose:
                 print("Printing stations")
                 print(stations)
@@ -199,15 +206,48 @@ class getwaveform:
                                min_az=self.min_az, 
                                max_az=self.max_az,
                                ifverbose=self.ifverbose)
+            #print("Printing stations NEW")
+            #print(stations)
+            #print("Done Printing stations...")
             
+            #stations.plotprojection="local")
+            # Find P and S arrival times
+            t1s = []
+            t2s = []
+            phases = self.phases
+            if self.phase_window:
+                model = TauPyModel(model=taupmodel)
+                
+                for net in stations:
+                    for sta in net:
+                        dist, az, baz = obspy.geodetics.gps2dist_azimuth(
+                        event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
+                        dist_deg = kilometer2degrees(dist/1000,radius=6371)
+                        Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+                        Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
+                    
+                        try:
+                            if Phase2arrivals[0].time < Phase1arrivals[0].time:
+                                # You are assuming that the first index is the first arrival.  Check this later.
+                                t1s.append(event.origins[0].time + Phase2arrivals[0].time - self.tbefore_sec)
+                                t2s.append(event.origins[0].time + Phase1arrivals[0].time + self.tafter_sec)
+                            else:
+                                t1s.append(event.origins[0].time + Phase1arrivals[0].time - self.tbefore_sec)
+                                t2s.append(event.origins[0].time + Phase2arrivals[0].time + self.tafter_sec)
+                        except:
+                            t1s.append(reftime - self.tbefore_sec)
+                            t2s.append(reftime + self.tafter_sec)
+
+            else:
+                t1s = [reftime - self.tbefore_sec]
+                t2s = [reftime + self.tafter_sec]
             
             print("Downloading waveforms...")
-            bulk_list = make_bulk_list_from_stalist(stations, 
-                    reftime - self.tbefore_sec, 
-                    reftime + self.tafter_sec, 
+            # this needs to change
+            bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 
                     channel=self.channel)
-            stream_raw = c.get_waveforms_bulk(bulk_list)
 
+            stream_raw = c.get_waveforms_bulk(bulk_list)
             # save ev_info object
             pickle.dump(self,open(self.evname + '/' + 
                                   self.evname + '_ev_info.obj', 'wb'))    
@@ -245,8 +285,7 @@ class getwaveform:
         
         print("--> Adding SAC metadata...")
         if self.ifverbose: print(inventory)
-        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, 
-                               stalist=inventory)
+        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory,taup_model= taupmodel,phases=phases,phase_write = self.write_sac_phase)
         
         # Do some waveform QA
         do_waveform_QA(st2, client_name, event, evtime, 
@@ -288,7 +327,7 @@ class getwaveform:
         # save station plot
         # Note: Plotted are stations in the inventory and NOT the ones with the traces
         # It could be possible that there might not be waveforms for some of these stations.
-        fig = stations.plot(projection="local", resolution="i", label = False, show=False)
+        fig = inventory.plot(projection="local", resolution="i", label = False, show=False)
         Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
        
         # Get list of unique stations + locaiton (example: 'KDAK.00')
@@ -331,9 +370,19 @@ class getwaveform:
             st2.taper(max_percentage=self.taper, type='hann',max_length=None, side='both')
 
         # save processed waveforms in SAC format
-        path_to_waveforms = evname_key 
+        # evname_key/RAW_processed = traces after waveform_QA + demean + detrend +
+        #                            resample + remove response + filtering +
+        #                            resampling + scaling + tapering
+        # NOTE: The orientation is same as that of extracted waveforms
+        #       Waveforms are rotated to ENZ, in case they are not already orientated,
+        #       in the next step (self.rotateRTZ)
+        path_to_waveforms = os.path.join(evname_key, 'RAW_processed')
         write_stream_sac(st2, path_to_waveforms, evname_key)
         
+        # Rotate to ENZ, RTZ and UVW
+        # Saves :
+        # ENZ files: evname_key/ENZ/
+        # ETZ files: evname_key
         if self.rotateRTZ:
             rotate_and_write_stream(st2, evname_key, 
                                     self.icreateNull, self.rotateUVW, self.ifverbose)

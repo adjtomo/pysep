@@ -63,7 +63,6 @@ def getargs():
     return parser.parse_args()
 
 
-
 if __name__ == '__main__':
     args = getargs()
 
@@ -110,7 +109,7 @@ if __name__ == '__main__':
         # KEY: Extract waveforms, IRIS
         # use try to recover nicely when there are multiple event requests
         ev_info.run_get_waveform()
-        '''
+        
         try:
             ev_info.run_get_waveform()
         except Exception as e:
@@ -121,4 +120,4 @@ if __name__ == '__main__':
 
         # save extraction info (git commit and filenames)
         ev_info.save_extraction_info()
-    '''
+        
