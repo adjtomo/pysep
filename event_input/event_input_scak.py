@@ -222,7 +222,35 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor
-        
+      
+# South-east unusual event
+    if iex == 9:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2016-12-30T18:27:10.406") 
+        ev_info.elat = 58.6716
+        ev_info.elon = -134.7691
+        ev_info.edep = 274
+        ev_info.emag = 3.43
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor
+        ev_info.ifFilter = True
+        ev_info.filter_type = 'bandpass'
+        ev_info.f1 = 1/100  # fmin
+        ev_info.f2 = 1/10  # fmax
+        ev_info.corners = 4
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
