@@ -1,19 +1,29 @@
 '''
 # ============================================================================
 run_getwaveform.py
-This script will fetch seismic waveforms, then process them,
-then write sac files.
+This script will fetch seismic waveforms, then process them, then write sac files.
 Used heavily within the UAF seismology group.
+
 This script contains a large number of examples in two categories:
 A. examples that target a current or previous bug
 B. examples of important events for modeling efforts that others
    may want to reproduce
+
 In the future, we will try to automatically run these examples for
 each code update.
 For now, we will simply try to regularly re-run the examples.
 contributors: Celso Alvizuri, Lion Krischer, Vipul Silwal, Carl Tape
+
 To run this script:
-python run_getwaveform.py
+Option A: from the command line
+python run_getwaveform.py NAME_OF_EVENT_INPUT_FILE EXAMPLE_INDEX
+python run_getwaveform.py event_input 3
+event input file needs to be linked locally:
+   ln -s event_input/event_input_flats.py .
+
+Option B: within a bash script
+check_getwaveform.bash will run all examples
+
 TO DO
 + filetags for the case iFilter = True (like lp10, bp10_40, etc)
 + provide better options and handling for data gaps (like: "toss
