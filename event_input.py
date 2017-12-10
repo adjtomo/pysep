@@ -48,10 +48,10 @@ def get_ev_info(ev_info,iex):
         ev_info.scale_factor = 100
         #ev_info.phase_window = False
         #-------for specfem------------
-        ev_info.tbefore_sec = 0
-        ev_info.resample_TF = False
-        ev_info.scale_factor = 1
-        ev_info.outformat = 'DISP'
+        #ev_info.tbefore_sec = 0
+        #ev_info.resample_TF = False
+        #ev_info.scale_factor = 1
+        #ev_info.outformat = 'DISP'
         #------------------------------
 
 # Iniskin earthquake

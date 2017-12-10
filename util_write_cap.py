@@ -51,20 +51,9 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
     # Apply twice to get rid of the phase distortion.
     trace.data = signal.filtfilt(b, a, trace.data)
 
-def rotate_and_write_stream(stream, evname_key, 
-                            icreateNull=True, ifrotateUVW = False, ifverbose = False):
-    """
-    Rotate an obspy stream to backazimuth
+#------------rotations---------------------
 
-    Must contain event and station metadata in the sac header
-    (stream.traces[0].stats.sac)
-
-    stream - Obspy Stream() object
-    reftime- UTCDateTime() object; this will be the output directory
-        (default to current directory)
-    """
-
-    # get name key for output directory and files
+def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=True, ifverbose = False):
     outdir = evname_key                  
 
     if not os.path.exists(outdir):
@@ -74,7 +63,7 @@ def rotate_and_write_stream(stream, evname_key,
     # Sorted stream makes for structured loop
     stream.sort()
 
-    # Get list of unique stations + locaiton (example: 'KDAK.00')
+    # Get list of unique stations + location (example: 'KDAK.00')
     
     stalist = []
     for tr in stream.traces:
@@ -114,11 +103,6 @@ def rotate_and_write_stream(stream, evname_key,
                     substr[itr].stats.sac['cmpaz'] = az1
                 if itr == 2:
                     substr[itr].stats.sac['cmpaz'] = az1 + 90.0
-
-        # Rotate to UVW
-        if ifrotateUVW:
-            substr2 = substr.copy()
-            rotate2UVW(substr2,evname_key)
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
@@ -171,19 +155,77 @@ def rotate_and_write_stream(stream, evname_key,
         substr[0].stats.sac['kcmpnm'] = substr[0].stats.channel
         substr[1].stats.sac['kcmpnm'] = substr[1].stats.channel
         substr[2].stats.sac['kcmpnm'] = substr[2].stats.channel
- 
-        # Create output directory if it doesn't exist
-        outdir_enz =  os.path.join(outdir, 'ENZ')
-        if not(os.path.exists(outdir_enz)):
-            os.makedirs(outdir_enz)
+
 
         # save NEZ waveforms
-        for tr in substr:
-            outfnam = os.path.join(outdir_enz, evname_key + '.' \
-                                       + tr.stats.network + '.' + tr.stats.station + '.' \
-                                       + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
-                                       + tr.stats.channel[-1].lower())
-            tr.write(outfnam, format='SAC')
+        if isave_ENZ:
+            # Create output directory if it doesn't exist
+            outdir_enz =  os.path.join(outdir, 'ENZ')
+            if not(os.path.exists(outdir_enz)):
+                os.makedirs(outdir_enz)
+
+            for tr in substr:
+                outfnam = os.path.join(outdir_enz, evname_key + '.' \
+                                           + tr.stats.network + '.' + tr.stats.station + '.' \
+                                           + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+                                           + tr.stats.channel[-1].lower())
+                tr.write(outfnam, format='SAC')
+
+def rotate2UVW(stream, evname_key):
+    # Directory is made, now rotate
+    # Sorted stream makes for structured loop
+    stream.sort()
+
+    # Get list of unique stations + location (example: 'KDAK.00')
+    stalist = []
+    for tr in stream.traces:
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+    stalist = list(set(stalist))
+        
+    # Initialize stream object
+    # For storing extra traces in case there are less than 3 compnents   
+    st_new = obspy.Stream()
+
+    for stn in stalist:
+        # split STNM.LOC
+        netw, station, location, tmp = stn.split('.')
+        chan = tmp + '*'
+        # Get 3 traces (subset based on matching station name and location code)
+        substr = stream.select(network=netw,station=station,
+                               location=location,channel=chan)
+        substr.sort()
+
+        substr2 = substr.copy()
+        rotate2UVW_station(substr2,evname_key)
+
+def rotate2RTZ(stream, evname_key, ifverbose = False):
+    
+    outdir = evname_key
+    
+    # Directory is made, now rotate
+    # Sorted stream makes for structured loop
+    stream.sort()
+
+    # Get list of unique stations + location (example: 'KDAK.00')
+    stalist = []
+    for tr in stream.traces:
+        #stalist.append(tr.stats.station)
+        stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
+    stalist = list(set(stalist))
+        
+    # Initialize stream object
+    # For storing extra traces in case there are less than 3 compnents   
+    st_new = obspy.Stream()
+
+    for stn in stalist:
+        # split STNM.LOC
+        netw, station, location, tmp = stn.split('.')
+        chan = tmp + '*'
+        # Get 3 traces (subset based on matching station name and location code)
+        substr = stream.select(network=netw,station=station,
+                               location=location,channel=chan)
+        substr.sort()
 
         # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
         try:
@@ -193,45 +235,40 @@ def rotate_and_write_stream(stream, evname_key,
                 print('--->',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
                           substr[1].stats.channel, substr[1].stats.sac['cmpinc'],substr[1].stats.sac['cmpaz'], \
                           substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
+
             substr.rotate('NE->RT')
+
             if ifverbose:
                 print('--->',substr[0].stats.channel, substr[0].stats.sac['cmpinc'], substr[0].stats.sac['cmpaz'], \
                           substr[1].stats.channel, substr[1].stats.sac['cmpinc'],substr[1].stats.sac['cmpaz'], \
                           substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
+
+            # Fix cmpaz metadata for Radial and Transverse components
+            for tr in stream.traces:
+                if tr.stats.channel[-1] == 'R':
+                    tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'R'
+                    tr.stats.sac['cmpaz'] = tr.stats.sac['az']
+                elif tr.stats.channel[-1] == 'T':
+                    tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'T'
+                    tr.stats.sac['cmpaz'] = tr.stats.sac['az']+90.0
+                    if tr.stats.sac['cmpaz'] > 360.0:
+                        tr.stats.sac['cmpaz'] += -360
+            
+                # Now Write
+                # 20160805 cralvizuri@alaska.edu -- some llnl stations have traces with
+                # multiple channel types. The original filename does not include 
+                # channel, so they're overwritten. eg KNB_BB and KNB_HF both are output
+                # as KNB_[component], so one is lost. this change fixes that.
+                outfnam = os.path.join(outdir, evname_key + '.' \
+                                           + tr.stats.network + '.' + tr.stats.station + '.' \
+                                           + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
+                                           + tr.stats.channel[-1].lower())
+                tr.write(outfnam, format='SAC')
+            
         except:
             "Rotation failed, skipping..."
             continue
 
-        # append substream to the main stream
-        st_new = st_new + substr
-
-    # replace stream object
-    stream = st_new
-
-    # Fix cmpaz metadata for Radial and Transverse components
-    for tr in stream.traces:
-        if tr.stats.channel[-1] == 'R':
-            tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'R'
-            tr.stats.sac['cmpaz'] = tr.stats.sac['az']
-        elif tr.stats.channel[-1] == 'T':
-            tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'T'
-            tr.stats.sac['cmpaz'] = tr.stats.sac['az']+90.0
-            if tr.stats.sac['cmpaz'] > 360.0:
-                tr.stats.sac['cmpaz'] += -360
-
-        # Now Write
-        # 20160805 cralvizuri@alaska.edu -- some llnl stations have traces with
-        # multiple channel types. The original filename does not include 
-        # channel, so they're overwritten. eg KNB_BB and KNB_HF both are output
-        # as KNB_[component], so one is lost. this change fixes that.
-        #outfnam = outdir + tr.stats.station + '_' + tr.stats.network + '.' + \
-        #    tr.stats.channel[-1].lower()
-        #outfnam = outdir + reftime.strftime('%Y%m%d%H%M%S%f')[:-3] + '.' \
-        outfnam = os.path.join(outdir, evname_key + '.' \
-                                   + tr.stats.network + '.' + tr.stats.station + '.' \
-                                   + tr.stats.location + '.' + tr.stats.channel[:-1] + '.' \
-                                   + tr.stats.channel[-1].lower())
-        tr.write(outfnam, format='SAC')
 
 def write_cap_weights(stream, evname_key, client_name='', event='', ifverbose=False):
     """
@@ -1328,7 +1365,7 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
     print("Done quality check")
 
 
-def rotate2UVW(st,evname_key):
+def rotate2UVW_station(st,evname_key):
     """
     Rotate to UVW orthogonal frame.
     In Symmetric Triaxial Seismometers, the sensing elements are also arranged to be mutually orthogonal, but instead of one axis being vertical, all three are inclined upwards from the horizontal at precisely the same angle, as if they were aligned with the edges of a cube balanced on a corner.

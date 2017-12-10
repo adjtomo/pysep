@@ -129,8 +129,6 @@ class getwaveform:
         self.scale_factor = 1             # for CAP use 10**2  (to convert m/s to cm/s)
 
         # Pre-processing (manily for CAP)
-        self.rotateRTZ = True             # Also generate rotated to RTZ waveforms
-        self.rotateUVW = False            # This option works only if 'rotateRTZ = True'
         self.output_cap_weight_file = True# output cap weight files
         self.detrend = True               # detrend waveforms
         self.demean = True                # demean waveforms
@@ -142,6 +140,14 @@ class getwaveform:
         self.iplot_response = False       # plot response function
         self.ifplot_spectrogram = False   # plot spectrograms 
         self.ifsave_stationxml = True     # save station xml file (for adjoint tomo)
+
+        # Waveforms to be saved
+        self.rotateRTZ = True             # Rotate and save the RTZ components
+        self.rotateUVW = False            # Rotate and save the UVW components
+        self.isave_raw = False            # save raw waveforms
+        self.isave_raw_processed = False  # save processed waveforms just before rotation to ENZ
+        #self.rotateENZ = True             # rotate extracted waveforms to ENZ
+        self.isave_ENZ = True             # save ENZ
 
         # username and password for embargoed IRIS data
         # Register here: http://ds.iris.edu/ds/nodes/dmc/forms/restricted-data-registration/
@@ -359,9 +365,10 @@ class getwaveform:
             raise ValueError("no waveforms left to process!")
 
         # save raw waveforms in SAC format
-        path_to_waveforms = evname_key + "/RAW"
-        write_stream_sac_raw(stream_raw, path_to_waveforms, 
-                             evname_key, self.idb, event, stations=inventory)
+        if self.isave_raw:
+            path_to_waveforms = evname_key + "/RAW"
+            write_stream_sac_raw(stream_raw, path_to_waveforms, 
+                                 evname_key, self.idb, event, stations=inventory)
 
         # Taper waveforms (optional; Generally used when data is noisy- example: HutchisonGhosh2016)
         # https://docs.obspy.org/master/packages/autogen/obspy.core.trace.Trace.taper.html
@@ -376,16 +383,29 @@ class getwaveform:
         # NOTE: The orientation is same as that of extracted waveforms
         #       Waveforms are rotated to ENZ, in case they are not already orientated,
         #       in the next step (self.rotateRTZ)
-        path_to_waveforms = os.path.join(evname_key, 'RAW_processed')
-        write_stream_sac(st2, path_to_waveforms, evname_key)
+        if self.isave_raw_processed:
+            path_to_waveforms = os.path.join(evname_key, 'RAW_processed')
+            write_stream_sac(st2, path_to_waveforms, evname_key)
+
+        # Rotate to ENZ (save: optional)
+        #if self.rotateENZ:
+        rotate2ENZ(st2, evname_key, self.isave_ENZ, self.icreateNull, self.ifverbose)
+
+        # rotate to UVW and save
+        if self.rotateUVW:
+            rotate2UVW(st2, evname_key) 
+
+        # Rotate to RTZ and save
+        if self.rotateRTZ:
+            rotate2RTZ(st2, evname_key)
         
         # Rotate to ENZ, RTZ and UVW
         # Saves :
         # ENZ files: evname_key/ENZ/
-        # ETZ files: evname_key
-        if self.rotateRTZ:
-            rotate_and_write_stream(st2, evname_key, 
-                                    self.icreateNull, self.rotateUVW, self.ifverbose)
+        # RTZ files: evname_key
+        #if self.rotateRTZ:
+        #    rotate_and_write_stream(st2, evname_key, 
+        #                            self.icreateNull, self.rotateUVW, self.ifverbose)
 
         if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event, self.ifverbose)
