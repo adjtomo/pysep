@@ -125,7 +125,7 @@ def get_ev_info(ev_info,iex):
         ev_info.edep = 125645.3
         ev_info.emag = 7.10
         ev_info.rtime = ev_info.otime
-        ev_info.tafter_sec = 600
+        #ev_info.tafter_sec = 600
 
     if iex == 12:
         # Chile Event
@@ -135,7 +135,7 @@ def get_ev_info(ev_info,iex):
         ev_info.edep = 22400.0
         ev_info.emag = 8.30
         ev_info.rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
-        ev_info.tafter_sec = 200
+        #ev_info.tafter_sec = 200 # Is this a problem? EQ and prenoise should have the same times
 
     if iex == 13:
         # Mariana Event observed by FLATS
@@ -170,5 +170,32 @@ def get_ev_info(ev_info,iex):
         ev_info.edep = 18000
         ev_info.emag = 3.5
         ev_info.rtime = ev_info.otime
+
+    if iex == 17:
+        ev_info.otime = obspy.UTCDateTime("2016-05-18T03:25:48")
+        ev_info.elat = 65.2466
+        ev_info.elon = -151.0651
+        ev_info.edep = 15156
+        ev_info.emag = 4.2
+        ev_info.rtime = ev_info.otime
+    
+    if iex == 18:
+        ev_info.otime = obspy.UTCDateTime("2017-11-08T06:49:11")
+        ev_info.elat = 64.8620 # temporary catalog
+        ev_info.elon = -148.6552
+        ev_info.edep = 16000
+        ev_info.emag = 3.6 # vipul mt inversion
+        ev_info.rtime = ev_info.otime
+
+    if iex == 19:
+        # North Korea
+        ev_info.otime = obspy.UTCDateTime("2017-09-03T03:30:01")
+        ev_info.elat = 41.332
+        ev_info.elon = 129.030
+        ev_info.edep = 0
+        ev_info.emag = 6.3
+        ev_info.rtime = ev_info.otime
+        ev_info.rtime = obspy.UTCDateTime("2017-09-03T03:38:55") 
+        #ev_info.tafter_sec = 600
 
     return(ev_info)

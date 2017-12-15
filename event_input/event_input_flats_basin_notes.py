@@ -175,7 +175,36 @@ def get_ev_info(ev_info,iex):
         ev_info.otime = obspy.UTCDateTime("2016-05-18T03:25:48")
         ev_info.elat = 65.2466
         ev_info.elon = -151.0651
-        ev_info.edep = 151562
+        ev_info.edep = 15156
         ev_info.emag = 4.2
         ev_info.rtime = ev_info.otime
+    
+    if iex == 18:
+        ev_info.otime = obspy.UTCDateTime("2017-11-08T06:49:11")
+        ev_info.elat = 64.8620 # temporary catalog
+        ev_info.elon = -148.6552
+        ev_info.edep = 16000
+        ev_info.emag = 3.6 # vipul mt inversion
+        ev_info.rtime = ev_info.otime
+
+    if iex == 19:
+        # North Korea
+        ev_info.otime = obspy.UTCDateTime("2017-09-03T03:30:01")
+        ev_info.elat = 41.332
+        ev_info.elon = 129.030
+        #ev_info.elat = 61.332
+        #ev_info.elon = -149.030
+        ev_info.edep = 0
+        ev_info.emag = 6.3
+        ev_info.rtime = ev_info.otime
+        ev_info.rtime = obspy.UTCDateTime("2017-09-03T03:38:55") 
+        #ev_info.isave_raw = True            # save raw waveforms
+        #ev_info.isave_raw_processed = True
+        #ev_info.phase_window = False
+        #ev_info.phases = ["P","S"]
+        #ev_info.write_sac_phase = True
+        
+        #ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 600
+        #ev_info.max_dist = 10
     return(ev_info)
