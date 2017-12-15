@@ -231,7 +231,10 @@ class getwaveform:
                         dist_deg = kilometer2degrees(dist/1000,radius=6371)
                         Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
                         Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
-                    
+                        somearr = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg)
+                        print("Print arrivals")
+                        print(somearr)
+
                         try:
                             if Phase2arrivals[0].time < Phase1arrivals[0].time:
                                 # You are assuming that the first index is the first arrival.  Check this later.
@@ -333,9 +336,14 @@ class getwaveform:
         # save station plot
         # Note: Plotted are stations in the inventory and NOT the ones with the traces
         # It could be possible that there might not be waveforms for some of these stations.
-        fig = inventory.plot(projection="local", resolution="i", label = False, show=False)
-        Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
-       
+        #fig = inventory.plot(projection="local", resolution="i", label = False, show=False)
+        #Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
+        try:
+            fig = inventory.plot(projection="local", resolution="i", label = False, show=False)
+            Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
+        except:
+            print("There is a problem with creating the station map!")
+
         # Get list of unique stations + locaiton (example: 'KDAK.00')
         stalist = []
         for tr in stream.traces:
