@@ -231,9 +231,9 @@ class getwaveform:
                         dist_deg = kilometer2degrees(dist/1000,radius=6371)
                         Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
                         Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
-                        somearr = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg)
-                        print("Print arrivals")
-                        print(somearr)
+                        #somearr = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg)
+                        #print("Print arrivals")
+                        #print(somearr)
 
                         try:
                             if Phase2arrivals[0].time < Phase1arrivals[0].time:
