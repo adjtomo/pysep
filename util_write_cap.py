@@ -156,7 +156,6 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=True, ifverbose =
         substr[1].stats.sac['kcmpnm'] = substr[1].stats.channel
         substr[2].stats.sac['kcmpnm'] = substr[2].stats.channel
 
-
         # save NEZ waveforms
         if isave_ENZ:
             # Create output directory if it doesn't exist
@@ -199,7 +198,7 @@ def rotate2UVW(stream, evname_key):
         substr2 = substr.copy()
         rotate2UVW_station(substr2,evname_key)
 
-def rotate2RTZ(stream, evname_key, ifverbose = False):
+def rotate2RTZ(stream, evname_key, ifverbose=False):
     
     outdir = evname_key
     
@@ -218,13 +217,14 @@ def rotate2RTZ(stream, evname_key, ifverbose = False):
     # For storing extra traces in case there are less than 3 compnents   
     st_new = obspy.Stream()
 
+    # XXX: Perhaps not using the subtream can speed up the rotation
     for stn in stalist:
         # split STNM.LOC
         netw, station, location, tmp = stn.split('.')
         chan = tmp + '*'
         # Get 3 traces (subset based on matching station name and location code)
-        substr = stream.select(network=netw,station=station,
-                               location=location,channel=chan)
+        substr = stream.select(network=netw, station=station,
+                               location=location, channel=chan)
         substr.sort()
 
         # stream.rotate('NE->RT') #And then boom, obspy rotates everything!
@@ -244,7 +244,7 @@ def rotate2RTZ(stream, evname_key, ifverbose = False):
                           substr[2].stats.channel, substr[2].stats.sac['cmpinc'], substr[2].stats.sac['cmpaz'])
 
             # Fix cmpaz metadata for Radial and Transverse components
-            for tr in stream.traces:
+            for tr in substr.traces:
                 if tr.stats.channel[-1] == 'R':
                     tr.stats.sac['kcmpnm'] = tr.stats.channel[0:2] + 'R'
                     tr.stats.sac['cmpaz'] = tr.stats.sac['az']

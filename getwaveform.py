@@ -146,7 +146,7 @@ class getwaveform:
         self.rotateUVW = False            # Rotate and save the UVW components
         self.isave_raw = False            # save raw waveforms
         self.isave_raw_processed = False  # save processed waveforms just before rotation to ENZ
-        #self.rotateENZ = True             # rotate extracted waveforms to ENZ
+        #self.rotateENZ = True            # rotate extracted waveforms to ENZ
         self.isave_ENZ = True             # save ENZ
 
         # username and password for embargoed IRIS data
@@ -291,7 +291,9 @@ class getwaveform:
         
         print("--> Adding SAC metadata...")
         if self.ifverbose: print(inventory)
-        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory,taup_model= taupmodel,phases=phases,phase_write = self.write_sac_phase)
+        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory, 
+                               taup_model= taupmodel, phases=phases, 
+                               phase_write = self.write_sac_phase)
         
         # Do some waveform QA
         do_waveform_QA(st2, client_name, event, evtime, 
@@ -397,25 +399,22 @@ class getwaveform:
 
         # Rotate to RTZ and save
         if self.rotateRTZ:
-            rotate2RTZ(st2, evname_key)
-        
-        # Rotate to ENZ, RTZ and UVW
-        # Saves :
-        # ENZ files: evname_key/ENZ/
-        # RTZ files: evname_key
-        #if self.rotateRTZ:
-        #    rotate_and_write_stream(st2, evname_key, 
-        #                            self.icreateNull, self.rotateUVW, self.ifverbose)
+            rotate2RTZ(st2, evname_key, self.ifverbose) 
+            
 
+        # save CAP weight files
         if self.output_cap_weight_file:
             write_cap_weights(st2, evname_key, client_name, event, self.ifverbose)
 
+        # save event info
         if self.output_event_info:
             write_ev_info(event, evname_key)
 
+        # Plot spectrograms
         if self.ifplot_spectrogram:
             plot_spectrogram(st2, evname_key)
 
+        # save pole zero file (Needed for MouseTrap)
         if self.ifsave_sacpaz:
             write_resp(inventory,evname_key)
 
