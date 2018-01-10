@@ -391,7 +391,7 @@ class getwaveform:
 
         # Rotate to ENZ (save: optional)
         #if self.rotateENZ:
-        rotate2ENZ(st2, evname_key, self.isave_ENZ, self.icreateNull, self.ifverbose)
+        st2 = rotate2ENZ(st2, evname_key, self.isave_ENZ, self.icreateNull, self.ifverbose)
 
         # rotate to UVW and save
         if self.rotateUVW:

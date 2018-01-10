@@ -87,6 +87,7 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=True, ifverbose =
                                location=location,channel=chan)
         substr.sort()
         if len(substr) < 3 and icreateNull:
+            # IF YOU DO THIS REMEMBER TO SET THE WEIGHTS TO ZERO FOR THESE COMPONENTS
             print('WARNING:', len(substr), 'traces available for rotation. Adding NULL traces - ', \
                       netw + '.' + station + '.' + location + '.' + chan)
             d1 = substr[0].data
@@ -170,6 +171,14 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=True, ifverbose =
                                            + tr.stats.channel[-1].lower())
                 tr.write(outfnam, format='SAC')
 
+        # append substream to the main stream
+        st_new = st_new + substr
+
+    # replace stream object
+    stream = st_new
+
+    return stream
+
 def rotate2UVW(stream, evname_key):
     # Directory is made, now rotate
     # Sorted stream makes for structured loop
@@ -181,10 +190,6 @@ def rotate2UVW(stream, evname_key):
         #stalist.append(tr.stats.station)
         stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
     stalist = list(set(stalist))
-        
-    # Initialize stream object
-    # For storing extra traces in case there are less than 3 compnents   
-    st_new = obspy.Stream()
 
     for stn in stalist:
         # split STNM.LOC
@@ -212,10 +217,6 @@ def rotate2RTZ(stream, evname_key, ifverbose=False):
         #stalist.append(tr.stats.station)
         stalist.append(tr.stats.network + '.' + tr.stats.station +'.'+ tr.stats.location + '.'+ tr.stats.channel[:-1])
     stalist = list(set(stalist))
-        
-    # Initialize stream object
-    # For storing extra traces in case there are less than 3 compnents   
-    st_new = obspy.Stream()
 
     # XXX: Perhaps not using the subtream can speed up the rotation
     for stn in stalist:
