@@ -69,7 +69,29 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor
 
-        
+# December 30, 2018 Healy earthquake M4.1
+    if iex == 3:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2017-12-30T11:43:16") # AEC prelim
+        ev_info.elat = 63.8200
+        ev_info.elon = -149.0497
+        ev_info.edep = 6000
+        ev_info.emag = 4.1
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor        
+
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
