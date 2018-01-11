@@ -17,7 +17,7 @@ def get_ev_info(ev_info,iex):
         ev_info.tafter_sec = 300
         ev_info.resample_freq = 50
         ev_info.scale_factor = 100
-        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,ZE'
+        ev_info.network = 'AK,AT,AV,CN,II,IU,TA,US,XM,XV,XZ,YV,ZE'
         ev_info.channel = 'BH?,HH?,EH?'
 
         ev_info.user = 'vsilwal@alaska.edu'
