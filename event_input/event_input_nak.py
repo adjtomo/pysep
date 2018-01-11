@@ -20,14 +20,16 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
         ev_info.channel = 'BH?,HH?'
         
-        # Multiple events files
-        events_file = "./test_data/nak_obspy.txt"
+        # events frmo get_events_nak.m
+        #events_file = "./test_data/nak_obspy.txt"
+        #ievent = 8
+        # three recent events (ievent = 1, 2, or 3)
+        events_file = "./test_data/nak_supp_obspy.txt"
+        ievent = 1
         
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
         ev_info_list = []
-        ievent = 8
-        # use iex variable to get a single event
         for xx in range(ievent-1,ievent):
             ev_info_temp = ev_info.copy()
             ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
