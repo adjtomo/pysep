@@ -23,9 +23,9 @@ def get_ev_info(ev_info,iex):
         # events frmo get_events_nak.m
         #events_file = "./test_data/nak_obspy.txt"
         #ievent = 8
-        # three recent events (ievent = 1, 2, or 3)
+        # three recent events
         events_file = "./test_data/nak_supp_obspy.txt"
-        ievent = 1
+        ievent = 2   # 1:Manley, 2:Healy, 3:Canada
         
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
