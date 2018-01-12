@@ -24,9 +24,11 @@ def get_ev_info(ev_info,iex):
         #events_file = "./test_data/nak_obspy.txt"
         #ievent = 6
         # three recent events
-        #events_file = "./test_data/nak_supp_obspy.txt"
+        events_file = "./test_data/nak_supp_obspy.txt"
         ievent = 2               # 1:Manley, 2:Healy, 3:Canada
-        
+
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+
         ev_info_list = []
         for xx in range(ievent-1,ievent):
             ev_info_temp = ev_info.copy()
