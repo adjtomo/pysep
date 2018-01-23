@@ -278,15 +278,33 @@ def get_ev_info(ev_info,iex):
         ev_info.max_dist = 1000
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 600
-        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV,TA'  # note: cannot use '*' because of IM
         ev_info.channel = 'BH?,HH?'
+        #ev_info.channel = 'BN?,HN?,EN?'    # strong motion
         ev_info.use_catalog = 0 
         ev_info.elat = 56.046
         ev_info.elon = -149.073
         ev_info.edep = 25000
         ev_info.emag = 7.9
-        ev_info.resample_freq = 50
-        ev_info.scale_factor = 100         # no scale factor
+        ev_info.resample_freq = 50         # for CAP
+        ev_info.scale_factor = 100         # for CAP
+
+        # parameters for examining step response (causal low-pass filter on raw waveforms)
+        # delete AUQ, SPCP, SPBG
+        #ev_info.ifFilter = True
+        #ev_info.filter_type = 'lowpass'
+        #ev_info.f1 = 1/4
+        #ev_info.zerophase = False
+        #ev_info.remove_response = False
+        #ev_info.ipre_filt = 0
+        #ev_info.demean = False
+        #ev_info.detrend = False
+        #ev_info.resample_TF = False        # if False then resample_freq is taken from SAC files
+        #ev_info.scale_factor = 1           # no scale factor
+        #ev_info.rotateRTZ = False
+        #ev_info.rotateUVW = True
+        #ev_info.isave_raw = True
+    
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
