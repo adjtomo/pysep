@@ -270,6 +270,23 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50
         ev_info.scale_factor = 100         # no scale factor
 
+# Mw 8 Kodiak, Jan 23 2018
+    if iex == 11:
+        ev_info.use_catalog = 1
+        ev_info.otime = obspy.UTCDateTime("2018-01-23 09:31:42")
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 1000
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 600
+        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  # note: cannot use '*' because of IM
+        ev_info.channel = 'BH?,HH?'
+        ev_info.use_catalog = 0 
+        ev_info.elat = 56.046
+        ev_info.elon = -149.073
+        ev_info.edep = 25000
+        ev_info.emag = 7.9
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100         # no scale factor
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
