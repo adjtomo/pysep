@@ -1,6 +1,7 @@
 CREATE TRAVELTIME FILE
-This has to done only once
+This has to be done only once
 
+> python
 >>> from obspy.taup.taup_create import build_taup_model
 >>> build_taup_model('./taup_models/ak_scak.tvel')
 
@@ -9,14 +10,10 @@ A new model file "ak_scak.npz" should be saved here:
 
 %-------------------------------------------
 EXAMPLE
-To compute travel time:
+Get travel time:
 >>> from obspy.taup import TauPyModel
 >>> model = TauPyModel(model="ak_scak")
 >>> arrivals = model.get_ray_paths(source_depth_in_km=10,distance_in_degree=1,phase_list=["P","S"])
->>> print(arrivals)
-2 arrivals
-	P phase arrival at 16.886 seconds
-	S phase arrival at 29.745 seconds
 >>> print(arrivals)
 12 arrivals
 	P phase arrival at 17.415 seconds
