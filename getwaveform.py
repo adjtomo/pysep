@@ -338,8 +338,6 @@ class getwaveform:
         # save station plot
         # Note: Plotted are stations in the inventory and NOT the ones with the traces
         # It could be possible that there might not be waveforms for some of these stations.
-        #fig = inventory.plot(projection="local", resolution="i", label = False, show=False)
-        #Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
         try:
             fig = inventory.plot(projection="local", resolution="i", label = False, show=False)
             Catalog([self.ev]).plot(fig=fig, outfile=self.evname + '/station_map.pdf')
