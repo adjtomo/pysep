@@ -1,0 +1,104 @@
+CREATE TRAVELTIME FILE
+This has to be done only once
+
+> python
+>>> from obspy.taup.taup_create import build_taup_model
+>>> build_taup_model('./taup_models/ak_scak.tvel')
+
+A new model file "ak_scak.npz" should be saved here:
+~/miniconda2/envs/sln/lib/python3.6/site-packages/obspy/taup/data/
+
+%-------------------------------------------
+EXAMPLE
+Get travel time:
+>>> from obspy.taup import TauPyModel
+>>> model = TauPyModel(model="ak_scak")
+>>> arrivals = model.get_ray_paths(source_depth_in_km=10,distance_in_degree=1,phase_list=["P","S"])
+>>> print(arrivals)
+12 arrivals
+	P phase arrival at 17.415 seconds
+	P phase arrival at 17.436 seconds
+	P phase arrival at 17.518 seconds
+	P phase arrival at 17.725 seconds
+	P phase arrival at 17.809 seconds
+	P phase arrival at 18.749 seconds
+	S phase arrival at 30.672 seconds
+	S phase arrival at 30.712 seconds
+	S phase arrival at 30.854 seconds
+	S phase arrival at 31.206 seconds
+	S phase arrival at 31.354 seconds
+	S phase arrival at 33.022 seconds
+>>> arrivals.plot(plot_type="cartesian")
+
+%-------------------------------------------
+These differ from default 'ak135' model
+
+>>> model = TauPyModel(model="ak135")
+>>> arrivals = model.get_ray_paths(source_depth_in_km=10,distance_in_degree=1,phase_list=["P","S"])
+>>> print(arrivals)
+8 arrivals
+	P phase arrival at 19.400 seconds
+	P phase arrival at 19.823 seconds
+	P phase arrival at 20.073 seconds
+	P phase arrival at 20.449 seconds
+	S phase arrival at 32.614 seconds
+	S phase arrival at 33.229 seconds
+	S phase arrival at 34.219 seconds
+	S phase arrival at 34.416 seconds 
+>>> arrivals.plot(plot_type="cartesian")
+
+%=========================================================
+Copied from here:
+http://www.seis.sc.edu/downloads/TauP/taup.pdf
+
+Creating and Saving Velocity Models
+
+There are currently two variations of velocity model files that can be read.  Both are piecewise linear between
+given depth points. Support for cubic spline velocity models would be useful and is planned for a future release.
+
+The first format is that used by the most recent ttimes codes (Kennett et al., 1995),.tvel.  This format has two
+comment lines,  followed by lines composed of depth,  Vp,  Vs and density,  all separated by whitespace.   TauP
+ignores the first two lines of this format and reads the remaining lines.
+
+The second format is based on the format used by Xgbm, (Davis and Henson, 1993a; Davis and Henson, 1993b).
+It is referred to here as the .nd format for “named discontinuities.” Its biggest advantage is that it can specify the
+location of the major boundaries and this makes it the preferred format.  The file consists of two types of lines,
+those that specify velocity at a depth, and those that specify the name of a discontinuity.
+
+The first type of line has between 3 and 6 numbers on a line separated by whitespace. They are, in order, depth in
+kilometers to the sample point, P velocity in kilometers per second, S velocity in kilometers per second, density
+in grams per cubic centimeter, Qp attenuation for compressional waves and Qs attenuation for shear waves. Only
+depth, Vp and Vs are  required.   The  remaining  parameters,  while  not  needed  for  travel  time  calculations, are
+included to allow the model to be used for other purposes in the future. The model is assumed to be linear between
+given depths and repeated depths are used to represent discontinuities. 
+
+The second type of line within the .nd format specifies one of the three major internal boundaries, mantle for the 
+crust-mantle boundary, outer-core for the outer core-mantle boundary, or inner-core for the inner core-outer core
+boundary.  These labels are placed on a line by themselves between the two lines representing the sample points
+above and below the depth of the discontinuity. These help to determine where a particular phase propagates. For
+instance, in a model that has many crustal and upper mantle layers, from which discontinuity does the phase
+PvmP reflect? Explicit labeling eliminates potential ambiguity.
+
+One further enhancement to these model file formats is the support for comments embedded within the model
+files.  As in shell scripting, everything after a # on a line is ignored.  
+In addition, C style /*...*/ and C++ style // ... comments are recognized.
+
+A very simple named discontinuities model file might look like this:
+/* below is a simple named discontinuities model.*/
+0.0  5.0  3.0  2.7
+20   5.0  3.0  2.7
+20   6.5  3.7  2.9
+33   6.5  3.7  2.9
+mantle          # the word "mantle" designates that this is the moho
+33   7.8  4.4  3.3
+410  8.9  4.7  3.5
+410  9.1  4.9  3.7
+670  10.2 5.5  4.0
+670  10.7 5.9  4.4
+2891 13.7 7.2  5.6
+outer-core      # "outer-core" designates that this is the core mantle boundary
+2891 8.0  0.0  9.9
+5149.5 10.3 0.0 12.2
+inner-core      # "inner-core" makes this the inner-outer core boundary
+5149.5 11 3.5 12.7
+6371 11.3  3.7  13

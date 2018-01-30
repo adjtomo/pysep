@@ -766,15 +766,14 @@ def sta_limit_distance(ev, stations, min_dist=0, max_dist=100000,
                 net.stations.remove(sta)
 
     # write the full list of stations to file
-    if ifverbose:
-        for net in stations:
-            for sta in net:
-                dist, az, baz = obspy.geodetics.gps2dist_azimuth(
-                    elat, elon, sta.latitude, sta.longitude)
-                print(sta.code, elon, elat, sta.longitude, sta.latitude,
-                      dist / 1000)
-                f.write(outform % (sta.code, net.code, sta.latitude, 
-                                   sta.longitude, dist / 1000, az))
+    for net in stations:
+        for sta in net:
+            dist, az, baz = obspy.geodetics.gps2dist_azimuth(
+                elat, elon, sta.latitude, sta.longitude)
+            print(sta.code, elon, elat, sta.longitude, sta.latitude,
+                  dist / 1000)
+            f.write(outform % (sta.code, net.code, sta.latitude, 
+                               sta.longitude, dist / 1000, az))
 
 def write_stream_sac(st, path_to_waveforms, evname_key):
     """
