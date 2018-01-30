@@ -198,4 +198,37 @@ def get_ev_info(ev_info,iex):
         ev_info.rtime = obspy.UTCDateTime("2017-09-03T03:38:55") 
         #ev_info.tafter_sec = 600
 
+    if iex == 20:
+        ev_info.otime = obspy.UTCDateTime("2017-12-30T11:43:16") # AEC prelim
+        ev_info.elat = 63.8200
+        ev_info.elon = -149.0497
+        ev_info.edep = 6000
+        ev_info.emag = 4.1
+        ev_info.rtime = ev_info.otime
+
+    if iex == 21:
+        ev_info.otime = obspy.UTCDateTime("2017-12-10T12:28:55.089")
+        ev_info.elat = 64.6447
+        ev_info.elon = -151.2380
+        ev_info.edep = 15494.7
+        ev_info.emag = 3.21 
+        ev_info.rtime = ev_info.otime
+
+    if iex == 22:
+        ev_info.otime = obspy.UTCDateTime("2017-12-22T08:00:13.000")
+        ev_info.elat = 65.4525
+        ev_info.elon = -134.2246
+        ev_info.edep = 6440
+        ev_info.emag = 5.0 
+        ev_info.rtime = ev_info.otime
+
+    if iex ==23:
+        ev_info.use_catalog = 0
+        ev_info.otime = obspy.UTCDateTime("2018-01-23 09:31:42")
+        ev_info.elat = 56.046
+        ev_info.elon = -149.073
+        ev_info.edep = 25000
+        ev_info.emag = 7.9
+        ev_info.rtime = ev_info.otime
+
     return(ev_info)
