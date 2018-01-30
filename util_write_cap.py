@@ -542,8 +542,18 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
         if phase_write:
             model = TauPyModel(model=taup_model)
             dist_deg = kilometer2degrees(tr.stats.sac['dist'],radius=6371)
-            
             Phase1arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+            if len(Phase1arrivals)==0:
+                if phases[0]=="P":
+                    phases[0]="p"
+                elif phases[0]=="p":
+                    phases[0]="P"
+                elif phases[0]=="S":
+                    phases[0]="s"
+                elif phases[0]=="s":
+                    phases[0]="S"
+                Phase1arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+            
             try:
                 tr.stats.sac['t5'] = Phase1arrivals[0].time
                 tr.stats.sac['user1'] = Phase1arrivals[0].incident_angle
@@ -557,7 +567,16 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
 
             if phases[0] != phases[1]:
                 Phase2arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
-
+                if len(Phase2arrivals)==0:
+                    if phases[1]=="P":
+                        phases[1]="p"
+                    elif phases[1]=="p":
+                        phases[1]="P"
+                    elif phases[1]=="S":
+                        phases[1]="s"
+                    elif phases[1]=="s":
+                        phases[1]="S"
+                Phase2arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
                 try:
                     tr.stats.sac['t6'] = Phase2arrivals[0].time
                     tr.stats.sac['user2'] = Phase2arrivals[0].incident_angle

@@ -230,7 +230,29 @@ class getwaveform:
                         event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
                         dist_deg = kilometer2degrees(dist/1000,radius=6371)
                         Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+                        if len(Phase1arrivals)==0:
+                            if phases[0]=="P":
+                                phases[0]="p"
+                            elif phases[0]=="p":
+                                phases[0]="P"
+                            elif phases[0]=="S":
+                                phases[0]="s"
+                            elif phases[0]=="s":
+                                phases[0]="S"
+                            Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+
                         Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
+                        if len(Phase2arrivals)==0:
+                            if phases[1]=="P":
+                                phases[1]="p"
+                            elif phases[1]=="p":
+                                phases[1]="P"
+                            elif phases[1]=="S":
+                                phases[1]="s"
+                            elif phases[1]=="s":
+                                phases[1]="S"
+                            Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
+
                         #somearr = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg)
                         #print("Print arrivals")
                         #print(somearr)
