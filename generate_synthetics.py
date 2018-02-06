@@ -1,6 +1,10 @@
+# To Run
+# > python generate_synthetics.py
+
 import obspy
 import pandas
 import os
+import glob
 
 # Give source parameters
 depth = 23    # in km
@@ -10,6 +14,10 @@ dip = 80
 rake = 1
 dur = 1       # source duration (in seconds)
 event_name = 'test'
+'''
+otime
+
+'''
 
 velocity_model = 'tactmod'
 greens_fun_path = '/store/wf/FK_synthetics'
@@ -64,6 +72,16 @@ def read_station_file(filename):
                "azimuth"])
     return data
 
+def update_sac_header():
+    '''
+    Add info to the sac headers of synthetics
+    '''
+
+def write_sac():
+    '''
+    rewrite header updated sac waveforms back
+    '''
+
 #-------------------------------------------
 # create event directory
 if not os.path.exists(event_name):
@@ -73,7 +91,8 @@ if not os.path.exists(event_name):
 green = os.path.join(greens_fun_path,velocity_model) + '/' + velocity_model + '_' + str(depth)
 
 # source mechanism
-m = str(mag)+'/'+str(strike)+'/'+str(dip)+'/'+str(rake)
+mflag = str(mag)+'/'+str(strike)+'/'+str(dip)+'/'+str(rake)
+dflag = str(dur)
 
 # Get station info
 df = read_station_file(station_file)
@@ -81,15 +100,63 @@ df = read_station_file(station_file)
 
 # Loop over stations
 for index, row in df.iterrows():
-    zcomp = row['station'] + '.z'
+    stnm = row['station']
+    net = row['network']
     az = row['azimuth']
     dist = round(row['distance']) 
+    lat = row['latitude']
+    lon = row['longitude']
     
+    # input flags
+    fname = net + '.' + stnm
+    oflag = event_name+'/' + fname + '.z'
+    aflag = str(az)
+    gflag = green + '/' + str(dist) + '.grn.0'
 
     # set syn flags
-    syn_command = 'syn' + ' -M'+m + ' -D'+str(dur) + ' -O'+event_name+'/'+zcomp + ' -A'+str(az) + ' -G'+green+'/'+str(dist)+ '.grn.0'
+    syn_command = 'syn' + ' -M'+mflag + ' -D'+dflag + ' -O'+oflag + ' -A'+aflag + ' -G'+gflag
+    #print(syn_command)
 
-    print(syn_command)
-
-    # call syn
+    # KEY: call syn (and generate synthetics)
     os.system(syn_command)
+    '''
+    # Read synthetics (*.r, *.t, *.z)
+    st = obspy.read(event_name+'/'+fname+'.r')
+    st[0].stats.sac['KCMPNM'] = 'BHR'
+    st = obspy.read(event_name+'/'+fname+'.t')
+    st[0].stats.sac['KCMPNM'] = 'BHT'
+    st = obspy.read(event_name+'/'+fname+'.z')
+    st[0].stats.sac['KCMPNM'] = 'BHZ'
+    
+    st = obspy.read(event_name+'/'+stnm+'.*')
+    #for tr in st:
+    #    tr.stats.sac['STNM'] = stnm
+        #tr.stat
+        #print(tr.stats)
+    #st.plot()
+    '''
+    for fname in glob.iglob(event_name+'/'+fname+'.*'):
+        #print(fname)
+        st = obspy.read(fname)
+        if fname[-1]=='r':
+            st[0].stats.channel='BHR'
+            st[0].stats.sac['KCMPNM'] = 'BHR'
+        elif fname[-1]=='t':
+            st[0].stats.sac['KCMPNM'] = 'BHT'
+            st[0].stats.channel='BHT'
+        elif fname[-1]=='z':
+            st[0].stats.sac['KCMPNM'] = 'BHZ'
+            st[0].stats.channel='BHZ'
+        st[0].stats.sac['KSTNM'] = stnm
+        st[0].stats.station = stnm
+        st[0].stats.network = net
+        #print(st[0].stats)
+
+        outfname = fname
+        st[0].write(outfname, format='SAC')
+        
+
+# Plot traces
+st = obspy.read(event_name+'/'+'*z')
+st.plot()
+#print(st)
