@@ -44,19 +44,51 @@ def get_ev_info(ev_info,iex):
 # XXX Replace it with a file (Extract multiple events)
     if iex == 1:
         ev_info.use_catalog = 1
+        #---------------------------------------------------------
+        # https://earthquake.usgs.gov/earthquakes/eventpage/ak18196426#executive
         ev_info.otime = obspy.UTCDateTime("2018-01-26 01:09:30")
+        ev_info.elat = 56.0382
+        ev_info.elon = -149.2686
+        ev_info.edep = 11000
+        ev_info.emag = 5.3
+        #---------------------------------------------------------
+        # https://earthquake.usgs.gov/earthquakes/eventpage/us2000cpiw#executive
+        #ev_info.otime = obspy.UTCDateTime("2018-01-25 23:55:14")
+        #ev_info.elat = 55.727
+        #ev_info.elon = -149.724
+        #ev_info.edep = 10000
+        #ev_info.emag = 5.0
+        #---------------------------------------------------------
+        # https://earthquake.usgs.gov/earthquakes/eventpage/ak18191541#executive
+        #ev_info.otime = obspy.UTCDateTime("2018-01-23 23:21:28")
+        #ev_info.elat = 56.612
+        #ev_info.elon = -148.164
+        #ev_info.edep = 9500
+        #ev_info.emag = 5.3
+        #---------------------------------------------------------
+        # https://earthquake.usgs.gov/earthquakes/eventpage/us2000cnh7#executive
+        #ev_info.otime = obspy.UTCDateTime("2018-01-24 00:04:48")
+        #ev_info.elat = 56.546
+        #ev_info.elon = -148.535
+        #ev_info.edep = 10000
+        #ev_info.emag = 5.5
+        #---------------------------------------------------------
+        # https://earthquake.usgs.gov/earthquakes/eventpage/us1000cdca#executive
+        #ev_info.otime = obspy.UTCDateTime("2018-01-31 20:01:45")
+        #ev_info.elat = 56.458
+        #ev_info.elon = -148.066
+        #ev_info.edep = 10000
+        #ev_info.emag = 5.0
+        #---------------------------------------------------------
+
         ev_info.min_dist = 0
-        ev_info.max_dist = 1000
+        ev_info.max_dist = 750
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 600
         ev_info.network = 'AK,CN,II,IU,US,XM,XV,XZ,YV,TA'  # note: cannot use '*' because of IM
         ev_info.channel = 'BH?,HH?'
         #ev_info.channel = 'BN?,HN?,EN?'    # strong motion
         ev_info.use_catalog = 0 
-        ev_info.elat = 56.0382
-        ev_info.elon = -149.2686
-        ev_info.edep = 11000
-        ev_info.emag = 5.3
         ev_info.resample_freq = 50         # for CAP
         ev_info.scale_factor = 100         # for CAP
 
