@@ -86,6 +86,7 @@ class getwaveform:
         self.phase_window = False            # Grab waveforms using phases
         self.phases = ["P","P"]              # Phases to write to sac files or grab data from
         self.write_sac_phase = False         # put phase information in sac files
+        self.taupmodel= "ak135"
         # Filter parameters
         self.ifFilter = False 
         #------Filter--------------
@@ -175,7 +176,6 @@ class getwaveform:
 
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
-        taupmodel = "iasp91"
         
         if self.idb==1:
             print("Preparing request for IRIS ...")
@@ -222,7 +222,9 @@ class getwaveform:
             t2s = []
             phases = self.phases
             if self.phase_window:
-                model = TauPyModel(model=taupmodel)
+
+                #model = TauPyModel(model=taupmodel)
+                model = TauPyModel(model=self.taupmodel)
                 
                 for net in stations:
                     for sta in net:
@@ -317,7 +319,7 @@ class getwaveform:
         print("--> Adding SAC metadata...")
         if self.ifverbose: print(inventory)
         st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory, 
-                               taup_model= taupmodel, phases=phases, 
+                               taup_model= self.taupmodel, phases=phases, 
                                phase_write = self.write_sac_phase)
         
         # Do some waveform QA
