@@ -270,6 +270,28 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50
         ev_info.scale_factor = 100         # no scale factor
     
+    if iex ==11:
+        ev_info.use_catalog = 1
+        ev_info.otime = obspy.UTCDateTime("2017-11-27T22:18:30.000")
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 200
+        ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,XV,XZ,YV'  
+        ev_info.channel = 'BH?'
+        ev_info.use_catalog = 0 
+        ev_info.elat = 60.5634
+        ev_info.elon = -147.4192
+        ev_info.edep = 16000
+        ev_info.emag = 5.3
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100         # no scale factor
+        
+        ev_info.phase_window = True
+        ev_info.phases = ["P","S"] # Choosing time period with respect to P & S
+        #ev_info.phases = ["P","P"]
+        ev_info.write_sac_phase = True
+        ev_info.taupmodel = "ak_scak" 
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
