@@ -67,7 +67,7 @@ W. Walter et al. (2006)
 The database can be downloaded from IRIS DMC at
   https://ds.iris.edu/mda/18-001
 The package needed to access these waveforms is here:
-   PENDING PATH FROM LION
+   https://github.com/krischer/llnl_db_client
 Follow the install instructions, then set a symbolic link as
    ln -s /PATH_TO_LLNL_CLIENT/llnl_db_client .
 
