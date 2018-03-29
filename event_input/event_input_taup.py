@@ -27,10 +27,8 @@ def get_ev_info(ev_info,iex):
         ev_info.ipre_filt = 1 # 0 = no prefiter.  1 = default prefilter (see getwaveform_iris.py) where is this file?
         ev_info.output_cap_weight_file = False
         ev_info.ifsave_stationxml = False
-            # For SALMON data
-        ev_info.user = "csrichards2@alaska.edu"
-        ev_info.password = "Pimd2jg8hVbD"
-           # ev_info_temp.user = None
-           # ev_info_temp.password = None
+        # For SALMON data
+        ev_info.user = None
+        ev_info.password = None
 
     return ev_info

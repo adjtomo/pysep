@@ -1,1 +1,0 @@
-event_input/event_input_local_splitting.py

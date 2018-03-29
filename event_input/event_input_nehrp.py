@@ -20,8 +20,8 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'AK,AT,AV,CN,II,IU,TA,US,XM,XV,XZ,YV,ZE'
         ev_info.channel = 'BH?,HH?,EH?'
 
-        ev_info.user = 'vsilwal@alaska.edu'
-        ev_info.password = 'dmk3hjKl3Jnq'
+        ev_info.user = None
+        ev_info.password = None
         
         # Multiple events files
         events_file = "/home/vipul/REPOSITORIES/manuscripts/vipul/papers/2016nehrp/data/beluga_events_obspy.txt"

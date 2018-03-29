@@ -78,10 +78,7 @@ def get_ev_info(ev_info,iex):
 #   saclst NPTS o b e NZHOUR NZMIN NZSEC NZMSEC f 19910914190000000/*.z
 # (This will show clearly that the reference time is NOT the origin time.)
     if iex == 6:
-        # to get the LLNL client, which is a private repo from Lion Krischer:
-        # cd $REPOS
-        # git clone https://GITHUBUSERNAME@github.com/krischer/llnl_db_client.git
-        # then follow instructions for install
+        # see pysep README for instructions to get and install the llnl_db_client
         ev_info.idb = 3              # LLNL database
         # resample_freq = 0    # no resampling and no cutting
         

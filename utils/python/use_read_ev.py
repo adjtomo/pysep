@@ -7,7 +7,8 @@ import read_event_obspy_file as reof
 import obspy
 import os
 
-events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinamp/data/basinamp_obspy.txt"
+#events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinamp/data/basinamp_obspy.txt"
+events_file = "./test_data/nak_obspy.txt"
 
 eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 

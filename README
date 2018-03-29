@@ -1,14 +1,14 @@
-pyseis
-a private github repository for fetching and processing waveforms using obspy
+pysep
+SEP = seismogram extraction and processing
 
-pyseis uses obspy tools to request seismic data, process data, and write out sac files.
+pysep uses obspy tools to request seismic data, process data, and write out sac files.
 Our motivation is to have files prepared for moment tensor inversions.
 However the sac files can be used for other purposes as well.
 
 download:
-git clone https://GITHUBUSERNAME@github.com/uafseismo/pyseis.git
+git clone https://github.com/uafseismo/pysep.git
 
-What pyseis does:
+What pysep does:
 + input event information or get it from IRIS. You can also loop over multiple events.
 + extract waveforms using get_waveforms_bulk
 + makes sure that the three-component waveforms for a station are of equal length
@@ -34,8 +34,8 @@ OPTIONAL STEPS
 + debugging plots plots: spectrograms, instrument response
 
 Additonal features
-+ access nuclear explosion and earthquake waveforms from custom LLNL database
 + access embargoed data sets from IRIS (requires user name and password)
++ interface with LLNL database of nuclear explosion and earthquake waveforms (see below)
 
 contributors (alphabetical):
 Celso Alvizuri
@@ -57,5 +57,18 @@ check_getwaveform.bash -- run example events and check the output files against 
                          
 getwaveform_saved
    check_filenames     -- directory of list of files for example events in event_input.py
+
+==============================
+
+pysep interfaces with the databases of:
+W. Walter et al. (2006)
+  An assembled western United States dataset for regional seismic analysis
+  ISSO 9660 CD, LLNL release UCRL-MI-222502
+The database can be downloaded from IRIS DMC at
+  https://ds.iris.edu/mda/18-001
+The package needed to access these waveforms is here:
+   https://github.com/krischer/llnl_db_client
+Follow the install instructions, then set a symbolic link as
+   ln -s /PATH_TO_LLNL_CLIENT/llnl_db_client .
 
 ==============================

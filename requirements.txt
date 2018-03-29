@@ -1,0 +1,9 @@
+At UAF we are using the following versions of programs:
+
+required:
+operating system    centos 7.4
+python              3.6.2
+obspy               1.0.3
+
+optional:
+sac                 101.6a
