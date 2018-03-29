@@ -28,7 +28,7 @@ def get_ev_info(ev_info,iex):
         ev_info.output_cap_weight_file = False
         ev_info.ifsave_stationxml = False
         # For SALMON data
-        ev_info_temp.user = None
-        ev_info_temp.password = None
+        ev_info.user = None
+        ev_info.password = None
 
     return ev_info
