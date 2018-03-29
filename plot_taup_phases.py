@@ -37,7 +37,7 @@ for dist_deg in dists[:]:
         somearray = model.get_ray_paths(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases[0]])
         
     except:
-        print('no somearray')
+        print('no somearray!')
      
     if len(temparr)==0:
         Phase1arrivals.append(math.nan)
