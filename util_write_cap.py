@@ -53,7 +53,7 @@ def zerophase_chebychev_lowpass_filter(trace, freqmax):
 
 #------------rotations---------------------
 
-def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=True, ifverbose = False):
+def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose = False):
     outdir = evname_key                  
 
     if not os.path.exists(outdir):
@@ -1325,7 +1325,14 @@ def do_waveform_QA(stream, client_name, event, evtime, before, after):
         loc = tr.stats.location
         cha = tr.stats.channel[:-1] + '*'
         chalist = stream.select(station = sta, location = loc, channel = cha)
-        chalist.merge()
+        try:
+            chalist.merge()
+        except Exception as e:
+            # Ignore cases when 'trying to merge tracs with different sample rates'
+            print(e)
+            print(chalist)
+            stream.remove(tr)
+            continue
         ncha = len(chalist)
         if (ncha < thr_ncha) and (net == 'LL'):
             print("Removing LLNL stations with less than 3 channels ...")
