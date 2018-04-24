@@ -31,7 +31,14 @@ Phase2_IA = []
 for dist_deg in dists[:]:
     temparr = model.get_travel_times(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases[0]])
     temparr2 = model.get_travel_times(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases2[0]])
-    #print(len(temparr))
+   
+    # there may be something wrong with obpsy and plotting since the error is that the arrivals does not have the attribute for plot_rays(), see Vipul's email for another way to plot.  
+    try: 
+        somearray = model.get_ray_paths(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases[0]])
+        
+    except:
+        print('no somearray!')
+     
     if len(temparr)==0:
         Phase1arrivals.append(math.nan)
         Phase1_IA.append(math.nan)
@@ -55,7 +62,6 @@ plt.ylabel("Time after EQ origin time (s)")
 plt.xlabel("Source-Receiver Distance (deg)")
 plt.title("Source depth:" + str(sourcedepth) + " km")
 f1.show()
-#print(Phase1arrivals)
 
 f2 = plt.figure(2)
 L2, = plt.plot(dkm,Phase2_IA,'ro',label=phases2[0])
