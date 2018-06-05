@@ -147,11 +147,11 @@ def get_ev_info(ev_info,iex):
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
         
-        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinamp/data/basinamp_obspy.txt"
+        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinresp/data/basinamp_obspy.txt"
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
         ev_info_list = []
-        for xx in range(8,9):
+        for xx in range(1,9):
             ev_info_temp = ev_info.copy()
             ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
             ev_info_temp.elat = elats[xx]
