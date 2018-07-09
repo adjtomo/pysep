@@ -158,6 +158,9 @@ class getwaveform:
         # To output lots of processing info
         self.ifverbose = False
 
+        # save RTZ as asdf files
+        self.ifsave_asdf = True
+
     def run_get_waveform(self):
         """
         Get SAC waveforms for an event
@@ -231,7 +234,8 @@ class getwaveform:
                         dist, az, baz = obspy.geodetics.gps2dist_azimuth(
                         event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
                         dist_deg = kilometer2degrees(dist/1000,radius=6371)
-                        Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+                        Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                                distance_in_degree=dist_deg,phase_list=[phases[0]])
                         if len(Phase1arrivals)==0:
                             if phases[0]=="P":
                                 phases[0]="p"
@@ -241,9 +245,11 @@ class getwaveform:
                                 phases[0]="s"
                             elif phases[0]=="s":
                                 phases[0]="S"
-                            Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[0]])
+                            Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                                    distance_in_degree=dist_deg,phase_list=[phases[0]])
 
-                        Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
+                        Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                                distance_in_degree=dist_deg,phase_list=[phases[1]])
                         if len(Phase2arrivals)==0:
                             if phases[1]=="P":
                                 phases[1]="p"
@@ -253,7 +259,8 @@ class getwaveform:
                                 phases[1]="s"
                             elif phases[1]=="s":
                                 phases[1]="S"
-                            Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
+                            Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                                    distance_in_degree=dist_deg,phase_list=[phases[1]])
 
                         #somearr = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg)
                         #print("Print arrivals")
@@ -405,6 +412,7 @@ class getwaveform:
         # Taper waveforms (optional; Generally used when data is noisy- example: HutchisonGhosh2016)
         # https://docs.obspy.org/master/packages/autogen/obspy.core.trace.Trace.taper.html
         # To get the same results as the default taper in SAC, use max_percentage=0.05 and leave type as hann.
+        # Note: Tapering also happens while resampling (see util_write_cap.py)
         if self.taper:
             st2.taper(max_percentage=self.taper, type='hann',max_length=None, side='both')
 
@@ -455,6 +463,19 @@ class getwaveform:
                 inventory.write(xmlfilename, format="stationxml", validate=True)
             except:
                 print('Could not create stationxml file')
+        
+        # Path to the asdf_converter script        
+        if self.ifsave_asdf:
+            # save RTZ
+            asdf_filename = evname_key + "/" + evname_key + ".h5"
+            os.system("../asdf_converters/asdf_converters/sac2asdf.py "
+                      + evname_key + " " + asdf_filename + " observed")
+            # save NEZ
+            nez_dir = evname_key + "/ENZ/"
+            nez_asdf_filename = nez_dir + evname_key + ".h5"
+            os.system("../asdf_converters/asdf_converters/sac2asdf.py "
+                      + nez_dir + " " + nez_asdf_filename + " observed")
+            
 
     def copy(self):
         '''
