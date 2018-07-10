@@ -45,13 +45,13 @@ class getwaveform:
         pre_filt  - list, corner frequencies of filter to apply before deconv
         a good idea when deconvolving (ifRemoveResponse=True)
         """
-        # DEFAULT SETTINGS (see getwaveform.py)
-        self.idb = 1    # default: =1-IRIS; =2-AEC; =3-LLNL; =4-Geoscope
+        # DEFAULT SETTINGS
+        self.idb = 1    # =1-IRIS (default); =2-AEC; =3-LLNL; =4-Geoscope
         self.client = Client()
 
         # event parameters
-        self.use_catalog = 1              # use an existing catalog (=1) or specify your own event parameters (see iex=9)
-        self.sec_before_after_event = 10  # time window to search for a target event in a catalog
+        self.use_catalog = 1 # =1: use an existing catalog (=1); =0: specify your own event parameters (see iex=9)
+        self.sec_before_after_event = 10 # time window to search for a target event in a catalog
         self.min_dist = 0 
         self.max_dist = 20000
         self.min_az = 0 
@@ -106,7 +106,7 @@ class getwaveform:
         # f2 should consider the sampling rate for the desired channels
         self.f1 = 1/40 # fmin - highpass will keep frequencies larger than fmin
         self.f2 = 1/10 # fmax - lowpass will keep frequencies lower than fmax
-        self.zerophase = True             # = False (causal), = True (acausal)
+        self.zerophase = True             # = False (causal/one-pass), = True (acausal/two-pass)
         # 4 pole filter is more sharper at the edges than 2 pole
         self.corners = 4                  # Is corner in Obspy same as Pole in SAC?
         
@@ -129,13 +129,13 @@ class getwaveform:
         self.resample_freq = 50           # 0 causes errors. Use resample_TF instead
         self.scale_factor = 1             # for CAP use 10**2  (to convert m/s to cm/s)
 
-        # Pre-processing (manily for CAP)
+        # Pre-processing (mainly for CAP)
         self.output_cap_weight_file = True# output cap weight files
         self.detrend = True               # detrend waveforms
         self.demean = True                # demean waveforms
         self.taper = False                # this could also be a fraction between 0 and 1 (fraction to be tapered from both sides)
         self.output_event_info = True     # output event info file
-        self.outformat = 'VEL'            # Intrument response removed waveforms could be saved as 'VEL' 'DISP' 'ACC'
+        self.outformat = 'VEL'            # Instrument-response-removed waveforms saved as VEL, DISP, or ACC
         self.ifsave_sacpaz = False        # save sac pole zero (needed as input for MouseTrap module)
         self.remove_response = True       # remove instrument response 
         self.iplot_response = False       # plot response function
