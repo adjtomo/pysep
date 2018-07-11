@@ -159,7 +159,7 @@ class getwaveform:
         self.ifverbose = False
 
         # save RTZ as asdf files
-        self.ifsave_asdf = True
+        self.ifsave_asdf = False
 
     def run_get_waveform(self):
         """
