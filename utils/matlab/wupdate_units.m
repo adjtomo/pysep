@@ -18,7 +18,20 @@ for ii=1:n
     try, fscale = get(w(ii),'SCALE'); end
 
     if ~isempty(kuser0)
-        if strcmp(kuser0,'M/S')
+        if strcmp(kuser0,'M')
+            units_all{ii} = 'm';
+            % update units based on scale factor
+            if ~isempty(fscale)
+               switch fscale
+                   case 1,      units_all{ii} = 'm';
+                   case 1e2,    units_all{ii} = 'cm';
+                   case 1e4,    units_all{ii} = 'mm';
+                   case 1e9,    units_all{ii} = 'nm';  
+                   otherwise
+                      error('check KUSER1 (10^N, N = 0, 2, 4, 9, allowed)');
+               end
+            end
+        elseif strcmp(kuser0,'M/S')
             units_all{ii} = 'm/s';
             % update units based on scale factor
             if ~isempty(fscale)
@@ -27,6 +40,19 @@ for ii=1:n
                    case 1e2,    units_all{ii} = 'cm/s';
                    case 1e4,    units_all{ii} = 'mm/s';
                    case 1e9,    units_all{ii} = 'nm/s';  
+                   otherwise
+                      error('check KUSER1 (10^N, N = 0, 2, 4, 9, allowed)');
+               end
+            end
+        elseif strcmp(kuser0,'M/S/S')
+            units_all{ii} = 'm/s/s';
+            % update units based on scale factor
+            if ~isempty(fscale)
+               switch fscale
+                   case 1,      units_all{ii} = 'm/s/s';
+                   case 1e2,    units_all{ii} = 'cm/s/s';
+                   case 1e4,    units_all{ii} = 'mm/s/s';
+                   case 1e9,    units_all{ii} = 'nm/s/s';  
                    otherwise
                       error('check KUSER1 (10^N, N = 0, 2, 4, 9, allowed)');
                end
