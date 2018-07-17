@@ -221,67 +221,10 @@ class getwaveform:
             
             #stations.plotprojection="local")
             # Find P and S arrival times
-            t1s = []
-            t2s = []
             phases = self.phases
-            if self.phase_window:
-
-                #model = TauPyModel(model=taupmodel)
-                model = TauPyModel(model=self.taupmodel)
-                
-                for net in stations:
-                    for sta in net:
-                        dist, az, baz = obspy.geodetics.gps2dist_azimuth(
-                        event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
-                        dist_deg = kilometer2degrees(dist/1000,radius=6371)
-                        Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
-                                                                distance_in_degree=dist_deg,phase_list=[phases[0]])
-                        if len(Phase1arrivals)==0:
-                            if phases[0]=="P":
-                                phases[0]="p"
-                            elif phases[0]=="p":
-                                phases[0]="P"
-                            elif phases[0]=="S":
-                                phases[0]="s"
-                            elif phases[0]=="s":
-                                phases[0]="S"
-                            Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
-                                                                    distance_in_degree=dist_deg,phase_list=[phases[0]])
-
-                        Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
-                                                                distance_in_degree=dist_deg,phase_list=[phases[1]])
-                        if len(Phase2arrivals)==0:
-                            if phases[1]=="P":
-                                phases[1]="p"
-                            elif phases[1]=="p":
-                                phases[1]="P"
-                            elif phases[1]=="S":
-                                phases[1]="s"
-                            elif phases[1]=="s":
-                                phases[1]="S"
-                            Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
-                                                                    distance_in_degree=dist_deg,phase_list=[phases[1]])
-
-                        #somearr = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,distance_in_degree=dist_deg)
-                        #print("Print arrivals")
-                        #print(somearr)
-
-                        try:
-                            if Phase2arrivals[0].time < Phase1arrivals[0].time:
-                                # You are assuming that the first index is the first arrival.  Check this later.
-                                t1s.append(event.origins[0].time + Phase2arrivals[0].time - self.tbefore_sec)
-                                t2s.append(event.origins[0].time + Phase1arrivals[0].time + self.tafter_sec)
-                            else:
-                                t1s.append(event.origins[0].time + Phase1arrivals[0].time - self.tbefore_sec)
-                                t2s.append(event.origins[0].time + Phase2arrivals[0].time + self.tafter_sec)
-                        except:
-                            t1s.append(reftime - self.tbefore_sec)
-                            t2s.append(reftime + self.tafter_sec)
-
-            else:
-                t1s = [reftime - self.tbefore_sec]
-                t2s = [reftime + self.tafter_sec]
-            
+          
+            t1s, t2s= get_phase_arrival_times(stations,event,self.phases,self.phase_window,self.taupmodel,reftime,self.tbefore_sec,self.tafter_sec)
+ 
             print("Downloading waveforms...")
             # this needs to change
             bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 

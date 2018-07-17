@@ -1501,3 +1501,64 @@ def write_resp(stalist,evname_key):
                 f =  open(respfile, 'w')
                 f.write('%s' % resp.get_sacpz())        # save in sac pole-zero format
                 f.close()
+def get_phase_arrival_times(stations,event,phases,phase_window,taupmodel,reftime,tbefore_sec,tafter_sec):
+    # Find P and S arrival times
+    t1s = []
+    t2s = []
+    phases = phases
+    if phase_window:
+        model = TauPyModel(model=taupmodel)
+        
+        for net in stations:
+            for sta in net:
+                dist, az, baz = obspy.geodetics.gps2dist_azimuth(
+                event.origins[0].latitude, event.origins[0].longitude, sta.latitude, sta.longitude)
+                dist_deg = kilometer2degrees(dist/1000,radius=6371)
+                Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                        distance_in_degree=dist_deg,phase_list=[phases[0]])
+                if len(Phase1arrivals)==0:
+                    if phases[0]=="P":
+                        phases[0]="p"
+                    elif phases[0]=="p":
+                        phases[0]="P"
+                    elif phases[0]=="S":
+                        phases[0]="s"
+                    elif phases[0]=="s":
+                        phases[0]="S"
+                    Phase1arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                            distance_in_degree=dist_deg,phase_list=[phases[0]])
+                                                                                                                              
+                Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                        distance_in_degree=dist_deg,phase_list=[phases[1]])
+                if len(Phase2arrivals)==0:
+                    if phases[1]=="P":
+                        phases[1]="p"
+                    elif phases[1]=="p":
+                        phases[1]="P"
+                    elif phases[1]=="S":
+                        phases[1]="s"
+                    elif phases[1]=="s":
+                        phases[1]="S"
+                    Phase2arrivals = model.get_travel_times(source_depth_in_km=event.origins[0].depth/1000,
+                                                            distance_in_degree=dist_deg,phase_list=[phases[1]])
+                                                                                                                              
+                #print("Print arrivals")
+                #print(somearr)
+                                                                                                                              
+                try:
+                    if Phase2arrivals[0].time < Phase1arrivals[0].time:
+                        # You are assuming that the first index is the first arrival.  Check this later.
+                        t1s.append(event.origins[0].time + Phase2arrivals[0].time - tbefore_sec)
+                        t2s.append(event.origins[0].time + Phase1arrivals[0].time + tafter_sec)
+                    else:
+                        t1s.append(event.origins[0].time + Phase1arrivals[0].time - tbefore_sec)
+                        t2s.append(event.origins[0].time + Phase2arrivals[0].time + tafter_sec)
+                except:
+                    t1s.append(reftime - tbefore_sec)
+                    t2s.append(reftime + tafter_sec)
+                                                                                                                              
+    else:
+        t1s = [reftime - tbefore_sec]
+        t2s = [reftime + tafter_sec]
+    
+    return t1s,t2s
