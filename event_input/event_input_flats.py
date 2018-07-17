@@ -333,35 +333,64 @@ def get_ev_info(ev_info,iex):
         
         events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/misc/F2TN_events_near_out.txt"
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+        ev_info_temp.tafter_sec = 500
+        ev_info_temp.network = 'AK,XV' 
+        ev_info_temp.channel = 'BH?,HH?'
+        ev_info_temp.resample_freq = 50        
+        ev_info_temp.scale_factor = 100 
 
-        ev_info_list = []
-        for xx in range(0,7):
-            ev_info_temp = ev_info.copy()
-            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
-            ev_info_temp.elat = elats[xx]
-            ev_info_temp.elon = elons[xx]
-            ev_info_temp.edep = edeps[xx]
-            ev_info_temp.emag = emags[xx]
-            ev_info_temp.eid = eids[xx]
-            ev_info_temp.rlat = 64.7090
-            ev_info_temp.rlon = -149.1327
-            ev_info_temp.rtime = ev_info_temp.otime
-            
-            # subset of stations
-            ev_info_temp.min_dist = 0
-            ev_info_temp.max_dist = 10 #500
-            ev_info_temp.tbefore_sec = 100
-            ev_info_temp.tafter_sec = 500
-            ev_info_temp.network = 'AK,XV' 
-            ev_info_temp.channel = 'BH?,HH?'
-            ev_info_temp.resample_freq = 50        
-            ev_info_temp.scale_factor = 100 
-
-            # append getwaveform objects
-            ev_info_list.append(ev_info_temp)
+        # append getwaveform objects
+        ev_info_list.append(ev_info_temp)
         
         # always return ev_info
         ev_info = ev_info_list
+
+    if iex == 9:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2018-05-27T10:40:00") 
+        ev_info.elat = 64.613
+        ev_info.elon = -149.0992
+        ev_info.edep = 000
+        ev_info.emag = 0
+        ev_info.rotateRTZ = False
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 15
+        ev_info.tbefore_sec = 1800
+        ev_info.tafter_sec = 3600
+        ev_info.network = 'XV' 
+        ev_info.channel = 'HH?'
+        ev_info.resample_freq = 50        
+        ev_info.scale_factor = 100 
+
+    if iex == 10:                                                                            
+        # FNN1 outage 
+	ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2018-07-15T19:30:00") 
+        ev_info.elat = 64.5716
+        ev_info.elon = -149.2179
+        ev_info.edep = 000
+        ev_info.emag = 0
+        ev_info.rotateRTZ = False
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 5 
+        ev_info.tbefore_sec = 0 
+        ev_info.tafter_sec = 3600
+        ev_info.network = 'XV' 
+        ev_info.channel = 'HH?'
+        ev_info.resample_freq = 50        
+        ev_info.scale_factor = 100 
+
+ 
     return(ev_info)
 
 #=================================================================================
