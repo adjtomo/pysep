@@ -107,6 +107,18 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.outformat = 'DISP'        # DISP or VEL
 
+        ev_info.ifverbose = True      # log file
+
+        # default pre-filter
+        #  (0.0003225816857473734, 0.0006451633714947468, 12.5, 25.0)
+
+        ev_info.ipre_filt = 2
+        ev_info.f1 = 1/1000
+        ev_info.f2 = 10.
+        ev_info.f0 = 0.5*ev_info.f1
+        ev_info.f3 = 2.0*ev_info.f2
+        ev_info.pre_filt=(ev_info.f0, ev_info.f1, ev_info.f2, ev_info.f3) 
+
         ev_info.rotateRTZ = False
         ev_info.isave_ENZ = True
         ev_info.isave_raw = True
