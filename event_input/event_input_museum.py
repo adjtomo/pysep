@@ -96,6 +96,8 @@ def get_ev_info(ev_info,iex):
         ev_info.max_lat = 65.0
         ev_info.min_lon = -148.8
         ev_info.max_lon = -146.1
+        # subset of stations (MDM)
+        # https://service.iris.edu/irisws/timeseries/1/query?net=AK&sta=MDM&cha=BHN&start=2012-04-11T08:38:37&end=2012-04-11T10:08:37&freqlimits=0.0005-0.001-10-20&units=DIS&demean=true&output=plot&loc=--&correct=true&taper=0.2
         ev_info.min_lat = 64.9
         ev_info.max_lat = 65.0
         ev_info.min_lon = -148.3
@@ -107,7 +109,7 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.outformat = 'DISP'        # DISP or VEL
 
-        ev_info.ifverbose = True      # log file
+        ev_info.ifverbose = True      # debugging output
 
         # default pre-filter
         #  (0.0003225816857473734, 0.0006451633714947468, 12.5, 25.0)
@@ -118,6 +120,7 @@ def get_ev_info(ev_info,iex):
         ev_info.f0 = 0.5*ev_info.f1
         ev_info.f3 = 2.0*ev_info.f2
         ev_info.pre_filt=(ev_info.f0, ev_info.f1, ev_info.f2, ev_info.f3) 
+        # (0.0005, 0.001, 10.0, 20.0)
 
         ev_info.rotateRTZ = False
         ev_info.isave_ENZ = True
