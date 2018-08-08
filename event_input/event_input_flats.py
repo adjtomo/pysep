@@ -367,16 +367,28 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        
         ev_info.scale_factor = 100 
 
-    if iex == 10:                                                                            
-        # FNN1 outage 
-	ev_info.idb = 1
+    if iex == 10:     
+        ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
-        # GCMT source parameters
-        # the otime is the centroid time and accounts for tshift
-        ev_info.otime = obspy.UTCDateTime("2018-07-15T19:30:00") 
+	# GCMT source parameters
+	# the otime is the centroid time and accounts for tshift
+        
+	# FNN1 outage 
+	#ev_info.otime = obspy.UTCDateTime("2018-07-15T19:30:00") 
+        #ev_info.elat = 64.5716
+        #ev_info.elon = -149.2179
+
+	# FTGH outage
+        #ev_info.otime = obspy.UTCDateTime("2018-07-23T23:30:00")
+        #ev_info.elat = 64.6917
+        #ev_info.elon = -148.8278
+      
+	# FNN1 out again 
+        ev_info.otime = obspy.UTCDateTime("2018-07-18T10:00:00")  
         ev_info.elat = 64.5716
         ev_info.elon = -149.2179
+        
         ev_info.edep = 000
         ev_info.emag = 0
         ev_info.rotateRTZ = False
