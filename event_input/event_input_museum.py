@@ -114,6 +114,7 @@ def get_ev_info(ev_info,iex):
         # default pre-filter
         #  (0.0003225816857473734, 0.0006451633714947468, 12.5, 25.0)
 
+        ev_info.water_level = 100000
         ev_info.ipre_filt = 2
         ev_info.f1 = 1/1000
         ev_info.f2 = 10.

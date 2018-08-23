@@ -1210,7 +1210,7 @@ def get_pre_filt(ipre_filt, tr):
     return pre_filt
 
 
-def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, 
+def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, water_level,
                      scale_factor, stations, outformat, ifverbose=False):
     """
     Remove instrument response. Or plot (but not both)
@@ -1237,7 +1237,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response,
             try:
                 if ifverbose:
                     print('%s: Plotting instrument response' % station_key)
-                tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                tr.remove_response(inventory=stations, water_level=water_level, pre_filt=pre_filt, \
                         output=outformat, plot = resp_plot)
                 continue
             except:
@@ -1247,7 +1247,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response,
                 if ifverbose:
                     print('%s: Correcting instrument response, pre-filter %s' %\
                               (station_key, pre_filt))
-                tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                tr.remove_response(inventory=stations, water_level=water_level, pre_filt=pre_filt, \
                         output=outformat)
             except Exception as e:
                 print("Failed to correct %s due to: %s" % (tr.id, str(e)))
