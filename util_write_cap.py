@@ -89,9 +89,9 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose 
 
 
         # what components are in substr?
-        components = []
+        components = list()
         for trace in substr:
-            components += trace.stats.channel[-1].upper()
+            components.append(trace.stats.channel[-1].upper())
         components.sort()
 
         if len(substr)<3:
