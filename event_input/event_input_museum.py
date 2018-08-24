@@ -91,17 +91,23 @@ def get_ev_info(ev_info,iex):
         ev_info.elon = 92.78
         ev_info.edep = 40.03
         ev_info.emag = 8.6
-        # subset of stations
-        ev_info.min_lat = 64.8
-        ev_info.max_lat = 65.0
-        ev_info.min_lon = -148.8
-        ev_info.max_lon = -146.1
+        # subset of stations -- all of Alaska
+        ev_info.min_lat = 59.0
+        ev_info.max_lat = 67.5
+        ev_info.min_lon = -165.0
+        ev_info.max_lon = -125.0
         # subset of stations (MDM)
         # https://service.iris.edu/irisws/timeseries/1/query?net=AK&sta=MDM&cha=BHN&start=2012-04-11T08:38:37&end=2012-04-11T10:08:37&freqlimits=0.0005-0.001-10-20&units=DIS&demean=true&output=plot&loc=--&correct=true&taper=0.2
         ev_info.min_lat = 64.9
         ev_info.max_lat = 65.0
         ev_info.min_lon = -148.3
         ev_info.max_lon = -148.2
+        # subset of stations (SKN)
+        # https://service.iris.edu/irisws/timeseries/1/query?net=AK&sta=SKN&cha=BHN&start=2012-04-11T08:38:37&end=2012-04-11T10:08:37&freqlimits=0.0005-0.001-10-20&units=DIS&demean=true&output=plot&loc=--&correct=true&taper=0.2
+        #ev_info.min_lat = 61.97
+        #ev_info.max_lat = 61.99
+        #ev_info.min_lon = -151.54
+        #ev_info.max_lon = -151.53
 
         ev_info.tbefore_sec = 0
         ev_info.tafter_sec = 6200
@@ -113,7 +119,6 @@ def get_ev_info(ev_info,iex):
 
         # default pre-filter
         #  (0.0003225816857473734, 0.0006451633714947468, 12.5, 25.0)
-
         ev_info.water_level = 100000
         ev_info.ipre_filt = 2
         ev_info.f1 = 1/1000
@@ -125,6 +130,7 @@ def get_ev_info(ev_info,iex):
 
         ev_info.rotateRTZ = False
         ev_info.isave_ENZ = True
+        ev_info.isave_raw_processed = True
         ev_info.isave_raw = True
         ev_info.resample_freq = 0        # no resampling
         ev_info.resample_TF = False
