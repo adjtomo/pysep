@@ -402,6 +402,31 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        
         ev_info.scale_factor = 100 
 
+    if iex == 11:     
+        
+        # Manley event
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+	
+        # FNN1 out again 
+        ev_info.otime = obspy.UTCDateTime("2018-08-28T15:18:44")  
+        ev_info.elat = 65.1778
+        ev_info.elon = -150.4964
+        
+        ev_info.edep = 16000
+        ev_info.emag = 4.8 
+        ev_info.rotateRTZ = True 
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        
+        ev_info.scale_factor = 100 
  
     return(ev_info)
 
