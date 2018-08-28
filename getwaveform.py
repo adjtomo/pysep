@@ -123,6 +123,7 @@ class getwaveform:
         self.f3 = 2.0*self.f2
         self.pre_filt=(self.f0, self.f1, self.f2, self.f3)    # applies for ipre_filt = 2 only
         # self.pre_filt = (0.005, 0.006, 10.0, 15.0) # BH default
+        self.water_level = 60
 
         # For CAP
         self.resample_TF = True           # if False then resample_freq is taken from SAC files
@@ -288,7 +289,7 @@ class getwaveform:
             
         if self.remove_response:
             resp_plot_remove(st2, self.ipre_filt, self.pre_filt, 
-                    self.iplot_response, 
+                    self.iplot_response, self.water_level,
                     self.scale_factor, 
                     stations, self.outformat, self.ifverbose)
         else:

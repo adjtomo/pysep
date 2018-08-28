@@ -5,117 +5,66 @@ from getwaveform import *
 def get_ev_info(ev_info,iex):
 # ===============================================================            
 # MFFZ earthquakes for investigating the step response
-# LISTED IN CHRONOLOGICAL ORDER
     if iex == 0:
         ev_info.idb = 1
-        ev_info.use_catalog = 0
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
-        ev_info.elat = 65.1526
-        ev_info.elon = -149.0398
-        ev_info.edep = 16614.7
-        ev_info.emag = 5.20
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2014-10-21T00:36:58.333")
-        ev_info.elat = 65.1489
-        ev_info.elon = -149.0413
-        ev_info.edep = 13134.8
-        ev_info.emag = 4.90
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2014-10-23T16:30:23.968")
-        ev_info.elat = 65.1644
-        ev_info.elon = -149.0523
-        ev_info.edep = 20066.5
-        ev_info.emag = 5.00
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2015-09-12T03:25:12.711")
-        ev_info.elat = 65.1207
-        ev_info.elon = -148.6646
-        ev_info.edep = 15556.8
-        ev_info.emag = 2.63
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2015-10-31T02:56:35.572")
-        ev_info.elat = 64.4285
-        ev_info.elon = -149.6969
-        ev_info.edep = 23852.1
-        ev_info.emag = 3.47
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2016-01-14T19:04:10.727")
-        ev_info.elat = 64.6827
-        ev_info.elon = -149.2479
-        ev_info.edep = 22663.7
-        ev_info.emag = 3.80
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2016-11-06T9:29:10.579")
-        ev_info.elat = 64.1639
-        ev_info.elon = -150.0626
-        ev_info.edep = 23190.0
-        ev_info.emag = 4.00
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2016-12-08T10:18:13.868")
-        ev_info.elat = 64.1937
-        ev_info.elon = -150.0376
-        ev_info.edep = 24522.1
-        ev_info.emag = 4.30
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2017-05-08T05:09:02.000") 
-        ev_info.elat = 65.2643
-        ev_info.elon = -146.922
-        ev_info.edep = 9000   # AEC/Vipul
-        ev_info.emag = 3.60   # Vipul
-        # -------------------------------------------------
-        ev_info.otime = obspy.UTCDateTime("2017-06-28T12:58:52.000") 
-        ev_info.elat = 64.7569
-        ev_info.elon = -148.8883
-        ev_info.edep = 18000  # Vipul
-        ev_info.emag = 3.50   # Vipul
-        # -------------------------------------------------
-        # the otime is the centroid time and accounts for tshift
-        ev_info.otime = obspy.UTCDateTime("2017-11-08T06:49:11")  # AEC prelim
-        ev_info.elat = 64.8632    # AEC Info release
-        ev_info.elon = -148.6255  # AEC Info release
-        ev_info.edep = 16000      # AEC Info release
-        ev_info.emag = 3.6        # AEC Info release
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        
+        events_file = "/home/carltape/REPOSITORIES/manuscripts/carltape/papers/nennuc/clipping/data/MFFZ_step_response_obspy.txt"
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
-        # -------------------------------------------------
-        # VIPUL: WHAT ARE THESE? OTHER EVENTS?
-        # ev_info.otime = obspy.UTCDateTime("2015-03-30T12:33:19.000")
-        # ev_info.otime = obspy.UTCDateTime("2015-10-20T19:14:16.000")
-        # ev_info.otime = obspy.UTCDateTime("2011-12-21T16:28:41.000")
-        # -------------------------------------------------
+        ev_info_list = []
+        for xx in range(len(eids)):
+            ev_info_temp = ev_info.copy()
+            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
+            ev_info_temp.elat = elats[xx]
+            ev_info_temp.elon = elons[xx]
+            ev_info_temp.edep = edeps[xx]
+            ev_info_temp.emag = emags[xx]
+            ev_info_temp.eid = eids[xx]
+            
+            ev_info_temp.min_dist = 0
+            ev_info_temp.max_dist = 300
+            ev_info_temp.tbefore_sec = 200
+            ev_info_temp.tafter_sec = 600
+            ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+            # ev_info_temp.network = 'XV,AK'
+            ev_info_temp.channel = 'BH?,HH?'
+            #ev_info_temp.scale_factor = 1
+            ev_info_temp.resample_TF = False
+            # for CAP
+            # ev_info_temp.scale_factor = 10.0**2
+            # ev_info_temp.resample_freq = 50 
         
-        ev_info.min_dist = 0
-        ev_info.max_dist = 300
-        ev_info.tbefore_sec = 200
-        ev_info.tafter_sec = 600
-        ev_info.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
-        # ev_info.network = 'XV,AK'
-        ev_info.channel = 'BH?,HH?'
-        #ev_info.scale_factor = 1
-        ev_info.resample_TF = False
-        # for CAP
-        # ev_info.scale_factor = 10.0**2
-        # ev_info.resample_freq = 50 
+            # to investigate step response
+            ev_info_temp.isave_raw = True
+            ev_info_temp.isave_raw_processed  = True
+            ev_info_temp.rotateENZ = False
+            ev_info_temp.rotateRTZ = False
+            ev_info_temp.rotateUVW = True
+            # filter options
+            ev_info_temp.ifFilter = True
+            ev_info_temp.zerophase = False    # causal
+            # filter_type = 'lowpass'
+            ev_info_temp.filter_type = 'bandpass'
+            ev_info_temp.f1 = 1/100  # fmin
+            ev_info_temp.f2 = 1/10  # fmax
+            ev_info_temp.corners = 4
+            # ev_info_temp.remove_response = False
+            ev_info_temp.remove_response = True
+            ev_info_temp.ipre_filt = 1
+            ev_info_temp.demean = True
+            ev_info_temp.detrend = True
+            ev_info_temp.output_cap_weight_file = False
+            # ev_info_temp.outformat = 'DISP'
+            ev_info_temp.ifsave_sacpaz = True
+            ev_info_temp.taper = 0.2
+
+            # append getwaveform objects
+            ev_info_list.append(ev_info_temp)
         
-        # to investigate step response
-        ev_info.rotateRTZ = True
-        ev_info.rotateUVW = True
-        ev_info.ifFilter = True
-        ev_info.zerophase = False    # causal
-        # filter_type = 'lowpass'
-        ev_info.filter_type = 'bandpass'
-        ev_info.f1 = 1/100  # fmin
-        ev_info.f2 = 1/10  # fmax
-        ev_info.corners = 4
-        # ev_info.remove_response = False
-        ev_info.remove_response = True
-        ev_info.ipre_filt = 1
-        ev_info.demean = True
-        ev_info.detrend = True
-        ev_info.output_cap_weight_file = False
-        # ev_info.outformat = 'DISP'
-        ev_info.ifsave_sacpaz = True
-        ev_info.taper = 0.2
+        # always return ev_info
+        ev_info = ev_info_list
         
 # NENNUC event (from Steve)
     if iex == 1:

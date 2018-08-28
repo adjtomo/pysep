@@ -86,24 +86,39 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose 
         substr = stream.select(network=netw,station=station,
                                location=location,channel=chan)
         substr.sort()
-        if len(substr) < 3 and icreateNull:
-            # IF YOU DO THIS REMEMBER TO SET THE WEIGHTS TO ZERO FOR THESE COMPONENTS
-            print('WARNING:', len(substr), 'traces available for rotation. Adding NULL traces - ', \
-                      netw + '.' + station + '.' + location + '.' + chan)
-            d1 = substr[0].data
-            dip1 = substr[0].stats.sac['cmpinc']
-            az1 = substr[0].stats.sac['cmpaz']
-            for itr in range(len(substr),3):
-                tmp = substr[0].copy()
-                #print(tmp.data)
-                substr.append(tmp)
-                substr[itr].data = np.zeros(substr[0].stats.npts)
-                substr[itr].stats.sac['cmpinc'] = dip1 + 90.0
-                tmp = None
-                if itr == 1:
-                    substr[itr].stats.sac['cmpaz'] = az1
-                if itr == 2:
-                    substr[itr].stats.sac['cmpaz'] = az1 + 90.0
+
+
+        # what components are in substr?
+        components = list()
+        for trace in substr:
+            components.append(trace.stats.channel[-1].upper())
+        components.sort()
+
+        if len(substr)<3:
+            if not icreateNull:
+                continue
+
+            # Station is missing one or more components. Checking to see if the 
+            # remaining components are usable
+            if components==['Z']:
+                print('WARNING: %s is missing horizontal components. In '
+                      'principle, the vertical component could still be '
+                      'used, but this is not yet implemented.'
+                       % substr[0].id)
+                continue
+
+            elif components==['E', 'N'] or\
+                 components==['1', '2']:
+                print('WARNING: %s is missing a vertical component. In '
+                      'principle, the horizontal components could still be '
+                      'used, but this is not yet implemented.'
+                       % substr[0].id)
+                continue
+
+            else:
+                print('WARNING: %s has no usable components. Skipping...'
+                      % substr[0].id)
+                continue
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
@@ -1210,7 +1225,7 @@ def get_pre_filt(ipre_filt, tr):
     return pre_filt
 
 
-def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, 
+def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, water_level,
                      scale_factor, stations, outformat, ifverbose=False):
     """
     Remove instrument response. Or plot (but not both)
@@ -1237,7 +1252,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response,
             try:
                 if ifverbose:
                     print('%s: Plotting instrument response' % station_key)
-                tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                tr.remove_response(inventory=stations, water_level=water_level, pre_filt=pre_filt, \
                         output=outformat, plot = resp_plot)
                 continue
             except:
@@ -1247,7 +1262,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response,
                 if ifverbose:
                     print('%s: Correcting instrument response, pre-filter %s' %\
                               (station_key, pre_filt))
-                tr.remove_response(inventory=stations, pre_filt=pre_filt, \
+                tr.remove_response(inventory=stations, water_level=water_level, pre_filt=pre_filt, \
                         output=outformat)
             except Exception as e:
                 print("Failed to correct %s due to: %s" % (tr.id, str(e)))

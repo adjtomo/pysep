@@ -84,6 +84,54 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100        # no scale factor
 
+# Earthquake in Fairbanks
+    if iex == 3:
+        ev_info.ifverbose = False
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+
+        # subset waveforms
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 200
+        ev_info.tbefore_sec = 50
+        ev_info.tafter_sec = 300
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100
+        ev_info.network = 'AK,AT,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
+        ev_info.channel = 'BH?,HH?'
+        ev_info.otime = obspy.UTCDateTime("2018-07-24T10:32:05") 
+        ev_info.elat = 64.8471
+        ev_info.elon = -147.7885
+        ev_info.edep = 8000
+        ev_info.emag = 3.2
+        ev_info.rotateUVW = True 
+
+        ev_info.user = None
+        ev_info.password = None
+
+# Earthquake on North Slope
+    if iex == 4:
+        ev_info.ifverbose = False
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+
+        # subset waveforms
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 500
+        ev_info.tbefore_sec = 50
+        ev_info.tafter_sec = 300
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100
+        ev_info.network = 'AK,AT,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
+        ev_info.channel = 'BH?,HH?'
+        ev_info.otime = obspy.UTCDateTime("2018-08-12T14:58:54") 
+        ev_info.elat = 69.6239
+        ev_info.elon = -145.2468
+        ev_info.edep = 10000
+        ev_info.emag = 6.4
+        ev_info.rotateUVW = True 
 
     return(ev_info)
 #=================================================================================
