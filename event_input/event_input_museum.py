@@ -11,8 +11,7 @@ def get_ev_info(ev_info,iex):
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
-        # GCMT source parameters
-        # the otime is the centroid time and accounts for tshift
+        # Iniskin earthquake
         ev_info.otime = obspy.UTCDateTime("2016-01-24T10:30:37.400") 
         ev_info.elat = 59.75
         ev_info.elon = -153.27
@@ -30,6 +29,7 @@ def get_ev_info(ev_info,iex):
 
         ev_info.rotateRTZ = False
         ev_info.isave_ENZ = True
+        ev_info.isave_raw_processed = True
         ev_info.isave_raw = True
         ev_info.resample_freq = 0        # no resampling
         ev_info.resample_TF = False
@@ -69,6 +69,7 @@ def get_ev_info(ev_info,iex):
 
             ev_info_temp.rotateRTZ = False
             ev_info_temp.isave_ENZ = True
+            ev_info_temp.isave_raw_processed = True
             ev_info_temp.isave_raw = True
             ev_info_temp.resample_freq = 0        # no resampling
             ev_info_temp.resample_TF = False
@@ -119,8 +120,9 @@ def get_ev_info(ev_info,iex):
 
         # default pre-filter
         #  (0.0003225816857473734, 0.0006451633714947468, 12.5, 25.0)
-        ev_info.water_level = 100000
-        ev_info.ipre_filt = 2
+        ev_info.water_level = 100000   # defaut = 60
+        ev_info.ipre_filt = 2   # custom pre-filter
+        #ev_info.ipre_filt = 1   # default pre-filter
         ev_info.f1 = 1/1000
         ev_info.f2 = 10.
         ev_info.f0 = 0.5*ev_info.f1
@@ -135,6 +137,71 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 0        # no resampling
         ev_info.resample_TF = False
         ev_info.scale_factor = 1         # no scale factor
+
+    if iex == 3:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        
+        ievent = 27
+        #events_file = "/home/carltape/REPOSITORIES/pysep/akglass_global_obspy.txt"
+        events_file = "/home/carltape/REPOSITORIES/pysep/akglass_alaska_obspy.txt"
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+
+        ev_info_list = []
+        #for xx in range(15,18):
+        #for xx in range(ievent-1,ievent):
+        for xx in range(len(eids)):
+            ev_info_temp = ev_info.copy()
+            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
+            ev_info_temp.elat = elats[xx]
+            ev_info_temp.elon = elons[xx]
+            ev_info_temp.edep = edeps[xx]
+            ev_info_temp.emag = emags[xx]
+            ev_info_temp.eid = eids[xx]
+
+            # subset of stations near Fairbanks
+            ev_info_temp.min_lat = 64.0
+            ev_info_temp.max_lat = 65.5
+            ev_info_temp.min_lon = -151.5
+            ev_info_temp.max_lon = -146.0
+
+            # global events
+            #ev_info_temp.tbefore_sec = 0
+            #ev_info_temp.tafter_sec = 5400
+            # Alaska events
+            ev_info_temp.tbefore_sec = 600
+            ev_info_temp.tafter_sec = 2500
+
+            ev_info_temp.network = '*'
+            ev_info_temp.channel = 'BH?'     # HH if you want FLATS (XV)
+            ev_info_temp.outformat = 'DISP'  # save as ACC, VEL, or DISP
+
+            ev_info_temp.water_level = 100000   # defaut = 60
+            ev_info_temp.ipre_filt = 2
+            ev_info_temp.f1 = 1/400
+            ev_info_temp.f2 = 10.
+            ev_info_temp.f0 = 0.5*ev_info_temp.f1
+            ev_info_temp.f3 = 2.0*ev_info_temp.f2
+            ev_info_temp.pre_filt=(ev_info_temp.f0, ev_info_temp.f1, ev_info_temp.f2, ev_info_temp.f3) 
+            # (0.0005, 0.001, 10.0, 20.0)
+
+            #ev_info_temp.ifFilter = True
+            #ev_info_temp.filter_type = 'highpass'
+
+            ev_info_temp.rotateRTZ = False
+            ev_info_temp.isave_ENZ = True
+            ev_info_temp.isave_raw_processed = True
+            ev_info_temp.isave_raw = True
+            ev_info_temp.resample_freq = 0        # no resampling
+            ev_info_temp.resample_TF = False
+            ev_info_temp.scale_factor = 1         # no scale factor
+            
+            # append getwaveform objects
+            ev_info_list.append(ev_info_temp)
+        
+        # always return ev_info
+        ev_info = ev_info_list
 
     return(ev_info)
 #=================================================================================
