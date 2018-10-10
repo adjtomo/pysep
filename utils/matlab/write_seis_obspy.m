@@ -5,6 +5,8 @@ function write_seis_obspy(ftag,lon,lat,dep,mag,otime)
 % input parameters for a python script to fetch waveforms from the IRIS DMC
 % and then process them using obspy.
 %
+% See also read_seis_obspy.m
+%
 
 n = length(lon);
 
