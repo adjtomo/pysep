@@ -5,12 +5,13 @@ from getwaveform import *
 def get_ev_info(ev_info,iex):
 # ===============================================================            
 # MFFZ earthquakes for investigating the step response
+# python run_getwaveform.py event_input_flats 0
     if iex == 0:
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
         
-        ievent = 13
+        ievent = 14
         events_file = "/home/carltape/REPOSITORIES/manuscripts/carltape/papers/nennuc/clipping/data/MFFZ_step_response_obspy.txt"
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
