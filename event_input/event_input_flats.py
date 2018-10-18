@@ -11,7 +11,7 @@ def get_ev_info(ev_info,iex):
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
         
-        ievent = 14
+        ievent = 13
         events_file = "/home/carltape/REPOSITORIES/manuscripts/carltape/papers/nennuc/clipping/data/MFFZ_step_response_obspy.txt"
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
@@ -30,6 +30,7 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.max_dist = 300
             ev_info_temp.tbefore_sec = 200
             ev_info_temp.tafter_sec = 600
+            #ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US,DE'
             ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
             # ev_info_temp.network = 'XV,AK'
             ev_info_temp.channel = 'BH?,HH?'
@@ -39,6 +40,10 @@ def get_ev_info(ev_info,iex):
             # ev_info_temp.scale_factor = 10.0**2
             # ev_info_temp.resample_freq = 50 
         
+            # For DE (Nanometrics) data
+            ev_info_temp.user = None
+            ev_info_temp.password = None
+
             # to investigate step response
             ev_info_temp.isave_raw = True
             ev_info_temp.isave_raw_processed  = True
