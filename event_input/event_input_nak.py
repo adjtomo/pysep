@@ -45,4 +45,25 @@ def get_ev_info(ev_info,iex):
         # always return ev_info
         ev_info = ev_info_list
 
+    if iex == 1:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+
+        ev_info.min_dist = 0 
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100
+        ev_info.network = 'AK,AT,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
+        ev_info.channel = 'BH?,HH?'
+        
+
+        ev_info.otime = obspy.UTCDateTime("2018-10-14T23:53:14.000") 
+        ev_info.elat = 67.7684
+        ev_info.elon = -156.4070
+        ev_info.edep = 7900
+        ev_info.emag = 5.3 
+
     return(ev_info)
