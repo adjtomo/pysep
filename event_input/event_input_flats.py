@@ -31,8 +31,9 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.tbefore_sec = 200
             ev_info_temp.tafter_sec = 600
             #ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US,DE'
-            ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+            #ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
             # ev_info_temp.network = 'XV,AK'
+            ev_info_temp.network = 'XV,DE'
             ev_info_temp.channel = 'BH?,HH?'
             #ev_info_temp.scale_factor = 1
             ev_info_temp.resample_TF = False
@@ -41,8 +42,8 @@ def get_ev_info(ev_info,iex):
             # ev_info_temp.resample_freq = 50 
         
             # For DE (Nanometrics) data
-            ev_info_temp.user = None
-            ev_info_temp.password = None
+            ev_info_temp.user = 'kksmith7@alaska.edu' 
+            ev_info_temp.password = 'wmpo3NmqTcRm' 
 
             # to investigate step response
             ev_info_temp.isave_raw = True
@@ -463,7 +464,7 @@ def get_ev_info(ev_info,iex):
 
     if iex == 14:     
         
-        # Manley event
+        # Tanana event
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
@@ -486,7 +487,78 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        
         ev_info.scale_factor = 100
 
+    if iex == 16:     
+        
+        # Anchorage event
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        
+        ievent = 1 
+        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/posters/2018/AGU_poster.txt"
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
+        ev_info_list = []
+        for xx in range(ievent-1,ievent):
+        #for xx in range(len(eids)):
+            ev_info_temp = ev_info.copy()
+            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
+            ev_info_temp.elat = elats[xx]
+            ev_info_temp.elon = elons[xx]
+            ev_info_temp.edep = edeps[xx]
+            ev_info_temp.emag = emags[xx]
+            ev_info_temp.eid = eids[xx]
+            
+            ev_info_temp.min_az = 0 
+            ev_info_temp.max_az = 15 
+            ev_info_temp.min_dist = 0
+            ev_info_temp.max_dist = 600 
+            ev_info_temp.tbefore_sec = 50 
+            ev_info_temp.tafter_sec = 350 
+            #ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US,DE'
+            #ev_info_temp.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
+            ev_info_temp.network = 'XV,DE,AK,TA'
+            ev_info_temp.channel = 'BH?,HH?'
+            #ev_info_temp.scale_factor = 1
+            ev_info_temp.resample_TF = False
+            # for CAP
+            # ev_info_temp.scale_factor = 10.0**2
+            # ev_info_temp.resample_freq = 50 
+        
+            # For DE (Nanometrics) data
+            ev_info_temp.user = 'kksmith7@alaska.edu' 
+            ev_info_temp.password = 'wmpo3NmqTcRm' 
+
+            # to investigate step response
+            ev_info_temp.isave_raw = True
+            ev_info_temp.isave_raw_processed  = True
+            ev_info_temp.rotateENZ = False
+            ev_info_temp.rotateRTZ = True 
+            ev_info_temp.rotateUVW = True
+            # filter options
+            #ev_info_temp.ifFilter = True 
+            ev_info_temp.ifFilter = False 
+            ev_info_temp.zerophase = False    # causal
+            # filter_type = 'lowpass'
+            #ev_info_temp.filter_type = 'bandpass'
+            #ev_info_temp.f1 = 1/100  # fmin
+            #ev_info_temp.f2 = 1/10  # fmax
+            #ev_info_temp.corners = 4
+            # ev_info_temp.remove_response = False
+            ev_info_temp.remove_response = True
+            ev_info_temp.ipre_filt = 1
+            ev_info_temp.demean = True
+            ev_info_temp.detrend = True
+            ev_info_temp.output_cap_weight_file = False
+            # ev_info_temp.outformat = 'DISP'
+            ev_info_temp.ifsave_sacpaz = True
+            ev_info_temp.taper = 0.2
+
+            # append getwaveform objects
+            ev_info_list.append(ev_info_temp)
+        
+        # always return ev_info
+        ev_info = ev_info_list
     return(ev_info)
 
 #=================================================================================
