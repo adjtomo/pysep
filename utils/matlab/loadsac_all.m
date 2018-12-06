@@ -47,7 +47,27 @@ w = wupdate_eid(w);
 % EXAMPLES
 
 if 0==1
-    % load sac files into Matlab
+    %% default CAP example
+    %bdir = getenv('PYSEP');
+    bdir = '/home/carltape/PROJECTS/earthquakes/CAP_test';
+    eid = '20090407201255351';
+    idir = strcat(bdir,'/',eid,'/');
+    ftag = '*.z';
+    [w,fnames] = loadsac_all(idir,ftag);
+    
+    % plot record section
+    rssort = 2;
+    iabs = 0;
+    tshift = [];   % time before origin time
+    tmark = [];
+    %T1 = 1.5; T2 = 4;      %  body waves
+    T1 = 16; T2 = 40;       % surface waves
+    pmax = []; iintp = [];
+    inorm = 1;
+    tlims = []; nfac = []; azstart = []; iunit = []; imap = 1;
+    plotw_rs(w,rssort,iabs,tshift,tmark,T1,T2,pmax,iintp,inorm,tlims,nfac,azstart,iunit,imap);
+    
+    %% load sac files into Matlab
     bdir = '/home/carltape/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/';
     %idir = strcat(bdir,'20160124103030230_iris/');
     idir = strcat(bdir,'20160124103029557_aec/');
