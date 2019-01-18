@@ -259,7 +259,7 @@ def get_ev_info(ev_info,iex):
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
         ev_info_list = []
-        for xx in range(0,3):
+        for xx in range(26,27):
             ev_info_temp = ev_info.copy()
             ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
             ev_info_temp.elat = elats[xx]
@@ -369,9 +369,14 @@ def get_ev_info(ev_info,iex):
 
 	# FPAP out and on
         #ev_info.otime = obspy.UTCDateTime("2018-09-28T12:00:00")  
-        ev_info.otime = obspy.UTCDateTime("2018-10-04T00:00:00")  
-        ev_info.elat = 64.6130
-        ev_info.elon = -149.0991
+        #ev_info.otime = obspy.UTCDateTime("2018-10-04T00:00:00")  
+        #ev_info.elat = 64.6130
+        #ev_info.elon = -149.0991
+	
+	# F2TN out and on
+        ev_info.otime = obspy.UTCDateTime("2018-08-03T18:30:00")  
+        ev_info.elat = 64.7091
+        ev_info.elon = -149.1327
         
         ev_info.edep = 0 
         ev_info.emag = 0
@@ -439,16 +444,22 @@ def get_ev_info(ev_info,iex):
 
     if iex == 13:     
         
-        # Manley event
+        # Nenana EQ 
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
 	
-        ev_info.otime = obspy.UTCDateTime("2018-08-25T18:15:51")  
-        ev_info.elat = 64.6181
-        ev_info.elon = -149.2233
-        
-        ev_info.edep = 18900
+	# from AEC website 
+        #ev_info.otime = obspy.UTCDateTime("2018-08-25T18:15:51") 
+        #ev_info.elat = 64.6181
+        #ev_info.elon = -149.2233
+        #ev_info.edep = 18900
+
+        # Reviewed time and location 
+        ev_info.otime = obspy.UTCDateTime("2018-08-25T18:15:51.595") 
+        ev_info.elat = 64.6224
+        ev_info.elon = -149.2107
+        ev_info.edep = 21166 
         ev_info.emag = 3.2 
         ev_info.rotateRTZ = True 
     
@@ -457,7 +468,7 @@ def get_ev_info(ev_info,iex):
         ev_info.max_dist = 300 
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 300
-        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US,DE' 
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 50        
         ev_info.scale_factor = 100
@@ -511,6 +522,7 @@ def get_ev_info(ev_info,iex):
             
             ev_info_temp.min_az = 0 
             ev_info_temp.max_az = 15 
+            ev_info_temp.max_az = 20 
             ev_info_temp.min_dist = 0
             ev_info_temp.max_dist = 600 
             ev_info_temp.tbefore_sec = 50 
