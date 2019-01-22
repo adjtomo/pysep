@@ -60,12 +60,17 @@ if 0==1
     iabs = 0;
     tshift = [];   % time before origin time
     tmark = [];
+    %T1 = []; T2 = [];
     %T1 = 1.5; T2 = 4;      %  body waves
     T1 = 16; T2 = 40;       % surface waves
     pmax = []; iintp = [];
     inorm = 1;
     tlims = []; nfac = []; azstart = []; iunit = []; imap = 1;
     plotw_rs(w,rssort,iabs,tshift,tmark,T1,T2,pmax,iintp,inorm,tlims,nfac,azstart,iunit,imap);
+    
+    %% simplest example (note: no additional filtering in record section)
+    bdir = getenv('PYSEP'); eid = '20040522075800000'; idir = strcat(bdir,'/',eid,'/');
+    ftag = '*.z'; [w,fnames] = loadsac_all(idir,ftag); plotw_rs(w);
     
     %% load sac files into Matlab
     bdir = '/home/carltape/REPOSITORIES/GEOTOOLS/python_util/util_data_syn/';
