@@ -307,12 +307,12 @@ def get_ev_info(ev_info,iex):
     
         # subset of stations
 
-        # ev_info.min_dist = 0
-        ev_info.min_dist = 300
+        ev_info.min_dist = 0
+        #ev_info.min_dist = 300
         ev_info.max_dist = 500 
         ev_info.tbefore_sec = 100 
         ev_info.tafter_sec = 1000 
-        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US,DE' 
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor

@@ -249,7 +249,7 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50        
         ev_info.scale_factor = 100 
 
-# Loop over multiple event       
+# Loop over multiple event for MT 
     if iex == 7:
         ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
@@ -565,6 +565,89 @@ def get_ev_info(ev_info,iex):
             # ev_info_temp.outformat = 'DISP'
             ev_info_temp.ifsave_sacpaz = True
             ev_info_temp.taper = 0.2
+
+            # append getwaveform objects
+            ev_info_list.append(ev_info_temp)
+        
+        # always return ev_info
+        ev_info = ev_info_list
+
+    # Loop over multiple event for metric study 
+    if iex == 17:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        sec_tol = 180 
+        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinresp/data/basinamp_obspy.txt"
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+	
+        get_SR_wf = False 
+        ev_info_list = []
+        for xx in range(26,27):
+            ev_info_temp = ev_info.copy()
+            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
+            ev_info_temp.elat = elats[xx]
+            ev_info_temp.elon = elons[xx]
+            ev_info_temp.edep = edeps[xx]
+            ev_info_temp.emag = emags[xx]
+            ev_info_temp.eid = eids[xx]
+            
+            print(ev_info_temp.tafter_sec)
+ 
+            # subset of stations
+            ev_info_temp.min_dist = 0
+            ev_info_temp.max_dist = 50 
+            #ev_info_temp.max_dist = 150
+            
+            ev_info_temp.rlat = 64.7716
+            ev_info_temp.rlon = -149.1465 
+            ev_info_temp.rtime = ev_info_temp.otime
+            saftcase = False 
+	    # Iniskin 
+            if ev_info_temp.otime-obspy.UTCDateTime("2016-01-24T10:30:29")<sec_tol: 
+                ev_info_temp.tafter_sec = 600; saftcase = True 
+	    # Chile 
+            if ev_info_temp.otime-obspy.UTCDateTime("2015-09-16T22:54:33")<sec_tol: 
+                ev_info_temp.rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
+                ev_info_temp.tafter_sec = 200; saftcase = True  
+	    # Mariana 
+            if ev_info_temp.otime-obspy.UTCDateTime("2016-07-29T21:18:26")<sec_tol: 
+                ev_info_temp.rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
+	    # North Korea 
+            if ev_info_temp.otime-obspy.UTCDateTime("2017-09-03T03:30:01")<sec_tol: 
+                ev_info_temp.rtime = obspy.UTCDateTime("2017-09-03T03:38:55")
+                ev_info_temp.tafter_sec = 600; saftcase = True  
+	    # Kodiak 
+            if ev_info_temp.otime-obspy.UTCDateTime("2018-01-23 09:31:42")<sec_tol: 
+                ev_info_temp.tafter_sec = 1000; saftcase = True  
+            # Anchorage 
+            if ev_info_temp.otime-obspy.UTCDateTime("2018-11-30T17:29:29")<sec_tol: 
+                ev_info_temp.tafter_sec = 600
+                saftcase = True 
+ 
+            ev_info_temp.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+            ev_info_temp.channel = 'BH?,HH?'
+            ev_info_temp.resample_freq = 50        
+            ev_info_temp.scale_factor = 1 
+            
+            if get_SR_wf:
+                ev_info_temp.before_sec = 0 
+                if not saftcase:
+		    TS_length = 500 
+                else: 
+		    TS_length = ev_info_temp.tafter_sec 
+                
+                if getpreEQnoise:
+                    ev_info_temp.tafter_sec = 0
+                    ev_info_temp.tbefore_sec = TS_length
+ 
+            # EQ metrics WFs 
+            else: 
+                ev_info_temp.tbefore_sec = 100
+                if not saftcase:
+                    ev_info_temp.tafter_sec = 400
+	    
+                # ev_info_temp.scale_factor = 100 
 
             # append getwaveform objects
             ev_info_list.append(ev_info_temp)
