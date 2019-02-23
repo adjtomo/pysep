@@ -624,8 +624,7 @@ def get_ev_info(ev_info,iex):
                 ev_info_temp.tafter_sec = 1000; saftcase = True  
             # Anchorage 
             if abs(ev_info_temp.otime-obspy.UTCDateTime("2018-11-30T17:29:29"))<sec_tol: 
-                ev_info_temp.tafter_sec = 600
-                saftcase = True 
+                ev_info_temp.tafter_sec = 600; saftcase = True 
  
             ev_info_temp.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
             ev_info_temp.channel = 'BH?,HH?'
