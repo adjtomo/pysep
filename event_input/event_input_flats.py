@@ -581,9 +581,10 @@ def get_ev_info(ev_info,iex):
         events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinresp/data/basinamp_obspy.txt"
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 	
-        get_SR_wf = False 
+        get_SR_wf = True 
+        getpreEQnoise = True; 
         ev_info_list = []
-        for xx in range(26,27):
+        for xx in range(3,4):
             ev_info_temp = ev_info.copy()
             ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
             ev_info_temp.elat = elats[xx]
@@ -602,26 +603,27 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.rlat = 64.7716
             ev_info_temp.rlon = -149.1465 
             ev_info_temp.rtime = ev_info_temp.otime
-            saftcase = False 
-	    # Iniskin 
-            if ev_info_temp.otime-obspy.UTCDateTime("2016-01-24T10:30:29")<sec_tol: 
-                ev_info_temp.tafter_sec = 600; saftcase = True 
+            saftcase = False
+            print(saftcase) 
+            # Iniskin 
+            if abs(ev_info_temp.otime-obspy.UTCDateTime("2016-01-24T10:30:29"))<sec_tol: 
+                ev_info_temp.tafter_sec = 600; saftcase = True
 	    # Chile 
-            if ev_info_temp.otime-obspy.UTCDateTime("2015-09-16T22:54:33")<sec_tol: 
+            if abs(ev_info_temp.otime-obspy.UTCDateTime("2015-09-16T22:54:33"))<sec_tol: 
                 ev_info_temp.rtime = obspy.UTCDateTime("2015-09-16T23:09:15.000")
                 ev_info_temp.tafter_sec = 200; saftcase = True  
 	    # Mariana 
-            if ev_info_temp.otime-obspy.UTCDateTime("2016-07-29T21:18:26")<sec_tol: 
+            if abs(ev_info_temp.otime-obspy.UTCDateTime("2016-07-29T21:18:26"))<sec_tol: 
                 ev_info_temp.rtime = obspy.UTCDateTime("2016-07-29T21:28:19.000")
 	    # North Korea 
-            if ev_info_temp.otime-obspy.UTCDateTime("2017-09-03T03:30:01")<sec_tol: 
+            if abs(ev_info_temp.otime-obspy.UTCDateTime("2017-09-03T03:30:01"))<sec_tol: 
                 ev_info_temp.rtime = obspy.UTCDateTime("2017-09-03T03:38:55")
                 ev_info_temp.tafter_sec = 600; saftcase = True  
 	    # Kodiak 
-            if ev_info_temp.otime-obspy.UTCDateTime("2018-01-23 09:31:42")<sec_tol: 
+            if abs(ev_info_temp.otime-obspy.UTCDateTime("2018-01-23 09:31:42"))<sec_tol: 
                 ev_info_temp.tafter_sec = 1000; saftcase = True  
             # Anchorage 
-            if ev_info_temp.otime-obspy.UTCDateTime("2018-11-30T17:29:29")<sec_tol: 
+            if abs(ev_info_temp.otime-obspy.UTCDateTime("2018-11-30T17:29:29"))<sec_tol: 
                 ev_info_temp.tafter_sec = 600
                 saftcase = True 
  
@@ -631,11 +633,13 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.scale_factor = 1 
             
             if get_SR_wf:
-                ev_info_temp.before_sec = 0 
+                ev_info_temp.tbefore_sec = 0 
                 if not saftcase:
-		    TS_length = 500 
+                    TS_length = 500
+                    print("first statement",saftcase) 
                 else: 
-		    TS_length = ev_info_temp.tafter_sec 
+                    TS_length = ev_info_temp.tafter_sec 
+                    print("second statement",saftcase) 
                 
                 if getpreEQnoise:
                     ev_info_temp.tafter_sec = 0
@@ -648,6 +652,8 @@ def get_ev_info(ev_info,iex):
                     ev_info_temp.tafter_sec = 400
 	    
                 # ev_info_temp.scale_factor = 100 
+            print("before sec = ", ev_info_temp.tbefore_sec)
+            print("after sec = ", ev_info_temp.tafter_sec)
 
             # append getwaveform objects
             ev_info_list.append(ev_info_temp)
