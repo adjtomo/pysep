@@ -117,6 +117,33 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor        
+    
+    # M3.7 North Pole 
+    if iex == 5:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        # GCMT source parameters
+        # the otime is the centroid time and accounts for tshift
+        ev_info.otime = obspy.UTCDateTime("2019-03-09T23:39:58") # AEC prelim
+        ev_info.elat = 64.5830 
+        ev_info.elon = -147.7238
+        ev_info.edep = 20600 
+        ev_info.emag = 3.7 
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 200  
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+
+        # For DE (Nanometrics) data
+        #ev_info.user = 'kksmith7@alaska.edu' 
+        #ev_info.password = 'wmpo3NmqTcRm' 
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US,DE' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor        
 
     return(ev_info)
 #=================================================================================
