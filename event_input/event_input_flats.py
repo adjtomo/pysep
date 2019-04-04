@@ -42,8 +42,8 @@ def get_ev_info(ev_info,iex):
             # ev_info_temp.resample_freq = 50 
         
             # For DE (Nanometrics) data
-            ev_info_temp.user = 'kksmith7@alaska.edu' 
-            ev_info_temp.password = 'wmpo3NmqTcRm' 
+            ev_info_temp.user = None
+            ev_info_temp.password = None 
 
             # to investigate step response
             ev_info_temp.isave_raw = True
