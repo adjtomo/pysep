@@ -1,0 +1,65 @@
+(Data providers and clients are used synonymously in this document)
+
+Before sending out the request to a specific client you need to know which networks are maintained by them. Their official webpage is generally the best place to start. 
+
+This test shows that data from one network could be maintained by multiple providers. 
+
+Here are comparitive test of sending request to IRIS and NCEDC:
+----------------NCEDC-------------------
+ev_info.client_name = 'NCEDC'
+ev_info.network = 'BK'
+----------------IRIS-------------------
+ev_info.client_name = 'IRIS'
+ev_info.network = 'AZ,CI,LB,TS,TA,NC,NN,SN,II,IU,US'
+-----------------------------------
+
+------------------------------------------------------------------------------------------------------------
+client IRIS     |      client IRIS      |       client NCEDC    |       client NCEDC    |      client NCEDC
+ntwk   IRIS     |      ntwk   NCEDC     |       ntwk   IRIS     |       ntwk   NCEDC    |      ntwk   *    
+------------------------------------------------------------------------------------------------------------
+CI	ARV	|	BK	CMB	|	CI	ARV	|	BK	BDM	|	BK	BDM
+CI	BAK	|	BK	MCCM	|	CI	BAK	|	BK	BKS	|	BK	BKS
+CI	CWC	|	BK	SAO	|	CI	BCW	|	BK	BL67	|	BK	BL67
+CI	ISA	|			|	CI	CAR	|	BK	BRIB	|	BK	BRIB
+CI	LGU	|			|	CI	CWC	|	BK	BRK	|	BK	BRK
+CI	MLAC	|			|	CI	FIG	|	BK	CMB	|	BK	CMB
+CI	MPP	|			|	CI	GATR	|	BK	CVS	|	BK	CVS
+CI	OSI	|			|	CI	ISA	|	BK	FARB	|	BK	FARB
+CI	PHL	|			|	CI	LCP	|	BK	HAST	|	BK	HAST
+CI	SBC	|			|	CI	MLAC	|	BK	HELL	|	BK	HELL
+CI	SCZ2	|			|	CI	MPP	|	BK	JRSC	|	BK	JRSC
+CI	SMM	|			|	CI	NJQ	|	BK	MCCM	|	BK	MCCM
+CI	TIN	|			|	CI	SBC	|	BK	MHC	|	BK	MHC
+CI	VES	|			|	CI	SMM	|	BK	MHDL	|	BK	MHDL
+LB	DAC	|			|	CI	SMR	|	BK	MOBB	|	BK	MOBB
+		|			|	CI	SMW	|	BK	OXMT	|	BK	OXMT
+		|			|	CI	SPG2	|	BK	PACP	|	BK	PACP
+		|			|	CI	SYP	|	BK	PKD	|	BK	PKD
+		|			|	CI	TFT	|	BK	RAMR	|	BK	RAMR
+		|			|	CI	TIN	|	BK	SAO	|	BK	SAO
+		|			|	CI	VES	|	BK	THIS	|	BK	THIS
+		|			|	LB	DAC	|	BK	TSCN	|	BK	TSCN
+		|			|			|	BK	VAK	|	BK	VAK
+		|			|			|	BK	WENL	|	BK	WENL
+		|			|			|			|	CI	ARV
+		|			|			|			|	CI	BAK
+		|			|			|			|	CI	BCW
+		|			|			|			|	CI	CAR
+		|			|			|			|	CI	CWC
+		|			|			|			|	CI	FIG
+		|			|			|			|	CI	GATR
+		|			|			|			|	CI	ISA
+		|			|			|			|	CI	LCP
+		|			|			|			|	CI	MLAC
+		|			|			|			|	CI	MPP
+		|			|			|			|	CI	NJQ
+		|			|			|			|	CI	SBC
+		|			|			|			|	CI	SMM
+		|			|			|			|	CI	SMR
+		|			|			|			|	CI	SMW
+		|			|			|			|	CI	SPG2
+		|			|			|			|	CI	SYP
+		|			|			|			|	CI	TFT
+		|			|			|			|	CI	TIN
+		|			|			|			|	CI	VES
+		|			|			|			|	LB	DAC

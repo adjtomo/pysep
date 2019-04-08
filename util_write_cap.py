@@ -444,7 +444,8 @@ def write_ev_info(ev, evname_key):
         ev.origins[0].latitude, ev.origins[0].depth / 1000.0,
         ev.magnitudes[0].mag))
 
-def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model = "ak135",phases=["P","P"], phase_write=False):
+def add_sac_metadata(st, client_name="LLNL", ev=[], stalist=[], ifverbose=False, 
+                     taup_model = "ak135",phases=["P","P"], phase_write=False):
     """
     Add event and station metadata to an Obspy stream
     """
@@ -535,7 +536,7 @@ def add_sac_metadata(st, idb=3, ev=[], stalist=[], ifverbose=False, taup_model =
                         stn_in_inventory=1   # trace does have inventory info
                         # Note: LLNL database does not have instruement response info or the sensor info
                         # Since units are different for Raw waveforms and after response is removed. This header is now set in getwaveform_iris.py
-                        if idb==1:
+                        if client_name!="LLNL":
                             #if tr.stats.sac['kuser0'] == 'RAW':
                             #    tr.stats.sac['kuser0'] = ch.response.instrument_sensitivity.output_units
                             #else:
@@ -829,7 +830,7 @@ def write_stream_sac(st, path_to_waveforms, evname_key):
         tr.write(outfile, format='SAC')
 
 def write_stream_sac_raw(stream_raw, path_to_waveforms, 
-                         evname_key, idb, event, stations):
+                         evname_key, client_name, event, stations):
     """
     write unprocessed (raw) waveforms in SAC format
     """
@@ -844,7 +845,7 @@ def write_stream_sac_raw(stream_raw, path_to_waveforms,
         # sac header is COUNTS when response is not removed
         tr.stats.sac['kuser0'] = 'RAW'
 
-    stream_raw = add_sac_metadata(stream_raw, idb=idb, 
+    stream_raw = add_sac_metadata(stream_raw, client_name=client_name, 
                                   ev=event, stalist=stations)
 
     # write raw waveforms
