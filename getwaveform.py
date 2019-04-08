@@ -46,8 +46,8 @@ class getwaveform:
         a good idea when deconvolving (ifRemoveResponse=True)
         """
         # DEFAULT SETTINGS
-        self.idb = 1    # =1-IRIS (default); =2-AEC; =3-LLNL; =4-Geoscope
-        self.client = Client()
+        self.idb = None  # =1-IRIS (default); =2-AEC; =3-LLNL; =4-Geoscope [USE client_name instead]
+        self.client_name = 'IRIS'   
 
         # event parameters
         self.use_catalog = 1 # =1: use an existing catalog (=1); =0: specify your own event parameters (see iex=9)
@@ -174,24 +174,39 @@ class getwaveform:
         ref_time_place -  reference time and place (other than origin time and place - for station subsetting)
         """
         
-        c = self.client
+        #c = self.client
         event = self.ev
         ref_time_place = self.ref_time_place
 
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
-        
-        if self.idb==1:
-            print("Preparing request for IRIS ...")
-            # BK network doesn't return data when using the IRIS client.
-            # this option switches to NCEDC if BK is 
-            if "BK" in self.network:
-                client_name = "NCEDC"
-                print("\nWARNING. Request for BK network. Switching to NCEDC client")
-                c = Client("NCEDC")
-            else:
-                client_name = "IRIS" 
-                
+
+        # Add deprecation warning
+        if self.idb is not None:
+            print('WARNING: Instead of idb use which client you want to use \n'\
+                  '         By default ev_info.client_name is set to IRIS')
+            if self.idb == 3:
+                self.client_name = "LLNL"
+            
+        if self.client_name != "LLNL":
+            # Send request to client
+            # There might be other way to do this using 'RoutingClient'
+            print("DATABASE >>> Sending request to",self.client_name,"client for data")
+            c = self.client = Client(self.client_name)
+            print(c)
+            
+            # Check if stations chosen are correct
+            # Example: NCEDC does not understand '-XXX' station code
+            if self.client_name == "NCEDC":
+                if '-' in self.station:
+                    raise ValueError("NCEDC client does not take '-' in station code")
+
+            if self.client_name == "IRIS":
+                if '*' in self.network:
+                    print("WARNING: You have chosen to search ALL networks at IRIS." \
+                          "This could take long!")
+
+            # Download stations
             print("Download stations...")
             stations = c.get_stations(network=self.network, 
                                       station=self.station, channel=self.channel,
@@ -224,20 +239,22 @@ class getwaveform:
             # Find P and S arrival times
             phases = self.phases
           
-            t1s, t2s= get_phase_arrival_times(stations,event,self.phases,self.phase_window,self.taupmodel,reftime,self.tbefore_sec,self.tafter_sec)
+            t1s, t2s= get_phase_arrival_times(stations,event,self.phases,
+                                              self.phase_window,self.taupmodel,
+                                              reftime,self.tbefore_sec,self.tafter_sec)
  
             print("Downloading waveforms...")
             # this needs to change
             bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 
-                    channel=self.channel)
+                                                    channel=self.channel)
 
             stream_raw = c.get_waveforms_bulk(bulk_list)
             # save ev_info object
             pickle.dump(self,open(self.evname + '/' + 
                                   self.evname + '_ev_info.obj', 'wb'))    
          
-        elif self.idb==3:
-            client_name = "LLNL"
+        elif self.client_name=="LLNL":
+            #client_name = "LLNL"
             print("Preparing request for LLNL ...")
             
             # Get event an inventory from the LLNL DB.
@@ -269,12 +286,12 @@ class getwaveform:
         
         print("--> Adding SAC metadata...")
         if self.ifverbose: print(inventory)
-        st2 = add_sac_metadata(stream, idb=self.idb, ev=event, stalist=inventory, 
-                               taup_model= self.taupmodel, phases=phases, 
-                               phase_write = self.write_sac_phase)
+        st2 = add_sac_metadata(stream, client_name=self.client_name, ev=event, 
+                               stalist=inventory, taup_model= self.taupmodel, 
+                               phases=phases, phase_write = self.write_sac_phase)
         
         # Do some waveform QA
-        do_waveform_QA(st2, client_name, event, evtime, 
+        do_waveform_QA(st2, self.client_name, event, evtime, 
                        self.tbefore_sec, self.tafter_sec)
         
         if self.demean:
@@ -299,7 +316,7 @@ class getwaveform:
 
         if self.scale_factor > 0:
             amp_rescale(st2, self.scale_factor)
-            if self.idb ==3:
+            if self.client_name == "LLNL":
                 amp_rescale_llnl(st2, self.scale_factor)
 
 
@@ -333,15 +350,15 @@ class getwaveform:
         #  Resample
         if self.resample_TF == True:
             # NOTE !!! tell the user if BOTH commands are disabled NOTE !!!
-            if (client_name == "IRIS"):
+            if (self.client_name == "IRIS"):
                 resample(st2, freq=self.resample_freq)
-            elif (client_name == "LLNL"):
+            elif (self.client_name == "LLNL"):
                 resample_cut(st2, self.resample_freq, evtime, self.tbefore_sec, self.tafter_sec)
         else:
             print("WARNING. Will not resample. Using original rate from the data")
 
         # match start and end points for all traces
-        st2 = trim_maxstart_minend(stalist, st2, client_name, event, evtime, 
+        st2 = trim_maxstart_minend(stalist, st2, self.client_name, event, evtime, 
                 self.resample_TF, self.resample_freq, 
                 self.tbefore_sec, self.tafter_sec, self.ifverbose)
         if len(st2) == 0:
@@ -351,7 +368,7 @@ class getwaveform:
         if self.isave_raw:
             path_to_waveforms = evname_key + "/RAW"
             write_stream_sac_raw(stream_raw, path_to_waveforms, 
-                                 evname_key, self.idb, event, stations=inventory)
+                                 evname_key, self.client_name, event, stations=inventory)
 
         # Taper waveforms (optional; Generally used when data is noisy- example: HutchisonGhosh2016)
         # https://docs.obspy.org/master/packages/autogen/obspy.core.trace.Trace.taper.html
@@ -386,7 +403,7 @@ class getwaveform:
 
         # save CAP weight files
         if self.output_cap_weight_file:
-            write_cap_weights(st2, evname_key, client_name, event, self.ifverbose)
+            write_cap_weights(st2, evname_key, self.client_name, event, self.ifverbose)
 
         # save event info
         if self.output_event_info:
@@ -480,12 +497,12 @@ class getwaveform:
         '''
 
         # IRIS
-        if self.idb == 1:
+        if self.client_name != "LLNL":
             # import functions to access waveforms
             if not self.user and not self.password:
-                self.client = Client("IRIS")
+                self.client = Client(self.client_name)
             else:
-                self.client = Client("IRIS", user=self.user, 
+                self.client = Client(self.client_name, user=self.user, 
                                      password=self.password)
                 # will only work for events in the 'IRIS' catalog
                 # (future: for Alaska events, read the AEC catalog)
@@ -501,7 +518,7 @@ class getwaveform:
                 self.ref_time_place = self.ev
         
         # LLNL
-        if self.idb == 3:
+        if self.client_name == "LLNL":
             import llnl_db_client
             self.client = llnl_db_client.LLNLDBClient(
                 "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc")
