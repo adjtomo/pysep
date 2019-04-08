@@ -119,5 +119,6 @@ if __name__ == '__main__':
             print("Continuing with next event\n")
             continue
         # save extraction info (git commit and filenames)
-        ev_info.save_extraction_info()
     '''
+        ev_info.save_extraction_info()
+        
