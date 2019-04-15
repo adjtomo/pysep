@@ -192,7 +192,7 @@ class getwaveform:
             # Send request to client
             # There might be other way to do this using 'RoutingClient'
             print("DATABASE >>> Sending request to",self.client_name,"client for data")
-            c = self.client = Client(self.client_name)
+            c = self.client
             print(c)
             
             # Check if stations chosen are correct
@@ -285,7 +285,7 @@ class getwaveform:
         stream = set_reftime(stream_raw, evtime)
         
         print("--> Adding SAC metadata...")
-        if self.ifverbose: print(inventory)
+        if self.ifverbose: print(stream.__str__(extended=True))
         st2 = add_sac_metadata(stream, client_name=self.client_name, ev=event, 
                                stalist=inventory, taup_model= self.taupmodel, 
                                phases=phases, phase_write = self.write_sac_phase)
