@@ -6,7 +6,8 @@ def get_ev_info(ev_info,iex):
 # ===============================================================
 # python run_getwaveform.py event_input_scec 0
     if iex == 0:
-        #ev_info.idb = 1           
+        #ev_info.idb = 1
+        ev_info.ifverbose = 1 
         ev_info.overwrite_ddir = 0       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
 
@@ -20,11 +21,11 @@ def get_ev_info(ev_info,iex):
         # note: check IRIS gmap for additional networks
         # note: FOR SOME REASON YOU MAY NEED TO REQUEST IRIS DATA FIRST, THEN NCEDC
         # request 1: IRIS
-        ev_info.client_name = 'IRIS'
-        ev_info.network = 'AZ,CI,LB,TS,TA,NC,NN,SN,II,IU,US'
+        #ev_info.client_name = 'IRIS'
+        #ev_info.network = 'AZ,CI,LB,TS,TA,NC,NN,SN,II,IU,US'
         # request 2: NCEDC
-        #ev_info.client_name = 'NCEDC'
-        #ev_info.network = 'BK'
+        ev_info.client_name = 'NCEDC'
+        ev_info.network = 'BK'
 
         #ev_info.channel = 'BH?,HH?,EH?'
         ev_info.channel = 'BH?'
@@ -38,7 +39,7 @@ def get_ev_info(ev_info,iex):
         ev_info.scale_factor = 100
         
         ievent = 16
-        #events_file = "/home/vipul/REPOSITORIES/pysep/txtfiles/scec_sims_obspy.txt"
+        #events_file = "/home/vipul/dlib/pysep_txtfiles/scec_sims_obspy.txt"
         events_file = "/home/carltape/PROJECTS/calif/MTs/scec_sims_obspy.txt"
 
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
