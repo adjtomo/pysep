@@ -9,6 +9,7 @@ For reference see versions prior to Aug 25, 2016 for:
 20160825 cralvizuri <cralvizuri@alaska.edu>
 """
 
+from copy import deepcopy
 import obspy
 from obspy.io.sac import SACTrace
 import obspy.signal.rotate as rotate
@@ -22,7 +23,7 @@ import shutil
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometer2degrees
 import math
-from obspy.core import UTCDateTime
+from obspy.core import Trace, UTCDateTime
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -107,18 +108,32 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose 
                        % substr[0].id)
                 continue
 
-            elif components==['E', 'N'] or\
-                 components==['1', '2']:
-                print('WARNING: %s is missing a vertical component. In '
-                      'principle, the horizontal components could still be '
-                      'used, but this is not yet implemented.'
+            elif components==['E', 'N']:
+                print('WARNING: %s is missing a vertical component. '
+                      'Adding null trace.'
                        % substr[0].id)
-                continue
+
+                stats = deepcopy(substr.select(component='N')[0].stats)
+                stats.channel = stats.channel[:-1]+'Z'
+                stats.sac['cmpinc'] = -90.
+                substr.append(Trace(np.zeros(stats.npts), stats))
+
+            elif components==['1', '2']:
+                print('WARNING: %s is missing a vertical component. '
+                      'Adding null trace.'
+                       % substr[0].id)
+
+                stats = deepcopy(substr[0].stats)
+                stats.channel = stats.channel[:-1]+'Z'
+                stats.sac['cmpaz'] = 0.
+                stats.sac['cmpinc'] = -90.
+                substr.append(Trace(np.zeros(stats.npts), stats))
 
             else:
                 print('WARNING: %s has no usable components. Skipping...'
                       % substr[0].id)
                 continue
+
 
         # Rotate to NEZ first
         # Sometimes channels are not orthogonal (example: 12Z instead of NEZ)
