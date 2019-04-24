@@ -128,6 +128,8 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose 
                 trace.stats.sac['cmpinc'] = 0.
                 substr.append(trace)
 
+                substr.sort()
+
 
             elif components==['E', 'N']:
                 print('\nWARNING: %s is missing vertical component. '
@@ -152,6 +154,7 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose 
                 trace.stats.sac['cmpaz'] = 0.
                 trace.stats.sac['cmpinc'] = -90.
                 substr.append(trace)
+
 
             else:
                 print('\nWARNING: %s has no usable components. SKIPPING...\n'
