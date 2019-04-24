@@ -9,7 +9,6 @@ For reference see versions prior to Aug 25, 2016 for:
 20160825 cralvizuri <cralvizuri@alaska.edu>
 """
 
-from copy import deepcopy
 import obspy
 from obspy.io.sac import SACTrace
 import obspy.signal.rotate as rotate
@@ -23,7 +22,7 @@ import shutil
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometer2degrees
 import math
-from obspy.core import Trace, UTCDateTime
+from obspy.core import UTCDateTime
 from util_helpers import copy_trace, remove_trace
 
 
