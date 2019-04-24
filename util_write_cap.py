@@ -24,6 +24,8 @@ from obspy.taup import TauPyModel
 from obspy.geodetics import kilometer2degrees
 import math
 from obspy.core import Trace, UTCDateTime
+from util_helpers import copy_trace, remove_trace
+
 
 def zerophase_chebychev_lowpass_filter(trace, freqmax):
     """
@@ -101,36 +103,59 @@ def rotate2ENZ(stream, evname_key, isave_ENZ=True, icreateNull=False, ifverbose 
 
             # Station is missing one or more components. Checking to see if the 
             # remaining components are usable
-            if components==['Z']:
-                print('WARNING: %s is missing horizontal components. In '
-                      'principle, the vertical component could still be '
-                      'used, but this is not yet implemented.'
+            if components==['N', 'Z'] or\
+               components==['E', 'Z'] or\
+               components==['1', 'Z'] or\
+               components==['2', 'Z'] or\
+               components==['Z']:
+                print('\nWARNING: %s is missing horizontal component(s). '
+                      'SUBSTITUTING WITH ZEROS...\n'
                        % substr[0].id)
-                continue
+
+                for component in ['N', 'E', '1', '2']:
+                    remove_trace(substr, component)
+
+                trace = copy_trace(substr, component='Z')
+                trace.data[:] = 0.
+                trace.stats.channel = trace.stats.channel[:-1]+'E'
+                trace.stats.sac['cmpaz'] = 90.
+                trace.stats.sac['cmpinc'] = 0.
+                substr.append(trace)
+
+                trace = copy_trace(substr, component='Z')
+                trace.data[:] = 0.
+                trace.stats.channel = trace.stats.channel[:-1]+'N'
+                trace.stats.sac['cmpaz'] = 0.
+                trace.stats.sac['cmpinc'] = 0.
+                substr.append(trace)
+
 
             elif components==['E', 'N']:
-                print('WARNING: %s is missing a vertical component. '
-                      'Adding null trace.'
+                print('\nWARNING: %s is missing vertical component. '
+                      'SUBSTITUTING WITH ZEROS...\n'
                        % substr[0].id)
 
-                stats = deepcopy(substr.select(component='N')[0].stats)
-                stats.channel = stats.channel[:-1]+'Z'
-                stats.sac['cmpinc'] = -90.
-                substr.append(Trace(np.zeros(stats.npts), stats))
+                trace = copy_trace(substr, component='N')
+                trace.data[:] = 0.
+                trace.stats.channel = trace.stats.channel[:-1]+'Z'
+                trace.stats.sac['cmpinc'] = -90.
+                substr.append(trace)
+
 
             elif components==['1', '2']:
-                print('WARNING: %s is missing a vertical component. '
-                      'Adding null trace.'
+                print('\nWARNING: %s is missing vertical component. '
+                      'SUBSTITUTING WITH ZEROS...\n'
                        % substr[0].id)
 
-                stats = deepcopy(substr[0].stats)
-                stats.channel = stats.channel[:-1]+'Z'
-                stats.sac['cmpaz'] = 0.
-                stats.sac['cmpinc'] = -90.
-                substr.append(Trace(np.zeros(stats.npts), stats))
+                trace = copy_trace(substr)
+                trace.data[:] = 0.
+                trace.stats.channel = trace.stats.channel[:-1]+'Z'
+                trace.stats.sac['cmpaz'] = 0.
+                trace.stats.sac['cmpinc'] = -90.
+                substr.append(trace)
 
             else:
-                print('WARNING: %s has no usable components. Skipping...'
+                print('\nWARNING: %s has no usable components. SKIPPING...\n'
                       % substr[0].id)
                 continue
 
@@ -1593,3 +1618,5 @@ def get_phase_arrival_times(stations,event,phases,phase_window,taupmodel,reftime
         t2s = [reftime + tafter_sec]
     
     return t1s,t2s
+
+
