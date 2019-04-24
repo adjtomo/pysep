@@ -5,6 +5,7 @@ miscellaneous helper utilities
 20160919 cralvizuri <cralvizuri@alaska.edu>
 """
 
+from copy import deepcopy
 from obspy.core import UTCDateTime
 
 def otime2eid(otime):
@@ -45,4 +46,26 @@ def eid2otime(eid):
     otime = UTCDateTime(eid)
     return(otime)
 
+
+def copy_trace(stream, component=None):
+    """ Copies given component from stream
+    """
+    if len(stream) == 0:
+        raise Exception("Cannot extract trace from empty stream")
+
+    if not component:
+        return deepcopy(stream[0])
+    else:
+        trace = stream.select(component=component)[0]
+        return deepcopy(trace)
+
+
+def remove_trace(stream, component=None):
+    """ Removes given component from stream
+    """
+    try:
+        trace = stream.select(component=component)[0]
+        stream.remove(trace)
+    except:
+        return stream
 
