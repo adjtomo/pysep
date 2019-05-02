@@ -7,6 +7,9 @@ def get_ev_info(ev_info,iex):
 # python run_getwaveform.py event_input_scec 0
     if iex == 0:
         #ev_info.idb = 1
+
+        ev_info.ifmass_downloader = True
+
         ev_info.ifverbose = 1 
         ev_info.overwrite_ddir = 0       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters

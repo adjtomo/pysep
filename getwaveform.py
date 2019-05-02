@@ -16,9 +16,13 @@ from scipy import signal
 import pickle
 
 from util_write_cap import *
+from util_helpers import get_streams_from_dir, get_inventory_from_xml
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometer2degrees
 import math
+
+from obspy.clients.fdsn.mass_downloader import CircularDomain, \
+    RectangularDomain, Restrictions, MassDownloader
 
 class getwaveform:
     def __init__(self):
@@ -80,7 +84,8 @@ class getwaveform:
         # station parameters
         self.network = '*'                   # all networks
         self.station = '*,-PURD,-NV33,-GPO'  # all stations except -(these)
-        self.channel = '*'                   # all channels     
+        self.channel = '*'                   # all channels    
+        self.location = '*'                  # all locations
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
         self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
         self.phase_window = False            # Grab waveforms using phases
@@ -162,6 +167,9 @@ class getwaveform:
         # save RTZ as asdf files
         self.ifsave_asdf = False
 
+        # Use mass downloader instead
+        self.ifmass_downloader = False
+
     def run_get_waveform(self):
         """
         Get SAC waveforms for an event
@@ -181,6 +189,46 @@ class getwaveform:
         evtime = event.origins[0].time
         reftime = ref_time_place.origins[0].time
 
+        if self.ifmass_downloader is True:
+            domain = CircularDomain(latitude=self.elat, longitude=self.elon,
+                                    minradius=0, maxradius=5)
+            
+            restrictions = Restrictions(
+                starttime = reftime - self.tbefore_sec,
+                endtime = reftime + self.tafter_sec,
+                station_starttime = None,
+                station_endtime = None,
+                chunklength_in_sec = None,
+                network = self.network,
+                station = self.station,
+                location = self.location,
+                channel = self.channel,
+                exclude_networks = [],
+                exclude_stations = [],
+                limit_stations_to_inventory=None,
+                reject_channels_with_gaps=False,
+                minimum_length = 0.0,
+                sanitize = True,
+                minimum_interstation_distance_in_m = 0,
+                channel_priorities=[],
+                location_priorities=[])
+
+            mdl = MassDownloader()
+            mdl.download(domain, restrictions, 
+                         mseed_storage="./mass_downloader/waveforms", 
+                         stationxml_storage="./mass_downloader/stations", 
+                         download_chunk_size_in_mb=20, threads_per_client=3, print_report=True)
+
+            inventory = get_inventory_from_xml("./mass_downloader/stations")
+            stream_raw = get_streams_from_dir("./mass_downloader/waveforms")
+
+            print(inventory)
+            phases = self.phases
+          
+            t1s, t2s= get_phase_arrival_times(inventory,event,self.phases,
+                                              self.phase_window,self.taupmodel,
+                                              reftime,self.tbefore_sec,self.tafter_sec)
+
         # Add deprecation warning
         if self.idb is not None:
             print('WARNING: Instead of idb use which client you want to use \n'\
@@ -188,7 +236,7 @@ class getwaveform:
             if self.idb == 3:
                 self.client_name = "LLNL"
             
-        if self.client_name != "LLNL":
+        if self.client_name != "LLNL" and self.ifmass_downloader is False:
             # Send request to client
             # There might be other way to do this using 'RoutingClient'
             print("DATABASE >>> Sending request to",self.client_name,"client for data")
@@ -205,7 +253,9 @@ class getwaveform:
                 if '*' in self.network:
                     print("WARNING: You have chosen to search ALL networks at IRIS." \
                           "This could take long!")
-
+            
+            
+            
             # Download stations
             print("Download stations...")
             stations = c.get_stations(network=self.network, 
@@ -252,8 +302,9 @@ class getwaveform:
             # save ev_info object
             pickle.dump(self,open(self.evname + '/' + 
                                   self.evname + '_ev_info.obj', 'wb'))    
+            
          
-        elif self.client_name=="LLNL":
+        elif self.client_name=="LLNL" and self.ifmass_downloader is False:
             #client_name = "LLNL"
             print("Preparing request for LLNL ...")
             
@@ -308,7 +359,7 @@ class getwaveform:
             resp_plot_remove(st2, self.ipre_filt, self.pre_filt, 
                     self.iplot_response, self.water_level,
                     self.scale_factor, 
-                    stations, self.outformat, self.ifverbose)
+                    inventory, self.outformat, self.ifverbose)
         else:
             # output RAW waveforms
             decon=False
@@ -500,10 +551,10 @@ class getwaveform:
         if self.client_name != "LLNL":
             # import functions to access waveforms
             if not self.user and not self.password:
-                self.client = Client(self.client_name,debug=True, timeout = 600)
+                self.client = Client(self.client_name,debug=True, timeout=600)
             else:
                 self.client = Client(self.client_name, user=self.user, 
-                                     password=self.password, debug=True, timeout = 600)
+                                     password=self.password, debug=True, timeout=600)
                 # will only work for events in the 'IRIS' catalog
                 # (future: for Alaska events, read the AEC catalog)
 
