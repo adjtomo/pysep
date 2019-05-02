@@ -500,10 +500,10 @@ class getwaveform:
         if self.client_name != "LLNL":
             # import functions to access waveforms
             if not self.user and not self.password:
-                self.client = Client(self.client_name,debug=True)
+                self.client = Client(self.client_name,debug=True, timeout = 600)
             else:
                 self.client = Client(self.client_name, user=self.user, 
-                                     password=self.password, debug=True)
+                                     password=self.password, debug=True, timeout = 600)
                 # will only work for events in the 'IRIS' catalog
                 # (future: for Alaska events, read the AEC catalog)
 
