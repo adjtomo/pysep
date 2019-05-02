@@ -7,6 +7,8 @@ miscellaneous helper utilities
 
 from copy import deepcopy
 from obspy.core import UTCDateTime
+import glob
+import obspy
 
 def otime2eid(otime):
     """
@@ -69,3 +71,35 @@ def remove_trace(stream, component=None):
     except:
         return stream
 
+
+def get_streams_from_dir(ddir):
+    '''
+    Get streams from dir (created by mass downloader)
+    mseed to stream
+    '''
+    from obspy.core import Trace, Stream
+
+    st = Stream()
+    tr = Trace()
+
+    for mseed_trace in glob.iglob(ddir + '/*.mseed'):
+        tr = obspy.read(mseed_trace)
+        st.append(tr[0])
+
+    return st
+
+def get_inventory_from_xml(ddir):
+    '''
+    Return combined inventory multiple xml files 
+    (created by mass downloader)
+    '''
+
+    from obspy.core.inventory import Inventory
+
+    inventory = Inventory()
+
+    for xmlfile in glob.iglob(ddir + '/*.xml'):
+        stninv = obspy.read_inventory(xmlfile)
+        inventory.networks.append(stninv[0])
+
+    return inventory
