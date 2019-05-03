@@ -214,13 +214,15 @@ class getwaveform:
                 location_priorities=[])
 
             mdl = MassDownloader()
+            
+            outdir = './' + self.evname
             mdl.download(domain, restrictions, 
-                         mseed_storage="./mass_downloader/waveforms", 
-                         stationxml_storage="./mass_downloader/stations", 
+                         mseed_storage=outdir+"/mass_downloader/waveforms", 
+                         stationxml_storage=outdir+"/mass_downloader/stations", 
                          download_chunk_size_in_mb=20, threads_per_client=3, print_report=True)
 
-            inventory = get_inventory_from_xml("./mass_downloader/stations")
-            stream_raw = get_streams_from_dir("./mass_downloader/waveforms")
+            inventory = get_inventory_from_xml(outdir+"/mass_downloader/stations")
+            stream_raw = get_streams_from_dir(outdir+"/mass_downloader/waveforms")
 
             print(inventory)
             phases = self.phases
