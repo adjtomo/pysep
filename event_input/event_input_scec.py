@@ -12,7 +12,7 @@ def get_ev_info(ev_info,iex):
 
         # subset waveforms
         ev_info.min_dist = 0 
-        ev_info.max_dist = 300           # 300 km: probably enough stations
+        ev_info.max_dist = 200           # 300 km: probably enough stations
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 300
 
@@ -22,12 +22,12 @@ def get_ev_info(ev_info,iex):
         #ev_info.client_name = 'IRIS'
         #ev_info.network = 'AZ,CI,LB,TS,TA,NC,NN,SN,II,IU,US'
         # request 2: NCEDC
-        ev_info.client_name = 'NCEDC'
-        ev_info.network = 'BK'
+        #ev_info.client_name = 'NCEDC'
+        #ev_info.network = 'BK'
 
         # note: this does not work
-        #ev_info.ifmass_downloader = True
-        #ev_info.network = 'AZ,CI,LB,TS,TA,NC,NN,SN,II,IU,US,BK'
+        ev_info.ifmass_downloader = True
+        ev_info.network = '*'
 
         #ev_info.channel = 'BH?,HH?,EH?'
         ev_info.channel = 'BH?'
