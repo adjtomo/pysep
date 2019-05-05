@@ -191,7 +191,7 @@ class getwaveform:
 
         if self.ifmass_downloader is True:
             domain = CircularDomain(latitude=self.elat, longitude=self.elon,
-                                    minradius=0, maxradius=5)
+                                    minradius=kilometer2degrees(self.min_dist), maxradius=kilometer2degrees(self.max_dist))
             
             restrictions = Restrictions(
                 starttime = reftime - self.tbefore_sec,
@@ -203,15 +203,16 @@ class getwaveform:
                 station = self.station,
                 location = self.location,
                 channel = self.channel,
-                #exclude_networks = [],
-                #exclude_stations = [],
+                #exclude_networks = (),
+                #exclude_stations = (),
                 #limit_stations_to_inventory=None,
                 reject_channels_with_gaps=False,
                 minimum_length = 0.0,
                 sanitize = True,
                 minimum_interstation_distance_in_m = 0,
-                channel_priorities=[],
-                location_priorities=[])
+                #channel_priorities=(),
+                #location_priorities=())
+		)
 
             mdl = MassDownloader()
             

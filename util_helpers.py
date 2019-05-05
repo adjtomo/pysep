@@ -96,10 +96,12 @@ def get_inventory_from_xml(ddir):
 
     from obspy.core.inventory import Inventory
 
-    inventory = Inventory()
+    inventory = Inventory(networks=[],source='ObsPy 1.0.3')
+    #inventory = Inventory()
 
     for xmlfile in glob.iglob(ddir + '/*.xml'):
         stninv = obspy.read_inventory(xmlfile)
         inventory.networks.append(stninv[0])
+        #inventory.__add__(stninv)
 
     return inventory
