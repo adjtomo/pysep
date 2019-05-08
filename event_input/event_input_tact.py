@@ -144,6 +144,31 @@ def get_ev_info(ev_info,iex):
         ev_info.channel = 'BH?,HH?'
         ev_info.resample_freq = 50        # no resampling
         ev_info.scale_factor = 100         # no scale factor        
+    
+    if iex == 6:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+	
+	# Natalia's Solution  
+        ev_info.otime = obspy.UTCDateTime("2019-04-11T10:42:45") # USGS prelim
+        ev_info.elat = 64.7370 
+        ev_info.elon = -149.176
+        ev_info.edep = 18900 
+        ev_info.emag = 4.4 
+    
+        # subset of stations
+        ev_info.min_dist = 0
+        ev_info.max_dist = 300  
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 500
+
+        ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US,DE' 
+        ev_info.channel = 'BH?,HH?'
+        ev_info.resample_freq = 50        # no resampling
+        ev_info.scale_factor = 100         # no scale factor        
+        ev_info.isave_raw = True
+        ev_info.isave_raw_processed  = True
 
     return(ev_info)
 #=================================================================================
