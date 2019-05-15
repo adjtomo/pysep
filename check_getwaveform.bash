@@ -15,9 +15,12 @@ nevent=${#events[@]}
 imax=$(($nevent - 1))
 echo "$nevent events in check_getwaveform.bash (index 0 to $imax)"
 
-# all events except HOYA
+#cap default event only (20090407201255351)
 imin=0
-imax=8
+imax=0
+# all events except HOYA
+#imin=0
+#imax=8
 # HOYA (requires LLNL client)
 #imin=9
 #imax=9
