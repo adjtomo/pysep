@@ -5,7 +5,7 @@ from getwaveform import *
 def get_ev_info(ev_info,iex):
 # ===============================================================
 # SilwalTape2016 example event (Anchorage)
-  if iex == 0:
+    if iex == 0:
         ev_info.use_catalog = 0
         ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.min_dist = 0
