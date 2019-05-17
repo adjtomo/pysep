@@ -153,7 +153,7 @@ class getwaveform:
         self.rotateUVW = False            # Rotate and save the UVW components
         self.isave_raw = False            # save raw waveforms
         self.isave_raw_processed = False  # save processed waveforms just before rotation to ENZ
-        #self.rotateENZ = True            # rotate extracted waveforms to ENZ
+        self.rotateENZ = True            # rotate extracted waveforms to ENZ
         self.isave_ENZ = True             # save ENZ
 
         # username and password for embargoed IRIS data
@@ -444,7 +444,10 @@ class getwaveform:
 
         # Rotate to ENZ (save: optional)
         #if self.rotateENZ:
-        st2 = rotate2ENZ(st2, evname_key, self.isave_ENZ, self.icreateNull, self.ifverbose)
+        #st2 = rotate2ENZ(st2, evname_key, self.isave_ENZ, self.icreateNull, self.ifverbose)
+
+        if self.rotateENZ:
+            st2 = rotate2ENZ(st2, evname_key, self.isave_ENZ, self.icreateNull, self.ifverbose)
 
         # rotate to UVW and save
         if self.rotateUVW:
