@@ -56,14 +56,6 @@ class getwaveform:
         # event parameters
         self.use_catalog = 1 # =1: use an existing catalog (=1); =0: specify your own event parameters (see iex=9)
         self.sec_before_after_event = 10 # time window to search for a target event in a catalog
-        self.min_dist = 0 
-        self.max_dist = 20000
-        self.min_az = 0 
-        self.max_az = 360
-        self.min_lat = None
-        self.max_lat = None
-        self.min_lon = None
-        self.max_lon = None
         self.tbefore_sec = 100
         self.tafter_sec = 300
         # These are used only if self.use_catalog = 0
@@ -86,6 +78,14 @@ class getwaveform:
         self.station = '*,-PURD,-NV33,-GPO'  # all stations except -(these)
         self.channel = '*'                   # all channels    
         self.location = '*'                  # all locations
+        self.min_dist = 0 
+        self.max_dist = 20000
+        self.min_az = 0 
+        self.max_az = 360
+        self.min_lat = None
+        self.max_lat = None
+        self.min_lon = None
+        self.max_lon = None
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
         self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
         self.phase_window = False            # Grab waveforms using phases
@@ -228,7 +228,7 @@ class getwaveform:
             print(inventory)
             phases = self.phases
           
-            t1s, t2s= get_phase_arrival_times(inventory,event,self.phases,
+            a, t0s= get_phase_arrival_times(inventory,event,self.phases,
                                               self.phase_window,self.taupmodel,
                                               reftime,self.tbefore_sec,self.tafter_sec)
 
@@ -292,13 +292,13 @@ class getwaveform:
             # Find P and S arrival times
             phases = self.phases
           
-            t1s, t2s= get_phase_arrival_times(stations,event,self.phases,
+            a, t0s= get_phase_arrival_times(stations,event,self.phases,
                                               self.phase_window,self.taupmodel,
                                               reftime,self.tbefore_sec,self.tafter_sec)
  
             print("Downloading waveforms...")
             # this needs to change
-            bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 
+            bulk_list = make_bulk_list_from_stalist(stations,a,t0s, 
                                                     channel=self.channel)
 
             stream_raw = c.get_waveforms_bulk(bulk_list)
