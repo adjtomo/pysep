@@ -228,7 +228,7 @@ class getwaveform:
             print(inventory)
             phases = self.phases
           
-            a, t0s= get_phase_arrival_times(inventory,event,self.phases,
+            t1s, t2s= get_phase_arrival_times(inventory,event,self.phases,
                                               self.phase_window,self.taupmodel,
                                               reftime,self.tbefore_sec,self.tafter_sec)
 
@@ -292,13 +292,13 @@ class getwaveform:
             # Find P and S arrival times
             phases = self.phases
           
-            a, t0s= get_phase_arrival_times(stations,event,self.phases,
+            t1s, t2s= get_phase_arrival_times(stations,event,self.phases,
                                               self.phase_window,self.taupmodel,
                                               reftime,self.tbefore_sec,self.tafter_sec)
  
             print("Downloading waveforms...")
             # this needs to change
-            bulk_list = make_bulk_list_from_stalist(stations,a,t0s, 
+            bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 
                                                     channel=self.channel)
 
             stream_raw = c.get_waveforms_bulk(bulk_list)
