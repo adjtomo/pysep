@@ -1203,15 +1203,16 @@ def prefilter(st, fmin, fmax, zerophase, corners, filter_type):
                 tr.stats.location +'.'+ tr.stats.channel
         print("--> station %14s Applying %s filter" % (station_key, filter_type))
         if filter_type=='bandpass':
-            print("%.3f to %.3f seconds" % (1/fmax, 1/fmin))
+            print("pass %.3f to %.3f Hz (%.3f to %.3f s) zerophase %s corners %i" % \
+                  (fmin,fmax,1/fmax,1/fmin,zerophase,corners))
             tr.filter(filter_type, freqmin=fmin, freqmax=fmax, \
                     zerophase=zerophase, corners=corners)
-        elif filter_type=='lowpass': # For period larger than maximum frequency
-            print("More than %.3f seconds" % (1/fmax))
+        elif filter_type=='lowpass': # use fmax; ignore fmin
+            print("pass f < %.3f Hz (periods > %.3f s)" % (fmax,1/fmax))
             tr.filter(filter_type, freq=fmax, zerophase=zerophase, \
                     corners=corners)
-        elif filter_type=='highpass': # For period larger than maximum frequency
-            print("Less than %.3f seconds" % (1/fmin))
+        elif filter_type=='highpass': # use fmin; ignore fmax
+            print("pass f > %.3f Hz (periods < %.3f s)" % (fmin,1/fmin))
             tr.filter(filter_type, freq=fmin, zerophase=zerophase, \
                     corners=corners)
 
@@ -1275,7 +1276,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, water_level,
     TODO consider separating the remove and plot functions
     """
 
-    print("\nApply instrument corrections")
+    print("\nRemove instrument response")
     for tr in st:
         station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
                 tr.stats.location, tr.stats.channel)
