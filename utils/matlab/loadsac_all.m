@@ -47,6 +47,12 @@ w = wupdate_eid(w);
 % EXAMPLES
 
 if 0==1
+    %% wind speed
+    %bdir = getenv('PYSEP');
+    idir = '/home/carltape/REPOSITORIES/pysep/20160901000000000/RAW_processed/';
+    ftag = '*.LWS.sac';
+    [w,fnames] = loadsac_all(idir,ftag);
+    
     %% default CAP example
     %bdir = getenv('PYSEP');
     bdir = '/home/carltape/PROJECTS/earthquakes/CAP_test';
