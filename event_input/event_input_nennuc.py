@@ -115,7 +115,7 @@ def get_ev_info(ev_info,iex):
         ev_info.taper = 0.05    # 0.05 default in process_data_new.pl
 
         # seismograms for CAP
-        if 1:
+        if 0:
             #ev_info.otime = obspy.UTCDateTime("2016-01-14T19:03:50.727")  # 20 s earlier
             ev_info.isave_ENZ = False
             ev_info.rotateENZ = True    
