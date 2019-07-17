@@ -10,6 +10,7 @@ from copy import deepcopy
 
 import obspy
 from obspy.clients.fdsn import Client
+from obspy.clients import fdsn
 from obspy.core.event import Event, Origin, Magnitude, Catalog
 
 from scipy import signal
@@ -52,6 +53,7 @@ class getwaveform:
         # DEFAULT SETTINGS
         self.idb = None  # =1-IRIS (default); =2-AEC; =3-LLNL; =4-Geoscope [USE client_name instead]
         self.client_name = 'IRIS'   
+        self.ifph5 = False   # PH5 data service from PASSCAL
 
         # event parameters
         self.use_catalog = 1 # =1: use an existing catalog (=1); =0: specify your own event parameters (see iex=9)
@@ -256,12 +258,19 @@ class getwaveform:
                 if '*' in self.network:
                     print("WARNING: You have chosen to search ALL networks at IRIS." \
                           "This could take long!")
-            
-            
-            
+            #-----------------------------
+            if self.ifph5:
+                STATION = 'http://service.iris.edu/ph5ws/station/1'
+                c = fdsn.client.Client('http://service.iris.edu',
+                                       service_mappings={
+                                       'station': STATION
+                                       },
+                                       debug=True
+                                   )
+            #-------------------
             # Download stations
             print("Download stations...")
-            stations = c.get_stations(network=self.network, 
+            stations = c.get_stations(network=self.network, location=self.location,
                                       station=self.station, channel=self.channel,
                                       starttime=reftime - self.tbefore_sec, 
                                       endtime=reftime + self.tafter_sec,
@@ -301,7 +310,22 @@ class getwaveform:
             bulk_list = make_bulk_list_from_stalist(stations,t1s,t2s, 
                                                     channel=self.channel)
 
-            stream_raw = c.get_waveforms_bulk(bulk_list)
+            if self.ifph5:
+                DATASELECT = 'http://service.iris.edu/ph5ws/dataselect/1'
+                c = fdsn.client.Client('http://service.iris.edu',
+                                       service_mappings={
+                                           'dataselect': DATASELECT
+                                       },
+                                       user = self.user,password = self.password,
+                                       debug=True
+                                   )
+                stream_raw = c.get_waveforms(network=self.network, location=self.location,
+                                             station=self.station, channel=self.channel,
+                                             starttime=reftime - self.tbefore_sec, 
+                                             endtime=reftime + self.tafter_sec)
+            else:
+                stream_raw = c.get_waveforms_bulk(bulk_list)
+            
             # save ev_info object
             pickle.dump(self,open(self.evname + '/' + 
                                   self.evname + '_ev_info.obj', 'wb'))    
