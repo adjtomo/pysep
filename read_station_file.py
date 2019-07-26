@@ -12,11 +12,10 @@ def read_station_file(filename):
     use_ones_stations = False; 
     for line in lines:
         line_elements = line.split()
-        if (line_elements[7] == '1') and use_ones_stations:
+        if (line_elements[8] == '1') and use_ones_stations:
             netwk.append(line_elements[0])
             stn_name.append(line_elements[1])
         elif not use_ones_stations:
             netwk.append(line_elements[0])
             stn_name.append(line_elements[1])
-    print(stn_name)
     return netwk,stn_name
