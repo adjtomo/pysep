@@ -90,7 +90,7 @@ class getwaveform:
         self.max_lon = None
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
         self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
-        self.phase_window = False            # Grab waveforms using phases
+        self.phase_window = False            # Grab waveforms using phases #WARNING this will cut the waveform to be near the phase arrival
         self.phases = ["P","P"]              # Phases to write to sac files or grab data from
         self.write_sac_phase = False         # put phase information in sac files
         self.taupmodel= "ak135"
