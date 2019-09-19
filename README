@@ -6,7 +6,7 @@ Our motivation is to have files prepared for moment tensor inversions.
 However the sac files can be used for other purposes as well.
 
 download:
-git clone https://github.com/uafseismo/pysep.git
+git clone https://github.com/uafgeotools/pysep.git
 
 What pysep does:
 + input event information or get it from IRIS. You can also loop over multiple events.
