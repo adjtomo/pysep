@@ -77,7 +77,8 @@ class getwaveform:
 
         # station parameters
         self.network = '*'                   # all networks
-        self.station = '*,-PURD,-NV33,-GPO'  # all stations except -(these)
+        self.station = '*'                   # all stations
+        #self.station = '*,-PURD,-NV33,-GPO'  # all stations except -(these)
         self.channel = '*'                   # all channels    
         self.location = '*'                  # all locations
         self.min_dist = 0 
