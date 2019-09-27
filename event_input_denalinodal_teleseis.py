@@ -149,9 +149,9 @@ def get_ev_info(ev_info,iex):
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 3600 #hour of data for this teleseismic event
 
-        ev_info.resample_TF = False #even when set to False, still resamples to 50 Hz
-        #ev_info.resample_freq = 50 #this is the default
-        #ev_info.scale_factor = 100 
+        ev_info.resample_TF = True
+        ev_info.resample_freq = 50 #this is the default
+        ev_info.scale_factor = 100 
         ev_info.network = 'AK,AT,AV,CN,II,IU,TA,US,XM,XV,DE' #for permanent stations
         #ev_info.network = 'ZE' #nodes
         ###ev_info.station = 'CUT,FAPT,UAF01,BWN,MCK,RND' #permanent stations near nodes below
