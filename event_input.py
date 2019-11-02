@@ -4,7 +4,7 @@ from getwaveform import *
 
 def get_ev_info(ev_info,iex):
 # ===============================================================
-# SilwalTape2016 example event (Anchorage)
+# SilwalTape2016 example event (Anchorage) -- python run_getwaveform.py event_input 0
     if iex == 0:
         ev_info.use_catalog = 0
         ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
@@ -13,13 +13,13 @@ def get_ev_info(ev_info,iex):
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 300
 
-        #output all proccessing steps
+        # output all proccessing steps
         ev_info.ifverbose = True
 
-        #keep stations with missing components and fill the missing component with a null trace (MPEN)
+        # keep stations with missing components and fill the missing component with a null trace (MPEN)
         ev_info.icreateNull = 0
 
-        #RAW and ENZ files can be used when checking if you are receiving all possible data (example station: SOLD)
+        # RAW and ENZ files can be used when checking if you are receiving all possible data (example station: SOLD)
         ev_info.isave_raw = False
         ev_info.isave_raw_processed = False
         ev_info.isave_ENZ = False
@@ -68,7 +68,6 @@ def get_ev_info(ev_info,iex):
 # Iniskin earthquake
 # NOTE: must enter username and password above to get SALMON (ZE) stations
     if iex == 1:
-        ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
         # GCMT source parameters
@@ -108,7 +107,6 @@ def get_ev_info(ev_info,iex):
 # MFFZ earthquakes for investigating the step response
 # copied from event_input_flats
     if iex == 2:
-        ev_info.idb = 1
         ev_info.use_catalog = 0
         # -------------------------------------------------
         ev_info.otime = obspy.UTCDateTime("2014-08-31T03:06:57.111")
@@ -154,7 +152,6 @@ def get_ev_info(ev_info,iex):
         
 # Loop over multiple event       
     if iex == 3:
-        ev_info.idb = 1
         ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
         
@@ -284,17 +281,22 @@ def get_ev_info(ev_info,iex):
 # same as iex=11 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
 #       origin time, hypocenter, magnitude.
+# --> THIS EXAMPLE IS NOT CURRENTLY WORKING WITH sln01
+# ERROR: FileNotFoundError: [Errno 2] No such file or directory: '19910914190000000/19910914190000000_ev_info.obj'
     if iex == 9:
-        ev_info.idb = 1            # IRIS database
+        ev_info.client_name = 'IRIS'
+        #ev_info.client_name = 'NCEDC'
+        ev_info.use_catalog = 1
+        #ev_info.idb = 1            # IRIS database
         # ev_info.resample_freq = 0  # no resampling
         # ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:00.000Z")   # Hoya actual
         ev_info.otime = obspy.UTCDateTime("1991-09-14T19:00:08.031Z")   # Hoya target
-        ev_info.min_dist = 0 
+        ev_info.min_dist = 0
         ev_info.max_dist = 1200
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 600
         # needs to be run TWICE to get BK stations and IRIS stations
-        # ev_info.network = 'BK'        # BK will go to NCEDC
+        #ev_info.network = 'BK'        # BK will go to NCEDC
         ev_info.network = '*'         # * will get all at IRIS DMC
         ev_info.channel = 'BH?,LH?' 
         ev_info.overwrite_ddir = 0

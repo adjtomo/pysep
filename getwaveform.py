@@ -51,9 +51,10 @@ class getwaveform:
         a good idea when deconvolving (ifRemoveResponse=True)
         """
         # DEFAULT SETTINGS
-        self.idb = None  # =1-IRIS (default); =2-AEC; =3-LLNL; =4-Geoscope [USE client_name instead]
-        self.client_name = 'IRIS'   
-        self.ifph5 = False   # PH5 data service from PASSCAL
+        self.ifph5 = False   # PH5 data format from PASSCAL (Denali nodal data)
+        self.client_name = 'IRIS'  # IRIS, LLNL, NCEDC
+        # idb = database index: OBSOLETE -- use client_name instead
+        self.idb = None  # =1-IRIS (default); =2-AEC; =3-LLNL; =4-Geoscope
 
         # event parameters
         self.use_catalog = 1 # =1: use an existing catalog (=1); =0: specify your own event parameters (see iex=9)
