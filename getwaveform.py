@@ -91,7 +91,7 @@ class getwaveform:
         self.min_lon = None
         self.max_lon = None
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
-        self.icreateNull = 1                 # create Null traces so that rotation can work (obspy stream.rotate require 3 traces)
+        self.icreateNull = 0                 # create Null traces so that rotation can work (obspy stream.rotate require 3 traces)
                                              # this might be helpful if missing a vertical component only
         self.phase_window = False            # Grab waveforms using phases #WARNING this will cut the waveform to be near the phase arrival
         self.phases = ["P","P"]              # Phases to write to sac files or grab data from
