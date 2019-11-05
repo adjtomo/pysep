@@ -6,18 +6,15 @@ def get_ev_info(ev_info,iex):
 # ===============================================================
 # SilwalTape2016 example event (Anchorage) -- python run_getwaveform.py event_input 0
     if iex == 0:
-        ev_info.use_catalog = 0
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
         ev_info.otime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.min_dist = 0
         ev_info.max_dist = 300
         ev_info.tbefore_sec = 100
         ev_info.tafter_sec = 300
 
-        # output all proccessing steps
-        ev_info.ifverbose = True
-
         # keep stations with missing components and fill the missing component with a null trace (MPEN)
-        ev_info.icreateNull = 0
+        #ev_info.icreateNull = 1
 
         # RAW and ENZ files can be used when checking if you are receiving all possible data (example station: SOLD)
         ev_info.isave_raw = False
@@ -55,6 +52,8 @@ def get_ev_info(ev_info,iex):
         # ev_info.rlon = -149.7428
         # ev_info.rtime = obspy.UTCDateTime("2009-04-07T20:12:55.351")
         ev_info.emag = 4.6
+        # scaling and resampling needed for CAP
+        ev_info.resample_TF = True
         ev_info.resample_freq = 50
         ev_info.scale_factor = 100
         #ev_info.phase_window = False
@@ -66,9 +65,7 @@ def get_ev_info(ev_info,iex):
         #------------------------------
 
 # Iniskin earthquake
-# NOTE: must enter username and password above to get SALMON (ZE) stations
     if iex == 1:
-        ev_info.overwrite_ddir = 1       # delete data dir if it exists
         ev_info.use_catalog = 0          # do not use event catalog for source parameters
         # GCMT source parameters
         # the otime is the centroid time and accounts for tshift
@@ -84,9 +81,9 @@ def get_ev_info(ev_info,iex):
         ev_info.tafter_sec = 600
         ev_info.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US'  # IM will probably crash it
         ev_info.channel = 'BH?,HH?'
-        ev_info.resample_freq = 0        # no resampling
-        ev_info.resample_TF = False
-        ev_info.scale_factor = 1         # no scale factor
+        #ev_info.resample_freq = 0        # no resampling
+        #ev_info.resample_TF = False
+        #ev_info.scale_factor = 1         # no scale factor
         
         # parameters for examining step response (causal low-pass filter on raw waveforms)
         # delete AUQ, SPCP, SPBG
@@ -101,8 +98,8 @@ def get_ev_info(ev_info,iex):
         ev_info.detrend = False
 
         # For SALMON data
-        ev_info.user = None
-        ev_info.password = None
+        #ev_info.user = None
+        #ev_info.password = None
             
 # MFFZ earthquakes for investigating the step response
 # copied from event_input_flats
@@ -123,11 +120,12 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'AV,CN,AT,TA,AK,XV,II,IU,US'
         # ev_info.network = 'XV,AK'
         ev_info.channel = 'BH?,HH?'
-        ev_info.scale_factor = 1
-        ev_info.resample_freq = 0
-        ev_info.resample_TF = False
+        #ev_info.scale_factor = 1
+        #ev_info.resample_freq = 0
+        #ev_info.resample_TF = False
         # for CAP
-        # ev_info.scale_factor = 10.0**2
+        # ev_info.resample_TF = True
+        # ev_info.scale_factor = 100
         # ev_info.resample_freq = 50 
         
         # to investigate step response
@@ -152,14 +150,16 @@ def get_ev_info(ev_info,iex):
         
 # Loop over multiple event       
     if iex == 3:
-        ev_info.overwrite_ddir = 1       # delete data dir if it exists
-        ev_info.use_catalog = 0          # do not use event catalog for source parameters
-        
-        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/basinresp/data/basinamp_obspy.txt"
+        ev_info.use_catalog = 0
+        # text file of source parameters
+        ievent = 1
+        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/nenanabasin/data/nenanabasin_obspy.txt"
         eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
 
         ev_info_list = []
-        for xx in range(1,9):
+        #for xx in range(len(eids)):
+        #for xx in range(1,3):
+        for xx in range(ievent-1,ievent):
             ev_info_temp = ev_info.copy()
             ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
             ev_info_temp.elat = elats[xx]
@@ -176,9 +176,9 @@ def get_ev_info(ev_info,iex):
             ev_info_temp.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
             #ev_info_temp.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
             ev_info_temp.channel = 'BH?,HH?'
-            ev_info_temp.resample_freq = 40
-            ev_info_temp.scale_factor = 100
-            ev_info_temp.resample_TF = False
+            #ev_info_temp.resample_freq = 40
+            #ev_info_temp.scale_factor = 100
+            #ev_info_temp.resample_TF = False
 
             # append getwaveform objects
             ev_info_list.append(ev_info_temp)
@@ -199,7 +199,6 @@ def get_ev_info(ev_info,iex):
         # center at F3TN
         ev_info.rlat =  64.7716
         ev_info.rlon = -149.1465
-        ev_info.scale_factor = 1
         ev_info.min_dist = 0
         ev_info.max_dist = 150
         ev_info.tbefore_sec = 100
@@ -227,8 +226,6 @@ def get_ev_info(ev_info,iex):
         ev_info.edep = 1502.1
         ev_info.emag = 3.35
         ev_info.rtime = ev_info.otime
-        # ev_info.resample_TF = False
-        # ev_info.resample_freq = 50
 
 # Illinois main event
     if iex == 6:
@@ -276,7 +273,10 @@ def get_ev_info(ev_info,iex):
         ev_info.tafter_sec = 600
         ev_info.network = 'AK,AT,AV,CN,II,IU,US,XM,TA,XE,XR,XZ,YV,XV,ZE,XG'
         ev_info.channel = 'BH?,HH?'
-        ev_info.resample_freq = 50   # for CAP
+        # for CAP
+        ev_info.resample_TF = True
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100
 
 # same as iex=11 but for the IRIS database
 # GOAL: For LLNL events, we do NOT want to use the IRIS source parameters:
@@ -284,6 +284,7 @@ def get_ev_info(ev_info,iex):
 # --> THIS EXAMPLE IS NOT CURRENTLY WORKING WITH sln01
 # ERROR: FileNotFoundError: [Errno 2] No such file or directory: '19910914190000000/19910914190000000_ev_info.obj'
     if iex == 9:
+        ev_info.overwrite_ddir = 0    # do NOT overwrite the existing directory
         ev_info.client_name = 'IRIS'
         #ev_info.client_name = 'NCEDC'
         ev_info.use_catalog = 1
