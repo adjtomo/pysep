@@ -1,0 +1,6 @@
+History of reference files
+
+For now we are documenting the sporadic times when we update the output files from the reference examples in event_input.py. (Ideally this would be part of unit testing.)
+
+Date User ObsPy Python Linux conda-uaf
+

@@ -91,7 +91,8 @@ class getwaveform:
         self.min_lon = None
         self.max_lon = None
         self.overwrite_ddir = 1              # 1 = delete data directory if it already exists
-        self.icreateNull = 1                 # create Null traces so that rotation can work (obsby stream.rotate require 3 traces)
+        self.icreateNull = 0                 # create Null traces so that rotation can work (obspy stream.rotate require 3 traces)
+                                             # this might be helpful if missing a vertical component only
         self.phase_window = False            # Grab waveforms using phases #WARNING this will cut the waveform to be near the phase arrival
         self.phases = ["P","P"]              # Phases to write to sac files or grab data from
         self.write_sac_phase = False         # put phase information in sac files
@@ -135,7 +136,7 @@ class getwaveform:
         self.water_level = 60
 
         # For CAP
-        self.resample_TF = True           # if False then resample_freq is taken from SAC files
+        self.resample_TF = False          # if False then resample_freq is taken from SAC files
         self.resample_freq = 50           # 0 causes errors. Use resample_TF instead
         self.scale_factor = 1             # for CAP use 10**2  (to convert m/s to cm/s)
 
@@ -152,12 +153,12 @@ class getwaveform:
         self.ifplot_spectrogram = False   # plot spectrograms 
         self.ifsave_stationxml = True     # save station xml file (for adjoint tomo)
 
-        # Waveforms to be saved
+        # options for rotation and for writing sac files
         self.rotateRTZ = True             # Rotate and save the RTZ components
         self.rotateUVW = False            # Rotate and save the UVW components
         self.isave_raw = False            # save raw waveforms
-        self.isave_raw_processed = False  # save processed waveforms just before rotation to ENZ
-        self.rotateENZ = True            # rotate extracted waveforms to ENZ
+        self.isave_raw_processed = True   # save processed waveforms just before rotation to ENZ
+        self.rotateENZ = True             # rotate extracted waveforms to ENZ
         self.isave_ENZ = True             # save ENZ
 
         # username and password for embargoed IRIS data
@@ -166,7 +167,7 @@ class getwaveform:
         self.password = None
 
         # To output lots of processing info
-        self.ifverbose = False
+        self.ifverbose = True
 
         # save RTZ as asdf files
         self.ifsave_asdf = False
