@@ -302,6 +302,48 @@ def get_ev_info(ev_info,iex):
         ev_info.overwrite_ddir = 0
         ev_info.ifsave_stationxml = False
     
+    if iex == 10:
+        ev_info.idb = 1
+        ev_info.overwrite_ddir = 1       # delete data dir if it exists
+        ev_info.use_catalog = 0          # do not use event catalog for source parameters
+        sec_tol = 180 
+        events_file = "/home/ksmith/REPOSITORIES/manuscripts/kyle/papers/nenanabasin/data/nenanabasin_obspy.txt"
+        eids,otimes,elons,elats,edeps,emags = reof.read_events_obspy_file(events_file)
+	
+        ev_info_list = []
+        for xx in range(0,1):
+            ev_info_temp = ev_info.copy()
+            ev_info_temp.otime = obspy.UTCDateTime(otimes[xx])
+            ev_info_temp.elat = elats[xx]
+            ev_info_temp.elon = elons[xx]
+            ev_info_temp.edep = edeps[xx]
+            ev_info_temp.emag = emags[xx]
+            ev_info_temp.eid = eids[xx]
+            # subset of stations
+            ev_info_temp.min_dist = 0
+            #ev_info_temp.max_dist = 50 
+            ev_info_temp.max_dist = 150
+            ev_info_temp.rlat = 64.7716
+            ev_info_temp.rlon = -149.1465 
+            ev_info_temp.rtime = ev_info_temp.otime
+            saftcase = False
+            ev_info_temp.phases = ["P","S"] 
+            ev_info_temp.write_sac_phase = True # put phase information in sac files
+            ev_info_temp.network = 'AV,CN,ZE,AT,TA,AK,XV,II,IU,US' 
+            ev_info_temp.channel = 'BH?,HH?'
+            ev_info_temp.resample_TF = True # to be consistent with past past waveforms
+            ev_info_temp.resample_freq = 50        
+            ev_info_temp.scale_factor = 1 
+            ev_info_temp.tbefore_sec = 150
+            ev_info_temp.tafter_sec = 1000
+            print("before sec = ", ev_info_temp.tbefore_sec)
+            print("after sec = ", ev_info_temp.tafter_sec)
+
+            # append getwaveform objects
+            ev_info_list.append(ev_info_temp)
+        
+        # always return ev_info
+        ev_info = ev_info_list
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
