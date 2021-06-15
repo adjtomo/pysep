@@ -345,6 +345,33 @@ def get_ev_info(ev_info,iex):
         
         # always return ev_info
         ev_info = ev_info_list
+	
+    if iex == 11:
+        ev_info.use_catalog = 0
+        ev_info.otime = obspy.UTCDateTime("2021-05-31T06:59:54.000")
+        ev_info.min_dist = 0
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 100
+        ev_info.tafter_sec = 300
+
+        # RAW and ENZ files can be used when checking if you are receiving all possible data (example station: SOLD)
+        ev_info.isave_raw = True
+        ev_info.isave_raw_processed = False
+        ev_info.isave_ENZ = True
+
+        ev_info.network = 'AK' # for testing
+        ev_info.channel = 'BH?'
+        ev_info.use_catalog = 0
+        ev_info.elat = 62.4469
+        ev_info.elon = -148.2537
+        ev_info.edep =  43900.0
+        ev_info.emag = 6.1
+        # scaling and resampling needed for CAP
+        ev_info.resample_TF = True
+        ev_info.resample_freq = 50
+        ev_info.scale_factor = 100
+        ev_info.remove_clipped = True
+	
     return(ev_info)
 #=================================================================================
 # END EXAMPLES
