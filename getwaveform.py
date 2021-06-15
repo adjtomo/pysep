@@ -21,6 +21,7 @@ from util_helpers import get_streams_from_dir, get_inventory_from_xml
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometer2degrees
 import math
+from clipping_handler import remove_clipped
 
 from obspy.clients.fdsn.mass_downloader import CircularDomain, \
     RectangularDomain, Restrictions, MassDownloader
@@ -174,6 +175,10 @@ class getwaveform:
 
         # Use mass downloader instead
         self.ifmass_downloader = False
+	
+        self.remove_clipped = False
+        if self.remove_clipped is True:
+            self.isave_raw = True
 
     def run_get_waveform(self):
         """
@@ -521,7 +526,9 @@ class getwaveform:
             os.system("../asdf_converters/asdf_converters/sac2asdf.py "
                       + nez_dir + " " + nez_asdf_filename + " observed")
             
-
+        if self.remove_clipped:
+            remove_clipped(evname_key)
+		
     def copy(self):
         '''
         create of copy of itself
