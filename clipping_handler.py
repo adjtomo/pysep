@@ -7,23 +7,18 @@ def remove_clipped(path):
     ddir = path+'/'
     rawdir = os.path.join(ddir, 'RAW/')
     # Load all sac files as one stream
-    data_dict = obspy.read(os.path.join(rawdir+'*.sac'))\
-        ._groupby('{network}.{station}.{location}')
-    # Split stream into individual station streams
-    data = [data_dict[key] for key in data_dict.keys()]
+    data = obspy.read(os.path.join(rawdir,'*.sac'))
     # Define clipping factor for 24 bits signal
     q = ((2**(24-1))**2)**0.5
 
     # Empty list to contain all the clipped traces ids
     clipped_stations = []
-    # Loop in station streams
-    for station in data:
-        # loop in traces
-        for trace in station:
-            n = len(trace.data[(trace.data**2)**(0.5) > 0.8*q])
-            if not n == 0:
-                clipped_stations.append(trace.id[:-1])
-                print('station', trace.id[:-1], 'has', n, 'clipped values!')
+    # Loop in traces stream
+    for trace in data:
+        n = len(trace.data[(trace.data**2)**(0.5) > 0.8*q])
+        if not n == 0:
+            clipped_stations.append(trace.id[:-1])
+            print('station', trace.id[:-1], 'has', n, 'clipped values!')
 
     # Replacing surface wave weight in .dat files
     for file in os.listdir(ddir):
