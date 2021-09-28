@@ -1,5 +1,4 @@
 
-
 import numpy as np
 import numpy.matlib
 from math import radians, degrees, sin, cos, asin, acos, sqrt
@@ -19,6 +18,8 @@ from datetime import datetime
 from obspy.geodetics import gps2dist_azimuth
 from scipy.signal import butter, filtfilt, sosfiltfilt
 
+import matplotlib
+matplotlib.use('TkAgg')
 
 def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, iintp=0, inorm=[1], tlims=[], nfac=1, azstart=[], iunit=1, imap=1, wsyn=[], bplotrs=True, displayfigs='on'):
     '''
@@ -27,6 +28,8 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     % INPUT
     %   w       waveform object (WHAT ADDED FIELDS SHOULD WE REQUIRE?)
     % INPUT (OPTIONAL) -- these can be omitted or set as [] to get default settings
+    %   elat    ??
+    %   elon    ??
     %   rssort  =0 input sorting of records
     %           =1 azimuthal sorting of records
     %           =2 distance sorting of records
@@ -94,8 +97,17 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     %
     % Carl Tape 11/21/2011
     % Yun Wang 11/2011
+    %
+    % Translated to python -
+    % Nealey Sims 1/2021
+    %
+    % Further upgrades -
+    % Aakash Gupta 9/2021
     %==========================================================================
     '''
+
+    ######################################### INITIALIZATION - 1 #################################################
+
     start = datetime.now()
     print('--> entering plotw_rs.m')
     
@@ -121,7 +133,9 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     bprint_map = False;
     fhct = 1; # initialize number of figure handle counts
     #--------------------
-    # check input arguments
+    
+    ####################################### CHECK INPUT ARGUMENTS ############################################
+
     w=win.copy()
     print(len(w))
     #w.merge(method=1, fill_value=0)#,interpolation_samples=0)  ## merge any traces with duplicate sta/chans
@@ -160,7 +174,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         print('  inorm = %s' % (inorm))
         print('  bplot_geometric_speading = %s' % (bplot_geometric_speading))
         print('  GEOFAC = %.2f' % (GEOFAC))
-    
+
     if iintp not in [-1, 0, 1]:
         raise ValueError('input iintp = %f must be -1 or 0 or 1' % (iintp))
     if bplotrs==False:
@@ -173,7 +187,9 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         if rssort not in [1, 2]:
             print(iabs, rssort)
             raise ValueError('if iabs=1, then rssort=1 (az) or rssort=2 (dist)')
-            
+    
+    ##########################################################################################################
+        
     nw=len(w)
     
     ncomp = 1   # w could be nw x ncomp
@@ -191,22 +207,23 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     if pmax==0:
         pmax=nseis
    
-    # time shifts (allows for alignment of seismograms on a time that varies
-    # from one trace to the next, say, a P arrival)
+    ####################################### TIME SHIFTS AND MARKERS ###########################################
+    # Allows for alignment of seismograms on a time that varies from one trace to the next, say, a P arrival
+    
     if len(tshift) == 0:
         print('no time shift applied (default)')
         tshift = np.zeros((nseis,1))
-        
+
     elif len(tshift)==1:
         print('time shift of %.2f s applied to all waveforms' % (tshift[0]))
         tshift = tshift*np.ones((nseis,1))
-        
+
     elif len(tshift)==nw:
         print('input tshift has dimension %i x %i' % (np.shape(tshift)))
         tshift = tshift[:]
         tshift = np.matlib.repmat(tshift,1,ncomp);
         print('output tshift has dimension %i x %i' % (np.shape(tshift)));
-        
+
     else:
         if nw != 1:
             raise ValueError('tshift (%i) must be same length as w (%i)' % (len(tshift),nseis))
@@ -230,7 +247,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         tshift0 = tshift[0]
         itrel = 0
     
-    #-------------------
+    ######################################### INITIALIZATION - 2 #################################################
 
     starttime=[]
     endtime=[]
@@ -246,12 +263,15 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     tdata = []
     trtimes=[]
     evidst=[]
+
     print(len(w))
     for i, tr in enumerate(w):
         chans.append(tr.stats.channel)
         try:
-            rlat.append(tr.stats.sac.stla)
-            rlon.append(tr.stats.sac.stlo)
+            # rlat.append(tr.stats.sac.stla)
+            # rlon.append(tr.stats.sac.stlo)
+            rlat.append(tr.stats.mseed['stla'])
+            rlon.append(tr.stats.mseed['stlo'])
         except:
             rlat.append(tr.stats.coordinates[0])
             rlon.append(tr.stats.coordinates[1])
@@ -270,7 +290,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         tdata.append(tr.data)
         trtimes.append(tr.times("timestamp"))
         
-    if nseis ==1:
+    if nseis==1:
         stchan = chans
     else:
         #unique channels
@@ -295,7 +315,6 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
             slabs.append(str(netwk[ii]) + '.' + str(sta[ii]) + '.' + str(loc[ii]))
             ii +=1
         sta = [str(ss) for ss in sta];
-
     else:
         #nsta = length(sta);     % temporary (MCK with two networks)
         nsta = len(np.unique(sta))
@@ -347,7 +366,9 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
                 print('must have a single event or station common to all input waveforms')
                 
     print('%i event, %i station' % (neve,nsta))
-    # reference start time
+    
+    ####################################### REFERENCE START TIME #############################################
+    
     tstartmin = min(starttime)
     imin = starttime.index(tstartmin)      
     print('minimum start time of all waveforms is %s (%s)' % (tstartmin,sta[imin]))
@@ -359,7 +380,8 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     #print(stref);
     print('--> this will be subtracted from all time vectors')
     
-    # compute distances and azimuths to stations (or events)
+    ############################## STATION (OR EVENT) DISTANCES & AZIMUTHS #####################################
+    
     if irs==1:
         lat1 = elat
         lon1 = elon
@@ -370,7 +392,6 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         lon1 = rlon[0]
         lat2 = elat
         lon2 = elon
-
     
     ###[dist] = distance(lat1,lon1,lat2,lon2, 'degrees')
     def get_bearing(lat1, long1, lat2, long2):
@@ -379,7 +400,6 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.cos(math.radians(dLon))
         brng = arctan2(x,y)
         brng = degrees(brng)
-
         return brng
     
     dist = []
@@ -426,7 +446,8 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     print('distance range is %.1f - %.1f = %.1f %s' % (max(dist),min(dist),dran,sunit))
     print(' azimuth range is %.1f - %.1f = %.1f' % (max(azi),min(azi),aran))
     
-    # sort
+    ################################################# SORT ######################################################
+
     # NEED TO IMPLEMENT A MULTI-SORT FOR THE CASE OF MULTIPLE SEISMOGRAMS AT
     # THE SAME SITE (if the distance or az are exactly the same, then sort
     # based on the net.sta.loc.chan string)
@@ -434,22 +455,21 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     if rssort == 0:      # default is no sorting
         nsei=nseis+1
         #ivec = [1:nseis].T
-        ivec =arange(1,nsei)[:, newaxis]
-    if rssort == 1:      # azimuth
+        ivec =np.arange(1,nsei)
+    elif rssort == 1:      # azimuth
         if len(azstart)==0:
             print(len(azstart))
             azstart = 0
-            warnings.warn('azstart not specified -- setting azstart = 0');
-        
+            warnings.warn('azstart not specified -- setting azstart = 0');        
         ###ivec = np.argsort((azi-azstart) % 360);
         ivec = np.argsort(azi)
         #[~,ivec] = np.argsort(azi-azstar)
-    if rssort == 2:      # distance
+    elif rssort == 2:      # distance
         ivec = np.argsort(dist);
-    if rssort == 3:      # alphabetical
+    elif rssort == 3:      # alphabetical
         ivec = np.argsort(slabs);
     
-    # labels for record section -- UNSORTED
+    ################################# RECORD SECTION LABELS -- UNSORTED #########################################
     rlabels=np.empty(((nseis),1), dtype=object)
     if iabs==0:
         jj=0
@@ -461,10 +481,10 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
                         stshift = ('DT %.1f s' % (tshift[jj]))
                     else:
                         stshift = ('DT %.1f min' % (tshift[jj]/60))
-                    
+
                 else:
                     stshift = ''
-                
+
                 #stshift = sprintf('DT %.1f',tshift(jj)-min(tshift));
             else:
                 stshift = ''
@@ -475,14 +495,14 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
             else :       # 1 station, multiple events (list event depths)
                 rlabels[jj] = ('%s %s (%.0f, %.0f %s) %.0f km %.1f %s' % 
                     (str(slabs[jj])[2:-2], chans[jj], math.floor(azi[jj]), dist[jj], sunit, edep[jj], mag[jj], stshift))
-            
-            
-        
+
+
+
     else:
         rlabels = slabs
     
-    
-    #--FILTER WAVEFORMS--------------------------------------------------------
+
+    ########################################### FILTER WAVEFORMS ###############################################
        
     RTAPER = 0.05
     
@@ -498,13 +518,13 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
             tr.trim((tr.stats.starttime),(tr.stats.endtime), pad=True, fill_value=fval)
             wtemp.append(tr)
         w=wtemp
-        
+
     else:
         ifilter = 1;
         npoles = 2;
         
         # fill gaps with mean value
-        #w = fillgaps(w,'meanAll');
+        # w = fillgaps(w,'meanAll');
         wtemp=Stream()
         for tr in w:
             fval=statistics.mean(tr.data)
@@ -539,7 +559,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
                 wfilt=w.filter("lowpass", freq=1/T1[0],zerophase=True)
             except:
                 print("filter didn't work")
-                
+
         elif len(T1) == 0 and len(T2) != 0:
             print('%i-pole high-pass T < %.1f s (f > %.2f Hz)' % (npoles,T2[0],1/T2[0]))
             #f = filterobject('H',1/T2,npoles);        
@@ -550,15 +570,15 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
                 wfilt=w.filter("highpass", freq=1/T2[0],zerophase=True)
             except:
                 print("filter didn't work")
-            
+
         elif len(T1) != 0 and len(T2) != 0:
             print('%i-pole band-pass filter between T = %.1f - %.1f s' % (npoles,T1[0],T2[0]))
             #f = filterobject('B',[1/T2 1/T1],npoles);
             stfilt = ('T = %.1f-%.1f s (%.2f-%.2f Hz)' % (T1[0],T2[0],1/T2[0],1/T1[0]))
             if T2[0] >= Tmax_for_mHz:
                 stfilt = ('T = %.1f-%.1f s (%.1f-%.1f mHz)' % (T1[0],T2[0],1/T2[0]*1e3,1/T1[0]*1e3))
+
             try:
-                
                 for tr in w:
                     #sos = butter(5, [1/T2[0], 1/T1[0]], 'bandpass', output='sos');
                     lowcut=1/T2[0]
@@ -633,18 +653,30 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     
     #wmaxvec = max(abs(w.merge(fill_value=0)))          # will handle empty records
     #print(wmaxvec)
-    '''
+
     ### come back to deal with synthetic arguments ###
-    if isyn==1
-        wsynmaxvec = max(abs(fillgaps(wsyn,0)));
-        disp('amplitude comparison between data and synthetics:');
-        for ii=1:length(w)
-            disp(sprintf('%5s %s ln(data/syn) = %6.2f',...
-                sta{ii},chans{ii},log(wmaxvec(ii) / wsynmaxvec(ii))));
-        end
-        wmaxvec = max([wmaxvec' ; wsynmaxvec'])';
-    end
-    '''
+    wsynmaxvec=[]
+    ftrs_syn = []
+    fttimes_syn = []
+    stimes_syn = []
+
+    if isyn==1:
+        wtemp = Stream()
+        for tr in wsyn:
+            fval = statistics.mean(tr.data)
+            tr.trim((tr.stats.starttime), (tr.stats.endtime), pad=True, fill_value=fval)
+            wtemp.append(tr)
+            wsynmaxvec.append(max(abs(tr.data[100:-100])))
+            ftrs_syn.append(tr.data)
+            fttimes_syn.append(tr.times("timestamp"))
+            stimes_syn.append(tr.stats.starttime)
+
+        wsyn = wtemp
+        print('amplitude comparison between data and synthetics:')
+        for ii in range(len(w)):
+            print(' %5s %s ln(data/syn) = %6.2f' % (sta[ii],chans[ii],np.log(wmaxvec[ii] / wsynmaxvec[ii])))
+        #wmaxvec = max(max(wmaxvec),max(wsynmaxvec))
+
     K = []
     fH = []
     if geoinorm[0] == 2:
@@ -695,16 +727,19 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
             plt.title('A(\\Delta) = %.2e / (sin \\Delta)^{%.2f}' % (K,GEOFAC),fontsize=16)
         
         # update wmaxvec
-        #wmaxvec = max(abs(fillgaps(w,0)))
-        '''
         if isyn==1:
-            wsynmaxvec = max(abs(fillgaps(wsyn,0)))
-            wmaxvec = max([wmaxvec' ; wsynmaxvec'])'
-            '''
+            wtemp = Stream()
+            for tr in wsyn:
+                fval = statistics.mean(tr.data)
+                tr.trim((tr.stats.starttime), (tr.stats.endtime), pad=True, fill_value=fval)
+                wtemp.append(tr)
+                wsynmaxvec.append(max(abs(tr.data[100:-100])))
+            wsyn = wtemp
+            #wmaxvec = max(max(wmaxvec),max(wsynmaxvec))
        
-    wmax = max(wmaxvec)    
+    wmax = max(wmaxvec)
     
-    #--PLOT RECORD SECTIONS----------------------------------------------------
+    ################################### PLOT RECORD SECTIONS ########################################
     
     if bplotrs == False:
         return
@@ -740,6 +775,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     azbin_fwid = 0.1    
     for a in range(len(azbin)):
         azbin[a]=azbin[a]%360
+    
     # vertical separation between seismograms
     wsep = 1.5*statistics.mean(wmaxvec)
     yshift = wsep*nfac
@@ -758,10 +794,9 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
                 yran=dran
                 if iunit==2:
                     yran = kilometers2degrees(dran)
-            
             for ii in range(len(wmaxvec)):
                 nvec[ii] = nfac * nseis/yran*wmaxvec[ii]
-            
+
         else:        # inorm = 0 or 2
             wvec = wmax*np.ones((nseis,1))
             for jj in range(len(wvec)):
@@ -823,8 +858,8 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         
         for jj in range(jmax):       # loop over seismograms
             if kk<nseis:
-            
-                ii = ivec[kk];  # key sorting
+
+                ii = ivec[kk]-1;  # key sorting
                 rlabs[jj] = rlabels[ii]
                 # get seismogram
                 ti3 = fttimes[ii]
@@ -866,17 +901,16 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
                     imx = np.argmax(abs(di3))
                     mx=di3.max()
                     stmx = ('%s max %.2e %s at t = %.1f s ' % (sta[ii],di3[imx],units,tplot[imx]))
-                
-                '''
+
                 ### come back to deal with synthetic arguments ###
-                if isyn==1
+                if isyn==1:
                 # be careful about the reference time
-                [tisyn,disyn,tstartsyn] = getm(wsyn(ii),'timevector','data','start');
-                tplot = (tisyn - tstartsyn)*spdy - tshift(ii);
-                dplotshift = disyn/nvec(ii) + dy(jj);   % key amplitude scaling
-                plot(tplot,dplotshift,synplot); 
-                end
-                '''
+                    tisyn = fttimes_syn[ii]
+                    disyn = ftrs_syn[ii]
+                    tstartsyn = stimes_syn[ii]
+                    tplot = (tisyn - dates.date2num(tstartsyn)*spdy) - tshift[ii]
+                    dplotshift = disyn/nvec[ii] + dy[jj]   # key amplitude scaling
+                    ax.plot(tplot,dplotshift,synplot, linewidth=0.5)
                 
                 # partition if plotting by azimuth (see azbin above)
                 if rssort==1 and iabs==0:
@@ -1050,7 +1084,3 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     #==========================================================================
 
     return w
-    
-    
-    
-    
