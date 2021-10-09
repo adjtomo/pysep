@@ -855,7 +855,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
         for jj in range(jmax):       # loop over seismograms
             if kk<nseis:
 
-                ii = ivec[kk]-1;  # key sorting
+                ii = ivec[kk];  # key sorting
                 rlabs[jj] = rlabels[ii]
                 # get seismogram
                 ti3 = fttimes[ii]
