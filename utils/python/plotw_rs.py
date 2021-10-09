@@ -1,4 +1,3 @@
-
 import numpy as np
 import numpy.matlib
 from math import radians, degrees, sin, cos, asin, acos, sqrt
@@ -18,18 +17,13 @@ from datetime import datetime
 from obspy.geodetics import gps2dist_azimuth
 from scipy.signal import butter, filtfilt, sosfiltfilt
 
-import matplotlib
-matplotlib.use('TkAgg')
-
-def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, iintp=0, inorm=[1], tlims=[], nfac=1, azstart=[], iunit=1, imap=1, wsyn=[], bplotrs=True, displayfigs='on'):
+def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, iintp=0, inorm=[1], tlims=[], nfac=1, azstart=[], iunit=1, imap=1, wsyn=[], bplotrs=True, displayfigs='on'):
     '''
     %PLOTW_RS processes waveform object and plots as a record section
     %
     % INPUT
     %   w       waveform object (WHAT ADDED FIELDS SHOULD WE REQUIRE?)
     % INPUT (OPTIONAL) -- these can be omitted or set as [] to get default settings
-    %   elat    ??
-    %   elon    ??
     %   rssort  =0 input sorting of records
     %           =1 azimuthal sorting of records
     %           =2 distance sorting of records
@@ -56,7 +50,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     %                   K
     %   tlims   time limits for x-axis ([] to use default)
     %           note that the 'tshift' field will shift each seismogram
-    %   nfac    controls spacing between seismograms
+    %   nfac    controls spacing between seismograms (use a smaller nfac value for more prominent peaks)
     %   azstart   azimuthal angle for top record (applies with rssort=1 only)
     %   iunit   units for distance record section (applies with rssort=2 only)
     %           =1 for km sphere, =2 for deg sphere, =3 for km flat
@@ -256,6 +250,8 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     sta=[]
     rlat=[]
     rlon=[]
+    elat=[]
+    elon=[]
     edep=[]
     eid=[]
     mag=[]
@@ -268,10 +264,8 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
     for i, tr in enumerate(w):
         chans.append(tr.stats.channel)
         try:
-            # rlat.append(tr.stats.sac.stla)
-            # rlon.append(tr.stats.sac.stlo)
-            rlat.append(tr.stats.mseed['stla'])
-            rlon.append(tr.stats.mseed['stlo'])
+            rlat.append(tr.stats.sac.stla)
+            rlon.append(tr.stats.sac.stlo)
         except:
             rlat.append(tr.stats.coordinates[0])
             rlon.append(tr.stats.coordinates[1])
@@ -285,8 +279,10 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         edep.append('dep ')
         eid.append(evidst[0])
         mag.append('NaN')
-        elat= elat*np.ones((len(w),1))
-        elon= elon*np.ones((len(w),1))
+        #elat= elat*np.ones((len(w),1))
+        #elon= elon*np.ones((len(w),1))
+        elat.append(tr.stats.sac.evla)
+        elon.append(tr.stats.sac.evlo)
         tdata.append(tr.data)
         trtimes.append(tr.times("timestamp"))
         
@@ -688,7 +684,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         # WARNING: This does not take into account the variation in amplitude. 
         print('correct for geometrical spreading using (sin x)^-%.2f' % (GEOFAC))
         sindel = np.sin(np.asarray(dist_deg) / deg)
-        # note: stations that are father away get enhanced by a larger valuye
+        # note: stations that are father away get enhanced by a larger value
         Kvec = wmaxvec * (sindel**GEOFAC)
         # single parameter for fitting (GEOFAC fixed)
         if len(geoinorm)==4:
@@ -1049,7 +1045,7 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
         
         #plt.ion
         plt.tight_layout()
-        #plt.show()
+        plt.show()
         pp+=1
     #return fig
     
@@ -1083,4 +1079,4 @@ def plotw_rs(win,elat=[], elon=[], rssort=2, iabs=0, tshift=[], tmark=[], T1=[],
 
     #==========================================================================
 
-    return w
+    # return w
