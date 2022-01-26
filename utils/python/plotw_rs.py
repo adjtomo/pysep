@@ -149,10 +149,11 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
     
     if len(wsyn)==0:
         isyn=0
-        wsyn=None
+        ws=None
     else:
         print('second waveform object detected -- waveforms will be superimposed');
         isyn=1
+        ws=wsyn.copy()
     geoinorm = inorm
     # exit here if user enters impermissible values
     if rssort not in [0, 1, 2, 3]: 
@@ -604,10 +605,10 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
         # apply identical filtering to synthetics, if present
         
         if isyn==1:
-            wsyn.detrend()
+            ws.detrend()
             #wsyn = demean(wsyn); 
-            wsyn.taper(max_percentage=RTAPER)
-            wsyn.filter("bandpass", freqmin=1/T2[0], freqmax=1/T1[0],corners=npoles,zerophase=True)
+            ws.taper(max_percentage=RTAPER)
+            ws.filter("bandpass", freqmin=1/T2[0], freqmax=1/T1[0],corners=npoles,zerophase=True)
     ##for trr in w: 
         ##trr.data=trr.data/max(abs(trr.data))
     # integrate or differentiate
@@ -620,14 +621,14 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
         units = 'nm'
         if isyn==1:
             if ifilter==0:
-                wsyn.detrend()
-            wsyn.integrate()
+                ws.detrend()
+            ws.integrate()
         
     if iintp==-1:
         w.differentiate()        # help waveform/diff
         units = 'nm / sec^2'
         if isyn==1:
-            wsyn.differentiate()
+            ws.differentiate()
     
     # compute amplitude scaling for plots
     # NOTE: This will normalize by the full time series, not simply by the time
@@ -658,7 +659,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
 
     if isyn==1:
         wtemp = Stream()
-        for tr in wsyn:
+        for tr in ws:
             fval = statistics.mean(tr.data)
             tr.trim((tr.stats.starttime), (tr.stats.endtime), pad=True, fill_value=fval)
             wtemp.append(tr)
@@ -667,7 +668,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
             fttimes_syn.append(tr.times("timestamp"))
             stimes_syn.append(tr.stats.starttime)
 
-        wsyn = wtemp
+        ws = wtemp
         print('amplitude comparison between data and synthetics:')
         for ii in range(len(w)):
             print(' %5s %s ln(data/syn) = %6.2f' % (sta[ii],chans[ii],np.log(wmaxvec[ii] / wsynmaxvec[ii])))
@@ -699,7 +700,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
             # THIS CHANGES THE AMPLITUDE OF w(ii)
             w[ii].data = w[ii].data / wvec[ii] 
             if isyn==1:
-                wsyn[ii] = wsyn[ii] / wvec[ii] 
+                ws[ii] = ws[ii] / wvec[ii]
             print('%5s %8.3f deg, max = %8.2e, maxG = %5.2f, K/sin(del)^x = %16.2f' %
                (sta[ii],dist_deg[ii],wmaxvec[ii],max(abs(w[ii].data)),wvec[ii]))
             ii+=1
@@ -725,12 +726,12 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
         # update wmaxvec
         if isyn==1:
             wtemp = Stream()
-            for tr in wsyn:
+            for tr in ws:
                 fval = statistics.mean(tr.data)
                 tr.trim((tr.stats.starttime), (tr.stats.endtime), pad=True, fill_value=fval)
                 wtemp.append(tr)
                 wsynmaxvec.append(max(abs(tr.data[100:-100])))
-            wsyn = wtemp
+            ws = wtemp
             #wmaxvec = max(max(wmaxvec),max(wsynmaxvec))
        
     wmax = max(wmaxvec)
@@ -925,7 +926,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
                                 tp1 = tlims[0];
                                 tp2 = tlims[0] + azbin_fwid*(tlims[1]-tlims[0]);
                                 #disp(sprintf('%i %i %.2f %.2f',pp,jj,tp1,tp2));  % testing
-                                if wsyn != None: # and var != None:
+                                if ws != None: # and var != None:
                                     pc = 'r' 
                                 else: 
                                     pc = 'k'
@@ -940,7 +941,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
                                 tp1 = tlims[0];
                                 tp2 = tlims[0] + azbin_fwid*(tlims[1]-tlims[0]);
                                 #disp(sprintf('%i %i %.2f %.2f',pp,jj,tp1,tp2));  % testing
-                                if wsyn != None: # and var != None:
+                                if ws != None: # and var != None:
                                     pc = 'r' 
                                 else: 
                                     pc = 'k'
