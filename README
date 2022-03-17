@@ -5,8 +5,11 @@ pysep uses obspy tools to request seismic data, process data, and write out sac 
 Our motivation is to have files prepared for moment tensor inversions.
 However the sac files can be used for other purposes as well.
 
-download:
-git clone https://github.com/uafgeotools/pysep.git
+setup:
++ git clone https://github.com/uafgeotools/pysep.git
++ cd pysep
++ conda env create -f ./setup/pysep.yml
++ conda activate pysep
 
 What pysep does:
 + input event information or get it from IRIS. You can also loop over multiple events.
@@ -31,20 +34,12 @@ OPTIONAL STEPS
 + rotate to RTZ, taking the sensor orientation into consideration
 + rotate to UVW triaxial orthogonal frame of the T120PH Nanometrics sensor
   (useful for isolating spurious signals to sensor components)
-+ debugging plots plots: spectrograms, instrument response
++ debugging plots: spectrograms, instrument response
 
-Additonal features
+Additional features
++ remove waveforms that are clipped by the digitizer (assumes N-bit for digitizer)
 + access embargoed data sets from IRIS (requires user name and password)
 + interface with LLNL database of nuclear explosion and earthquake waveforms (see below)
-
-contributors (alphabetical):
-Celso Alvizuri
-Lion Krischer
-Vipul Silwal
-Kyle Smith
-Cole Richards
-Carl Tape
-Liam Toney
 
 ==============================
 
