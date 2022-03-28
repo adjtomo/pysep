@@ -1,20 +1,13 @@
-import numpy as np
-import numpy.matlib
-from math import radians, degrees, sin, cos, asin, acos, sqrt
-from geopy import distance
-from matlab2datetime import matlab2datetime
-import warnings
-from numpy import arctan,arctan2,random,sin,cos,degrees
+from datetime import datetime
 import math
 import statistics
-from scipy import signal
-from obspy.geodetics import kilometers2degrees
-import matplotlib.pyplot as plt
+import warnings
+from geopy import distance
 from matplotlib import dates
-from obspy import read, Stream
-from obspy.core import read, UTCDateTime
-from datetime import datetime
-from obspy.geodetics import gps2dist_azimuth
+import matplotlib.pyplot as plt
+import numpy as np
+from obspy import Stream
+from obspy.geodetics import kilometers2degrees, gps2dist_azimuth
 from scipy.signal import butter, filtfilt, sosfiltfilt
 
 def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, iintp=0, inorm=[1], tlims=[], nfac=1, azstart=[], iunit=1, imap=1, wsyn=[], bplotrs=True, displayfigs='on'):
@@ -395,8 +388,8 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
         dLon = (long2 - long1)
         x = math.cos(math.radians(lat2)) * math.sin(math.radians(dLon))
         y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.cos(math.radians(dLon))
-        brng = arctan2(x,y)
-        brng = degrees(brng)
+        brng = np.arctan2(x,y)
+        brng = math.degrees(brng)
         return brng
     
     dist = []
@@ -684,7 +677,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
         # single factor that accounts for geometric spreading.
         # WARNING: This does not take into account the variation in amplitude. 
         print('correct for geometrical spreading using (sin x)^-%.2f' % (GEOFAC))
-        sindel = np.sin(np.asarray(dist_deg) / deg)
+        sindel = math.sin(np.asarray(dist_deg) / deg)
         # note: stations that are father away get enhanced by a larger value
         Kvec = wmaxvec * (sindel**GEOFAC)
         # single parameter for fitting (GEOFAC fixed)
@@ -717,7 +710,7 @@ def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, 
             plt.text(dist_deg,wmaxvec,sta,fontsize=fsizeg)
             # best-fitting curve
             x = np.linspace(0,min([1.1*max(dist_deg), 180]))
-            plt.plot(x,K/(sin(x/deg)**GEOFAC),'r--',linewidth=2)
+            plt.plot(x,K/(math.sin(x/deg)**GEOFAC),'r--',linewidth=2)
             plt.ylim(0, 1.05*max(wmaxvec))
             plt.xlabel('\Delta, source-station arc distance, deg',fontsize=14);
             plt.ylabel('max( |v(t)| )',fontsize=14);
