@@ -15,7 +15,8 @@ def plotw_rs(win,       #waveform object to be plotted
                         # 1=azimuthal sorting of records
                         # 2=distance sorting of records
                         # 3=alphabetical sorting of records (by station name or event ID)
-    iabs=0              # 1= to plot by absolute distance or azimuth (this means unequal vertical spacing between the waveforms)
+                        # 4=station azimuth weighted vertical spacing of waveforms
+                        # 5=station distance weighted vertical spacing of waveforms    
     tshift=[],          # time shift (in seconds) to apply to the waveforms ([] for none)
     tmark=[],           # absolute time markers, ([] for none), note: if tshift varies, then you can't use this option
     T1=[],              # minimum period of filter ([] for low-pass or no filter)
@@ -136,10 +137,12 @@ def plotw_rs(win,       #waveform object to be plotted
         ws=wsyn.copy()
     geoinorm = inorm
     # exit here if user enters impermissible values
-    if rssort not in [0, 1, 2, 3]: 
+    if rssort not in [0, 1, 2, 3, 4, 5]: 
         raise ValueError('input rssort = %f must be 0, 1, 2, 3' % (rssort))
-    if iabs not in [0, 1]:
-        raise ValueError('input iabs = %f must be 0 or 1' % (iabs))
+    # if vertical axis is absolute (distance or azimuth), then plot all waveforms on the same record section (pmax huge)    
+    elif rssort in [4, 5]:
+        pmax = 1000
+
     if len(inorm) >= 2:
         if len(inorm)==3: 
             bplot_geometric_speading = inorm[2]
@@ -154,14 +157,6 @@ def plotw_rs(win,       #waveform object to be plotted
         raise ValueError('input iintp = %f must be -1 or 0 or 1' % (iintp))
     if bplotrs==False:
         raise ValueError('check input: you say you do not want a plot and do not want to return any variables')
-    
-    # if vertical axis is absolute (distance or azimuth), then plot all
-    # waveforms on the same record section (pmax huge)
-    if iabs==1:
-        pmax = 1000
-        if rssort not in [1, 2]:
-            print(iabs, rssort)
-            raise ValueError('if iabs=1, then rssort=1 (az) or rssort=2 (dist)')
     
     ##########################################################################################################
         
@@ -428,12 +423,12 @@ def plotw_rs(win,       #waveform object to be plotted
     # NEED TO IMPLEMENT A MULTI-SORT FOR THE CASE OF MULTIPLE SEISMOGRAMS AT
     # THE SAME SITE (if the distance or az are exactly the same, then sort
     # based on the net.sta.loc.chan string)
-    sortlab = ['input','azimuth','distance','label']
+    sortlab = ['input','azimuth','distance','label','azimuth','distance']
     if rssort == 0:      # default is no sorting
         nsei=nseis+1
         #ivec = [1:nseis].T
         ivec =np.arange(1,nsei)
-    elif rssort == 1:      # azimuth
+    elif rssort in [1,4]:      # azimuth
         if len(azstart)==0:
             print(len(azstart))
             azstart = 0
@@ -441,14 +436,14 @@ def plotw_rs(win,       #waveform object to be plotted
         ###ivec = np.argsort((azi-azstart) % 360);
         ivec = np.argsort(azi)
         #[~,ivec] = np.argsort(azi-azstar)
-    elif rssort == 2:      # distance
+    elif rssort in [2,5]:      # distance
         ivec = np.argsort(dist);
     elif rssort == 3:      # alphabetical
         ivec = np.argsort(slabs);
     
     ################################# RECORD SECTION LABELS -- UNSORTED #########################################
     rlabels=np.empty(((nseis),1), dtype=object)
-    if iabs==0:
+    if rssort not in [4, 5]:
         jj=0
         for jj in range(nseis):
             # variable time shift
@@ -472,8 +467,6 @@ def plotw_rs(win,       #waveform object to be plotted
             else :       # 1 station, multiple events (list event depths)
                 rlabels[jj] = ('%s %s (%.0f, %.0f %s) %.0f km %.1f %s' % 
                     (str(slabs[jj])[2:-2], chans[jj], math.floor(azi[jj]), dist[jj], sunit, edep[jj], mag[jj], stshift))
-
-
 
     else:
         rlabels = slabs
@@ -762,10 +755,10 @@ def plotw_rs(win,       #waveform object to be plotted
         nvec = wmaxvec
         yshift = nfac
     
-    if iabs==1:
+    if rssort in [4,5]:
         nvec=np.ones((len(wmaxvec),1))
         if inorm[0]==1:
-            if rssort==1:
+            if rssort==4:
                 yran=aran
             else:
                 yran=dran
@@ -844,12 +837,12 @@ def plotw_rs(win,       #waveform object to be plotted
                 
                 # KEY: time vector for plotting
                 tplot = (ti3 - tref) - tshift[ii]
-                if iabs==0:
+                if rssort not in [4,5]:
                     # plot from top to bottom
                     dy[jj] = (jmax + 1 - jj)*yshift
                 else:
                     # use absolute scaling (e.g., plot records at their actual distance)
-                    if rssort==1: 
+                    if rssort==4: 
                         dy[jj] = azi[ii] 
                     else: 
                         dy[jj] = dist[ii]
@@ -890,7 +883,7 @@ def plotw_rs(win,       #waveform object to be plotted
                     ax.plot(tplot,dplotshift,synplot, linewidth=0.5)
                 
                 # partition if plotting by azimuth (see azbin above)
-                if rssort==1 and iabs==0:
+                if rssort==1:
                     # azimuth of previous (az0) and current (az1) stations in the sorted list
                     az0 = az1
                     az1 = azi[ii]
@@ -930,17 +923,16 @@ def plotw_rs(win,       #waveform object to be plotted
                 # exit early for the last page of the multi-page record section
                 if pp == nfig and jj == nseis % pmax:
                     print('ending early')
-                    if iabs==0:
+                    if rssort not in [4,5]:
                         dy = (jmax + 1 - arange(jmax))*yshift
                     return
     
                 
                 kk = kk+1
             
-        if iabs==0:
+        if rssort not in [4,5]:
             
-            # this may chop off a large-amplitude trace near the boundary, but
-            # at least the gap will be the same for a sequence of plots
+            # this may chop off a large-amplitude trace near the boundary, but at least the gap will be the same for a sequence of plots
 
             ylims = [0 ,yshift*(jmax+2)]
             plt.yticks([])
@@ -952,7 +944,7 @@ def plotw_rs(win,       #waveform object to be plotted
         else:
             # using actual values of distance or azimuth
             ax.yaxis.tick_right()
-            if rssort==1:
+            if rssort==4:
                 ylims = [min(azi)-5, max(azi)+5];
                 if max(azi)-min(azi) > 300:
                     ylims = [-10, 370] 
@@ -975,7 +967,7 @@ def plotw_rs(win,       #waveform object to be plotted
             plt.vlines(tm,ylims[0],ylims[1], 'r')
         plt.xlim(tlims)
         plt.ylim(ylims[0],ylims[1])
-        if iabs==1:
+        if rssort in [4,5]:
         #if rssort ==1:
             plt.gca().invert_yaxis()
         #plt.subplots_adjust(left=0.10)
