@@ -10,56 +10,43 @@ from obspy import Stream
 from obspy.geodetics import kilometers2degrees, gps2dist_azimuth
 from scipy.signal import butter, filtfilt, sosfiltfilt
 
-def plotw_rs(win, rssort=2, iabs=0, tshift=[], tmark=[], T1=[], T2=[], pmax=50, iintp=0, inorm=[1], tlims=[], nfac=1, azstart=[], iunit=1, imap=1, wsyn=[], bplotrs=True, displayfigs='on'):
+def plotw_rs(win,       #waveform object to be plotted
+    rssort=2,           # 0=input sorting of records
+                        # 1=azimuthal sorting of records
+                        # 2=distance sorting of records
+                        # 3=alphabetical sorting of records (by station name or event ID)
+    iabs=0              # 1= to plot by absolute distance or azimuth (this means unequal vertical spacing between the waveforms)
+    tshift=[],          # time shift (in seconds) to apply to the waveforms ([] for none)
+    tmark=[],           # absolute time markers, ([] for none), note: if tshift varies, then you can't use this option
+    T1=[],              # minimum period of filter ([] for low-pass or no filter)
+    T2=[],              # maximum period of bandpass ([] for high-pass or no filter)
+    pmax=50,            # maximum number of time series per record section
+    iintp=0,            # 1=integrate, -1=differentiate, 0=nothing
+    inorm=[1],          # 0 = no amplitude scaling
+                        # 1 = for scaling by max(abs(d(t))) per trace
+                        # 2 = for no amplitude scaling except correcting for geometric spreading
+                        # inorm can have up to 4 entries:
+                        #     inorm(=2)
+                        #     GEOFAC
+                        #     plot_geometric_spreading
+                        #     K
+    tlims=[],           # time limits for x-axis ([] to use default), note that the 'tshift' field will shift each seismogram
+    nfac=1,             # controls spacing between seismograms (use a smaller nfac value for more prominent peaks)
+    azstart=[],         # azimuthal angle for top record (applies with rssort=1 and rssort=4 only)
+    iunit=1,            # units for distance in distance sorted record sections, 1=km sphere, 2=deg sphere, 3=km flat, (applies with rssort=2 and rssort=5 only)
+    imap=1,             # plot a simple map showing the station and source locations
+    wsyn=[],            # second waveform object to superimpose on the first (e.g., synthetic seismograms)
+    bplotrs=True,       # =true to plot record section (can have two additional arguments odir and ftag -- see below)
+                        # =false to not plot record section (but presumably to return processed waveforms)
+    displayfigs='on'):
+
     '''
-    %PLOTW_RS processes waveform object and plots as a record section
-    %
-    % INPUT
-    %   w       waveform object (WHAT ADDED FIELDS SHOULD WE REQUIRE?)
-    % INPUT (OPTIONAL) -- these can be omitted or set as [] to get default settings
-    %   rssort  =0 input sorting of records
-    %           =1 azimuthal sorting of records
-    %           =2 distance sorting of records
-    %           =3 alphabetical sorting of records (by station name or event ID)
-    %   iabs    =1 to plot by absolute distance or azimuth (this means unequal
-    %              vertical spacing between the waveforms)
-    %   tshift  time shift (in seconds) to apply to the waveforms ([] for none)
-    %   tmark   absolute time markers (Matlab serial date) ([] for none)
-    %           note: if tshift varies, then you can't use this option
-    %   Tfilt   =[Tmin Inf] for high-pass filter
-    %           =[0 Tmax] for low-pass filter
-    %           =[Tmin Tmax] for band-pass filter
-    %   T1      minimum period of filter: =[] for low-pass or no filter
-    %   T2      maximum period of bandpass: =[] for high-pass or no filter
-    %   pmax    maximum number of time series per record section
-    %   iintp   =1 to integrate, =-1 to differentiate, =0 for nothing
-    %   inorm   =0 for no amplitude scaling
-    %           =1 for scaling by max(abs(d(t))) per trace
-    %           =2 for no amplitude scaling except correcting for geometric spreading
-    %              inorm can have up to 4 entries:
-    %                   inorm(=2)
-    %                   GEOFAC
-    %                   plot_geometric_spreading
-    %                   K
-    %   tlims   time limits for x-axis ([] to use default)
-    %           note that the 'tshift' field will shift each seismogram
-    %   nfac    controls spacing between seismograms (use a smaller nfac value for more prominent peaks)
-    %   azstart   azimuthal angle for top record (applies with rssort=1 only)
-    %   iunit   units for distance record section (applies with rssort=2 only)
-    %           =1 for km sphere, =2 for deg sphere, =3 for km flat
-    %   imap    plot a simple map showing the station and source locations
-    %   wsyn    second waveform object to superimpose on w (e.g., synthetic seismograms)
-    %   bplotrs =true to plot record section (can have two additional arguments odir and ftag -- see below)
-    %           =false to not plot record section (but presumably to return processed waveforms)
-    %
     % OUTPUT (OPTIONAL)
-    %   ivec  index in which w(i) are ordered in the plot;
-    %            w(ivec) gives the plotting order from top to bottom (if iabs=0)
+    %   ivec  index in which w(i) are ordered in the plot; w(ivec) gives the plotting order from top to bottom (if iabs=0)
     %   w     processed waveform (typically data)
     %   wsyn  processed waveform (typically synthetics)
     %   K     2nd parameter for geometric spreading
-    %   fH	  figure handles for plots
-    %   
+    %   fH    figure handles for plots
     %
     % DETAILS ABOUT THE TIME AXIS
     %   The following variables are pertinent to the time axis:
