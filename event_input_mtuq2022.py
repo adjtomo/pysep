@@ -141,3 +141,5 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50
         # See iex == 1 for more info
         ev_info.scale_factor = 100
+
+    return(ev_info)
