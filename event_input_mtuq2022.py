@@ -73,12 +73,11 @@ def get_ev_info(ev_info,iex):
     if iex == 3:
         ev_info.overwrite_ddir = 1
         ev_info.use_catalog = 0
-        #CHANGE THIS vvvvvvvvv
-        ev_info.otime = obspy.UTCDateTime("2020-04-04T01:53:18.920")
+        ev_info.otime = obspy.UTCDateTime("2017-09-03 03:30:01.760")
         ev_info.min_dist = 0
-        ev_info.max_dist = 300
+        ev_info.max_dist = 1300
         ev_info.tbefore_sec = 100
-        ev_info.tafter_sec = 300
+        ev_info.tafter_sec = 600
         #^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         # RAW and ENZ files can be used when checking if you are receiving all possible data
@@ -87,21 +86,22 @@ def get_ev_info(ev_info,iex):
         ev_info.isave_ENZ = False
 
         # Network and Channel requests CHANGE THIS vvvvvvvv
-        ev_info.network = 'CI'
+        ev_info.network = 'IC,IU,G,JP'
         ev_info.channel = 'BH?'
-        ev_info.station = '-SWS' #Receive all stations except CI.SWS
+        ev_info.station = 'MDJ,INCN,JTU,MAJO,INU,BJT,YSS'
+        ev_info.location = '00'
         # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     
         # Event specific information CHANGE THIS vvvvvvvvvvvv
-        ev_info.elat = 33.490
-        ev_info.elon = -116.506
-        ev_info.edep =  10500.0
-        ev_info.emag = 4.9
+        ev_info.elat = 41.3324
+        ev_info.elon = 129.0297
+        ev_info.edep =  1000.0
+        ev_info.emag = 5.18
         # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         # scaling and resampling
         ev_info.resample_TF = True
-        ev_info.resample_freq = 50
+        ev_info.resample_freq = 5
         # See iex == 1 for more info
         ev_info.scale_factor = 100
 
