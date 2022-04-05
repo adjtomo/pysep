@@ -111,7 +111,7 @@ def get_ev_info(ev_info,iex):
         ev_info.use_catalog = 0
         #CHANGE THIS vvvvvvvvv
         #
-        ev_info.otime = obspy.UTCDateTime("2014-08-26T11:56:45.0")
+        ev_info.otime = obspy.UTCDateTime("2014-08-25T16:19:03.0")
         ev_info.min_dist = 20
         ev_info.max_dist = 300
         ev_info.tbefore_sec = 60
@@ -126,14 +126,14 @@ def get_ev_info(ev_info,iex):
         # Network and Channel requests CHANGE THIS vvvvvvvv
         ev_info.network = 'Z7'
         ev_info.channel = 'HH?'
-        #ev_info.station = '-SWS' #Receive all stations except CI.SWS (if not needed just delete)
+        ev_info.station = 'RODG,DYSA,LIND,LOKT,LAUF,KALF,HELI,FAG,SVIN,K250' #Receive all stations except CI.SWS (if not needed just delete)
         # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     
         # Event specific information CHANGE THIS vvvvvvvvvvvv
-        ev_info.elat = 64.80
-        ev_info.elon = -16.897
-        ev_info.edep =  7000.0
-        ev_info.emag = 4.3
+        ev_info.elat = 64.612
+        ev_info.elon = -17.472
+        ev_info.edep =  5000.0
+        ev_info.emag = 4.6
         # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         # scaling and resampling
