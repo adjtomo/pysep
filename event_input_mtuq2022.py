@@ -55,8 +55,8 @@ def get_ev_info(ev_info,iex):
         ev_info.network = 'CI'
         ev_info.channel = 'BH?'
         # CI.SWS causes script to crash (Station problems?)
-        ev_info.station = '-SWS' #Receive all stations except CI.SWS
-    
+        ev_info.station = 'BAR,IKP,PLM,GLA,BC3,PDM,IRM,DAN,GMR,TUQ,HEC,GSC,RRX,BBR,SCI2,CIA,SDD,VTV,ADO,ARV,DGR,SVD,DJJ,FMP,-SWS' #Receive subset of stations
+        
         # Event specific information
         ev_info.elat = 33.490
         ev_info.elon = -116.506
