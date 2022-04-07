@@ -412,11 +412,11 @@ def write_cap_weights(stream, evname_key, client_name='', event='', ifverbose=Fa
     # Write files sorted by distance. 
     # (There are cleaner ways to do this, including combining with azim sort 
     # below...but this will do for now)
-    wfile = "%s/weight.dat" % outdir
-    wfile_body = "%s/weight_body.dat" % outdir
-    wfile_surf = "%s/weight_surf.dat" % outdir
-    wfile_body_client = "%s/weight_body_%s.dat" % (outdir, client_name)
-    wfile_surf_client = "%s/weight_surf_%s.dat" % (outdir, client_name)
+    wfile = "%s/weights.dat" % outdir
+    wfile_body = "%s/weights_body.dat" % outdir
+    wfile_surf = "%s/weights_surf.dat" % outdir
+    wfile_body_client = "%s/weights_body_%s.dat" % (outdir, client_name)
+    wfile_surf_client = "%s/weights_surf_%s.dat" % (outdir, client_name)
     f =  open(wfile, 'w')
     fb = open(wfile_body, 'w')
     fs = open(wfile_surf, 'w')
@@ -443,11 +443,11 @@ def write_cap_weights(stream, evname_key, client_name='', event='', ifverbose=Fa
 
     # Write files sorted by azimuth.
     # (There are cleaner ways to do this but this will do for now)
-    wfile = "%s/weight_azim.dat" % outdir
-    wfile_body = "%s/weight_body_azim.dat" % outdir
-    wfile_surf = "%s/weight_surf_azim.dat" % outdir
-    wfile_body_client = "%s/weight_body_%s_azim.dat" % (outdir, client_name)
-    wfile_surf_client = "%s/weight_surf_%s_azim.dat" % (outdir, client_name)
+    wfile = "%s/weights_azim.dat" % outdir
+    wfile_body = "%s/weights_body_azim.dat" % outdir
+    wfile_surf = "%s/weights_surf_azim.dat" % outdir
+    wfile_body_client = "%s/weights_body_%s_azim.dat" % (outdir, client_name)
+    wfile_surf_client = "%s/weights_surf_%s_azim.dat" % (outdir, client_name)
     f =  open(wfile, 'w')
     fb = open(wfile_body, 'w')
     fs = open(wfile_surf, 'w')
@@ -1186,7 +1186,7 @@ def amp_rescale_llnl(st, scale_factor):
                     (station_key, scale_factor_HG))
             tr.data = tr.data * scale_factor_HG
             tr.stats.sac['scale'] = scale_factor_HG * scale_factor
-        elif (tr.stats.channel is 'R') or (tr.stats.channel is 'T') or (tr.stats.channel is 'V') :
+        elif (tr.stats.channel == 'R') or (tr.stats.channel == 'T') or (tr.stats.channel == 'V') :
             print("--> WARNING LLNL station %14s Rescaling by %f" % \
                     (station_key, scale_factor_XX))
             tr.data = tr.data * scale_factor_XX
@@ -1281,7 +1281,7 @@ def resp_plot_remove(st, ipre_filt, pre_filt, iplot_response, water_level,
         station_key = "%s.%s.%s.%s" % (tr.stats.network, tr.stats.station,\
                 tr.stats.location, tr.stats.channel)
 
-        if ipre_filt is 0 or ipre_filt is 1:
+        if ipre_filt == 0 or ipre_filt == 1:
             pre_filt = get_pre_filt(ipre_filt, tr) 
 
         # Plot or remove instrument response but not both.
