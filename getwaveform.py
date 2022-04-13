@@ -54,7 +54,7 @@ class GetWaveform:
                  remove_clipped=False, filter_type="bandpass", f1=1/40,
                  f2=1/10, zerophase=True, corners=4,
                  water_level=60, detrend=True, demean=True, taper=False,
-                 rotateRTZ=True, rotateUVW=False, rotateENZ=False,
+                 rotateRTZ=True, rotateUVW=False, rotateENZ=True,
                  min_dist=0, max_dist=20E3, min_az=0, max_az=360,
                  min_lat=None, min_lon=None, max_lat=None, max_lon=None,
                  resample_TF=False, resample_freq=50, scale_factor=1,
