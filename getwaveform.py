@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PYSEP: PYthon Seismic Extraction Program - waveform fetching and prepping.
+PYSEP: PYthon Seismic Extraction and Procesing - waveform fetching and prepping.
 A tool for interfacing with IRIS waveform and meta-data using ObsPy with options
 for SAC input and output.
 """
@@ -370,17 +370,21 @@ class GetWaveform:
         st2, evname_key = rename_if_LLNL_event(st2, evtime)
         self.evname = evname_key
 
-        # Note: Plotted are stations in the inventory and NOT the ones with
-        # traces. It could be possible that there might not be waveforms for
-        # some of these stations.
+        # !!! Plotted stations in the inventory do not necessarily have
+        # waveform data.
         try:
-            fig = inventory.plot(projection="local", resolution="i",
-                                 label=False, show=False)
-            Catalog([self.ev]).plot(fig=fig,
-                                    outfile=os.path.join(self.evname,
-                                                         "station_map.pdf"))
-        except:
-            print("There is a problem with creating the station map!")
+            # Temp change the size of all text objects to get text labels small
+            # and make the event size a bit smaller
+            with plt.rc_context({"font.size": 5, "lines.markersize": 4}):
+                fig = inventory.plot(projection="local", resolution="i",
+                                     label=True, show=False, size=10,
+                                     color="g")
+                cat = Catalog(events=[self.ev])
+                cat.plot(outfile=os.path.join(self.evname, "station_map.pdf"),
+                         fig=fig, resolution="i", show=False)
+
+        except Exception as e:
+            print(f"There was a problem creating the station map: {e}")
 
         # Get list of unique stations + locations (example: 'KDAK.00')
         stalist = []

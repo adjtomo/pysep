@@ -476,7 +476,8 @@ class RecordSection:
             err.figsize = "must be tuple defining (horizontal, vertical) extent"
 
         if os.path.exists(self.save) and not self.overwrite:
-            err.save = f"path {self.save} already exists, will not overwrite"
+            err.save = (f"path {self.save} already exists. Use '--overwrite' " 
+                        f"flag to save over existing figures.")
 
         _dirname = os.path.dirname(self.save)
         if not os.path.exists(_dirname):
