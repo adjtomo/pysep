@@ -94,7 +94,7 @@ if __name__ == '__main__':
         ddir = os.path.join(os.getcwd(), ev_info.evname)
         if ev_info.overwrite_ddir and os.path.exists(ddir):
             shutil.rmtree(ddir)
-            warnings.warn("\nDeleted existing directory:\n{ddir}\n")
+            warnings.warn(f"\nDeleted existing directory:\n{ddir}\n")
 
 
         # Extract waveforms from IRIS and save output information
