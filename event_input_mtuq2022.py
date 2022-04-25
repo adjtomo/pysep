@@ -20,7 +20,7 @@ def get_ev_info(ev_info,iex):
         ev_info.isave_ENZ = False
 
         # Networks of interest (All within distance limitations)
-        ev_info.network = '*'
+        ev_info.network = 'AK,YV'
         ev_info.channel = 'BH?'
 
         # Event information
