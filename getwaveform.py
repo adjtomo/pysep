@@ -19,6 +19,7 @@ from util_write_cap import *
 from clipping_handler import remove_clipped
 from util_helpers import get_streams_from_dir, get_inventory_from_xml
 
+
 class GetWaveform:
     """
     Download, preprocess, and save waveform data from IRIS using ObsPy
@@ -378,10 +379,13 @@ class GetWaveform:
             with plt.rc_context({"font.size": 5, "lines.markersize": 4}):
                 fig = inventory.plot(projection="local", resolution="i",
                                      label=True, show=False, size=10,
-                                     color="g")
+                                     color="g", method="cartopy")
                 cat = Catalog(events=[self.ev])
-                cat.plot(outfile=os.path.join(self.evname, "station_map.pdf"),
-                         fig=fig, resolution="i", show=False)
+                # !!! fig=plt.gca() kwarg is a hacked workaround for bug in
+                # !!! ObsPy==1.3.0 (obspy.imaging.maps._plot_cartopy_into_axes)
+                cat.plot(method="cartopy", 
+                         outfile=os.path.join(self.evname, "station_map.pdf"),
+                         fig=plt.gca(), show=False)
 
         except Exception as e:
             print(f"There was a problem creating the station map: {e}")
