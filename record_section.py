@@ -479,7 +479,7 @@ class RecordSection:
             err.save = (f"path {self.save} already exists. Use '--overwrite' " 
                         f"flag to save over existing figures.")
 
-        _dirname = os.path.dirname(self.save)
+        _dirname = os.path.abspath(os.path.dirname(self.save))
         if not os.path.exists(_dirname):
             print(f"creating output directory {_dirname}")
             os.makedirs(_dirname)
