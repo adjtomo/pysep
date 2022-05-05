@@ -141,5 +141,80 @@ def get_ev_info(ev_info,iex):
         ev_info.resample_freq = 50
         # See iex == 1 for more info
         ev_info.scale_factor = 100
+        
+  # Iceland Event SA
+    if iex == 5:
+        ev_info.overwrite_ddir = 1
+        ev_info.use_catalog = 0
+        #CHANGE THIS vvvvvvvvv
+        #
+        ev_info.otime = obspy.UTCDateTime("2014-08-28T08:13:39.0")
+        ev_info.min_dist = 50
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 60
+        ev_info.tafter_sec = 360
+        #^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        # RAW and ENZ files can be used when checking if you are receiving all possible data
+        ev_info.isave_raw = False
+        ev_info.isave_raw_processed = False
+        ev_info.isave_ENZ = False
+        
+        # Network and Channel requests CHANGE THIS vvvvvvvv
+        ev_info.network = 'Z7'
+        ev_info.channel = 'HH?'
+        ev_info.station = 'VADA,RIFR,DREK,VIFE,SVAD,BRU,BOTN,UTYR,MIDF,SKAF,HETO,LAUF,FAG,SVIN,K250'
+       
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        # Event specific information CHANGE THIS vvvvvvvvvvvv
+        ev_info.elat = 64.654
+        ev_info.elon = -17.385
+        ev_info.edep =  7000.0
+        ev_info.emag = 5.3
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        # scaling and resampling
+        ev_info.resample_TF = True
+        ev_info.resample_freq = 50
+        # See iex == 1 for more info
+        ev_info.scale_factor = 100
+    
+# Iceland Event SB
+    if iex == 6:
+        ev_info.overwrite_ddir = 1
+        ev_info.use_catalog = 0
+        #CHANGE THIS vvvvvvvvv
+        #
+        ev_info.otime = obspy.UTCDateTime("2014-08-26T11:56:45.0")
+        ev_info.min_dist = 20
+        ev_info.max_dist = 300
+        ev_info.tbefore_sec = 60
+        ev_info.tafter_sec = 360
+        #^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        # RAW and ENZ files can be used when checking if you are receiving all possible data
+        ev_info.isave_raw = False
+        ev_info.isave_raw_processed = False
+        ev_info.isave_ENZ = False
+        
+        # Network and Channel requests CHANGE THIS vvvvvvvv
+        ev_info.network = 'Z7'
+        ev_info.channel = 'HH?' 
+        ev_info.station = 'FJAS,OSKV,KLUR,DYFE,DJK,VIFE,LOKT,BJK,BRU,MIDF,KOLL,KODA,SVIN,SKAF,K250,KALF,LAUF'
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        # Event specific information CHANGE THIS vvvvvvvvvvvv
+        ev_info.elat = 64.8
+        ev_info.elon = -16.897
+        ev_info.edep =  7000.0
+        ev_info.emag = 4.2
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        # scaling and resampling
+        ev_info.resample_TF = True
+        ev_info.resample_freq = 50
+        # See iex == 1 for more info
+        ev_info.scale_factor = 100
 
     return(ev_info)
