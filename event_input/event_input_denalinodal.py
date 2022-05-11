@@ -38,6 +38,7 @@ def get_ev_info(ev_info,iex):
         ev_info.ifph5 = False
         ev_info.network = 'AK,AT,AV,CN,II,IU,TA,US,XM,XV,DE,ZE'
         ev_info.channel = 'BH?,HH?'
+        ev_info.station = "-UAF01"
 
         # Run 2: denali nodal data
         #ev_info.overwrite_ddir = 0
