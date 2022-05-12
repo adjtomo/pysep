@@ -53,9 +53,6 @@ def get_ev_info(ev_info,iex):
         ev_info.rotateENZ = True
         ev_info.rotateRTZ = True
 
-        ev_info.user = 'ctape@alaska.edu'
-        ev_info.password = 'dln3mjKtap3m9'
-
         #Cantwell local event
         ev_info.otime = obspy.UTCDateTime("2019-02-25T18:22:30.906")
         ev_info.elat = 62.8002
