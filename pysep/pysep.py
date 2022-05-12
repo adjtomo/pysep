@@ -11,6 +11,8 @@ from obspy.core.event import Event, Origin, Magnitude, Catalog
 
 from pysep import logger
 from pysep.utils.read import load_yaml
+from pysep.utils.curtail import curtail_by_station_distance_azimuth
+from pysep.utils.fetch import fetch_bulk_station_list_taup
 
 class Pysep:
     """
@@ -203,7 +205,6 @@ class Pysep:
         self.event_magnitude = None
 
         # Waveform selection criteria
-        self.reference_time = reference_time
         self.seconds_before_ref = tbefore_sec
         self.seconds_after_ref = tafter_sec
 
@@ -284,8 +285,8 @@ class Pysep:
 
 
         # Event information to be filled
-        self.ev = Event()
-        self.ref_time_place = Event()
+        self.distances = None
+        self.azimuths = None
 
     def get_client(self, user=None, password=None):
         """
@@ -359,9 +360,10 @@ class Pysep:
         """
         logger.info(f"getting event information with client {self.client_name}")
 
-        cat = self.Client.get_events(
+        cat = self.client.get_events(
             starttime=self.origintime - self.seconds_before_event,
-            endtime=self.origintime + self.seconds_after_event
+            endtime=self.origintime + self.seconds_after_event,
+            debug=self.debug
         )
         event = cat[0]
 
@@ -413,8 +415,50 @@ class Pysep:
         TODO add warning for "*" may take long
         :return:
         """
-        self.st_raw = st
-        self.inv = inv
+        if self.fmt == "PH5":
+            st = self._get_waveforms_ph5()
+        else:
+            # Allow setting start and endtimes based on seismic phases
+            if self.phases:
+                bulk = fetch_bulk_station_list_taup()
+            # Make the bulk selection list manually
+            else:
+                bulk = self._make_bulk_station_list()
+            st = self.client.get_waveforms_bulk(bulk=bulk)
+
+        return st
+
+    def _make_bulk_station_list(self):
+        """
+        ObsPy Client.get_waveforms_bulk() requires a list input
+        """
+        bulk = []
+        t1 = self.origin_time - self.seconds_before_ref
+        t2 = self.origin_time - self.seconds_after_ref
+        for net in self.inv:
+            for sta in net:
+                # net sta loc cha t1 t2
+                bulk.append((net.code, sta.code, "*", self.channel, t1, t2))
+        return bulk
+
+
+    def _get_waveforms_ph5(self):
+        """
+        Download waveforms from PH5 dataservice
+        :return:
+        """
+        dataselect = "http://service.iris.edu/ph5ws/dataselect/1"
+        c = Client("http://service.iris.edu",
+                   service_mappings={"dataselect": dataselect},
+                   user=self.user, password=self.password, debug=self.debug
+                   )
+        st = c.get_waveforms(
+            network=self.network, location=self.location, station=self.station,
+            channel=self.channel,
+            starttime=self.origintime - self.seconds_before_ref,
+            endtime=self.origintime - self.seconds_after_ref
+        )
+        return st
 
     def get_stations(self):
         """
@@ -427,11 +471,11 @@ class Pysep:
         inv = self.client.get_stations(
             network=self.network, location=self.location, station=self.station,
             channel=self.channel,
-            starttime=self.reference_time - self.seconds_before_ref,
-            endtime=self.reference_time + self.seconds_after_ref,
+            starttime=self.origin_time - self.seconds_before_ref,
+            endtime=self.origin_time + self.seconds_after_ref,
             minlatitude=self.min_lat, maxlatitude=self.max_lat,
             minlongitude=self.min_lon, maxlongitude=self.max_lon,
-            level="response"
+            level="response", debug=self.debug
         )
         logger.info(f"collected {len(inv)} stations from {self.client_name}")
 
@@ -439,11 +483,40 @@ class Pysep:
 
         return inv
 
-    def _curtail_stations(self):
+    def curtail_stations(self):
         """
         Remove stations based on station distance, azimuth, etc.
         :return:
         """
+        inv = self.inv.copy()
+        inv, distances, azimuths = curtail_by_station_distance_azimuth(
+            event=self.event, inv=self.inv, min_dist=self.min_dist,
+            max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az
+        )
+
+
+    def write(self, fmt, fid):
+        """
+        Write out various files specifying information about the collected
+        stations and waveforms
+
+        :param fmt:
+        :return:
+        """
+
+    def _write_station_list(self, fid):
+        """
+        Write a list of station codes, distances, etc.
+        """
+        with open(fid, "w") as f:
+            for net in self.inv:
+                for sta in net:
+                    netsta_code = f"{net.code}.{sta.code}"
+                    f.write(f"{sta.code} {net.code} {sta.latitude} "
+                            f"{sta.longitude} {self.distances[netsta_code]}"
+                            f"{self.azimuths[netsta_code]}")
+
+
 
 
     def append_sac_headers(self):
@@ -467,6 +540,7 @@ class Pysep:
         # Get waveforms and add additional information
         self.st = self.get_waveforms()
         self.inv = self.get_stations()
+        self.inv = self.curtail_stations()
 
         self.st = self.append_sac_headers()
         self.st = self.quality_check_waveforms()
