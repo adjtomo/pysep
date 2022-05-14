@@ -11,14 +11,18 @@ from obspy.core.event import Event, Origin, Magnitude, Catalog
 
 from pysep import logger
 from pysep.utils.read import load_yaml
-from pysep.utils.curtail import curtail_by_station_distance_azimuth
+from pysep.utils.capsac import append_sac_headers
+from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
+                                 quality_check_waveforms)
 from pysep.utils.fetch import fetch_bulk_station_list_taup
+from pysep.utils.llnl import scale_llnl_waveform_amplitudes
+
 
 class Pysep:
     """
     Download, preprocess, and save waveform data from IRIS using ObsPy
     """
-    def __init__(self, config_file=None,  client_name="IRIS", origin_time=None,
+    def __init__(self, config_file=None,  client="IRIS", origin_time=None,
                  network="*", station="*", location="*", channel="*",
                  remove_response=True, remove_clipped=False,
                  filter_type="bandpass", f1=1/40, f2=1/10, zerophase=True,
@@ -32,7 +36,7 @@ class Pysep:
                  tbefore_sec=100, tafter_sec=300, use_catalog=False, ifph5=False,
                  write_sac_phase=False, taupmodel="ak135",
                  output_cap_weight_file=True, output_event_info=True,
-                 outformat="VEL",  ipre_filt=1, iplot_response=False,
+                 output_unit="VEL",  ipre_filt=1, iplot_response=False,
                  icreateNull=False, isave_raw=False, isave_raw_processed=True,
                  isave_rotateENZ=True, isave_ENZ=True,
                  ifFilter=False, ifsave_sacpaz=False, ifplot_spectrogram=False,
@@ -41,8 +45,8 @@ class Pysep:
         """
         Define a default set of parameters
 
-        :type client_name: str
-        :param client_name: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
+        :type client: str
+        :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
             NCEDC or any FDSN clients accepted by ObsPy
         :type network: str
         :param network: name or names of networks to query for, if names plural,
@@ -149,8 +153,8 @@ class Pysep:
             use in the Cut-And-Paste moment tensor inversion code
         :type output_event_info: bool
         :param output_event_info: output an event information file
-        :type outformat: str
-        :param outformat: the output format of the waveforms, something like
+        :type output_unit: str
+        :param output_unit: the output format of the waveforms, something like
             'DISP', 'VEL', 'ACC'
         :type ipre_filt: int
         :param ipre_filt: apply a prefilter to incoming data
@@ -188,9 +192,8 @@ class Pysep:
         :param password: if IRIS embargoes data behind passwords, password
         """
         self.config_file = config_file
-        self.client_name = client_name
-        self.client = self.get_client(user=user, password=password)
-
+        self.client = client
+        self.c = self.get_client(user=user, password=password)  # actual Client
 
         # Catalog event selection: Parameters for gathering from Client
         self.event_selection = "default"  # catalog, default
@@ -253,7 +256,7 @@ class Pysep:
         self.detrend = detrend
         self.demean = demean
         self.taper = taper
-        self.outformat = outformat
+        self.output_unit = output_unit
         self.remove_response = remove_response
 
         # Options for rotation
@@ -285,8 +288,19 @@ class Pysep:
 
 
         # Event information to be filled
+        self.event = None
+        self.inv = None
+        self.st = None
         self.distances = None
         self.azimuths = None
+
+    def check(self):
+        """
+        TODO
+            * Check output format
+            * Check preprocessing flags
+
+        """
 
     def get_client(self, user=None, password=None):
         """
@@ -295,32 +309,33 @@ class Pysep:
         TODO add log level to parameters and use to set client debug
         :return:
         """
-        if self.client_name is not None:
-            if self.client_name.upper() == "LLNL":
+        if self.client is not None:
+            if self.client.upper() == "LLNL":
                 try:
                     import llnl_db_client
-                except ImportError:
+                    c = llnl_db_client.LLNLDBClient(
+                        "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
+                    )
+                except ImportError as e:
                     logger.warning("Cannot import llnl_db_client, please "
                                    "download from "
                                    "https://github.com/krischer/llnl_db_client")
-                client = llnl_db_client.LLNLDBClient(
-                    "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
-                )
+                    raise ImportError from e
             # IRIS DMC PH5WS Station Web Service
-            elif self.client_name.upper() == "PH5":
-                client = Client(
+            elif self.client.upper() == "PH5":
+                c = Client(
                     "http://service.iris.edu", debug=True,
                     service_mappings={
                         "station": "http://service.iris.edu/ph5ws/station/1"
                     }
                 )
             else:
-                client = Client(self.client_name, user=user, password=password,
+                c = Client(self.client, user=user, password=password,
                                 debug=False, timeout=600)
         else:
-            client = None
+            c = None
 
-        return client
+        return c
 
     def overwrite_parameters(self):
         """
@@ -332,12 +347,6 @@ class Pysep:
                         f"{self.config_file}")
             config = load_yaml(self.config_file)
 
-    def check(self):
-        """
-        Check that parameters are set acceptably
-        :return:
-        """
-
     def get_event(self):
         """
         Download event metadata from IRIS using ObsPy functionality
@@ -346,7 +355,7 @@ class Pysep:
         if self.event_selection == "catalog":
             event = self._get_event_catalog()
         else:
-            if self.client_name.upper() == "LLNL":
+            if self.client.upper() == "LLNL":
                 event = self._get_event_llnl()
             else:
                 event = self._get_event_default()
@@ -358,9 +367,9 @@ class Pysep:
         TODO Assert origin time and second before/after event set
         :return:
         """
-        logger.info(f"getting event information with client {self.client_name}")
+        logger.info(f"getting event information with client {self.client}")
 
-        cat = self.client.get_events(
+        cat = self.c.get_events(
             starttime=self.origintime - self.seconds_before_event,
             endtime=self.origintime + self.seconds_after_event,
             debug=self.debug
@@ -397,7 +406,7 @@ class Pysep:
         """
         logger.info("getting event information from LLNL database")
 
-        cat = self.client.get_catalog()
+        cat = self.c.get_catalog()
         mintime_str = f"time > {self.origin_time - self.seconds_before_event}"
         maxtime_str = f"time < {self.origin_time + self.seconds_after_event}"
 
@@ -424,7 +433,7 @@ class Pysep:
             # Make the bulk selection list manually
             else:
                 bulk = self._make_bulk_station_list()
-            st = self.client.get_waveforms_bulk(bulk=bulk)
+            st = self.c.get_waveforms_bulk(bulk=bulk)
 
         return st
 
@@ -440,7 +449,6 @@ class Pysep:
                 # net sta loc cha t1 t2
                 bulk.append((net.code, sta.code, "*", self.channel, t1, t2))
         return bulk
-
 
     def _get_waveforms_ph5(self):
         """
@@ -467,8 +475,8 @@ class Pysep:
         TODO
         :return:
         """
-        logger.info(f"collecting station data from {self.client_name}")
-        inv = self.client.get_stations(
+        logger.info(f"collecting station data from {self.client}")
+        inv = self.c.get_stations(
             network=self.network, location=self.location, station=self.station,
             channel=self.channel,
             starttime=self.origin_time - self.seconds_before_ref,
@@ -477,10 +485,9 @@ class Pysep:
             minlongitude=self.min_lon, maxlongitude=self.max_lon,
             level="response", debug=self.debug
         )
-        logger.info(f"collected {len(inv)} stations from {self.client_name}")
+        logger.info(f"collected {len(inv)} stations from {self.client}")
 
         inv = self.curtail_stations(inv)
-
         return inv
 
     def curtail_stations(self):
@@ -490,10 +497,39 @@ class Pysep:
         """
         inv = self.inv.copy()
         inv, distances, azimuths = curtail_by_station_distance_azimuth(
-            event=self.event, inv=self.inv, min_dist=self.min_dist,
+            event=self.event, inv=inv, min_dist=self.min_dist,
             max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az
         )
 
+        return inv
+
+    def preprocess(self):
+        """
+        Very simple preprocessing to remove response and apply a prefilter
+        """
+        st_out = self.st.copy()
+        if "demean" in self.preprocess_flags:
+            logger.info(f"applying demean to all data")
+            st_out.detrend("demean")
+        if "detrend" in self.preprocess_flags:
+            logger.info(f"applying linear detrend to all data")
+            st_out.detrend("linear")
+        if "remove_response" in self.preprocess_flags:
+            logger.info(f"removing response, output units in: "
+                        f"{self.output_unit}")
+            st_out.remove_response(inv=self.inv, water_level=self.water_level,
+                                   pre_filt=self.pre_filt,
+                                   output=self.output_unit)
+        if self.scale_factor:
+            logger.info(f"applying amplitude scale factor {self.scale_factor}")
+            for tr in st_out:
+                tr.data = tr.data * self.scale_factor
+                tr.stats.sac["scale"] = self.scale_factor
+        if self.client == "LLNL":
+            # This won't do anything if we don't have any 'LL' network codes
+            st_out = scale_llnl_waveform_amplitudes(st_out)
+
+        return st_out
 
     def write(self, fmt, fid):
         """
@@ -516,16 +552,6 @@ class Pysep:
                             f"{sta.longitude} {self.distances[netsta_code]}"
                             f"{self.azimuths[netsta_code]}")
 
-
-
-
-    def append_sac_headers(self):
-        """
-        Write SAC headers to Stream objects
-        :return:
-        """
-
-
     def main(self):
         """
         Run Pysep seismogram extraction
@@ -542,8 +568,8 @@ class Pysep:
         self.inv = self.get_stations()
         self.inv = self.curtail_stations()
 
-        self.st = self.append_sac_headers()
-        self.st = self.quality_check_waveforms()
+        self.st = append_sac_headers(self.st, self.inv, self.event)
+        self.st = quality_check_waveforms()
 
         # Pre-filtering and preprocessing
         self.st = self.preprocess()
