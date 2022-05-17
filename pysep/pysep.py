@@ -5,7 +5,8 @@ Download, pre-process, and organize seismic waveforms, event and station
 metadata
 """
 import os
-from obspy import UTCDateTime
+import numpy as np
+from obspy import UTCDateTime, Stream
 from obspy.clients.fdsn import Client
 from obspy.core.event import Event, Origin, Magnitude, Catalog
 
@@ -16,6 +17,7 @@ from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms)
 from pysep.utils.fetch import fetch_bulk_station_list_taup
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
+from pysep.utils.process import zerophase_chebychev_lowpass_filter
 
 
 class Pysep:
@@ -531,6 +533,83 @@ class Pysep:
 
         return st_out
 
+    def prep_resample(self):
+        """
+        Resample data to desired sampling rate and throw in a decimation filter
+
+        TODO ignoring `resample_cut` which doesn't seem to do anything but
+            is included in old code
+        :return:
+        """
+        logger.info(f"resampling data to sampling rate: {self.resample_freq}")
+        st_out = self.st.copy()
+        for i, tr in enumerate(st_out[:]):
+            target_nyquist = 0.5 * self.resample_freq
+            current_nyquist = 0.5 * tr.stats.sampling_rate
+            if target_nyquist < current_nyquist:
+                try:
+                    # This function affects the trace in-place
+                    zerophase_chebychev_lowpass_filter(
+                        tr=tr, freqmax=target_nyquist
+                    )
+                except Exception as e:
+                    logger.warning(f"exception in lowpass filtering "
+                                   f"{tr.get_id()}, remove")
+                    logger.debug(e)
+                    st_out.remove(tr)
+            else:
+                tr.detrend("linear")
+            tr.taper(max_percentage=0.01, type="hann")
+            # Enforce that this data array is 'c'ontiguous
+            tr.data = np.require(tr.data, requirements=["C"])
+
+        return st_out
+
+    def resample_and_trim_start_end_times(self):
+        """
+        Trim the maximum start and minumum end times for each station to get
+        all waveforms to start and end at the same time
+        :return:
+        """
+        logger.info("trimming start and end times on a per-station basis")
+        st_edit = self.prep_resample()
+        st_out = Stream()
+        codes = [tr.get_id() for tr in st_edit]
+        resampled_codes = []
+
+        for code in codes:
+            # Brute force check if we've done this station, so we don't do again
+            break_loop = False
+            for resampled in resampled_codes:
+                if code.startswith(resampled):
+                    break_loop = True
+            if break_loop:
+                break
+
+            # Subset the stream based on the N number of components
+            net, sta, loc, cha = code.split(".")
+            cha_wild = f"{cha[:-1]}*"  # replace component with wildcard
+            st_edit_select = st_edit.select(network=net, station=sta,
+                                            location=loc, channel=cha_wild)
+
+            max_start = max([tr.stats.starttime for tr in st_edit_select])
+            min_end = min([tr.stats.endtime for tr in st_edit_select])
+            npts = int((min_end - max_start) * self.resample_freq)
+
+            # Lanczos is the preferred ObsPy interpolation method. NOT the same
+            # used by SAC (weighted_average_slopes)
+            # `a` is passed to lanczos_interpolation and defines the width of
+            #   the window in samples on either side. Larger values of `a` are
+            #   more expensive but better for interpolation
+            st_edit_select.interpolate(sampling_rate=self.resample_freq,
+                                      method="lanczos", starttime=max_start,
+                                      npts=npts, a=8)
+
+            st_out += st_edit_select
+            resampled.append(f"{code[-1]}")  # drop component
+
+        return st_out
+
     def write(self, fmt, fid):
         """
         Write out various files specifying information about the collected
@@ -562,6 +641,8 @@ class Pysep:
         self.check()
 
         self.event = self.get_event()
+        self.fid = self.assign_unique_event_id()
+
 
         # Get waveforms and add additional information
         self.st = self.get_waveforms()
@@ -573,7 +654,8 @@ class Pysep:
 
         # Pre-filtering and preprocessing
         self.st = self.preprocess()
-        self.get_unique_station_codes()
+
+        # self.get_unique_station_codes()
 
         # Making sure time series are standardized
         self.st = self.resample()
@@ -588,6 +670,7 @@ class Pysep:
         # Output files for other programs
         self.write_weights(format="cap")
         self.write(format="all")
+        # plot_station_map(self.inv, self.event)
 
 
 if __name__ == "__main__":

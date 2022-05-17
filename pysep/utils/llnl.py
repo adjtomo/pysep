@@ -60,3 +60,11 @@ def scale_llnl_waveform_amplitudes(st):
                 tr.stats.sac["scale"] = scale_factor_llnl
 
     return st_out
+
+
+def rename_llnl_event():
+    """
+    Check origin time against a known LLNL event catalog, and rename event
+    based on this origin time. Replaces `rename_if_LLNL_event`
+    :return:
+    """
