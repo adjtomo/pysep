@@ -60,18 +60,35 @@ def quality_check_waveforms(st):
     """
     st_out = st.copy()
 
-    st_out = _rename_channels(st_out)
-    st_out = _remove_stations_for_missing_channels(st_out)
+    st_out = rename_channels(st_out)
+    st_out = remove_stations_for_missing_channels(st_out)
+    st_out = remove_for_clipped_amplitudes(st_out)
 
     logger.debug("filling any data gaps by interpolating missing values")
     st_out.merge(fill_value="interpolate")
 
-    st_out = _remove_stations_for_insufficient_length(st_out)
+    st_out = remove_stations_for_insufficient_length(st_out)
 
     return st_out
 
 
-def _rename_channels(st):
+def remove_for_clipped_amplitudes(st):
+    """
+    Removed stations with clipped amplitudes
+
+    replaces `clipping_handler.remove_clipped`
+    TODO where is that clip factor coming from?
+    """
+    st_out = st.copy()
+    clip_factor = 0.8 * ((2 ** (24 - 1)) **2) ** 0.5  # For a 24-bit signal
+    for tr in st_out[:]:
+        # Figure out the if any amplitudes are clipped
+        if len(tr.data[(tr.data**2)**0.5 > clip_factor]):
+            logger.info(f"removing {tr.get_id()} for clipped amplitudes")
+            st_out.remove(tr)
+
+
+def rename_channels(st):
     """
     Rename channels which intermix location names with channel names,
     For example: BHX00 -> BHX.00
@@ -98,7 +115,7 @@ def _rename_channels(st):
     return st_out
 
 
-def _remove_stations_for_missing_channels(st, required_number_channels=3):
+def remove_stations_for_missing_channels(st, required_number_channels=3):
     """
     Remove LLNL stations (network=='LL') with missing channels.
 
@@ -132,7 +149,7 @@ def _remove_stations_for_missing_channels(st, required_number_channels=3):
     return st_out
 
 
-def _remove_stations_for_insufficient_length(st):
+def remove_stations_for_insufficient_length(st):
     """
     Remove stations if the length does not match the mode of all other lengths
     in the stream, which is assumed to be the expected length

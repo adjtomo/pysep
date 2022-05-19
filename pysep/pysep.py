@@ -12,7 +12,7 @@ from obspy.core.event import Event, Origin, Magnitude, Catalog
 
 from pysep import logger
 from pysep.utils.read import load_yaml
-from pysep.utils.capsac import append_sac_headers
+from pysep.utils.capsac import append_sac_headers, write_cap_weights_file
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms)
 from pysep.utils.fetch import fetch_bulk_station_list_taup
@@ -25,25 +25,19 @@ class Pysep:
     Download, preprocess, and save waveform data from IRIS using ObsPy
     """
     def __init__(self, config_file=None,  client="IRIS", origin_time=None,
-                 network="*", station="*", location="*", channel="*",
+                 networks="*", stations="*", locations="*", channels="*",
                  remove_response=True, remove_clipped=False,
                  filter_type="bandpass", f1=1/40, f2=1/10, zerophase=True,
                  corners=4, water_level=60, detrend=True, demean=True,
                  taper=False, rotateRTZ=True, rotateUVW=False, rotateENZ=True,
                  min_dist=0, max_dist=20E3, min_az=0, max_az=360,
                  min_lat=None, min_lon=None, max_lat=None, max_lon=None,
-                 resample_TF=False, resample_freq=50, scale_factor=1,
-                 overwrite_ddir=True, phase_window=False, phases=None,
+                 resample_freq=50, scale_factor=1, phase_list=None,
                  seconds_before_event=20, seconds_after_event=20,
-                 tbefore_sec=100, tafter_sec=300, use_catalog=False, ifph5=False,
+                 seconds_before_ref=100, seconds_after_ref=300,
                  write_sac_phase=False, taupmodel="ak135",
                  output_cap_weight_file=True, output_event_info=True,
-                 output_unit="VEL",  ipre_filt=1, iplot_response=False,
-                 icreateNull=False, isave_raw=False, isave_raw_processed=True,
-                 isave_rotateENZ=True, isave_ENZ=True,
-                 ifFilter=False, ifsave_sacpaz=False, ifplot_spectrogram=False,
-                 ifsave_stationxml=True, ifverbose=True, ifsave_asdf=False,
-                 ifmass_downloader=False, user=None, password=None, **kwargs):
+                 output_unit="VEL",  user=None, password=None, **kwargs):
         """
         Define a default set of parameters
 
@@ -197,28 +191,37 @@ class Pysep:
         self.client = client
         self.c = self.get_client(user=user, password=password)  # actual Client
 
-        # Catalog event selection: Parameters for gathering from Client
-        self.event_selection = "default"  # catalog, default
+        # Parameters related to event selection
+        self.event_selection = event_selection
+
+        self.origin_time = UTCDateTime(origin_time)
         self.seconds_before_event = seconds_before_event
         self.seconds_after_event = seconds_after_event
 
-        # Default event selection: User-provided event parameters
-        self.origin_time = UTCDateTime(origin_time)
-        self.event_latitude = None
-        self.event_longitude = None
-        self.event_depth_km = None
-        self.event_magnitude = None
+        # Optional: if User wants to define an event on their own
+        self.event_latitude = event_latitude
+        self.event_longitude = event_longitude
+        self.event_depth_km = event_depth_km
+        self.event_magnitude = magnitude
 
-        # Waveform selection criteria
-        self.seconds_before_ref = tbefore_sec
-        self.seconds_after_ref = tafter_sec
+        # Waveform and StationXML gathering parameters
+        self.networks = networks
+        self.stations = stations
+        self.channels = channels
+        self.locations = locations
 
-        # Station-related parameters
-        self.network = network
-        self.station = station
-        self.station = station
-        self.channel = channel
-        self.location = location
+        # Waveform collection parameters
+        try:
+            # Reference time allows throwing a static time shift from the origin
+            # time, e.g., if there are timing errors with relation to o time
+            self.reference_time = UTCDateTime(reference_time)
+        except TypeError:
+            self.reference_time = self.origin_time
+        self.seconds_before_ref = seconds_before_ref
+        self.seconds_after_ref = seconds_after_ref
+        self.phase_list = phase_list
+
+        # Station curtailing criteria
         self.min_dist = min_dist
         self.max_dist = max_dist
         self.min_az = min_az
@@ -227,91 +230,68 @@ class Pysep:
         self.max_lat = max_lat
         self.min_lon = min_lon
         self.max_lon = max_lon
-        self.overwrite_ddir = overwrite_ddir
-        self.icreateNull = icreateNull
-        self.phases = phases
-        self.write_sac_phase = write_sac_phase
-        self.taupmodel= taupmodel
 
-        # Filter-related parameters
-        self.ifFilter = ifFilter
-        self.filter_type = filter_type
-        self.f1 = f1
-        self.f2 = f2
-        self.zerophase = zerophase
-        self.corners = corners
-        self.phase_window = phase_window
-
-        # Pre-filter-related parameters
-        self.ipre_filt = ipre_filt
-        self.water_level = water_level
-        self.f0 = 0.5 * self.f1
-        self.f3 = 2.0 * self.f2
-        self.pre_filt = (self.f0, self.f1, self.f2, self.f3)
-
-        # For CAP (Cut-And-Paste moment tensor inversion code)
-        self.resample_TF = resample_TF
-        self.resample_freq = resample_freq
-        self.scale_factor = scale_factor
-
-        # Pre-processing (mainly for CAP)
-        self.detrend = detrend
-        self.demean = demean
-        self.taper = taper
+        # Preprocessing flags
+        self.demean = bool(demean)
+        self.detrend = bool(detrend)
+        self.remove_response = bool(remove_response)
         self.output_unit = output_unit
-        self.remove_response = remove_response
+        self.water_level = water_level
+        self.pre_filt = pre_filt
+        self.scale_factor = scale_factor
+        self.resample_freq = resample_freq
 
-        # Options for rotation
-        self.rotateRTZ = rotateRTZ
-        self.rotateUVW = rotateUVW
-        self.rotateENZ = rotateENZ
+        # Client related parameters
+        self.debug = bool(debug)
+        self.timeout = timeout
 
-        # Output flags for how to save the raw or processed data
-        self.ph5 = ifph5
-        self.output_event_info = output_event_info
-        self.output_cap_weight_file = output_cap_weight_file
-        self.save_sacpaz = ifsave_sacpaz
-        self.plot_spectrogram = ifplot_spectrogram
-        self.plot_response = iplot_response
-        self.save_stationxml = ifsave_stationxml
-        self.save_asdf = ifsave_asdf
-        self.save_raw = isave_raw
-        self.save_raw_processed = isave_raw_processed
-        self.save_ENZ = isave_ENZ
-        self.save_rotateENZ = isave_rotateENZ
+        # Internally filled attributes
+        self.output_dir = None
 
-        self.remove_clipped = remove_clipped
-        if self.remove_clipped:
-            print("Removing clipped stations forces `isave_raw`==True")
-            self.isave_raw = True
-
-        # Flags to deal with miscellaneous items
-        self.ifmass_downloader = ifmass_downloader
-
-
-        # Event information to be filled
-        self.event = None
-        self.inv = None
-        self.st = None
-        self.distances = None
-        self.azimuths = None
 
     def check(self):
         """
         TODO
             * Check output format
             * Check preprocessing flags
-
+            * Check user and password if PH5 data gathering
         """
+        if self.event_selection == "catalog" or self.client == "LLNL":
+            for par in [self.seconds_before_event, self.seconds_after_event]:
+                assert(par is not None), (
+                    "Event selection requires the following parameters: "
+                    "`seconds_before_event` and `seconds_after_event`")
+        elif self.event_selection == "default":
+            for par in [self.event_latitude, self.event_longitude,
+                        self.event_depth_km, self.event_magnitude]:
+                assert(par is not None), (
+                    "`event_selection`=='default' requires "
+                    "`event_latitude`, `event_longitude`, `event_depth_km` "
+                    "and `event_magnitude`")
+        else:
+            raise ValueError("`event_selection` must seconds_before_evente in "
+                             "'catalog' or 'default'")
+
+
+        # Check preprocessing flags
+        if self.remove_response:
+            for par in [self.output_unit, self.pre_filt, self.water_level]:
+                pass
+        assert(0 <= self.min_az <= 360), f"0 <= `min_az` <= 360"
+        assert(0 <= self.max_az <= 360), f"0 <= `min_az` <= 360"
+
+
 
     def get_client(self, user=None, password=None):
         """
-        Options to choose different Clients based on client name
+        Options to choose different Clients based on client name. These clients
+        are ONLY for waveform gathering. We assume that
 
         TODO add log level to parameters and use to set client debug
         :return:
         """
         if self.client is not None:
+            # Lawrence Livermore Natinoal Lab internal waveform database
             if self.client.upper() == "LLNL":
                 try:
                     import llnl_db_client
@@ -326,14 +306,17 @@ class Pysep:
             # IRIS DMC PH5WS Station Web Service
             elif self.client.upper() == "PH5":
                 c = Client(
-                    "http://service.iris.edu", debug=True,
+                    "http://service.iris.edu", debug=self.debug,
                     service_mappings={
-                        "station": "http://service.iris.edu/ph5ws/station/1"
-                    }
+                        "station": "http://service.iris.edu/ph5ws/station/1",
+                        "dataselect":
+                            "http://service.iris.edu/ph5ws/dataselect/1"
+                    }, user=user, password=password
                 )
+            # Default ObsPy FDSN webservice client
             else:
                 c = Client(self.client, user=user, password=password,
-                                debug=False, timeout=600)
+                           debug=self.debug, timeout=self.timeout)
         else:
             c = None
 
@@ -341,18 +324,18 @@ class Pysep:
 
     def overwrite_parameters(self):
         """
-        Overwrite default parameters using a config file
-        :return:
+        Overwrite default parameters using a YAML config file
         """
         if self.config_file is not None:
             logger.info(f"overwriting default parameters with config file: "
                         f"{self.config_file}")
             config = load_yaml(self.config_file)
+            for key, val in config.items():
+                setattr(self, key, val)
 
     def get_event(self):
         """
         Download event metadata from IRIS using ObsPy functionality
-        :return:
         """
         if self.event_selection == "catalog":
             event = self._get_event_catalog()
@@ -372,10 +355,14 @@ class Pysep:
         logger.info(f"getting event information with client {self.client}")
 
         cat = self.c.get_events(
-            starttime=self.origintime - self.seconds_before_event,
-            endtime=self.origintime + self.seconds_after_event,
+            starttime=self.origin_time - self.seconds_before_event,
+            endtime=self.origin_time + self.seconds_after_event,
             debug=self.debug
         )
+        logger.info(f"{len(cat)} matching events found for "
+                    f"{self.seconds_before_event}s < {self.origin_time} "
+                    f"< {self.seconds_after_event}, choosing first")
+
         event = cat[0]
 
         return event
@@ -385,8 +372,9 @@ class Pysep:
         Make a barebones event object based on user-defined parameters
 
         TODO Assert that event parameters are not None if event selection
+        TODO resource ids and preferred ids for magnitude and origin
         """
-        logger.info("getting event information with user parameters")
+        logger.info("creating event metadata with user parameters")
 
         origin = Origin(latitude=self.event_latitude,
                         longitude=self.event_longitude,
@@ -426,17 +414,34 @@ class Pysep:
         TODO add warning for "*" may take long
         :return:
         """
-        if self.fmt == "PH5":
+        if self.client.upper() == "PH5":
             st = self._get_waveforms_ph5()
         else:
             # Allow setting start and endtimes based on seismic phases
-            if self.phases:
+            if self.phase_list:
                 bulk = fetch_bulk_station_list_taup()
             # Make the bulk selection list manually
             else:
                 bulk = self._make_bulk_station_list()
+
             st = self.c.get_waveforms_bulk(bulk=bulk)
 
+        logger.info(f"{len(st)} waveforms returned after query")
+
+        return st
+
+    def _get_waveforms_ph5(self):
+        """
+        Download waveforms from PH5 dataservice
+        :return:
+        """
+        logger.debug("")
+        st = self.c.get_waveforms(
+            network=self.networks,  location=self.locations,
+            station=self.stations, channel=self.channels,
+            starttime=self.origin_time - self.seconds_before_ref,
+            endtime=self.origin_time - self.seconds_after_ref
+        )
         return st
 
     def _make_bulk_station_list(self):
@@ -444,49 +449,65 @@ class Pysep:
         ObsPy Client.get_waveforms_bulk() requires a list input
         """
         bulk = []
-        t1 = self.origin_time - self.seconds_before_ref
-        t2 = self.origin_time - self.seconds_after_ref
+        t1 = self.reference_time - self.seconds_before_ref
+        t2 = self.reference_time - self.seconds_after_ref
         for net in self.inv:
             for sta in net:
                 # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, "*", self.channel, t1, t2))
+                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
         return bulk
 
-    def _get_waveforms_ph5(self):
+    def get_codes(self, st=None, choice=None):
         """
-        Download waveforms from PH5 dataservice
-        :return:
+        Get station codes from the internal stream attribute, where station
+        codes are formatted NN.SSS.LL.CCc where N=network, S=station,
+        L=location, C=channel, and c=component
+
+        :type choice: str
+        :param choice: choice of the part of the code returned, available:
+            * 'network': return unique network codes (e.g., NN)
+            * 'station': return unique network + station codes (e.g., NN.SSS)
+            * 'location': return up to location (e.g., NN.SSS.LL)
+            * 'channel': return up to channel, no component (e.g., NN.SSS.LL.CC)
+            * else: return full station code (e.g., NN.SSS.LL.CCc)
+        :rtype: list
+        :return: unique station codes filtered by choice
         """
-        dataselect = "http://service.iris.edu/ph5ws/dataselect/1"
-        c = Client("http://service.iris.edu",
-                   service_mappings={"dataselect": dataselect},
-                   user=self.user, password=self.password, debug=self.debug
-                   )
-        st = c.get_waveforms(
-            network=self.network, location=self.location, station=self.station,
-            channel=self.channel,
-            starttime=self.origintime - self.seconds_before_ref,
-            endtime=self.origintime - self.seconds_after_ref
-        )
-        return st
+        if st is None:
+            st = self.st.copy()
+
+        full_codes = [tr.get_id() for tr in st]
+        if choice == "network":
+            codes = [code.split(".")[0] for code in full_codes]
+        elif choice == "station":
+            codes = [".".join(code.split(".")[:1]) for code in full_codes]
+        elif choice == "location":
+            codes = [".".join(code.split(".")[:2]) for code in full_codes]
+        elif choice == "channel":
+            codes = [code[:-1] for code in full_codes]
+        else:
+            codes = full_codes
+
+        return list(set(codes))
+
 
     def get_stations(self):
         """
         Download station metadata from IRIS using ObsPy functionality
-
-        TODO
         :return:
         """
         logger.info(f"collecting station data from {self.client}")
+
         inv = self.c.get_stations(
-            network=self.network, location=self.location, station=self.station,
-            channel=self.channel,
+            network=self.networks, location=self.locations,
+            station=self.stations, channel=self.channels,
             starttime=self.origin_time - self.seconds_before_ref,
             endtime=self.origin_time + self.seconds_after_ref,
             minlatitude=self.min_lat, maxlatitude=self.max_lat,
             minlongitude=self.min_lon, maxlongitude=self.max_lon,
             level="response", debug=self.debug
         )
+
         logger.info(f"collected {len(inv)} stations from {self.client}")
 
         inv = self.curtail_stations(inv)
@@ -502,21 +523,22 @@ class Pysep:
             event=self.event, inv=inv, min_dist=self.min_dist,
             max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az
         )
-
         return inv
 
     def preprocess(self):
         """
         Very simple preprocessing to remove response and apply a prefilter
+
+        TODO do we need the pre-filt if we are doing it in resample?
         """
         st_out = self.st.copy()
-        if "demean" in self.preprocess_flags:
+        if self.demean:
             logger.info(f"applying demean to all data")
             st_out.detrend("demean")
-        if "detrend" in self.preprocess_flags:
+        if self.detrend
             logger.info(f"applying linear detrend to all data")
             st_out.detrend("linear")
-        if "remove_response" in self.preprocess_flags:
+        if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
             st_out.remove_response(inv=self.inv, water_level=self.water_level,
@@ -533,7 +555,7 @@ class Pysep:
 
         return st_out
 
-    def prep_resample(self):
+    def _prep_resample(self):
         """
         Resample data to desired sampling rate and throw in a decimation filter
 
@@ -572,9 +594,9 @@ class Pysep:
         :return:
         """
         logger.info("trimming start and end times on a per-station basis")
-        st_edit = self.prep_resample()
+        st_edit = self._prep_resample()
         st_out = Stream()
-        codes = [tr.get_id() for tr in st_edit]
+        codes = self.get_codes(st=st_edit)
         resampled_codes = []
 
         for code in codes:
@@ -602,11 +624,11 @@ class Pysep:
             #   the window in samples on either side. Larger values of `a` are
             #   more expensive but better for interpolation
             st_edit_select.interpolate(sampling_rate=self.resample_freq,
-                                      method="lanczos", starttime=max_start,
-                                      npts=npts, a=8)
+                                       method="lanczos", starttime=max_start,
+                                       npts=npts, a=8)
 
             st_out += st_edit_select
-            resampled.append(f"{code[-1]}")  # drop component
+            resampled_codes.append(f"{code[-1]}")  # drop component
 
         return st_out
 
@@ -640,35 +662,29 @@ class Pysep:
         self.overwrite_parameters()
         self.check()
 
+        # Get waveforms and metadata (QuakeML, StationXML)
         self.event = self.get_event()
-        self.fid = self.assign_unique_event_id()
-
-
-        # Get waveforms and add additional information
         self.st = self.get_waveforms()
         self.inv = self.get_stations()
         self.inv = self.curtail_stations()
 
         self.st = append_sac_headers(self.st, self.inv, self.event)
+        self.output_dir = self.st[0].stats.sac["kevnm"]
         self.st = quality_check_waveforms()
 
         # Pre-filtering and preprocessing
         self.st = self.preprocess()
-
-        # self.get_unique_station_codes()
-
-        # Making sure time series are standardized
-        self.st = self.resample()
-        self.st = self.trim_start_end_times()
+        self.st = self.resample_and_trim_start_end_times()
+        self.rotate()
 
         # Write intermediate files
         self.write()
 
         # Rotate streams to desired orientation
-        self.rotate()
 
         # Output files for other programs
-        self.write_weights(format="cap")
+        write_cap_weights_file(st=self.st, event=self.event,
+                               path_out=self.output_dir, order_by="dist")
         self.write(format="all")
         # plot_station_map(self.inv, self.event)
 
