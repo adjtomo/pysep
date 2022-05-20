@@ -615,13 +615,16 @@ def add_sac_metadata(st, client_name="LLNL", ev=[], stalist=[], ifverbose=False,
             try:
                 tr.stats.sac['t5'] = Phase1arrivals[0].time
                 tr.stats.sac['user1'] = Phase1arrivals[0].incident_angle
+                tr.stats.sac['user3'] = Phase1arrivals[0].takeoff_angle
 
             except:
                 tr.stats.sac['t5'] = math.nan
                 tr.stats.sac['user1'] = math.nan
+                tr.stats.sac['user3'] = math.nan
 
             tr.stats.sac['kt5'] = phases[0] + '_' + taup_model
             tr.stats.sac['kuser1'] = phases[0] + '_ia_' + taup_model
+            tr.stats.sac['kuser3'] = phases[0] + '_ia_' + taup_model
 
             if phases[0] != phases[1]:
                 Phase2arrivals = model.get_travel_times(source_depth_in_km=ev.origins[0].depth/1000,distance_in_degree=dist_deg,phase_list=[phases[1]])
@@ -638,12 +641,15 @@ def add_sac_metadata(st, client_name="LLNL", ev=[], stalist=[], ifverbose=False,
                 try:
                     tr.stats.sac['t6'] = Phase2arrivals[0].time
                     tr.stats.sac['user2'] = Phase2arrivals[0].incident_angle
+                    tr.stats.sac['user4'] = Phase2arrivals[0].takeoff_angle
                 except:
                     tr.stats.sac['t6'] = math.nan
                     tr.stats.sac['user2'] = math.nan
+                    tr.stats.sac['user4'] = math.nan
             
                 tr.stats.sac['kt6'] = phases[1] + '_' + taup_model
                 tr.stats.sac['kuser2'] = phases[1] + '_ia_' + taup_model
+                tr.stats.sac['kuser4'] = phases[1] + '_ia_' + taup_model
 
         # Append all traces that DO NOT have inventory information                        
         if stn_in_inventory==0:
