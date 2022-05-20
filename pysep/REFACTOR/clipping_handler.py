@@ -35,6 +35,8 @@ def remove_clipped(path):
 
 
 
+# DELETE ME
+
         # Catalog event selection: Parameters for gathering from Client
         self.event_selection = "default"  # catalog, default
         self.seconds_before_event = seconds_before_event

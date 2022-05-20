@@ -7,11 +7,62 @@ from obspy import UTCDateTime
 from pysep import logger
 
 
-def get_llnl_catalog():
+def return_llnl_catalog_origin_times(event=None):
     """
-    Read in LLNL catalog YAML file and return dict of origintimes and event tags
+    Returns a static LLNL catalog which provides origin times and event tags
+
+    :type event: str
+    :param event: returns only a specific event based on the event names
     """
-    pass
+    llnl_catalog = {
+        # Explosions
+        "KERNVILLE": "1988-02-15T18:10:00.09",
+        "AMARILLO": "1989-06-27T15:30:00.02",
+        "DISKO_ELM": "1989-09-14T15:00:00.10",
+        "HORNITOS": "1989-10-31T15:30:00.09",
+        "BARNWELL": "1989-12-08T15:00:00.09",
+        "METROPOLIS": "1990-03-10T16:00:00.08",
+        "BULLION": "1990-06-13T16:00:00.09",
+        "AUSTIN": "1990-06-21T18:15:00.00",
+        "HOUSTON": "1990-11-14T19:17:00.07",
+        "COSO": "1991-03-08T21:02:45.08",
+        "BEXAR": "1991-04-04T19:00:00.00",
+        "HOYA": "1991-09-14T19:00:00.08",
+        "LUBBOCK": "1991-10-18T19:12:00.00",
+        "BRISTOL": "1991-11-26T18:35:00.07",
+        "JUNCTION": "1992-03-26T16:30:00.00",
+        "HUNTERS_TROPHY": "1992-09-18T17:00:00.08",
+        "DIVIDER": "1992-09-23T15:04:00.00",
+        "ATRISCO": "1982-08-05T14:00:00",  # Explosion not in Ford2009
+        # Earthquakes
+        "LITTLE_SKULL_MAIN": "1992-06-29T10:14:23.18",
+        "LITTLE_SKULL_AFTERSHOCK": "1992-07-05T06:54:13.52",
+        "TIMBER_MOUNTAIN": "1995-07-31T12:34:47.35",
+        "GROOM_PASS": "1997-04-26T01:49:35.20",
+        "CALICO_FAN": "1997-09-12T13:36:54.94",
+        "WARM_SPRINGS": "1998-12-12T01:41:32.00",
+        "FRENCHMAN_FLAT_1": "1999-01-23T03:00:32.00",
+        "FRENCHMAN_FLAT_2": "1999-01-27T10:44:23.30",
+        "LITTLE_SKULL": "2002-06-14T12:40:45.36",
+        # Earthquakes in Ford, but not in LLNL database
+        "AMARGOSA": "1996-09-05T08:16:55.40",
+        "INDIAN_SPRINGS": "1997-06-14T19:48:19.45",
+        "RALSTON": "2007-01-24T11:30:16.099",
+        # Mine collapses
+        "ATRISCO_HOLE": "1982-08-05T14:21:38.000",
+        "TRONA_MINE_1": "1995-02-03T15:26:10.690",
+        "TRONA_MINE_2": "2000-01-30T14:46:51.310"
+        }
+
+    llnl_catalog = {key: UTCDateTime(val) for key, val in llnl_catalog.items()}
+    if event is None:
+        try:
+            llnl_catalog = {event.upper(): llnl_catalog[event.upper()]}
+        except KeyError:
+            raise KeyError(f"Invalid event tag: {event.upper()}; acceptable: "
+                           f"{llnl_catalog.keys()}")
+
+    return llnl_catalog
 
 
 def scale_llnl_waveform_amplitudes(st):

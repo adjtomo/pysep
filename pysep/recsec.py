@@ -1,6 +1,6 @@
 #!/usr/bin/evn python3
 """
-Record Section plotting tool for seismic waveforms (observed and synthetic)
+RECord SECtion plotting tool for seismic waveforms (observed and synthetic)
 
 This is a refactor of Pysep's Python utility `plotw_rs`, a record section
 plotting script. The intent of this script is to plot multiple time series'
@@ -17,7 +17,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
 
 .. rubric:: Examples
     1) Print the help message to see available options and flags
-    $ python record_section.py -h
+    $ python recsec.py -h
 
     2) From the command line: The following example code blocks work with pysep 
         to download data for a southern California event.
@@ -27,14 +27,14 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
 
     a) Plot a record section for the socal event with default values
 
-        $ python record_section.py --pysep_path 20200404015318920 
+        $ python recsec.py --pysep_path 20200404015318920 
 
     b) Plot high-passed data with 7 km/s move out (focused on direct arrivals),
         show direct arrivals through to surface waves for all traces, thin lines
         to accentuate high frequencies. Overwrite previous figure and split
         figure onto multiple pages
 
-        $ python record_section.py --pysep_path 20200404015318920 \
+        $ python recsec.py --pysep_path 20200404015318920 \
             --move_out 7 --min_period_s 1 --xlim_s 100 175 \
             --linewidth .25 --max_traces_per_rs 60 --overwrite
 
@@ -43,7 +43,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         thicken up default linewidth and increase spacing between adjacent 
         seismograms 
 
-        $ python record_section.py --pysep_path 20200404015318920 \
+        $ python recsec.py --pysep_path 20200404015318920 \
             --components RT --move_out 4 --min_period_s 2 --max_period_s 50 \
             --xlim_s 50 200 --y_axis_spacing 3 --linewidth 1 \
             --amplitude_scale_factor 4 --overwrite 
@@ -53,7 +53,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         Scale amplitudes by factor 2 for better visualization
         and start azimuth plotting at 180* (as opposed to default 0*).
 
-        $ python record_section.py --pysep_path 20200404015318920 \
+        $ python recsec.py --pysep_path 20200404015318920 \
             --sort_by azimuth --scale_by global_norm --components T \
             --min_period_s 2 --max_period_s 30 --move_out 4 \
             --amplitude_scale_factor 2 --azimuth_start_deg 180 \
@@ -63,7 +63,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         Reduce amplitudes by 1/4 (0.25). Set y label fontsize smaller than 
         default and at the max X value of the figure (far to the right)
 
-        $ python record_section.py --pysep_path 20200404015318920 \
+        $ python recsec.py --pysep_path 20200404015318920 \
             --sort_by abs_distance_r --components Z --min_period_s 2 \
             --max_period_s 50 --amplitude_scale_factor 0.25 \
             --y_label_loc x_max --y_label_fontsize 7 --overwrite \
@@ -76,7 +76,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         >>> import os
         >>> from glob import glob
         >>> from obspy import read
-        >>> from record_section import plotw_rs
+        >>> from recsec import plotw_rs
         >>> st = Stream()
         >>> for fid in glob(os.path.join("20200404015318920", "*.?")):
         >>>     st += read(fid)

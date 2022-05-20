@@ -6,7 +6,7 @@ import yaml
 import numpy as np
 
 
-def load_yaml(fid):
+def read_yaml(fid):
     """
 
     :return:

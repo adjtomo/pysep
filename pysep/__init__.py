@@ -9,3 +9,6 @@ formatter = logging.Formatter(FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+
+from pysep.pysep import Pysep
+from pysep.recsec import RecordSection

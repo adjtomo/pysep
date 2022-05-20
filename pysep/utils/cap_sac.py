@@ -9,7 +9,6 @@ from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 from pysep import logger
 
 
-
 def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
     """
     Write CAP (Cut-and-Paste) moment tensor inversion code weight files,
@@ -175,3 +174,33 @@ def _append_sac_headers_trace(tr, event, inv):
     tr.stats.back_azimuth = baz
 
     return tr
+
+
+def format_sac_headers_post_rotation(st):
+    """
+    SAC headers do not update when rotating so we need to apply manual
+    changes to the azimuth, inclination and naming values
+
+    TODO is this necessary? Who is using the SAC headers and what info
+        do they need? Or can we just re-run SAC header appending?
+    :param st:
+    :return:
+    """
+    pass
+    azimuth_dict = {"E": 90., "N": 0., "Z": 0.}
+    inclin_dict = {"E": 0., "N": 0., "Z": -90.}
+
+    st_out = st.copy()
+    for tr in st_out:
+        comp = tr.stats.component
+        tr.stats.sac["kcmpnm"] = tr.stats.channel  # TODO component or channel?
+        if comp in azimuth_dict.keys():
+            tr.stats.sac["cmpaz"] = azimuth_dict[comp]
+            tr.stats.sac["cmpinc"] = inclin_dict[comp]
+        elif comp == "R":
+            tr.stats.sac["cmpaz"] = tr.stats.sac["az"]
+        elif comp == "T":
+            tr.stats.sac["cmpaz"] = (tr.stats.sac["az"] + 90) % 360
+
+    return st_out
+
