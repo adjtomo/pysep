@@ -2,14 +2,13 @@
 Test the general functionality of Pysep
 """
 import pytest
-from pysep import Pysep
+from pysep import Pysep, logger
 
 
 @pytest.fixture
 def config_file():
     """
-    Test config file
-    :return:
+    Test config file for a 2009 Anchorage earthquake
     """
     return "./test_data/test_config_anchorage.yaml"
 
@@ -17,55 +16,61 @@ def config_file():
 @pytest.fixture
 def test_pysep(config_file):
     """
-    Test Pysep instance
-    :param config_file:
-    :return:
+    Test Pysep instance based on a Config file, gather event and StationXML
     """
     pysep = Pysep(config_file=config_file)
     pysep.load_config()
     pysep.check()
+    pysep.c = pysep.get_client()
+    pysep.event = pysep.get_event()
+    pysep.inv = pysep.get_stations()
+
     return pysep
 
 
 def test_get_client(test_pysep):
     """
-
-    :param test_pysep:
-    :return:
+    Simple check that we're looking at IRIS for our client
     """
-    client = test_pysep.get_client()
-    assert(client.base_url == "http://service.iris.edu")
+    assert(test_pysep.c.base_url == "http://service.iris.edu")
 
 
 def test_get_event(test_pysep):
     """
-
-    :param test_pysep:
-    :return:
+    Simple check that the event created by User parameters is right
     """
-    event = test_pysep.get_event()
-    assert(event.preferred_magnitude().mag == 4.6)
+    assert(test_pysep.event.preferred_magnitude().mag == 4.6)
 
 
 def test_get_inventory(test_pysep):
     """
-
+    Check that the collected stations are correct
     :param test_pysep:
     :return:
     """
-    test_pysep._client = test_pysep.get_client()
-    inv = test_pysep.get_stations()
+    inv = test_pysep.inv
+    assert(len(inv.get_contents()["channels"]) == 9)
     assert(f"{inv[0].code}{inv[0][0].code}{inv[0][0][0].code}" == "AKATKABHE")
 
 
 def test_get_waveform(test_pysep):
     """
-
+    Get waveforms for a few test stations from IRIS
     :param test_pysep:
     :return:
     """
-    test_pysep._client = test_pysep.get_client()
-    test_pysep.inv = test_pysep.get_stations()
     st = test_pysep.get_waveforms()
     assert(len(st) == 11)
     assert(st[-1].get_id() == "YV.ALPI..BHZ")
+
+
+def test_curtail_stations(test_pysep):
+    """
+    Exclude a station based on maximum distance getting exceeded
+    """
+    inv, azimuths, distances = test_pysep.curtail_stations()
+
+    nsta_pre_curtail = len(test_pysep.inv.get_contents()["channels"])
+    nsta_post_curtail = len(inv.get_contents()["channels"])
+
+    assert(nsta_pre_curtail - nsta_post_curtail == 6)

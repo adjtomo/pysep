@@ -76,11 +76,11 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         >>> import os
         >>> from glob import glob
         >>> from obspy import read
-        >>> from recsec import plotw_rs
+        >>> from recsec import plot_record_section
         >>> st = Stream()
         >>> for fid in glob(os.path.join("20200404015318920", "*.?")):
         >>>     st += read(fid)
-        >>> plotw_rs(st=st, sort_by="distance_r")
+        >>> plot_record_section(st=st, sort_by="distance_r")
 """
 import os
 import sys
@@ -95,6 +95,7 @@ from matplotlib.ticker import MultipleLocator
 from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
+from pysep import logger
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -291,17 +292,16 @@ class RecordSection:
         """
         # Read files from path if provided
         if pysep_path is not None and os.path.exists(pysep_path):
-            # Expected file format: 20200404015318920.CI.LRL..BH.r
-            fids = glob(os.path.join(pysep_path, "*.*.*.*.*.?"))
-            print(f"Reading {len(fids)} files from: {pysep_path}")
+            # Expecting to find SAC files labelled as such
+            fids = glob(os.path.join(pysep_path, "*.sac"))
+            logger.info(f"Reading {len(fids)} files from: {pysep_path}")
             if fids:
                 # Overwrite stream, so reading takes precedence
                 st = Stream()
                 for fid in fids:
                     st += read(fid)
-
-        assert(st), \
-            "Stream object not found, please check inputs `st` and `pysep_path"
+        assert st, ("Stream object not found, please check inputs `st` "
+                     "and `pysep_path")
 
         # User defined parameters, do some type-setting
         self.st = st.copy()
@@ -374,9 +374,9 @@ class RecordSection:
             to set their parameters correctly
 
         :raises AssertionError: If any parameters are not set as expected by
-            plotw_rs functionality
+            plot_record_section functionality
         """
-        print("checking parameter acceptability")
+        logger.info("checking parameter acceptability")
 
         # Used to keep track of which parameters failed and in what way
         err = Dict()
@@ -394,7 +394,7 @@ class RecordSection:
                 if not hasattr(tr.stats, "sac"):
                     _idx.append(i)
             if _idx:
-                err.st = (f"{len(_idx)} traces have no SAC header, plotw_rs "
+                err.st = (f"{len(_idx)} traces have no SAC header, recsec "
                           f"expects SAC headers for sorting. Trace indexes "
                           f"are: {_idx}")
 
@@ -481,13 +481,13 @@ class RecordSection:
 
         _dirname = os.path.abspath(os.path.dirname(self.save))
         if not os.path.exists(_dirname):
-            print(f"creating output directory {_dirname}")
+            logger.info(f"creating output directory {_dirname}")
             os.makedirs(_dirname)
 
         if err:
             out = "ERROR - Parameter errors, please make following changes:\n"
-            out += "\n".join([f"\t{key}: {val}" for key, val in err.items()])
-            print(out)
+            out += "\n".join([f"`{key}`: {val}" for key, val in err.items()])
+            logger.info(out)
             sys.exit(-1)
 
     def get_skip_idx(self):
@@ -510,8 +510,8 @@ class RecordSection:
             if tr.stats.component not in self.components:
                 skip_idx.append(idx)
             # !!! Add more here
-        print(f"criteria check will remove "
-              f"{len(skip_idx)}/{len(self.st)} traces")
+        logger.info(f"criteria check will remove "
+                    f"{len(skip_idx)}/{len(self.st)} traces")
 
         return np.array(skip_idx)
 
@@ -640,7 +640,7 @@ class RecordSection:
                 determine if the user wants to reverse their sort, they do this
                 by appending '_r' to the end of the `sort_by` argument
         """
-        print("getting source-receiver stats")
+        logger.info("getting source-receiver stats")
 
         def _unique(list_):
             """return a unique numpy array derived from a list"""
@@ -694,7 +694,8 @@ class RecordSection:
 
         # Further change the time shift if we have move out input
         if self.move_out:
-            print(f"apply {self.move_out} {self.distance_units}/s move out")
+            logger.info(f"apply {self.move_out} {self.distance_units}/s "
+                        f"move out")
             move_out_arr = self.distances / self.move_out
             time_shift_arr -= move_out_arr
 
@@ -716,7 +717,7 @@ class RecordSection:
         :return backazimuths: source-receiver azimuths (deg) in the original
             order of Stream
         """
-        print("calculating source-receiver distance and (back)azimuths")
+        logger.info("calculating source-receiver distance and (back)azimuths")
 
         distances, azimuths, backazimuths = [], [], []
         for tr in self.st:
@@ -804,7 +805,7 @@ class RecordSection:
         :return: an array corresponding to the Stream indexes which provides
             a per-trace scaling coefficient
         """
-        print(f"determining amplitude scaling with: {self.scale_by}")
+        logger.info(f"determining amplitude scaling with: {self.scale_by}")
 
         # Don't scale by anything
         if self.scale_by is None:
@@ -815,14 +816,14 @@ class RecordSection:
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
-                    print("scaling amplitudes for absolute distance")
+                    logger.info("scaling amplitudes for absolute distance")
                     scale = np.mean(self.distances) / 10
                 elif "backazimuth" in self.sort_by:
-                    print("scaling amplitudes for absolute backazimuth")
+                    logger.info("scaling amplitudes for absolute backazimuth")
                     scale = self.backazimuths.max() - self.backazimuths.min()
                     scale /= 100
                 elif "azimuth" in self.sort_by:
-                    print("scaling amplitudes for absolute azimuth")
+                    logger.info("scaling amplitudes for absolute azimuth")
                     scale = self.azimuths.max() - self.azimuths.min()
                     scale /= 50
                 # Divide to make waveforms larger
@@ -868,7 +869,8 @@ class RecordSection:
         """
         raise NotImplementedError("This function is currently work in progress")
 
-        print("calculating geometrical spreading for amplitude normalization")
+        logger.info("calculating geometrical spreading for amplitude "
+                    "normalization")
 
         # Create a sinusoidal function based on distances in degrees
         sin_del = np.sin(np.array(self.dist) / (180 / np.pi))
@@ -896,7 +898,7 @@ class RecordSection:
         :return: returns an indexing list which is sorted based on the user
             defined `sort_by` argument.
         """
-        print(f"determining sort order with parameter: {self.sort_by}")
+        logger.info(f"determining sort order with parameter: {self.sort_by}")
 
         # Retain input ordering but run sorting to allow reversing
         if "default" in self.sort_by:
@@ -989,7 +991,7 @@ class RecordSection:
         :return: an array of actual y-axis positions that can be passed directly
             to plt.plot() (or similar)
         """
-        print(f"determining y-axis positioning for sort: {self.sort_by}")
+        logger.info(f"determining y-axis positioning for sort: {self.sort_by}")
 
         # Default weights provides constant `y_axis_spacing` between seismos
         if self.sort_by == "default" or "abs_" not in self.sort_by:
@@ -1018,16 +1020,16 @@ class RecordSection:
             seismograms. At the moment we just apply a blanket filter.
         """
         if self.preprocess is None:
-            print("no preprocessing applied")
+            logger.info("no preprocessing applied")
             return
         elif self.preprocess == "st":
-            print(f"preprocessing {len(self.st)} `st` waveforms")
+            logger.info(f"preprocessing {len(self.st)} `st` waveforms")
             preprocess_list = [self.st]
         elif self.preprocess == "st_syn":
-            print(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
+            logger.info(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
             preprocess_list = [self.st_syn]
         elif self.preprocess == "both":
-            print(f"preprocessing {len(self.st) + len(self.st_syn)} "
+            logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
                   f"`st` and `st_syn` waveforms")
             preprocess_list = [self.st, self.st_syn]
 
@@ -1043,21 +1045,23 @@ class RecordSection:
             # Allow multiple filter options based on user input
             # Min period but no max period == low-pass
             if self.max_period_s is not None and self.min_period_s is None:
-                print(f"apply lowpass filter w/ cutoff {1/self.max_period_s}")
+                logger.info(f"apply lowpass filter w/ cutoff "
+                            f"{1/self.max_period_s}")
                 st.filter("lowpass", freq=1/self.max_period_s, zerophase=True)
             # Max period but no min period == high-pass
             elif self.min_period_s is not None and self.max_period_s is None:
-                print(f"apply highpass filter w/ cutoff {1/self.min_period_s}")
+                logger.info(f"apply highpass filter w/ cutoff "
+                            f"{1/self.min_period_s}")
                 st.filter("highpass", freq=1/self.min_period_s, zerophase=True)
             # Both min and max period == band-pass
             elif self.min_period_s is not None and \
                     self.max_period_s is not None:
-                print(f"applying bandpass filter w/ "
+                logger.info(f"applying bandpass filter w/ "
                       f"[{1/self.max_period_s}, {self.min_period_s}]")
                 st.filter("bandpass", freqmin=1/self.max_period_s,
                             freqmax=1/self.min_period_s, zerophase=True)
             else:
-                print("no filtering applied")
+                logger.info("no filtering applied")
 
             # Integrate and differentiate N number of times specified by user
             st.detrend("simple")
@@ -1067,7 +1071,7 @@ class RecordSection:
                 elif self.integrate > 0:
                     func = "integrate"
             for i in range(np.abs(self.integrate)):
-                print("{func} all waveform data")
+                logger.info(f"{func} all waveform data x{abs(self.integrate)}")
                 getattr(st, func)()
 
     def plot(self, subset=None, page_num=None, **kwargs):
@@ -1091,14 +1095,15 @@ class RecordSection:
             start, stop = subset
             nwav = stop - start
 
-        print(f"plotting record section for {nwav} waveforms")
+        logger.info(f"plotting record section for {nwav} waveforms")
 
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
-        print("PLOTTING LINE CHECK STARTING FROM BOTTOM")
-        print("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tYABSMAX")
+        logger.debug("plotting line check starting from bottom (y=0)")
+        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tYABSMAX")
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
+        log_str = "\n"
         # Allow choosing observed or synthetic data, defaults to observed
         # Allow different waveform looks based on observed vs. synthetic
         for choice in ["st", "st_syn"]:
@@ -1112,9 +1117,10 @@ class RecordSection:
                     y_index = idx
                 else:
                     y_index = y_idx + start
-                self._plot_trace(idx=idx, y_index=y_index, choice=choice,
-                                 **kwargs)
+                log_str += self._plot_trace(idx=idx, y_index=y_index,
+                                            choice=choice, **kwargs)
 
+        logger.debug(log_str)
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
         self._set_plot_aesthetic()
@@ -1135,7 +1141,7 @@ class RecordSection:
                 save_fid = f"{fid}_{page_num:0>2}{ext}"
             else:
                 save_fid = self.save
-            print(f"\nsaving figure to {save_fid}")
+            logger.info(f"saving figure to {save_fid}")
             plt.savefig(save_fid)
         if self.show:
             plt.show()
@@ -1179,20 +1185,23 @@ class RecordSection:
         self.ax.plot(x, y, c=["k", "r"][c], linewidth=linewidth, zorder=10)
 
         # Sanity check print station information to check against plot
-        print(f"{idx}"
-              f"\t{int(self.y_axis[y_index])}"
-              f"\t{tr.get_id():<6}"
-              f"\t{self.distances[idx]:6.2f}"
-              f"\t{self.azimuths[idx]:6.2f}"
-              f"\t{self.backazimuths[idx]:6.2f}"
-              f"\t{self.time_shift_s[idx]:4.2f}"
-              f"\t{self.max_amplitudes[idx]:.2E}")
+        log_str = (f"{idx}"
+                   f"\t{int(self.y_axis[y_index])}"
+                   f"\t{tr.get_id():<6}"
+                   f"\t{self.distances[idx]:6.2f}"
+                   f"\t{self.azimuths[idx]:6.2f}"
+                   f"\t{self.backazimuths[idx]:6.2f}"
+                   f"\t{self.time_shift_s[idx]:4.2f}"
+                   f"\t{self.max_amplitudes[idx]:.2E}\n"
+                   )
 
         # Retain some stats for global plot args
         self.stats.xmin.append(x.min())
         self.stats.xmax.append(x.max())
         self.stats.ymin.append(y.min())
         self.stats.ymax.append(y.max())
+
+        return log_str
 
     def _plot_azimuth_bins(self):
         """
@@ -1296,22 +1305,24 @@ class RecordSection:
             else:
                 loc = self.y_label_loc
             self._set_y_axis_text_labels(start=start, stop=stop, loc=loc)
-        print(f"placing station labels on y-axis at: {loc}")
+        logger.info(f"placing station labels on y-axis at: {loc}")
 
         # User requests that we turn off y-axis
         if self.y_label_loc is None:
-            print(f"user requests turning off y-axis w/ `y_label_loc`== None")
+            logger.info(f"user requests turning off y-axis w/ "
+                        f"`y_label_loc`== None")
             self.ax.get_yaxis().set_visible(False)
         # OR EDGE CASE: Relative plotting but labels are not placed on the
         # y-axis, turn off the y-axis cause it doesn't mean anything anymore
         elif self.y_label_loc not in ["default", "y_axis", "y_axis_right"] and \
                 "abs" not in self.sort_by:
-            print("turning off y-axis as it contains no information")
+            logger.info("turning off y-axis as it contains no information")
             self.ax.get_yaxis().set_visible(False)
 
         # Reverse the y-axis if we are doing absolute y-axis and reversing
         if "abs_" in self.sort_by and "_r" in self.sort_by:
-            print("user requests inverting y-axis with absolute reverse sort")
+            logger.info("user requests inverting y-axis with absolute "
+                        "reverse sort")
             self.ax.invert_yaxis()
 
         # X-axis label is different if we time shift
@@ -1536,34 +1547,6 @@ class RecordSection:
         plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
 
 
-def plotw_rs(*args, **kwargs):
-    """
-    Main call function. Run the record section plotting functions in order.
-    Contains the logic for breaking up figure into multiple pages.
-    """
-    _start = datetime.now()
-    print(f"STARTING RECORD SECTION PLOTTER")
-
-    rs = RecordSection(*args, **kwargs)
-    rs.process_st()
-    rs.get_parameters()
-    # Simple case where all waveforms will fit on one page
-    if len(rs.sorted_idx) <= rs.max_traces_per_rs:
-        rs.plot()
-    # More complicated case where we need to split onto multiple pages
-    else:
-        for i, start in enumerate(np.arange(0, len(rs.st),
-                                            rs.max_traces_per_rs)):
-            stop = start + rs.max_traces_per_rs
-            # Case where the num waveforms is less than max_traces_per_rs
-            if stop < rs.max_traces_per_rs:
-                stop = len(rs.st)
-            rs.plot(subset=[start, stop], page_num=i+1)
-
-    _end = datetime.now()
-    print(f"FINISHED RECORD SECTION (t={_end - _start}s)")
-
-
 def parse_args():
     """
     Parse command line arguments to set record section parameters dynamically
@@ -1587,7 +1570,7 @@ def parse_args():
         from an interactive environment.
     """
     parser = argparse.ArgumentParser(
-        description="Input basic plotw_rs params",
+        description="Input basic record section params",
         formatter_class=argparse.RawTextHelpFormatter,
                                      )
 
@@ -1681,6 +1664,8 @@ def parse_args():
                         help="Path to save the resulting record section fig")
     parser.add_argument("--overwrite", default=False, action="store_true",
                         help="overwrite existing figure if path exists")
+    parser.add_argument("--log_level", default="DEBUG", type=str,
+                        help="verbosity of logger: 'WARNING', 'INFO', 'DEBUG'")
 
     # Keyword arguments can be passed directly to the argparser in the same 
     # format as the above kwargs (e.g., --linewidth 2), but they will not have 
@@ -1693,6 +1678,37 @@ def parse_args():
     return parser.parse_args()
 
 
+def main():
+    """
+    Main call function, replacing `plotw_rs`. Run the record section plotting
+    functions in order. Contains the logic for breaking up figure into multiple
+    pages.
+    """
+    args = parse_args()
+    logger.setLevel(args.log_level.upper())
+    _start = datetime.now()
+    logger.info(f"starting record section plotter")
+
+    rs = RecordSection(**vars(args))
+    rs.process_st()
+    rs.get_parameters()
+    # Simple case where all waveforms will fit on one page
+    if len(rs.sorted_idx) <= rs.max_traces_per_rs:
+        rs.plot()
+    # More complicated case where we need to split onto multiple pages
+    else:
+        for i, start in enumerate(np.arange(0, len(rs.st),
+                                            rs.max_traces_per_rs)):
+            stop = start + rs.max_traces_per_rs
+            # Case where the num waveforms is less than max_traces_per_rs
+            if stop < rs.max_traces_per_rs:
+                stop = len(rs.st)
+            rs.plot(subset=[start, stop], page_num=i+1)
+
+    _end = datetime.now()
+    logger.info(f"finished record section in t={(_end - _start)}s")
+
+
 if __name__ == "__main__":
-    plotw_rs(**vars(parse_args()))
+    main()
 

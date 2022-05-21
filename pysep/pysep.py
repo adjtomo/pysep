@@ -4,27 +4,33 @@ Python Seismogram Extraction and Processing
 Download, pre-process, and organize seismic waveforms, event and station
 metadata
 """
+import argparse
 import os
 import sys
-import numpy as np
 import yaml
-from obspy import UTCDateTime, Stream
+import warnings
+
+from glob import glob
+from pathlib import Path
+from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 from obspy.clients.fdsn.header import FDSNBadRequestException
 from obspy.core.event import Event, Origin, Magnitude
 
 from pysep import logger
-from pysep.utils.io import read_yaml
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
                                  format_sac_headers_post_rotation)
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
-                                 quality_check_waveforms)
+                                 quality_check_waveforms_before_processing,
+                                 quality_check_waveforms_after_processing)
 from pysep.utils.fetch import fetch_bulk_station_list_taup
+from pysep.utils.fmt import format_event_tag
+from pysep.utils.io import read_yaml, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
-from pysep.utils.process import (zerophase_chebychev_lowpass_filter, get_codes,
-                                 format_streams_for_rotation, rotate_to_UVW)
+from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
+                                 format_streams_for_rotation, rotate_to_uvw)
 from pysep.utils.plot import plot_source_receiver_map
-from pysep.recsec import plotw_rs
+from pysep.recsec import main as plotw_rs  # to avoid confusion w/ Pysep.main()
 
 
 class Pysep:
@@ -46,7 +52,7 @@ class Pysep:
                  taupmodel="ak135", output_unit="VEL",  user=None,
                  password=None, client_debug=False, log_level="DEBUG",
                  timeout=600, write_files=None, plot_files=None,
-                 llnl_db_path=None, output_dir=None, **kwargs):
+                 llnl_db_path=None, output_dir=None, overwrite=False, **kwargs):
         """
         Define a default set of parameters
 
@@ -236,8 +242,10 @@ class Pysep:
         self.phase_list = phase_list
 
         # This default is a UAF LUNGS system-specific database path
-        self.llnl_db_path = llnl_db_path or \
-                            "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
+        self.llnl_db_path = (
+                llnl_db_path or
+                "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
+        )
 
         # Station curtailing criteria
         self.min_dist = min_dist
@@ -267,13 +275,19 @@ class Pysep:
         self.write_files = write_files or {"all"}
         self.plot_files = plot_files or {"all"}
         self.log_level = log_level
+        self._overwrite = overwrite
 
         # Internally filled attributes
-        self._client = None
+        self.c = None
         self.event_tag = None
         self._azimuths = {}
         self._distances = {}
+        self.st = None
+        self.inv = None
+        self.event = None
 
+        logger.info(f"`log_level` set to {log_level}")
+        logger.setLevel(log_level)
 
     def check(self):
         """
@@ -329,8 +343,15 @@ class Pysep:
                     "`output_unit`, `water_level` "
                 )
 
-        assert(0 <= self.min_az <= 360), f"0 <= `min_az` <= 360"
-        assert(0 <= self.max_az <= 360), f"0 <= `max_az` <= 360"
+        if not (0 <= self.min_az <= 360):
+            _old_val = self.min_az
+            self.min_az = self.min_az % 360
+            logger.warning(f"0 <= `min_az` <= 360; {_old_val} -> {self.min_az}")
+
+        if not (0 <= self.max_az <= 360):
+            _old_val = self.max_az
+            self.max_az = self.max_az % 360
+            logger.warning(f"0 <= `max_az` <= 360; {_old_val} -> {self.max_az}")
 
         if self.rotate is not None:
             acceptable_rotations = {"RTZ", "UVW", "ZNE"}
@@ -338,6 +359,8 @@ class Pysep:
             assert(set(self.rotate).issubset(acceptable_rotations)), (
                 f"`rotate` must be a subset of: {acceptable_rotations}"
             )
+        else:
+            self.rotate = []
 
         acceptable_units = ["DISP", "VEL", "ACC", "DEF"]
         self.output_unit = self.output_unit.upper()
@@ -367,7 +390,6 @@ class Pysep:
             f"{acceptable_plot_files}"
         )
         self.plot_files = set(self.plot_files)
-
 
     def get_client(self):
         """
@@ -438,7 +460,7 @@ class Pysep:
         """
         logger.info(f"getting event information with client {self.client}")
 
-        cat = self._client.get_events(
+        cat = self.c.get_events(
             starttime=self.origin_time - self.seconds_before_event,
             endtime=self.origin_time + self.seconds_after_event,
             debug=self.client_debug
@@ -479,7 +501,7 @@ class Pysep:
         """
         logger.info("getting event information from LLNL database")
 
-        cat = self._client.get_catalog()
+        cat = self.c.get_catalog()
         mintime_str = f"time > {self.origin_time - self.seconds_before_event}"
         maxtime_str = f"time < {self.origin_time + self.seconds_after_event}"
 
@@ -497,6 +519,7 @@ class Pysep:
         TODO add warning for "*" may take long
         :return:
         """
+        logger.info(f"querying client '{self.client.upper()}' for waveforms")
         if self.client.upper() == "PH5":
             st = self._get_waveforms_ph5()
         else:
@@ -507,7 +530,8 @@ class Pysep:
             else:
                 bulk = self._make_bulk_station_list()
             try:
-                st = self._client.get_waveforms_bulk(bulk=bulk)
+                logger.info(f"querying {len(bulk)} stations as bulk request...")
+                st = self.c.get_waveforms_bulk(bulk=bulk)
             except FDSNBadRequestException:
                 logger.warning(f"client {self.client} returned no waveforms, "
                                f"please check your event and station "
@@ -524,7 +548,7 @@ class Pysep:
         :return:
         """
         logger.debug("")
-        st = self._client.get_waveforms(
+        st = self.c.get_waveforms(
             network=self.networks,  location=self.locations,
             station=self.stations, channel=self.channels,
             starttime=self.origin_time - self.seconds_before_ref,
@@ -545,13 +569,13 @@ class Pysep:
                 bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
         return bulk
 
-
     def get_stations(self):
         """
         Download station metadata from IRIS using ObsPy functionality
         :return:
         """
-        inv = self._client.get_stations(
+        logger.info(f"querying {self.client.upper()} for station metadata")
+        inv = self.c.get_stations(
             network=self.networks, location=self.locations,
             station=self.stations, channel=self.channels,
             starttime=self.origin_time - self.seconds_before_ref,
@@ -573,20 +597,23 @@ class Pysep:
     def curtail_stations(self):
         """
         Remove stations based on station distance, azimuth, etc.
+        
+        TODO write a list of curtailed stations and why they were curtailed
         :return:
         """
         inv = self.inv.copy()
-        inv, distances, azimuths = curtail_by_station_distance_azimuth(
+
+        inv = curtail_by_station_distance_azimuth(
             event=self.event, inv=inv, min_dist=self.min_dist,
             max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az
         )
-        return inv, distances, azimuths
+
+        return inv
 
     def preprocess(self):
         """
         Very simple preprocessing to remove response and apply a prefilter
-
-        TODO do we need the pre-filt if we are doing it in resample?
+        scale waveforms (if necessary) and clean up waveform time series
         """
         st_out = self.st.copy()
         if self.detrend:
@@ -595,7 +622,8 @@ class Pysep:
         if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
-            st_out.remove_response(inv=self.inv, water_level=self.water_level,
+            st_out.remove_response(inventory=self.inv,
+                                   water_level=self.water_level,
                                    pre_filt=self.pre_filt,
                                    taper=bool(self.taper_percentage),
                                    taper_fraction=self.taper_percentage,
@@ -603,7 +631,7 @@ class Pysep:
                                    output=self.output_unit
                                    )
         if self.scale_factor:
-            logger.info(f"applying amplitude scale factor {self.scale_factor}")
+            logger.info(f"applying amplitude scale factor: {self.scale_factor}")
             for tr in st_out:
                 tr.data = tr.data * self.scale_factor
                 tr.stats.sac["scale"] = self.scale_factor
@@ -611,72 +639,10 @@ class Pysep:
             # This won't do anything if we don't have any 'LL' network codes
             st_out = scale_llnl_waveform_amplitudes(st_out)
 
-        return st_out
+        # Apply pre-resample lowpass, resample waveforms, make contiguous
+        st_out = merge_and_trim_start_end_times(st_out)
+        st_out = resample_data(st_out, resample_freq=self.resample_freq)
 
-    def _prep_resample(self):
-        """
-        Resample data to desired sampling rate and throw in a decimation filter
-
-        TODO ignoring `resample_cut` which doesn't seem to do anything but
-            is included in old code
-        :return:
-        """
-        logger.info(f"resampling data to sampling rate: {self.resample_freq}")
-        st_out = self.st.copy()
-        for i, tr in enumerate(st_out[:]):
-            target_nyquist = 0.5 * self.resample_freq
-            current_nyquist = 0.5 * tr.stats.sampling_rate
-            if target_nyquist < current_nyquist:
-                try:
-                    # This function affects the trace in-place
-                    zerophase_chebychev_lowpass_filter(
-                        tr=tr, freqmax=target_nyquist
-                    )
-                except Exception as e:
-                    logger.warning(f"exception in lowpass filtering "
-                                   f"{tr.get_id()}, remove")
-                    logger.debug(e)
-                    st_out.remove(tr)
-            else:
-                tr.detrend("linear")
-            tr.taper(max_percentage=0.01, type="hann")
-            # Enforce that this data array is 'c'ontiguous
-            tr.data = np.require(tr.data, requirements=["C"])
-
-        return st_out
-
-    def resample_and_trim_start_end_times(self):
-        """
-        Trim the maximum start and minumum end times for each station to get
-        all waveforms to start and end at the same time
-        :return:
-        """
-        logger.info("trimming start and end times on a per-station basis")
-        st_edit = self._prep_resample()
-        st_out = Stream()
-        # e.g., NN.SSS.LL.CC?  i.e., only getting per-station codes
-        codes = get_codes(st=st_edit, choice="channel", suffix="?")
-
-        for code in codes:
-            # Subset the stream based on the N number of components
-            net, sta, loc, cha = code.split(".")
-            st_edit_select = st_edit.select(network=net, station=sta,
-                                            location=loc, channel=cha)
-
-            max_start = max([tr.stats.starttime for tr in st_edit_select])
-            min_end = min([tr.stats.endtime for tr in st_edit_select])
-            npts = int((min_end - max_start) * self.resample_freq)
-
-            # Lanczos is the preferred ObsPy interpolation method. NOT the same
-            # used by SAC (weighted_average_slopes)
-            # `a` is passed to lanczos_interpolation and defines the width of
-            #   the window in samples on either side. Larger values of `a` are
-            #   more expensive but better for interpolation
-            st_edit_select.interpolate(sampling_rate=self.resample_freq,
-                                       method="lanczos", starttime=max_start,
-                                       npts=npts, a=8)
-
-            st_out += st_edit_select
         return st_out
 
     def rotate_streams(self):
@@ -684,7 +650,7 @@ class Pysep:
         Rotate arbitrary three-component seismograms to desired orientation
 
         TODO Original code had a really complicated method for rotating,
-            is that necesssary? Why is st.rotate() not acceptable
+            is that necesssary? Why is st.rotate() not acceptable?
         """
         st_out = self.st.copy()
 
@@ -694,7 +660,7 @@ class Pysep:
             st_out.rotate(method="->ZNE", inventory=self.inv)
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
-            st_out = rotate_to_UVW(st_out)
+            st_out = rotate_to_uvw(st_out)
         if "RTZ" in self.rotate:
             logger.info("rotating to components RTZ")
             st_out.rotate("NE->RT", inventory=self.inv)
@@ -703,126 +669,223 @@ class Pysep:
 
         return st_out
 
-    def write(self, fmt, fid):
+    def write(self):
         """
         Write out various files specifying information about the collected
         stations and waveforms
-
-        :param fmt:
-        :return:
         """
-        for weights_fid in ["weights_dist", "weights_az", "weights_name"]:
+        for weights_fid in ["weights_dist", "weights_az", "weights_code"]:
             if weights_fid in self.write_files or "all" in self.write_files:
                 order_by = weights_fid.split("_")[1]
                 write_cap_weights_files(
                     st=self.st, event=self.event, order_by=order_by,
-                    path_out=os.path.join(self.output_dir, self.event_tag)
+                    path_out=self.output_dir
                 )
 
         if "config_file" in self.write_files or "all" in self.write_files:
+            logger.info("writing config file yaml file")
             self._write_config_file()
 
         if "station_list" in self.write_files or "all" in self.write_files:
-            self._write_station_list()
+            logger.info("writing stations file")
+            fid = os.path.join(self.output_dir, "stations_list.txt")
+            write_stations_file(self.inv, self.event, fid)
 
         if "inv" in self.write_files or "all" in self.write_files:
-            fid = os.path.join(self.output_dir, f"inv_{self.event_tag}.xml")
+            fid = os.path.join(self.output_dir, f"inv.xml")
+            logger.info("writing inventory as StationXML")
             self.inv.write(fid, format="STATIONXML")
 
         if "event" in self.write_files or "all" in self.write_files:
-            fid = os.path.join(self.output_dir, f"event_{self.event_tag}.xml")
+            fid = os.path.join(self.output_dir, f"event.xml")
+            logger.info("writing event as QuakeML")
             self.event.write(fid, format="QuakeML")
 
         if "stream" in self.write_files or "all" in self.write_files:
-            fid = os.path.join(self.output_dir, f"stream_{self.event_tag}.ms")
-            self.st.write(fid, format="MSEED")
+            fid = os.path.join(self.output_dir, f"stream.ms")
+            logger.info("writing waveform stream in MiniSEED")
+            with warnings.catch_warnings():
+                # ignore the encoding warning that comes from ObsPy
+                warnings.simplefilter("ignore")
+                self.st.write(fid, format="MSEED")
 
         if "sac" in self.write_files or "all" in self.write_files:
+            logger.info("writing each waveform trace in SAC format")
+            _output_dir = os.path.join(self.output_dir, "SAC")
+            if not os.path.exists(_output_dir):
+                os.makedirs(_output_dir)
             for tr in self.st:
                 # e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
                 tag = f"{self.event_tag}.{tr.get_id()}.sac"
-                fid = os.path.join(self.output_dir, tag)
+                fid = os.path.join(_output_dir, tag)
                 tr.write(fid, format="SAC")
 
-
-    def _write_config_file(self):
+    def _write_config_file(self, fid=None):
         """
-        Write a YAML config file based on the parameters
-        :return:
+        Write a YAML config file based on the internal `Pysep` attributes
         """
-        event_tag = self.event_tag
-        if event_tag is None:
-            tag = "pysep"
-        fid = os.path.join(self.output_dir, f"config_{tag}.yaml")
+        if fid is None:
+            fid = os.path.join(self.output_dir, f"config.yaml")
         dict_out = vars(self)
 
         # Drop hidden variables
         dict_out = {key: val for key, val in dict_out.items()
-                                                     if not key.startswith("_")}
+                    if not key.startswith("_")}
+        # Things that don't need to go in config include data and client
+        attr_remove_list = ["st", "event", "inv", "c"]
+        for key in attr_remove_list:
+            del(dict_out[key])
+        # Write times in as strings not UTCDateTime
+        dict_out["origin_time"] = str(dict_out["origin_time"])
+        dict_out["reference_time"] = str(dict_out["reference_time"])
+
         with open(fid, "w") as f:
             yaml.dump(dict_out, f, default_flow_style=False, sort_keys=False)
-
-
-    def _write_station_list(self, fid=None):
-        """
-        Write a list of station codes, distances, etc.
-        """
-        if fid is None:
-            fid = os.path.join(self.event_tag, f"station_list.txt")
-
-        with open(fid, "w") as f:
-            for net in self.inv:
-                for sta in net:
-                    netsta_code = f"{net.code}.{sta.code}"
-                    f.write(f"{sta.code} {net.code} {sta.latitude} "
-                            f"{sta.longitude} {self._distances[netsta_code]}"
-                            f"{self._azimuths[netsta_code]}\n")
 
     def plot(self):
         """
         Plot map and record section if requested
+
+        TODO improve source receiver map plotting
         """
         if "map" in self.plot_files or "all" in self.plot_files:
-            fid = os.path.join(self.output_dir, f"map_{self.event_tag}.png")
+            fid = os.path.join(self.output_dir, f"station_map.png")
             plot_source_receiver_map(self.inv, self.event, fid)
 
         if "record_section" in self.plot_files or "all" in self.plot_files:
-            fid = os.path.join(self.output_dir,
-                               f"record_section_{self.event_tag}.png")
-            plotw_rs(st=self.st, sort_by="distance_r", save=fid)
+            fid = os.path.join(self.output_dir, f"record_section.png")
+            # Default settings to create a general record section
+            plotw_rs(st=self.st, sort_by="distance_r",
+                     scale_by="normalize", overwrite=True, save=fid)
 
     def main(self):
         """
-        Run Pysep seismogram extraction
-        :return:
+        Run PySEP: Seismogram Extraction and Processing. Steps in order are:
+
+            1) Set default parameters or load from config file
+            2) Check parameter validity, exit if unexpected values
+            3) Get data and metadata (QuakeML, StationXML, waveforms)
+            4) Remove unacceptable stations based on user-defined criteria
+            5) Remove unacceptable waveforms based on user-defined criteria
+            6) Generate some new metadata for tagging and output
+            7) Pre-process waveforms and standardize for general use
+            8) Generate output files and figures as end-product
         """
         # Overload default parameters with event input file and check validity
         self.load_config()
         self.check()
-        self._client = self.get_client()
+        self.c = self.get_client()
 
-        # Get waveforms and metadata (QuakeML, StationXML)
+        # Get metadata (QuakeML, StationXML)
         self.event = self.get_event()
+        self.event_tag = format_event_tag(self.event)
+        logger.info(f"event tag is: {self.event_tag}")
+        self.output_dir = os.path.join(self.output_dir, self.event_tag)
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+        elif not self._overwrite:
+            logger.warning(f"output directory '{self.output_dir}' exists and "
+                           f"overwrite flag (-o/--overwrite) not set, exiting")
+            sys.exit(0)
+
         self.inv = self.get_stations()
         self.inv, self._azimuths, self._distances = self.curtail_stations()
+
+        # Get waveforms, format and assess waveform quality
         self.st = self.get_waveforms()
+        self.st = quality_check_waveforms_before_processing(self.st)
+        self.st = append_sac_headers(self.st, self.event, self.inv)
 
-        # Format and assess waveform quality
-        self.st = append_sac_headers(self.st, self.inv, self.event)
-        self.event_tag = self.st[0].stats.sac["kevnm"]  # event time
-        self.output_dir = os.path.join(self.output_dir, self.event_tag)
-        self.st = quality_check_waveforms(st=self.st)
-
-        # Preprocessing and standardization
+        # Waveform preprocessing and standardization
         self.st = self.preprocess()
-        self.st = self.resample_and_trim_start_end_times()
         self.st = self.rotate_streams()
+        self.st = quality_check_waveforms_after_processing(self.st)
 
+        # Generate outputs for user consumption
         self.write()
         self.plot()
 
 
-# if __name__ == "__main__":
-#     # !!! Parse arguments
-#     sep = Pysep(config_file=args.config_file)
-#     sep.main()
+def parse_args():
+    """
+    Define command line arguments. Allow user to set Pysep completely from
+    the command line (although that would be extremely cumbersome, best to
+    use Config files)
+    """
+    parser = argparse.ArgumentParser(
+        description="PYSEP: Python Seismogram Extraction and Processing"
+    )
+    # Exposing some of the more useful parameters as public arguments
+    parser.add_argument("-c", "--config", default=None, type=str, nargs="?",
+                        help="path to a YAML config filie which defines "
+                             "parameters used to control PySEP")
+    parser.add_argument("-p", "--preset", default=None, type=str, nargs="?",
+                        help="Overwrites '-c/--config', use one of the default "
+                             "in-repo config files which have been previously "
+                             "designed. See 'pysep/pysep/configs' for options")
+    parser.add_argument("-e", "--event", default="all", type=str, nargs="?",
+                        help="Required if using '-p/--preset'. Each preset "
+                             "config may define >1 event. This flag determines"
+                             "which event to run. If `event`=='all', will "
+                             "gather ALL events in the preset.")
+    parser.add_argument("-l", "--log_level", default="DEBUG", type=str,
+                        nargs="?", help="verbosity of logging: 'WARNING', "
+                                        "'INFO', 'DEBUG'")
+    parser.add_argument("-o", "--overwrite", default=False, action="store_true",
+                        help="overwrite existing directory which matches "
+                             "the unique event tag")
+
+    # Keyword arguments can be passed directly to the argparser in the same
+    # format as the above kwargs (e.g., --linewidth 2), but they will not have
+    # help messages or type checking
+    parsed, unknown = parser.parse_known_args()
+    for arg in unknown:
+        if arg.startswith(("-", "--")):
+            parser.add_argument(arg.split("=")[0])
+
+    return parser.parse_args()
+
+
+def main():
+    """
+    Main run function which just parses arguments and runs Pysep
+    """
+    args = parse_args()
+    if args.preset is not None:
+        pysep_dir = Path(__file__).parent.absolute()
+        preset_glob = os.path.join(pysep_dir, "configs", "*")
+        presets = [os.path.basename(_) for _ in glob(preset_glob)]
+        assert(args.preset in presets), (
+            f"chosen preset (-p/--preset) {args.preset} not in available: "
+            f"{presets}"
+        )
+
+        event_glob = os.path.join(pysep_dir, "configs", args.preset, "*")
+        event_paths = glob(event_glob)
+        event_names = [os.path.basename(_) for _ in event_paths]
+        # 'event' arg can be an index (int) or a name (str)
+        try:
+            event_idx = int(args.event)
+            config_files = [event_paths[event_idx]]
+        except (ValueError, TypeError):
+            if args.event.upper() == "ALL":
+                config_files = event_paths
+            else:
+                assert(args.event in event_names), (
+                    f"chosen event (-e/--event) must be an integer "
+                    f"index < {len(event_names)} or one of: {event_names}"
+                )
+                config_files = [event_paths[event_names.index(args.event)]]
+    elif args.config is not None:
+        assert(os.path.exists(args.config)), (
+            f"config file (-c/--config) {args.config} does not exist"
+        )
+        config_files = [args.config]
+
+    for config_file in config_files:
+        sep = Pysep(config_file=config_file, **vars(args))
+        sep.main()
+
+
+if __name__ == "__main__":
+    main()

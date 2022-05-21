@@ -7,6 +7,7 @@ from obspy.core.stream import Stream
 from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
 from pysep import logger
+from pysep.utils.fmt import format_event_tag
 
 
 def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
@@ -34,14 +35,14 @@ def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
     TODO re-add Ptime setting with event.picks
     :return:
     """
-    assert(order_by in ["dist", "az", "code"]), f"CAP weights sorting must be" \
-                                                f"by 'dist', 'az', or 'code'"
+    assert(order_by in ["dist", "az", "code"]), (f"CAP weights sorting must be "
+                                                 f"by 'dist', 'az', or 'code'")
 
     # Standard look to the white space in the weights' files
-    weight_fmt = ("{code:>35}{dist:8.2f}{body_z:>3}{body_r:>2}\t"
-                  "{surf_z:>2}{surf_r:>2}{surf_t:>2}\t"
-                  "{p_arr:6.2f}{leg:>2}\t"
-                  "{s_arr:6.2f}{leg:>2}\t"
+    weight_fmt = ("{code:>30}{dist:8.2f}{body_z:>3}{body_r:>2}   "
+                  "{surf_z:>2}{surf_r:>2}{surf_t:>2}   "
+                  "{p_arr:6.2f}{leg:>2}   "
+                  "{s_arr:6.2f}{leg:>2}   "
                   "{corr:>2}\n")
 
     # Define pre-set keys for differently weighted weights files
@@ -56,7 +57,7 @@ def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
     # e.g. NN.SSS.LL.CC?; wildcard component
     codes = list(set([f"{tr.get_id()[:-1]}?" for tr in st]))
     code_list = []
-    p_arrival = 0  # default value
+    p_arrival = 0.  # default value
     for code in codes:
         net, sta, loc, cha = code.split(".")
         for pick in event.picks:
@@ -74,19 +75,20 @@ def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
     code_list = np.array(code_list)
     ordered_codes = code_list[code_list[:, idx].argsort()]
 
+    logger.info("writing CAP weight files")
     for basename, weights in weight_files.items():
         fid = os.path.join(path_out, basename)
-        logger.info(f"writing CAP-style weight file for {len(ordered_codes)} "
-                    f"stations, ordered by '{order_by}' to file: '{fid}'")
-        with open(fid) as f:
+        logger.debug(f"writing CAP weight file for {len(ordered_codes)} "
+                     f"station(s), ordered by '{order_by}': '{fid}'")
+        with open(fid, "w") as f:
             for vals in ordered_codes:
                 code, dist, az, p_arr = vals
                 # note: code drops the wild card that we appended earlier
                 f.write(weight_fmt.format(
-                    code=code[:-1], dist=dist, body_z=weights["body_z"],
+                    code=code[:-1], dist=float(dist), body_z=weights["body_z"],
                     body_r=weights["body_r"], surf_z=weights["surf_z"],
                     surf_r=weights["surf_r"], surf_t=weights["surf_t"],
-                    p_arr=p_arr, leg=0, s_arr=0, corr=0)
+                    p_arr=float(p_arr), leg=0, s_arr=0., corr=0)
                 )
 
 
@@ -105,11 +107,11 @@ def append_sac_headers(st, event, inv):
         have been removed from the stream
     """
     st_out = Stream()
-    for tr in st[:]:
+    for tr in st.copy()[:]:
         try:
             st_out.append(_append_sac_headers_trace(tr, event, inv))
         except Exception as e:
-            logger.warning(f"{tr.get_id()} cannot write SAC headers, removing")
+            logger.warning(f"{tr.get_id()} can't write SAC headers: {e}")
     return st_out
 
 
@@ -122,7 +124,7 @@ def _append_sac_headers_trace(tr, event, inv):
     TODO Add back in information removed from original function
         * Add P arrival time to stats.sac["a"]
         * Add TauP phase arrivals, writing to t5, kt5, user1, kuser1
-        * Add sensor type somewhere, previously stored in KT? (used for pics)
+        * Add sensor type somewhere, previously stored in KT? (used for picks)
 
     :type tr: obspy.core.trace.Trace
     :param tr: Trace to append SAC header to
@@ -154,12 +156,11 @@ def _append_sac_headers_trace(tr, event, inv):
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
         "evdp": event.preferred_origin().depth / 1E3,  # depth in km
-        "mag": event.preferred_magnitude(),
+        "mag": event.preferred_magnitude().mag,
         "stla": sta.latitude,
         "stlo": sta.longitude,
         "stel": sta.elevation / 1E3,  # elevation in km
-        # 'kevnm' renders to, e.g.,: 2012-04-04T142142
-        "kevnm": event.preferred_origin().time.strftime("%Y-%m-%dT%H%M%S"),
+        "kevnm": format_event_tag(event),
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees

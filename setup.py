@@ -17,6 +17,9 @@ setup(name="pysep",
       license='GPL-3.0',
       python_requires=">=3.7",
       packages=find_packages(),
-      install_requires=[
+      install_requires=install_requires,
+      entry_points={"console_scripts": ["pysep=pysep.pysep:main",
+                                        "recsec=pysep.recsec:main"]
+                                        },
       zip_safe=False
       )
