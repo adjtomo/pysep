@@ -1574,7 +1574,7 @@ def parse_args():
         formatter_class=argparse.RawTextHelpFormatter,
                                      )
 
-    parser.add_argument("--pysep_path", default="./", type=str, nargs="?",
+    parser.add_argument("-p", "--pysep_path", default="./", type=str, nargs="?",
                         help="path to Pysep output, which is expected to "
                              "contain trace-wise SAC waveform files which will "
                              "be read")
@@ -1678,18 +1678,20 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def plotw_rs(*args, **kwargs):
     """
     Main call function, replacing `plotw_rs`. Run the record section plotting
     functions in order. Contains the logic for breaking up figure into multiple
     pages.
+
+    .. note::
+        All arguments should be parsed into the argparser, *args and **kwargs
+        are just there to keep the IDE happy
     """
-    args = parse_args()
-    logger.setLevel(args.log_level.upper())
     _start = datetime.now()
     logger.info(f"starting record section plotter")
 
-    rs = RecordSection(**vars(args))
+    rs = RecordSection(*args, **kwargs)
     rs.process_st()
     rs.get_parameters()
     # Simple case where all waveforms will fit on one page
@@ -1707,6 +1709,16 @@ def main():
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
+
+
+def main():
+    """
+    Convenience 'main' function to play nice with entry scripts
+
+    .. rubric::
+        $ recsec -h
+    """
+    plotw_rs(**vars(parse_args()))
 
 
 if __name__ == "__main__":

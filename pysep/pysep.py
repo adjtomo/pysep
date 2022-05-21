@@ -3,6 +3,10 @@ Python Seismogram Extraction and Processing
 
 Download, pre-process, and organize seismic waveforms, event and station
 metadata
+
+TODO
+    * flesh out the template config file
+    * save intermediate files? or some form of checkpointing
 """
 import argparse
 import os
@@ -30,7 +34,7 @@ from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw)
 from pysep.utils.plot import plot_source_receiver_map
-from pysep.recsec import main as plotw_rs  # to avoid confusion w/ Pysep.main()
+from pysep.recsec import plotw_rs
 
 
 class Pysep:
@@ -614,6 +618,9 @@ class Pysep:
         """
         Very simple preprocessing to remove response and apply a prefilter
         scale waveforms (if necessary) and clean up waveform time series
+
+        TODO remove resposne on a per station basis incase one fails, it doesnt
+            cause the whole stream to fail
         """
         st_out = self.st.copy()
         if self.detrend:
@@ -622,14 +629,18 @@ class Pysep:
         if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
-            st_out.remove_response(inventory=self.inv,
-                                   water_level=self.water_level,
-                                   pre_filt=self.pre_filt,
-                                   taper=bool(self.taper_percentage),
-                                   taper_fraction=self.taper_percentage,
-                                   zero_mean=self.demean,
-                                   output=self.output_unit
-                                   )
+            import pdb;pdb.set_trace()
+            try:
+                st_out.remove_response(inventory=self.inv,
+                                       water_level=self.water_level,
+                                       pre_filt=self.pre_filt,
+                                       taper=bool(self.taper_percentage),
+                                       taper_fraction=self.taper_percentage,
+                                       zero_mean=self.demean,
+                                       output=self.output_unit
+                                       )
+            except ValueError as e:
+                logger.warning(f"cannot remove response {e}")
         if self.scale_factor:
             logger.info(f"applying amplitude scale factor: {self.scale_factor}")
             for tr in st_out:
@@ -733,6 +744,8 @@ class Pysep:
                     if not key.startswith("_")}
         # Things that don't need to go in config include data and client
         attr_remove_list = ["st", "event", "inv", "c"]
+        if self.client.upper() != "LLNL":
+            attr_remove_list.append("llnl_db_path")  # not important unless LLNL
         for key in attr_remove_list:
             del(dict_out[key])
         # Write times in as strings not UTCDateTime
@@ -816,14 +829,14 @@ def parse_args():
         description="PYSEP: Python Seismogram Extraction and Processing"
     )
     # Exposing some of the more useful parameters as public arguments
-    parser.add_argument("-c", "--config", default=None, type=str, nargs="?",
+    parser.add_argument("-c", "--config", default="", type=str, nargs="?",
                         help="path to a YAML config filie which defines "
                              "parameters used to control PySEP")
-    parser.add_argument("-p", "--preset", default=None, type=str, nargs="?",
+    parser.add_argument("-p", "--preset", default="", type=str, nargs="?",
                         help="Overwrites '-c/--config', use one of the default "
                              "in-repo config files which have been previously "
                              "designed. See 'pysep/pysep/configs' for options")
-    parser.add_argument("-e", "--event", default="all", type=str, nargs="?",
+    parser.add_argument("-e", "--event", default="", type=str, nargs="?",
                         help="Required if using '-p/--preset'. Each preset "
                              "config may define >1 event. This flag determines"
                              "which event to run. If `event`=='all', will "
@@ -851,10 +864,13 @@ def main():
     Main run function which just parses arguments and runs Pysep
     """
     args = parse_args()
-    if args.preset is not None:
+    # Allow grabbing preset Config files from inside the repo
+    if args.preset:
         pysep_dir = Path(__file__).parent.absolute()
         preset_glob = os.path.join(pysep_dir, "configs", "*")
-        presets = [os.path.basename(_) for _ in glob(preset_glob)]
+        # Ignore the template config files, only look at directories
+        presets = [os.path.basename(_) for _ in glob(preset_glob)
+                   if not _.endswith(".yaml")]
         assert(args.preset in presets), (
             f"chosen preset (-p/--preset) {args.preset} not in available: "
             f"{presets}"
@@ -876,11 +892,16 @@ def main():
                     f"index < {len(event_names)} or one of: {event_names}"
                 )
                 config_files = [event_paths[event_names.index(args.event)]]
-    elif args.config is not None:
+    # If not preset, user should specify the config file
+    elif args.config:
         assert(os.path.exists(args.config)), (
             f"config file (-c/--config) {args.config} does not exist"
         )
         config_files = [args.config]
+    # Finally, allow user to manually set all the input parameters through
+    # the command line using '--' flags. Not recommended
+    else:
+        config_files = [None]
 
     for config_file in config_files:
         sep = Pysep(config_file=config_file, **vars(args))
