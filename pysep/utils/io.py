@@ -53,7 +53,7 @@ def write_stations_file(inv, event, fid="./stations_list.txt"):
                                                    lat2=sta.latitude,
                                                    lon2=sta.longitude
                                                    )
-                dist_km = dist_m * 1E3
+                dist_km = dist_m * 1E-3
                 f.write(f"{sta.code:<6} {net.code:<2} "
                         f"{sta.latitude:9.4f} {sta.longitude:9.4f} "
-                        f"{dist_km:7.3f} {az:6.2f}\n")
+                        f"{dist_km:8.3f} {az:6.2f}\n")

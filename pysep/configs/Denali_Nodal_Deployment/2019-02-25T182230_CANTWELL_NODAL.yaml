@@ -1,24 +1,23 @@
 config_file: null
-client: IRIS
+client: PH5
 client_debug: false
 timeout: 600
 event_selection: default
-origin_time: 2009-04-07T20:12:55.351
+origin_time: '2019-02-25T18:22:30.906Z'
 seconds_before_event: 20
 seconds_after_event: 20
-event_latitude: 61.45420
-event_longitude: -149.7428
-event_depth_km: 33.033
-event_magnitude: 4.6
-networks: 'AK,YV,AV,AT,XZ,PN'
-stations: '*'
-channels: 'BH?'
+event_latitude: 62.8002
+event_longitude: -149.6240
+event_depth_km: 73.7
+event_magnitude: 3.10
+networks: 'ZE'
+stations: '1304'
+channels: '*'
 locations: '*'
-reference_time: null
+reference_time: '2020-04-04T01:53:18.920000Z'
 seconds_before_ref: 100
 seconds_after_ref: 300
 phase_list: null
-llnl_db_path: /store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc
 min_dist: 0
 max_dist: 300.0
 min_az: 0
@@ -30,7 +29,9 @@ max_lon: null
 demean: true
 detrend: true
 taper_percentage: 0
-rotate: null
+rotate:
+- ENZ
+- RTZ
 remove_response: true
 output_unit: VEL
 water_level: 60
@@ -38,10 +39,5 @@ pre_filt: null
 scale_factor: 100.0
 resample_freq: 50
 remove_clipped: false
-output_dir: ./
-write_files: !!set
-  all: null
-plot_files: !!set
-  all: null
 log_level: DEBUG
-event_tag: null
+event_tag: 2020-04-04T015318_SOUTHERN_CALIFORNIA

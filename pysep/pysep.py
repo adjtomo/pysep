@@ -13,6 +13,7 @@ import os
 import sys
 import yaml
 import warnings
+import llnl_db_client
 
 from glob import glob
 from pathlib import Path
@@ -27,8 +28,7 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing)
-from pysep.utils.fetch import fetch_bulk_station_list_taup
-from pysep.utils.fmt import format_event_tag
+from pysep.utils.fmt import format_event_tag, get_codes
 from pysep.utils.io import read_yaml, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
@@ -48,17 +48,21 @@ class Pysep:
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, water_level=60, detrend=True,
                  demean=True, taper_percentage=0, rotate=None, pre_filt=None,
-                 min_dist=0, max_dist=20E3, min_az=0, max_az=360,
-                 min_lat=None, min_lon=None, max_lat=None, max_lon=None,
-                 resample_freq=50, scale_factor=1, phase_list=None,
+                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
+                 minlatitude=None, minlongitude=None, maxlatitude=None,
+                 maxlongitude=None, resample_freq=50, scale_factor=1,
+                 phase_list=None,
                  seconds_before_event=20, seconds_after_event=20,
                  seconds_before_ref=100, seconds_after_ref=300,
                  taupmodel="ak135", output_unit="VEL",  user=None,
                  password=None, client_debug=False, log_level="DEBUG",
-                 timeout=600, write_files=None, plot_files=None,
+                 timeout=600, write_files="all", plot_files="all",
                  llnl_db_path=None, output_dir=None, overwrite=False, **kwargs):
         """
         Define a default set of parameters
+
+        TODO
+            removed resample_TF, was this used?
 
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
@@ -76,18 +80,7 @@ class Pysep:
         :type remove_response: bool
         :param remove_response: Remove instrument response or not
         :type remove_clipped: remove any clipped stations from final output
-        :type filter_type: str
-        :param filter_type: type of ObsPy filter to use: 'bandpass', 'highpass',
-            or 'lowpass'
-        :type f1: float
-        :param f1: minimum frequency in hz
-        :type f2: float
-        :param f2: maximum frequency in hz
-        :type zerophase: bool
-        :param zerophase: apply a two-pass filter to keep time shift
-            information, defaults True
-        :type corners: int
-        :param corners: filter corners to apply
+        :param remove_clipped: Check if waveforms are clipped, remove if so
         :type water_level: float
         :param water_level: water_level to apply during filtering for small vals
         :type detrend: bool
@@ -101,111 +94,67 @@ class Pysep:
             To get the same results as the default taper in SAC,
             use max_percentage=0.05 and leave type as hann.
             Tapering also happens while resampling (see util_write_cap.py)
-        :type rotateRTZ: bool
-        :param rotateRTZ: rotate components to Radial, Transverse, Vertical (Z)
-        :type rotateUVW: bool
-        :param rotateUVW: rotate into a UVW coordinate system
-        :type rotateZNE: bool
-        :param rotateZNE: rotate to East, North, Vertical (Z)
-        :type min_dist: float
-        :param min_dist: get waveforms from stations starting from a minimum
+        :type rotate: list of str
+        :param rotate: choose how to rotate the waveform data. Can include
+            the following options (order insensitive):
+            * ZNE: Rotate from arbitrary components to North, East, Up
+            * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
+            * UVW: Rotate from ZNE to orthogonal UVW orientation
+        :type mindistance: float
+        :param mindistance: get waveforms from stations starting from a minimum
             distance away  from event (km)
-        :type max_dist: float
-        :param max_dist: get waveforms from stations up to a maximum distance
+        :type maxdistance: float
+        :param maxdistance: get waveforms from stations up to a maximum distance
             from event (km)
-        :type min_az: float
-        :param min_az: get waveforms from a station starting at a given
+        :type minazimuth: float
+        :param minazimuth: get waveforms from a station starting at a given
             minimum azimuth (deg) out to a final maximum azimuth (deg) where
             0 degrees points North from the event
-        :type max_az: float
-        :param max_az: get waveforms from a station starting at a given
+        :type maxazimuth: float
+        :param maxazimuth: get waveforms from a station starting at a given
             minimum azimuth (deg) out to a final maximum azimuth (deg) where
             0 degrees points North from the event
-        :type min_lat: float
-        :param min_lat: minimum latitude for bounding box to search for stations
-        :type max_lat: float
-        :param max_lat: maximum latitude for bounding box to search for stations
-        :type min_lon: float
-        :param min_lon: minimum longitude for bounding box to search for stas
-        :type max_lon: float
-        :param max_lon: maximum longitude for bounding box to search for stas
-        :type resample_TF: bool
-        :param resample_TF if False then resample_freq is taken from SAC files
+        :type minlatitude: float
+        :param minlatitude: minimum latitude for bounding box to search for
+            stations and events
+        :type maxlatitude: float
+        :param maxlatitude: maximum latitude for bounding box to search for
+            stations and events
+        :type minlongitude: float
+        :param minlongitude: minimum longitude for bounding box to search for
+            stations and events
+        :type maxlongitude: float
+        :param maxlongitude: maximum longitude for bounding box to search for
+            stations and events
         :type resample_freq: float
         :param resample_freq: frequency to resample data at
         :type scale_factor: float
         :param scale_factor: scale data by a constant, for CAP use 10**2
             (to convert m/s to cm/s)
-        :type overwrite_ddir: bool
-        :param overwrite_ddir: if True, delete any existing data directories
-        :type phase_window: bool
-        :param phase_window: trim waveforms between two phases determined by
-            TauP
-        :type phases: list of str
-        :param phases: phases to write to SAC files or grab data from, e.g.,
-            ['P', 'PP']
-        :type sec_before_after_event: float
-        :param sec_before_after_event: seconds before and after an event
-            origin time to search for the event, allowing some wiggle room if
-            the given origin_time is not exactly the catalog time
-            will search O - T  <= t <= O + T
-        :type tbefore_sec: float
-        :param tbefore_sec: time before origintime to fetch waveform data
-        :type tafter_sec: float
-        :param tafter_sec: time after origintime to fetch waveform data
-        :type use_catalog: bool
-        :param use_catalog: do not gather event catalog from IRIS,
-            but provide your own event information manually
-        :type ifph5: bool
-        :param ifph5: Use PH5 data format from PASSCAL (Denali nodal data
-            specific)
-        :type write_sac_phase: bool
-        :param write_sac_phase: include phase information in output SAC files
+        :type phase_list: list of str
+        :param phase_list: phase names to get ray information from TauP with.
+            Defaults to direct arrivals 'P' and 'S'
+        :type reference_time: str
+        :param reference_time: Waveform origin time. Allows for a static time
+            shift from the event origin time, e.g., if there are timing errors
+            with relation to o time. If not given, defaults to event origin time
+        :type seconds_before_ref: float
+        :param seconds_before_ref: time before origintime to fetch waveform data
+        :type seconds_after_ref: float
+        :param seconds_after_ref: time after origintime to fetch waveform data
         :type taupmodel: str
         :param taupmodel: name of TauP model to use to calculate phase arrivals
-        :type output_cap_weight_file: bool
-        :param output_cap_weight_file: output a 'weights.dat' file formatted for
-            use in the Cut-And-Paste moment tensor inversion code
-        :type output_event_info: bool
-        :param output_event_info: output an event information file
         :type output_unit: str
         :param output_unit: the output format of the waveforms, something like
             'DISP', 'VEL', 'ACC'
-        :type ipre_filt: int
-        :param ipre_filt: apply a prefilter to incoming data
-            0 No pre_filter
-            1 default pre_filter (see getwaveform_iris.py)
-            2 user-defined pre_filter (use this if using bandpass filter)
-            pre-filter for deconvolution
-            https://ds.iris.edu/files/sac-manual/commands/transfer.html
-            Pre-filter will not be applied if remove_response == False
-        :type iplot_response: bool
-        :param iplot_response: plot instrument response
-        :type icreateNull: int
-        :param icreateNull: create Null traces to allow for trace rotation
-            with missing components, useful for missing vertical components
-        :type isave_raw: bool
-        :param isave_raw: save raw waveform data (before preprocessing
-        :type ifFilter: bool
-        :param ifFilter: flag to turn filtering on or off
-        :type ifsave_sacpaz: Save SAC poles-and-zeros information, which is
-            required as input for the MouseTrap module
-        :type ifplot_spectrogram: bool
-        :param ifplot_spectrogram: plot spectrograms
-        :type ifsave_stationxml: bool
-        :param ifsave_stationxml: save StationXML files, for adjoint tomography
-            purposes usually
-        :type ifverbose: bool
-        :param ifverbose: print status during waveform getting
-        :type ifsave_asdf: bool
-        :param ifsave_asdf: save waveforms in ASDF format
-        :type ifmass_downloader: bool
-        :param ifmass_downloader: use ObsPy's mass downloader
         :type user: str
-        :param user: if IRIS embargoes data behind passwords, user ID
+        :param user: User ID if IRIS embargoes data behind passwords
         :type password: str
-        :param password: if IRIS embargoes data behind passwords, password
+        :param password: Password if IRIS embargoes data behind passwords
         """
+        # Internal attribute but define first so that it sits at the top of
+        # written config files
+        self.event_tag = None
         self.config_file = config_file
 
         # ObsPy client-related parameters
@@ -217,7 +166,6 @@ class Pysep:
 
         # Parameters related to event selection
         self.event_selection = event_selection
-
         try:
             self.origin_time = UTCDateTime(origin_time)
         except TypeError:
@@ -225,7 +173,8 @@ class Pysep:
         self.seconds_before_event = seconds_before_event
         self.seconds_after_event = seconds_after_event
 
-        # Optional: if User wants to define an event on their own
+        # Optional: if User wants to define an event on their own.
+        # `event_depth_km` and `event_magnitude` are also used for client query
         self.event_latitude = event_latitude
         self.event_longitude = event_longitude
         self.event_depth_km = event_depth_km
@@ -238,34 +187,32 @@ class Pysep:
         self.locations = locations
 
         # Waveform collection parameters
-        # Reference time allows throwing a static time shift from the origin
-        # time, e.g., if there are timing errors with relation to o time
         self.reference_time = reference_time or self.origin_time
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
         self.phase_list = phase_list
 
-        # This default is a UAF LUNGS system-specific database path
+        # NOTE: This default is a UAF LUNGS system-specific database path
         self.llnl_db_path = (
                 llnl_db_path or
                 "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
         )
 
-        # Station curtailing criteria
-        self.min_dist = min_dist
-        self.max_dist = max_dist
-        self.min_az = min_az
-        self.max_az = max_az
-        self.min_lat = min_lat
-        self.max_lat = max_lat
-        self.min_lon = min_lon
-        self.max_lon = max_lon
+        # Event and station search and curtailing criteria
+        self.mindistance = mindistance
+        self.maxdistance = maxdistance
+        self.minazimuth = minazimuth
+        self.maxazimuth = maxazimuth
+        self.minlatitude = minlatitude
+        self.maxlatitude = maxlatitude
+        self.minlongitude = minlongitude
+        self.maxlongitude = maxlongitude
 
         # Preprocessing flags
         self.demean = bool(demean)
         self.detrend = bool(detrend)
         self.taper_percentage = taper_percentage
-        self.rotate = rotate
+        self.rotate = rotate or ["ZNE", "RTZ"]
         self.remove_response = bool(remove_response)
         self.output_unit = output_unit
         self.water_level = water_level
@@ -276,22 +223,23 @@ class Pysep:
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
-        self.write_files = write_files or {"all"}
-        self.plot_files = plot_files or {"all"}
+        self.write_files = write_files
+        self.plot_files = plot_files
         self.log_level = log_level
         self._overwrite = overwrite
 
         # Internally filled attributes
         self.c = None
-        self.event_tag = None
-        self._azimuths = {}
-        self._distances = {}
         self.st = None
         self.inv = None
         self.event = None
 
-        logger.info(f"`log_level` set to {log_level}")
-        logger.setLevel(log_level)
+        # Allow the user to manipulate the logger during __init__
+        if log_level is not None:
+            logger.debug(f"`log_level` set to {log_level}")
+            logger.setLevel(log_level)
+        else:
+            logger.disabled = True
 
     def check(self):
         """
@@ -302,7 +250,7 @@ class Pysep:
             self.reference_time = self.origin_time
         self.reference_time = UTCDateTime(self.reference_time)
 
-        if self.event_selection == "catalog" or self.client == "LLNL":
+        if self.event_selection == "search" or self.client == "LLNL":
             for par in [self.seconds_before_event, self.seconds_after_event]:
                 assert(par is not None), (
                     "Event selection requires the following parameters: "
@@ -315,12 +263,12 @@ class Pysep:
                     "`event_latitude`, `event_longitude`, `event_depth_km` "
                     "and `event_magnitude`")
         else:
-            raise ValueError("`event_selection` must seconds_before_evente in "
-                             "'catalog' or 'default'")
+            raise ValueError("`event_selection` must be one of the following: "
+                             "'search' or 'default'")
 
         if self.client.upper() == "PH5":
             assert(self._user is not None and self._password is not None), (
-                "`client`=='PH5' requires `user` and `password`"
+                "`client`=='PH5' requires `-U/--user` and `-P/--password`"
             )
 
         if self.client.upper() == "LLNL":
@@ -347,22 +295,28 @@ class Pysep:
                     "`output_unit`, `water_level` "
                 )
 
-        if not (0 <= self.min_az <= 360):
-            _old_val = self.min_az
-            self.min_az = self.min_az % 360
-            logger.warning(f"0 <= `min_az` <= 360; {_old_val} -> {self.min_az}")
+        if not (0 <= self.minazimuth <= 360):
+            _old_val = self.minazimuth
+            self.minazimuth = self.minazimuth % 360
+            logger.warning(f"0 <= `minazimuth` <= 360; "
+                           f"{_old_val} -> {self.minazimuth}")
 
-        if not (0 <= self.max_az <= 360):
-            _old_val = self.max_az
-            self.max_az = self.max_az % 360
-            logger.warning(f"0 <= `max_az` <= 360; {_old_val} -> {self.max_az}")
+        if not (0 <= self.maxazimuth <= 360):
+            _old_val = self.maxazimuth
+            self.maxazimuth = self.maxazimuth % 360
+            logger.warning(f"0 <= `maxazimuth` <= 360; "
+                           f"{_old_val} -> {self.maxazimuth}")
 
         if self.rotate is not None:
-            acceptable_rotations = {"RTZ", "UVW", "ZNE"}
-            self.rotate = [val.upper() for val in self.rotate]
+            acceptable_rotations = {"RTZ", "UVW", "ENZ"}
+            self.rotate = ["".join(sorted(val.upper())) for val in self.rotate]
             assert(set(self.rotate).issubset(acceptable_rotations)), (
                 f"`rotate` must be a subset of: {acceptable_rotations}"
             )
+            if "RTZ" in self.rotate:
+                assert("UVW" not in self.rotate), (
+                    f"rotate can only have one of the following: 'UVW', 'RTZ'"
+                )
         else:
             self.rotate = []
 
@@ -379,40 +333,47 @@ class Pysep:
             )
 
         # Enforce that `write_files` and `plot_files` are sets
-        acceptable_write_files = {"weights", "weights_az",
-                                  "weights_dist", "weights_name",
-                                  "config", "all"}
-        assert(self.write_files.issubset(acceptable_write_files)), (
-            f"`write_files` must be a list of some or all of: "
-            f"{acceptable_write_files}"
-        )
-        self.write_files = set(self.write_files)
+        if self.write_files is None:
+            self.write_files = {}
+        else:
+            try:
+                self.write_files = {self.write_files}
+            # TypeError thrown if we're trying to do {{*}}
+            except TypeError:
+                pass
+            acceptable_write_files = self.write(_return_filenames=True)
+            assert(self.write_files.issubset(acceptable_write_files)), (
+                f"`write_files` must be a list of some or all of: "
+                f"{acceptable_write_files}"
+            )
 
-        acceptable_plot_files = {"map", "record_section", "all"}
-        assert(self.plot_files.issubset(acceptable_plot_files)), (
-            f"`plot_files` must be a list of some or all of: "
-            f"{acceptable_plot_files}"
-        )
-        self.plot_files = set(self.plot_files)
+        if self.plot_files is None:
+            self.plot_files = {}
+        else:
+            try:
+                self.plot_files = {self.plot_files}
+            except TypeError:
+                pass
+            acceptable_plot_files = {"map", "record_section", "all"}
+            assert(self.plot_files.issubset(acceptable_plot_files)), (
+                f"`plot_files` must be a list of some or all of: "
+                f"{acceptable_plot_files}"
+            )
 
     def get_client(self):
         """
-        Options to choose different Clients based on client name. These clients
-        are ONLY for waveform gathering. We assume that
+        Options to choose different Clients based on attribute `client` which
+        will be used to gather waveforms and metadata
+
+        :rtype: obspy.clients.fdsn.client.Client
+        :return: Client used to gather waveforms and metadata
         """
         if self.client is None:
             return None
 
         # Lawrence Livermore Natinoal Lab internal waveform database
         if self.client.upper() == "LLNL":
-            try:
-                import llnl_db_client
-                c = llnl_db_client.LLNLDBClient(self.llnl_db_path)
-            except ImportError as e:
-                logger.warning("Cannot import `llnl_db_client`, please "
-                               "download and install from: "
-                               "https://github.com/krischer/llnl_db_client")
-                raise ImportError from e
+            c = llnl_db_client.LLNLDBClient(self.llnl_db_path)
         # IRIS DMC PH5WS Station Web Service
         elif self.client.upper() == "PH5":
             c = Client(
@@ -429,7 +390,7 @@ class Pysep:
 
         return c
 
-    def load_config(self, config_file=None):
+    def load(self, config_file=None):
         """
         Overwrite default parameters using a YAML config file
         """
@@ -441,34 +402,102 @@ class Pysep:
                         f"'{config_file}'")
             config = read_yaml(config_file)
             for key, val in config.items():
-                setattr(self, key, val)
+                if hasattr(self, key):
+                    old_val = getattr(self, key)
+                    if val != old_val:
+                        logger.debug(f"{key}: {old_val} -> {val}")
+                        setattr(self, key, val)
 
     def get_event(self):
         """
-        Download event metadata from IRIS using ObsPy functionality
+        Exposed API for grabbing event metadata depending on the
+        `event_selection` choice.
+
+        Options for `event_selection` are:
+            'search': query FDSN with event parameters
+            'default': create an event from scratch using user parameters
+                or if 'client'=='LLNL', grab event from internal database
+
+        :rtype: obspy.core.event.Event
+        :return: Matching event given event criteria. If multiple events are
+            returned with the query, returns the first in the catalog
         """
-        if self.event_selection == "catalog":
-            event = self._get_event_catalog()
-        else:
+        if self.event_selection == "search":
+            event = self._query_event_from_client()
+        elif self.event_selection == "default":
             if self.client.upper() == "LLNL":
-                event = self._get_event_llnl()
+                event = self._get_event_from_llnl_catalog()
             else:
-                event = self._get_event_default()
+                event = self._create_event_from_scratch()
+        else:
+            event = None
+
+        # This is how we will access the event info so print out and check
+        lat = event.preferred_origin().latitude
+        lon = event.preferred_origin().longitude
+        depth_km = event.preferred_origin().depth * 1E-3
+        otime = event.preferred_origin().time
+        mag = event.preferred_magnitude().mag
+        logger.info(f"event info summary - origin time: {otime}; "
+                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km:.2f}; "
+                    f"magnitude={mag:.2f}")
 
         return event
 
-    def _get_event_catalog(self):
+    def _query_event_from_client(self, magnitude_buffer=0.1,
+                                 depth_buffer_km=1.):
         """
-        TODO Assert origin time and second before/after event set
-        :return:
+        Retrieve an event catalog using ObsPy Client.get_events().
+        Searches Client for a given origin time, location, depth (optional)
+        and magnitude (optional).
+
+        To use this, set attribute `event_selection`=='search'
+
+        :type magnitude_buffer: float
+        :param magnitude_buffer: if attribute `event_magnitude` is given,
+            will search events for events with magnitude:
+            event_magnitude +/- magnitude_buffer
+        :type depth_buffer_km: float
+        :param depth_buffer_km: if attribute `event_depth_km` is given,
+            will search events for events with depth:
+            event_depth_km +/- depth_buffer_km
+        :rtype: obspy.core.event.Event
+        :return: Matching event given event criteria. If multiple events are
+            returned with the query, returns the first in the catalog
         """
         logger.info(f"getting event information with client {self.client}")
+
+        # Allow user to guess magnitude of the event we're searching for
+        if self.event_magnitude is not None:
+            minmagnitude = self.event_magnitude - magnitude_buffer
+            maxmagnitude = self.event_magnitude + magnitude_buffer
+        else:
+            logger.info("no `magnitude` specified, this will make the search "
+                        "criteria more broad. If the returned catalog is too "
+                        "large, consider setting a guess value for `magnitude`")
+            minmagnitude = None
+            maxmagnitude = None
+
+        # Allow user to guess depth of the event we're searching for
+        if self.event_depth_km is not None:
+            mindepth = self.event_depth_km - depth_buffer_km
+            maxdepth = self.event_depth_km + depth_buffer_km
+        else:
+            logger.info("no `depth` specified, this will make the search "
+                        "criteria more broad. If the returned catalog is too "
+                        "large, consider setting a guess value for `depth`")
+            mindepth = None
+            maxdepth = None
 
         cat = self.c.get_events(
             starttime=self.origin_time - self.seconds_before_event,
             endtime=self.origin_time + self.seconds_after_event,
-            debug=self.client_debug
+            minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
+            minlongitude=self.minlongitude, maxlongitude=self.maxlongitude,
+            minmagnitude=minmagnitude, maxmagnitude=maxmagnitude,
+            mindepth=mindepth, maxdepth=maxdepth, debug=self.client_debug,
         )
+
         logger.info(f"{len(cat)} matching events found for "
                     f"{self.seconds_before_event}s < {self.origin_time} "
                     f"< {self.seconds_after_event}, choosing first")
@@ -477,10 +506,13 @@ class Pysep:
 
         return event
 
-    def _get_event_default(self):
+    def _create_event_from_scratch(self):
         """
         Make a barebones event object based on user-defined parameters which
         will then be used to query for waveforms and StationXML data
+
+        :rtype: obspy.core.event.Event
+        :return: Event object with origin and magnitude information appended
         """
         logger.info("creating event metadata with user parameters")
 
@@ -497,11 +529,15 @@ class Pysep:
 
         return event
 
-    def _get_event_llnl(self):
+    def _get_event_from_llnl_catalog(self):
         """
         Special getter function for Lawrence Livermore National Lab data
         LLNL database has a special client
-        :return:
+
+        TODO Do we need more filtering in the catalog?
+
+        :rtype: obspy.core.event.Event
+        :return: Event information queried from LLNL database
         """
         logger.info("getting event information from LLNL database")
 
@@ -515,68 +551,14 @@ class Pysep:
 
         return event
 
-    def get_waveforms(self):
-        """
-        Download data from IRIS using ObsPy functionality
-
-        TODO add check for no '-' in station for NCEDC stations
-        TODO add warning for "*" may take long
-        :return:
-        """
-        logger.info(f"querying client '{self.client.upper()}' for waveforms")
-        if self.client.upper() == "PH5":
-            st = self._get_waveforms_ph5()
-        else:
-            # Allow setting start and endtimes based on seismic phases
-            if self.phase_list:
-                bulk = fetch_bulk_station_list_taup()
-            # Make the bulk selection list manually
-            else:
-                bulk = self._make_bulk_station_list()
-            try:
-                logger.info(f"querying {len(bulk)} stations as bulk request...")
-                st = self.c.get_waveforms_bulk(bulk=bulk)
-            except FDSNBadRequestException:
-                logger.warning(f"client {self.client} returned no waveforms, "
-                               f"please check your event and station "
-                               f"parameters again and re-submit")
-                sys.exit(-1)
-
-        logger.info(f"{len(st)} waveforms returned after query")
-
-        return st
-
-    def _get_waveforms_ph5(self):
-        """
-        Download waveforms from PH5 dataservice
-        :return:
-        """
-        logger.debug("")
-        st = self.c.get_waveforms(
-            network=self.networks,  location=self.locations,
-            station=self.stations, channel=self.channels,
-            starttime=self.origin_time - self.seconds_before_ref,
-            endtime=self.origin_time - self.seconds_after_ref
-        )
-        return st
-
-    def _make_bulk_station_list(self):
-        """
-        ObsPy Client.get_waveforms_bulk() requires a list input
-        """
-        bulk = []
-        t1 = self.reference_time - self.seconds_before_ref
-        t2 = self.reference_time + self.seconds_after_ref
-        for net in self.inv:
-            for sta in net:
-                # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
-        return bulk
-
     def get_stations(self):
         """
-        Download station metadata from IRIS using ObsPy functionality
-        :return:
+        Exposed API for grabbing station metadata from client.
+        Download station metadata using ObsPy get_stations() with a user-defined
+        bounding box and for user-defined networks, stations etc.
+
+        :rtype: obspy.core.inventory.Inventory
+        :return: Station metadata queried from Client
         """
         logger.info(f"querying {self.client.upper()} for station metadata")
         inv = self.c.get_stations(
@@ -584,8 +566,8 @@ class Pysep:
             station=self.stations, channel=self.channels,
             starttime=self.origin_time - self.seconds_before_ref,
             endtime=self.origin_time + self.seconds_after_ref,
-            minlatitude=self.min_lat, maxlatitude=self.max_lat,
-            minlongitude=self.min_lon, maxlongitude=self.max_lon,
+            minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
+            minlongitude=self.minlongitude, maxlongitude=self.maxlongitude,
             level="response"
         )
 
@@ -598,18 +580,86 @@ class Pysep:
 
         return inv
 
+    def get_waveforms(self):
+        """
+        Exposed API for grabbing waveforms from client. Internal logic
+        determines how waveforms are queried, but mainly it is controlled
+        by the internal `inv` attribute detailing station information,
+        and reference times for start and end times.
+
+        :rtype: obspy.core.stream.Stream
+        :return: Stream of channel-separated waveforms
+        """
+        logger.info(f"querying client '{self.client.upper()}' for waveforms")
+
+        minimumlength = self.seconds_before_ref + self.seconds_after_ref
+        logger.debug(f"asserting that the minimum waveform length should be"
+                     f"{minimumlength:.2f}")
+
+        # PH5 should not be queried in bulk as it is a small request
+        if self.client.upper() == "PH5":
+            st = self.c.get_waveforms(
+                network=self.networks, location=self.locations,
+                station=self.stations, channel=self.channels,
+                starttime=self.origin_time - self.seconds_before_ref,
+                endtime=self.origin_time - self.seconds_after_ref,
+                minimumlength=minimumlength
+            )
+        else:
+            st = self._bulk_query_waveforms_from_client()
+
+        logger.info(f"{len(st)} waveforms returned after query")
+
+        return st
+
+    def _bulk_query_waveforms_from_client(self):
+        """
+        Make a bulk request query to the Client based on the internal `inv`
+        attribute defining the available station metadata.
+
+        TODO removed 'make_bulk_list_from_stalist' which used TauP to gather
+            data between P and S arrivals. Do we need this?
+
+        :rtype: obspy.core.stream.Stream
+        :return: Stream of channel-separated waveforms
+        """
+        bulk = []
+        t1 = self.reference_time - self.seconds_before_ref
+        t2 = self.reference_time + self.seconds_after_ref
+        for net in self.inv:
+            for sta in net:
+                # net sta loc cha t1 t2
+                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
+
+        try:
+            logger.info(f"querying {len(bulk)} lines in bulk client request...")
+            st = self.c.get_waveforms_bulk(bulk=bulk, minimumlength=t2-t1)
+        except FDSNBadRequestException:
+            logger.warning(f"client {self.client} returned no waveforms, "
+                           f"please check your event and station "
+                           f"parameters again and re-submit")
+            sys.exit(-1)
+
+        return st
+
     def curtail_stations(self):
         """
-        Remove stations based on station distance, azimuth, etc.
-        
-        TODO write a list of curtailed stations and why they were curtailed
-        :return:
+        Remove stations from `inv` based on station distance, azimuth, etc.
+
+        .. note::
+            One function function currently, but we can expand curtailing here
+            if need by
+
+        :rtype: obspy.core.inventory.Inventory
+        :return: station metadata that has been curtailed based on acceptable
+            paramaters
         """
         inv = self.inv.copy()
 
         inv = curtail_by_station_distance_azimuth(
-            event=self.event, inv=inv, min_dist=self.min_dist,
-            max_dist=self.max_dist, min_az=self.min_az, max_az=self.max_az
+            event=self.event, inv=inv, mindistance=self.mindistance,
+            maxdistance=self.maxdistance, minazimuth=self.minazimuth,
+            maxazimuth=self.maxazimuth
         )
 
         return inv
@@ -619,8 +669,9 @@ class Pysep:
         Very simple preprocessing to remove response and apply a prefilter
         scale waveforms (if necessary) and clean up waveform time series
 
-        TODO remove resposne on a per station basis incase one fails, it doesnt
-            cause the whole stream to fail
+        :rtype: obspy.core.stream.Stream
+        :return: a preprocessed stream with response removed, amplitude scaled
+            (optional), and time series standardized
         """
         st_out = self.st.copy()
         if self.detrend:
@@ -629,18 +680,24 @@ class Pysep:
         if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
-            import pdb;pdb.set_trace()
-            try:
-                st_out.remove_response(inventory=self.inv,
-                                       water_level=self.water_level,
-                                       pre_filt=self.pre_filt,
-                                       taper=bool(self.taper_percentage),
-                                       taper_fraction=self.taper_percentage,
-                                       zero_mean=self.demean,
-                                       output=self.output_unit
-                                       )
-            except ValueError as e:
-                logger.warning(f"cannot remove response {e}")
+            for code in get_codes(st=self.st, choice="channel", suffix="?",
+                                  up_to=True):
+                net, sta, loc, cha = code.split(".")
+                st_sta = st_out.select(network=net, station=sta, location=loc,
+                                       channel=cha)
+                try:
+                    st_sta.remove_response(inventory=self.inv,
+                                           water_level=self.water_level,
+                                           pre_filt=self.pre_filt,
+                                           taper=bool(self.taper_percentage),
+                                           taper_fraction=self.taper_percentage,
+                                           zero_mean=self.demean,
+                                           output=self.output_unit)
+                except ValueError as e:
+                    for tr in st_sta:
+                        logger.warning(f"can't remove response {code}: {e}"
+                                       f"removing trace from stream")
+                        st_out.remove(tr)
         if self.scale_factor:
             logger.info(f"applying amplitude scale factor: {self.scale_factor}")
             for tr in st_out:
@@ -661,7 +718,11 @@ class Pysep:
         Rotate arbitrary three-component seismograms to desired orientation
 
         TODO Original code had a really complicated method for rotating,
-            is that necesssary? Why is st.rotate() not acceptable?
+            was that necesssary? Why was st.rotate() not acceptable?
+
+        :rtype: obspy.core.stream.Stream
+        :return: a stream that has been rotated to desired coordinate system
+            with SAC headers that have been adjusted for the rotation
         """
         st_out = self.st.copy()
 
@@ -672,7 +733,7 @@ class Pysep:
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
             st_out = rotate_to_uvw(st_out)
-        if "RTZ" in self.rotate:
+        elif "RTZ" in self.rotate:
             logger.info("rotating to components RTZ")
             st_out.rotate("NE->RT", inventory=self.inv)
 
@@ -680,47 +741,95 @@ class Pysep:
 
         return st_out
 
-    def write(self):
+    def write(self, write_files=None, _return_filenames=False):
         """
         Write out various files specifying information about the collected
-        stations and waveforms
+        stations and waveforms.
+
+        Options are:
+            * weights_dist: write out 'weights.dat' file sorted by distance
+            * weights_az: write out 'weights.dat' file sorted by azimuth
+            * weights_code: write out 'weights.dat' file sorted by sta code
+            * station_list: write a text file with station information
+            * inv: write the inventory as a StationXML file
+            * event: write the event as a QuakeML file
+            * stream: write the stream as a single MSEED file
+            * sac: write the stream as individual (per-channel) SAC files with
+                the appropriate SAC header
+            * config_file: write the current configuration as a YAML file
+            * all: ignores all other options, writes everything listed above
+
+        :type write_files: list of str
+        :param write_files: list of files that should be written out, must
+            match the acceptable list defined in the function or here in the
+            docstring
+        :type _return_filenames: bool
+        :param _return_filenames: internal flag to not actually write anything
+            but just return a list of acceptable filenames. This keeps all the
+            file naming definitions in one function. This is only required by
+            the check() function.
         """
+        # This is defined here so that all these filenames are in one place,
+        # but really this set is just required by check(), not by write()
+        _acceptable_files = {"weights_az", "weights_dist", "weights_code",
+                             "station_list", "inv", "event", "stream",
+                             "config_file", "sac", "all"}
+        if _return_filenames:
+            return _acceptable_files
+
+        # Allow the user to call write() with their own set of filenames if this
+        # wasn't defined by the config or this is being scripted and they only
+        # want certain files out at intermediate steps
+        if write_files is None:
+            write_files = self.write_files
+        else:
+            write_files = set(write_files)
+            assert(write_files.issubset(_acceptable_files)), (
+                f"`write_files` must be a list of some or all of: "
+                f"{_acceptable_files}"
+            )
+
         for weights_fid in ["weights_dist", "weights_az", "weights_code"]:
-            if weights_fid in self.write_files or "all" in self.write_files:
+            if weights_fid in write_files or "all" in write_files:
                 order_by = weights_fid.split("_")[1]
                 write_cap_weights_files(
                     st=self.st, event=self.event, order_by=order_by,
                     path_out=self.output_dir
                 )
 
-        if "config_file" in self.write_files or "all" in self.write_files:
-            logger.info("writing config file yaml file")
-            self._write_config_file()
+        if "config_file" in write_files or "all" in write_files:
+            logger.info("writing config YAML file")
+            fid = os.path.join(self.output_dir, f"pysep_config.yaml")
+            self.write_config(fid=fid)
 
-        if "station_list" in self.write_files or "all" in self.write_files:
-            logger.info("writing stations file")
+        if "station_list" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, "stations_list.txt")
+            logger.info("writing stations file")
+            logger.debug(fid)
             write_stations_file(self.inv, self.event, fid)
 
-        if "inv" in self.write_files or "all" in self.write_files:
+        if "inv" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, f"inv.xml")
             logger.info("writing inventory as StationXML")
+            logger.debug(fid)
             self.inv.write(fid, format="STATIONXML")
 
-        if "event" in self.write_files or "all" in self.write_files:
+        if "event" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, f"event.xml")
             logger.info("writing event as QuakeML")
+            logger.debug(fid)
             self.event.write(fid, format="QuakeML")
 
-        if "stream" in self.write_files or "all" in self.write_files:
+        if "stream" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, f"stream.ms")
             logger.info("writing waveform stream in MiniSEED")
+            logger.debug(fid)
             with warnings.catch_warnings():
                 # ignore the encoding warning that comes from ObsPy
                 warnings.simplefilter("ignore")
                 self.st.write(fid, format="MSEED")
 
-        if "sac" in self.write_files or "all" in self.write_files:
+        if "sac" in write_files or "all" in write_files:
             logger.info("writing each waveform trace in SAC format")
             _output_dir = os.path.join(self.output_dir, "SAC")
             if not os.path.exists(_output_dir):
@@ -729,28 +838,40 @@ class Pysep:
                 # e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
                 tag = f"{self.event_tag}.{tr.get_id()}.sac"
                 fid = os.path.join(_output_dir, tag)
+                logger.debug(os.path.basename(fid))
                 tr.write(fid, format="SAC")
 
-    def _write_config_file(self, fid=None):
+    def write_config(self, fid=None):
         """
-        Write a YAML config file based on the internal `Pysep` attributes
+        Write a YAML config file based on the internal `Pysep` attributes.
+        Remove a few internal attributes (those containing data) before writing
+        and also change types on a few to keep the output file simple but
+        also re-usable for repeat queries.
+
+        :type fid: str
+        :param fid: name of the file to write. defaults to config.yaml
         """
         if fid is None:
-            fid = os.path.join(self.output_dir, f"config.yaml")
+            fid = f"pysep_config.yaml"
+        logger.debug(fid)
         dict_out = vars(self)
 
         # Drop hidden variables
         dict_out = {key: val for key, val in dict_out.items()
                     if not key.startswith("_")}
-        # Things that don't need to go in config include data and client
-        attr_remove_list = ["st", "event", "inv", "c"]
+        # Internal attributes that don't need to go into the written config
+        attr_remove_list = ["st", "event", "inv", "c", "write_files",
+                            "plot_files", "output_dir"]
+
         if self.client.upper() != "LLNL":
             attr_remove_list.append("llnl_db_path")  # not important unless LLNL
         for key in attr_remove_list:
             del(dict_out[key])
         # Write times in as strings not UTCDateTime
-        dict_out["origin_time"] = str(dict_out["origin_time"])
-        dict_out["reference_time"] = str(dict_out["reference_time"])
+        for key in ["origin_time", "reference_time"]:
+            val = dict_out[key]
+            if isinstance(val, UTCDateTime):
+                dict_out[key] = str(val)
 
         with open(fid, "w") as f:
             yaml.dump(dict_out, f, default_flow_style=False, sort_keys=False)
@@ -771,7 +892,7 @@ class Pysep:
             plotw_rs(st=self.st, sort_by="distance_r",
                      scale_by="normalize", overwrite=True, save=fid)
 
-    def main(self):
+    def run(self):
         """
         Run PySEP: Seismogram Extraction and Processing. Steps in order are:
 
@@ -785,7 +906,7 @@ class Pysep:
             8) Generate output files and figures as end-product
         """
         # Overload default parameters with event input file and check validity
-        self.load_config()
+        self.load()
         self.check()
         self.c = self.get_client()
 
@@ -802,7 +923,7 @@ class Pysep:
             sys.exit(0)
 
         self.inv = self.get_stations()
-        self.inv, self._azimuths, self._distances = self.curtail_stations()
+        self.inv = self.curtail_stations()
 
         # Get waveforms, format and assess waveform quality
         self.st = self.get_waveforms()
@@ -826,11 +947,11 @@ def parse_args():
     use Config files)
     """
     parser = argparse.ArgumentParser(
-        description="PYSEP: Python Seismogram Extraction and Processing"
+        description="PYSEP: Python Seismogram Extraction and Processing",
     )
     # Exposing some of the more useful parameters as public arguments
     parser.add_argument("-c", "--config", default="", type=str, nargs="?",
-                        help="path to a YAML config filie which defines "
+                        help="path to a YAML config file which defines "
                              "parameters used to control PySEP")
     parser.add_argument("-p", "--preset", default="", type=str, nargs="?",
                         help="Overwrites '-c/--config', use one of the default "
@@ -841,7 +962,13 @@ def parse_args():
                              "config may define >1 event. This flag determines"
                              "which event to run. If `event`=='all', will "
                              "gather ALL events in the preset.")
-    parser.add_argument("-l", "--log_level", default="DEBUG", type=str,
+    parser.add_argument("-U", "--user", default=None, type=str, nargs="?",
+                        help="Username if required to access IRIS webservices")
+    parser.add_argument("-P", "--password", default=None, type=str, nargs="?",
+                        help="Password if required to access IRIS webservices")
+    parser.add_argument("-l", "--list", default=False, action="store_true",
+                        help="list out avaialable `preset` config options")
+    parser.add_argument("-L", "--log_level", default="INFO", type=str,
                         nargs="?", help="verbosity of logging: 'WARNING', "
                                         "'INFO', 'DEBUG'")
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
@@ -859,26 +986,79 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_data(config_file=None, write_files=None, plot_files=None,
+             *args, **kwargs):
+    """
+    Interactive/scripting function to run PySep and return quality controlled,
+    SAC-headed stream object which can then be used for other processes.
+
+    .. note::
+        By default turns file writing and plotting OFF so that this function
+        acts solely as a data collection/processing call.
+
+    .. note::
+        args and kwargs are passed directly to Pysep.__init__() so you can
+        define all your parameters in this call, or through a config file
+
+    .. rubric::
+        >>> from pysep import get_data
+        >>> st = get_data(config_file='config.yaml')
+
+    :type config_file: str
+    :param config_file: path to YAML config file which will overload any default
+        configs
+    :type write_files: list or None
+    :param write_files: list of files to write, acceptable options defined in
+        write(). Defaults to None, no files will be written
+    :type plot_files: list or None
+    :param plot_files: list of files to plot, acceptable options defined in
+        plot(). Defaults to None, no figures will be made
+    """
+    # Set logger to quietest level to mimic a standard function call. Can be
+    # overwritten by the config file
+    logger.setLevel("CRITICAL")
+    sep = Pysep(config_file=config_file, write_files=write_files,
+                plot_files=plot_files, *args, **kwargs)
+    sep.run()
+    return sep.st
+
+
 def main():
     """
-    Main run function which just parses arguments and runs Pysep
+    Command-line-tool function which parses command line arguments and runs
+    data gathering and processing. This is accessed through the command line:
+
+    .. rubric::
+        $ pysep -c config.yaml
     """
     args = parse_args()
     # Allow grabbing preset Config files from inside the repo
-    if args.preset:
+    if args.preset or args.list:
         pysep_dir = Path(__file__).parent.absolute()
+        # If '-l/--list', just print out available config objects
+        if args.list:
+            filelist = glob(os.path.join(pysep_dir, "configs", "*", "*"))
+            filelist = sorted([fid.split("/")[-2:] for fid in filelist])
+            print(f"-p/--preset -e/--event")
+            for i, fid in enumerate(filelist):
+                preset, event = fid
+                print(f"-p {preset} -e {event}")
+            return
+
         preset_glob = os.path.join(pysep_dir, "configs", "*")
         # Ignore the template config files, only look at directories
         presets = [os.path.basename(_) for _ in glob(preset_glob)
                    if not _.endswith(".yaml")]
-        assert(args.preset in presets), (
-            f"chosen preset (-p/--preset) {args.preset} not in available: "
-            f"{presets}"
-        )
+        if not args.list:
+            assert(args.preset in presets), (
+                f"chosen preset (-p/--preset) {args.preset} not in available: "
+                f"{presets}"
+            )
 
         event_glob = os.path.join(pysep_dir, "configs", args.preset, "*")
-        event_paths = glob(event_glob)
+        event_paths = sorted(glob(event_glob))
         event_names = [os.path.basename(_) for _ in event_paths]
+
         # 'event' arg can be an index (int) or a name (str)
         try:
             event_idx = int(args.event)
@@ -905,7 +1085,7 @@ def main():
 
     for config_file in config_files:
         sep = Pysep(config_file=config_file, **vars(args))
-        sep.main()
+        sep.run()
 
 
 if __name__ == "__main__":

@@ -18,8 +18,8 @@ def test_pysep(config_file):
     """
     Test Pysep instance based on a Config file, gather event and StationXML
     """
-    pysep = Pysep(config_file=config_file)
-    pysep.load_config()
+    pysep = Pysep(config_file=config_file, log_level=None)
+    pysep.load()
     pysep.check()
     pysep.c = pysep.get_client()
     pysep.event = pysep.get_event()
@@ -60,7 +60,7 @@ def test_get_waveform(test_pysep):
     :return:
     """
     st = test_pysep.get_waveforms()
-    assert(len(st) == 11)
+    assert(len(st) == 7)
     assert(st[-1].get_id() == "YV.ALPI..BHZ")
 
 
@@ -68,7 +68,7 @@ def test_curtail_stations(test_pysep):
     """
     Exclude a station based on maximum distance getting exceeded
     """
-    inv, azimuths, distances = test_pysep.curtail_stations()
+    inv = test_pysep.curtail_stations()
 
     nsta_pre_curtail = len(test_pysep.inv.get_contents()["channels"])
     nsta_post_curtail = len(inv.get_contents()["channels"])

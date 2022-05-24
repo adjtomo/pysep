@@ -39,7 +39,7 @@ def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
                                                  f"by 'dist', 'az', or 'code'")
 
     # Standard look to the white space in the weights' files
-    weight_fmt = ("{code:>30}{dist:8.2f}{body_z:>3}{body_r:>2}   "
+    weight_fmt = ("{code:>32}{dist:8.2f} {body_z:>3}{body_r:>2}   "
                   "{surf_z:>2}{surf_r:>2}{surf_t:>2}   "
                   "{p_arr:6.2f}{leg:>2}   "
                   "{s_arr:6.2f}{leg:>2}   "

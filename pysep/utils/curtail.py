@@ -9,8 +9,9 @@ from pysep import logger
 from pysep.utils.fmt import get_codes
 
 
-def curtail_by_station_distance_azimuth(event, inv, min_dist=0, max_dist=1E6,
-                                        min_az=0, max_az=360):
+def curtail_by_station_distance_azimuth(event, inv, mindistance=0,
+                                        maxdistance=1E6, minazimuth=0,
+                                        maxazimuth=360):
     """
     Remove stations that are greater than a certain distance from event
     Replaces the old `sta_limit_distance` function
@@ -31,16 +32,16 @@ def curtail_by_station_distance_azimuth(event, inv, min_dist=0, max_dist=1E6,
                                                lon2=sta.longitude
                                                )
             dist_km = dist_m / 1E3
-            if not (min_dist <= dist_km <= max_dist):
+            if not (mindistance <= dist_km <= maxdistance):
                 remove_for_distance.append(netsta_code)
-            elif not (min_az <= az <= max_az):
+            elif not (minazimuth <= az <= maxazimuth):
                 remove_for_azimuth.append(netsta_code)
             else:
                 distances[netsta_code] = dist_km
                 azimuths[netsta_code] = az
 
     logger.info(f"{len(remove_for_distance)} traces outside distance "
-                f"bounds [{min_dist}, {max_dist}]km"
+                f"bounds [{mindistance}, {maxdistance}]km"
                 )
     if remove_for_distance:
         for remove in remove_for_distance:
@@ -49,7 +50,7 @@ def curtail_by_station_distance_azimuth(event, inv, min_dist=0, max_dist=1E6,
         logger.debug(f"stations removed:\n{remove_for_distance}")
 
     logger.info(f"{len(remove_for_azimuth)} traces outside azimuth bounds "
-                f"[{min_az}, {max_az}]deg"
+                f"[{minazimuth}, {maxazimuth}]deg"
                 )
     if remove_for_azimuth:
         for remove in remove_for_azimuth:
@@ -57,7 +58,7 @@ def curtail_by_station_distance_azimuth(event, inv, min_dist=0, max_dist=1E6,
             inv = inv.remove(network=net, station=sta)
         logger.debug(f"stations removed: {remove_for_azimuth}")
 
-    return inv, distances, azimuths
+    return inv
 
 
 def quality_check_waveforms_before_processing(st):
