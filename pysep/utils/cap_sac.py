@@ -1,5 +1,8 @@
 """
 Utils to honor file formats from SAC and CAP
+
+For SAC header names and descriptions, see:
+    http://www.adc1.iris.edu/files/sac-manual/manual/file_format.html
 """
 import os
 import numpy as np
@@ -143,7 +146,6 @@ def _append_sac_headers_trace(tr, event, inv):
     net = inv_unique[0]
     sta = net[0]
     cha = sta[0]
-
     dist_m, az, baz = gps2dist_azimuth(
         lat1=event.preferred_origin().latitude,
         lon1=event.preferred_origin().longitude,
@@ -151,6 +153,8 @@ def _append_sac_headers_trace(tr, event, inv):
     )
     dist_km = dist_m * 1E-3  # units: m -> km
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
+
+    # Get some information from TauP regarding incident angle, takeoff angle
 
     sac_header = {
         "evla": event.preferred_origin().latitude,
@@ -165,7 +169,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "az": az,  # degrees
         "baz": baz,  # degrees
         "gcarc": dist_deg,  # degrees
-        "cmpinc": cha.dip,  # channel dip/inclination in degrees
+        "cmpinc": cha.dip,  # channel dip/inclination in degrees  TODO this is incident angle
         "cmpaz": cha.azimuth,  # channel azimuth in degrees
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
@@ -187,7 +191,6 @@ def format_sac_headers_post_rotation(st):
     :param st:
     :return:
     """
-    pass
     azimuth_dict = {"E": 90., "N": 0., "Z": 0.}
     inclin_dict = {"E": 0., "N": 0., "Z": -90.}
 

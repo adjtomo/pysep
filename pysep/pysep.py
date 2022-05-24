@@ -987,7 +987,7 @@ def parse_args():
 
 
 def get_data(config_file=None, write_files=None, plot_files=None,
-             *args, **kwargs):
+             log_level=None, *args, **kwargs):
     """
     Interactive/scripting function to run PySep and return quality controlled,
     SAC-headed stream object which can then be used for other processes.
@@ -1013,14 +1013,18 @@ def get_data(config_file=None, write_files=None, plot_files=None,
     :type plot_files: list or None
     :param plot_files: list of files to plot, acceptable options defined in
         plot(). Defaults to None, no figures will be made
+    :type log_level: str or None
+    :param log_level: verbosity of logger. Defaults to no logging to mimic
+        a standard function call rather than a standalone package
+    :rtype: tuple of (obspy.core.event.Event, obspy.core.inventory.Inventory,
+                      obspy.core.stream.Stream)
+    :return: returns obspy objects defining data and metadata that have been
+        collected by PySEP
     """
-    # Set logger to quietest level to mimic a standard function call. Can be
-    # overwritten by the config file
-    logger.setLevel("CRITICAL")
     sep = Pysep(config_file=config_file, write_files=write_files,
-                plot_files=plot_files, *args, **kwargs)
+                plot_files=plot_files, log_level=log_level, *args, **kwargs)
     sep.run()
-    return sep.st
+    return sep.event, sep.inv, sep.st
 
 
 def main():
