@@ -62,7 +62,8 @@ class Pysep:
         Define a default set of parameters
 
         TODO
-            removed resample_TF, was this used?
+            * removed resample_TF, was this used?
+            * load config FIRST and then set defaults, make all defaults None?
 
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
@@ -892,7 +893,26 @@ class Pysep:
             plotw_rs(st=self.st, sort_by="distance_r",
                      scale_by="normalize", overwrite=True, save=fid)
 
-    def run(self):
+    def _event_tag_and_output_dir(self):
+        """
+        Convenience function to establish and naming schema for files and
+        directories. Also takes care of making empty directories.
+
+        :rtype: tuple of str
+        :return: (unique event tag, path to output directory)
+        """
+        event_tag = format_event_tag(self.event)
+        logger.info(f"event tag is: {self.event_tag}")
+        full_output_dir = os.path.join(self.output_dir, event_tag)
+        if not os.path.exists(full_output_dir):
+            os.makedirs(full_output_dir)
+        elif not self._overwrite:
+            logger.warning(f"output directory '{full_output_dir}' exists and "
+                           f"overwrite flag (-o/--overwrite) not set, exiting")
+            sys.exit(0)
+        return event_tag, full_output_dir
+
+    def run(self, event=None, inv=None, st=None):
         """
         Run PySEP: Seismogram Extraction and Processing. Steps in order are:
 
@@ -904,6 +924,16 @@ class Pysep:
             6) Generate some new metadata for tagging and output
             7) Pre-process waveforms and standardize for general use
             8) Generate output files and figures as end-product
+
+        :type event: obspy.core.event.Event
+        :param event: optional user-provided event object which will force a
+            skip over QuakeML/event searching
+        :type inv: obspy.core.inventory.Inventory
+        :param inv: optional user-provided inventory object which will force a
+            skip over StationXML/inventory searching
+        :type st: obspy.core.stream.Stream
+        :param st: optional user-provided strean object which will force a
+            skip over waveform searching
         """
         # Overload default parameters with event input file and check validity
         self.load()
@@ -911,22 +941,23 @@ class Pysep:
         self.c = self.get_client()
 
         # Get metadata (QuakeML, StationXML)
-        self.event = self.get_event()
-        self.event_tag = format_event_tag(self.event)
-        logger.info(f"event tag is: {self.event_tag}")
-        self.output_dir = os.path.join(self.output_dir, self.event_tag)
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-        elif not self._overwrite:
-            logger.warning(f"output directory '{self.output_dir}' exists and "
-                           f"overwrite flag (-o/--overwrite) not set, exiting")
-            sys.exit(0)
+        if event is None:
+            self.event = self.get_event()
+        else:
+            self.event = event
+        self.event_tag, self.output_dir = self._event_tag_and_output_dir()
 
-        self.inv = self.get_stations()
+        if inv is None:
+            self.inv = self.get_stations()
+        else:
+            self.inv = inv
         self.inv = self.curtail_stations()
 
         # Get waveforms, format and assess waveform quality
-        self.st = self.get_waveforms()
+        if st is None:
+            self.st = self.get_waveforms()
+        else:
+            self.st = st
         self.st = quality_check_waveforms_before_processing(self.st)
         self.st = append_sac_headers(self.st, self.event, self.inv)
 
@@ -986,8 +1017,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_data(config_file=None, write_files=None, plot_files=None,
-             log_level=None, *args, **kwargs):
+def get_data(config_file=None, event=None, inv=None, st=None, write_files=None,
+             plot_files=None, log_level=None, *args, **kwargs):
     """
     Interactive/scripting function to run PySep and return quality controlled,
     SAC-headed stream object which can then be used for other processes.
@@ -1007,6 +1038,15 @@ def get_data(config_file=None, write_files=None, plot_files=None,
     :type config_file: str
     :param config_file: path to YAML config file which will overload any default
         configs
+    :type event: obspy.core.event.Event
+    :param event: optional user-provided event object which will force a
+        skip over QuakeML/event searching
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: optional user-provided inventory object which will force a
+        skip over StationXML/inventory searching
+    :type st: obspy.core.stream.Stream
+    :param st: optional user-provided strean object which will force a
+        skip over waveform searching
     :type write_files: list or None
     :param write_files: list of files to write, acceptable options defined in
         write(). Defaults to None, no files will be written
@@ -1023,7 +1063,7 @@ def get_data(config_file=None, write_files=None, plot_files=None,
     """
     sep = Pysep(config_file=config_file, write_files=write_files,
                 plot_files=plot_files, log_level=log_level, *args, **kwargs)
-    sep.run()
+    sep.run(event=event, inv=inv, st=st)
     return sep.event, sep.inv, sep.st
 
 
