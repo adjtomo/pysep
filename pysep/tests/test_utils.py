@@ -4,15 +4,17 @@ checking waveforms and formatting data with metadata
 
 TODO add function testing clipped station, need to find example data
 """
+import os
 import pytest
 from obspy import read, read_events, read_inventory
 
 from pysep.utils.cap_sac import (append_sac_headers,
                                  format_sac_header_w_taup_traveltimes)
-from pysep.utils.fmt import format_event_tag
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
                                  remove_stations_for_insufficient_length)
+from pysep.utils.fmt import format_event_tag
+from pysep.utils.plot import plot_source_receiver_map
 
 
 @pytest.fixture
@@ -99,6 +101,17 @@ def test_remove_stations_for_missing_channels(test_st):
     st = remove_stations_for_missing_channels(st_out, networks="AK,YV")
     assert(len(st) == 3)
     assert(len(test_st) == 11)
+
+
+def test_plot_map(test_event, test_inv):
+    """
+    Make a simple source-receiver map
+
+    TODO This should probably have an image comparison to a baseline but for
+        now we just make sure plotting works
+    """
+    plot_source_receiver_map(inv=test_inv, event=test_event, save=False,
+                             show=False)
 
 
 @pytest.mark.skip(reason="need to find correct clipped example data")

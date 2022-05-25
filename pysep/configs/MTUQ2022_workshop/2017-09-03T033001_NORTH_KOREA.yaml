@@ -1,7 +1,9 @@
+event_tag: 2017-09-03T033001_NORTH_KOREA
 config_file: null
 client: IRIS
 client_debug: false
 timeout: 600
+taup_model: ak135
 event_selection: default
 origin_time: '2017-09-03T03:30:01.760000Z'
 seconds_before_event: 20
@@ -18,14 +20,14 @@ reference_time: '2017-09-03T03:30:01.760000Z'
 seconds_before_ref: 100
 seconds_after_ref: 300
 phase_list: null
-min_dist: 0
-max_dist: 1300.0
-min_az: 0
-max_az: 360
-min_lat: null
-max_lat: null
-min_lon: null
-max_lon: null
+mindistance: 0
+maxdistance: 1300.0
+minazimuth: 0
+maxazimuth: 360
+minlatitude: null
+maxlatitude: null
+minlongitude: null
+maxlongitude: null
 demean: true
 detrend: true
 taper_percentage: 0
@@ -40,4 +42,3 @@ scale_factor: 100.0
 resample_freq: 5
 remove_clipped: false
 log_level: DEBUG
-event_tag: 2017-09-03T033001_NORTH_KOREA

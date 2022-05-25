@@ -650,7 +650,7 @@ class Pysep:
         Remove stations from `inv` based on station distance, azimuth, etc.
 
         .. note::
-            One function function currently, but we can expand curtailing here
+            One-function function currently, but we can expand curtailing here
             if need by
 
         :rtype: obspy.core.inventory.Inventory
@@ -887,13 +887,13 @@ class Pysep:
         """
         if "map" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"station_map.png")
-            plot_source_receiver_map(self.inv, self.event, fid)
+            plot_source_receiver_map(self.inv, self.event, save=fid)
 
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
             # Default settings to create a general record section
-            plotw_rs(st=self.st, sort_by="distance_r",
-                     scale_by="normalize", overwrite=True, save=fid)
+            plotw_rs(st=self.st, sort_by="distance_r", scale_by="normalize",
+                     overwrite=True, show=False, save=fid)
 
     def _event_tag_and_output_dir(self):
         """

@@ -1,28 +1,76 @@
 #! /usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Pysep plotting utilities
 """
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+
 from obspy.core.event import Catalog
+from obspy.geodetics import gps2dist_azimuth
 from obspy.taup import TauPyModel
 
+from pysep import logger
+from pysep.utils.fmt import format_event_tag
 
-def plot_source_receiver_map(inv, event, fid="./station_map.png"):
+
+def plot_source_receiver_map(inv, event, save="./station_map.png",
+                             projection=None, show=False):
     """
-    Simple utility to plot station and event on a single map
+    Simple utility to plot station and event on a single map with Cartopy
     """
+    if projection is None:
+        # Calculate the maximum source receiver distance to determine what
+        # projection we should be in
+        dists = []
+        event_latitude = event.preferred_origin().latitude
+        event_longitude = event.preferred_origin().longitude
+        for net in inv:
+            for sta in net:
+                dist_m, _, _ = gps2dist_azimuth(lat1=event_latitude,
+                                                lon1=event_longitude,
+                                                lat2=sta.latitude,
+                                                lon2=sta.longitude
+                                                )
+                dists.append(dist_m * 1E-3)
+        if max(dists) < 5000:  # km
+            projection = "local"
+        else:
+            projection = "ortho"
+        logger.debug(f"setting projection {projection} due to max src-rcv "
+                     f"distance of {max(dists)}km")
+
     # Temp change the size of all text objects to get text labels small
     # and make the event size a bit smaller
-    with plt.rc_context({"font.size": 5, "lines.markersize": 4}):
-        inv.plot(projection="local", resolution="i", label=True, show=False,
-                 size=10, color="g", method="cartopy")
+    with plt.rc_context({"font.size": 6, "lines.markersize": 4}):
+        inv.plot(projection=projection, resolution="i", label=True, show=False,
+                 size=12, color="g", method="cartopy")
         # !!! fig=plt.gca() kwarg is a workaround for bug in
         # !!! ObsPy==1.3.0 (obspy.imaging.maps._plot_cartopy_into_axes)
-        Catalog(events=[event]).plot(method="cartopy", outfile=fid,
+        Catalog(events=[event]).plot(method="cartopy", label=None,
                                      fig=plt.gca(), show=False)
+
+    # Hijack the ObsPy plot and make some adjustments to make it look nicer
+    ax = plt.gca()
+    gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False,
+                      y_inline=False, linewidth=.25, alpha=.25, color="k")
+    gl.top_labels = False
+    gl.right_labels = False
+    gl.xlabel_style = {"rotation": 0}
+    ax.spines["geo"].set_linewidth(1.5)
+
+    title = (f"{format_event_tag(event)}\n"
+             f"NSTA: {len(inv.get_contents()['stations'])} // "
+             f"DEPTH: {event.preferred_origin().depth * 1E-3}km // "
+             f"{event.preferred_magnitude().magnitude_type} "
+             f"{event.preferred_magnitude().mag}"
+             )
+
+    ax.set_title(title)
+    if save:
+        plt.savefig(save)
+    if show:
+        plt.show()
 
 
 def plot_phases():

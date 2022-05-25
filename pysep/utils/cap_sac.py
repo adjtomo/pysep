@@ -13,6 +13,16 @@ from pysep import logger
 from pysep.utils.fmt import format_event_tag
 from pysep.utils.fetch import get_taup_arrivals_with_sac_headers
 
+# SAC HEADER CONSTANTS DEFINING NON-INTUITIVE QUANTITIES
+SACDICT = {
+    "p_arrival_time": "t5",
+    "p_incident_angle": "user1",
+    "p_takeoff_angle": "user3",
+    "s_arrival_time": "t6",
+    "s_incident_angle": "user2",
+    "s_takeoff_angle": "user4",
+}
+
 
 def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
     """
@@ -171,7 +181,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "az": az,  # degrees
         "baz": baz,  # degrees
         "gcarc": dist_deg,  # degrees
-        "cmpinc": cha.dip,  # channel dip/inclination in degrees  TODO this is incident angle?
+        "cmpinc": cha.dip,  # channel dip/inclination in degrees
         "cmpaz": cha.azimuth,  # channel azimuth in degrees
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
@@ -189,10 +199,18 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phases=None):
     Also get some information from TauP regarding incident angle, takeoff angle
     By default we only care about direct arrivals (both upgoing and downgoing)
 
-    TODO Proabbly find better ways to store arrival time and incidence angles
+    .. note::
+        This function expects that the Stream has been formatted with SAC header
+
+    .. note::
+        SAC header writing could probably be in a loop, but I think it's more
+        readable to see P and S values getting written separately.
+
+    TODO Probably find better ways to store arrival time and incident angles
     """
     st_out = st.copy()
 
+    # Call TauP with a specific model to retrieve travel times etc.
     if phases is None:
         phases = ["p", "P", "s", "S"]
     phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
@@ -200,23 +218,37 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phases=None):
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
         arrivals = phase_dict[tr.get_id()]
-        # Find earliest arriving P-wave (!!! Assuming it's the P or p wave)
+        # Find earliest arriving P-wave (P or p)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
-                      a.name.upper() == "P"]
+                     a.name.upper() == "P"]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
-        tr.stats.sac["A"] = arrivals[idx].time  # first P-arrival time
-        tr.stats.sac["KA"] = f"{arrivals[idx].name}_{model}"  # first arrival ID
-        tr.stats.sac["user3"] = arrivals[idx].takeoff_angle
-        tr.stats.sac["user4"] = arrivals[idx].incident_angle
+        p = arrivals[idx]  # Earliest P-wave Arrival object
 
-        # Find earliest arriving S-wave
+        tr.stats.sac["a"] = p.time  # relative time sec: float
+        tr.stats.sac["ka"] = f"{p.name}_{model}"  # name: str
+
+        tr.stats.sac[SACDICT["p_arrival_time"]] = p.time
+        tr.stats.sac[f"k{SACDICT['p_arrival_time']}"] = f"{p.name}_{model}"
+
+        # P-wave incident angle (ia) and takeoff angle (ta)
+        tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ia_{model}"
+        tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ta_{model}"
+
+        # Find earliest arriving S-wave (S or s)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
-                      a.name.upper() == "S"]
-        idx, _ = min(idx_times, key=lambda x: x[1])  # find indx of min time
-        tr.stats.sac["T5"] = arrivals[idx].time  # first S-arrival time
-        tr.stats.sac["KA"] = f"{arrivals[idx].name}_{model}"  # first arrival ID
-        tr.stats.sac["user5"] = arrivals[idx].takeoff_angle
-        tr.stats.sac["user6"] = arrivals[idx].incident_angle
+                     a.name.upper() == "S"]
+        idx, _ = min(idx_times, key=lambda x: x[1])
+        s = arrivals[idx]  # Earliest S-wave Arrival object
+
+        tr.stats.sac[SACDICT["s_arrival_time"]] = s.time
+        tr.stats.sac[f"k{SACDICT['s_arrival_time']}"] = f"{s.name}_{model}"
+
+        tr.stats.sac[SACDICT["s_incident_angle"]] = s.incident_angle
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ia_{model}"
+        tr.stats.sac[SACDICT["s_takeoff_angle"]] = s.takeoff_angle
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ta_{model}"
 
     return st_out
 
