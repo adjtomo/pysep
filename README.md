@@ -6,38 +6,32 @@ standardize and format the data, and write out SAC files with the underlying
 motivation of preparing data for moment tensor inversions, although the 
 written files can be used for other purposes.
 
->> **_Note:_** `PySEP` contains pre-defined configuration files which can be 
-               used to reproduce
-data gathering from previous published studies, workshops, etc.
-
 The main processing steps taken by `PySEP` are:
 
-* Create or gather event metadata (QuakeML) with user-defined event parameters 
-  (e.g., origin time, hypocentral location, magnitude)
-* Gather station metdata (StationXML) in a bounding box surrounding an event, 
-  based on network, station, location and channel codes. Optional arguments for
-  thinning out station catalog due to distance or azimuth constraints
-* Gather three-component waveform data for chosen station catalog
-* Quality check waveforms, which includes: removing data gaps, null'ing out
-  missing components, removing traces with clipped amplitudes
-* Preprocess waveforms including: instrument response removal, amplitude 
-  scaling, standardizing time series.
-* Rotating streams to desired components: ZNE, RTZ, UVW (triaxial orthogonal)
-* Appending SAC headers with event and station metadata, as well as TauP-derived
-  travel times, incident angles and takeoff angles for user-defined phases
-* Write per-component SAC files, as well as StationXML, QuakeML and MSEEd files
-* Write CAP (Cut-and-Paste) weight files for moment tensor inversions
-* Write config YAML files which can be used to re-run data gathering/processing
-* Plot a record section and source-receiver map
+1. Create or gather event metadata (QuakeML) with user-defined event parameters 
+2. Gather station metdata (StationXML) in a bounding box surrounding an event, 
+3. Curtail station list due to distance or azimuth constraints
+4. Gather three-component waveform data for chosen station catalog
+5. Quality check waveforms: remove gaps, null out missing components, address 
+  clipped amplitudes
+6. Preprocess waveforms: detrend, remove response, amplitude scaling, 
+  standardizing time series.
+7. Rotate streams to desired components: ZNE, RTZ, UVW (triaxial orthogonal)
+8. Append SAC headers with event and station metadata, and TauP arrivals
+9. Write per-component SAC files, and StationXML, QuakeML and MSEED files
+10. Write CAP (Cut-and-Paste) weight files for moment tensor inversions
+11. Write config YAML files which can be used to re-run data gathering/processing
+12. Plot a record section and source-receiver map
 
-PySEP also features the ability to:
+PySEP also has the capacity to:
 
 * Interface with a Lawrence Livermore National Laboratory database of nuclear
   explosion and earthquake waveforms (see note)
-* Access embargoed waveform data and PASSCAL HDF5 (PH5) datasets
+* Allow access to embargoed waveform data and PASSCAL HDF5 (PH5) datasets
+* Access pre-defined configuration files for data used in previous studies 
+* Input custom TauP models for arrival time estimation
 
-
-## Installation
+### Installation
 
 We recommend installing PySEP into a Conda environment. Dependencies are 
 installed via Conda where possible, with Pip used to install PySEP itself. 
@@ -51,7 +45,7 @@ $ conda install --file requirements.txt
 $ pip install -e .
 ```
 
-## Running Tests
+### Running Tests
 
 PySEP comes with unit testing which should be run before and after making any
 changes to see if your changes have altered the expected code behavior.
@@ -192,11 +186,27 @@ class, making PySEP a bit more flexible.
                 event_longitude=156.443, event_depth_km=15., ....
                 )
 ```
+
+To append SAC headers to your own seismic data, you can directly use the
+`PySEP` utility functions
+
+```python
+>>> from pysep.utils.cap_sac import append_sac_headers, format_sac_header_w_taup_traveltimes
+>>> from obspy import read, read_events, read_inventory
+>>> st = read()
+>>> inv = read_inventory()
+>>> event = read_events()[0]
+>>> st = append_sac_headers(st=st, inv=inv, event=event)
+>>> st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
+```
+
+Check out the Pysep.run() function for other API options for using PySEP.
+
 --------------------------------------------------------------------------------
 
 ### LLNL Note
 
-PySEP interfaces with the databases of:
+`PySEP` interfaces with the databases of:
 
 * W. Walter et al. (2006)
   An assembled western United States dataset for regional seismic analysis
