@@ -60,7 +60,7 @@ def test_get_waveform(test_pysep):
     :return:
     """
     st = test_pysep.get_waveforms()
-    assert(len(st) == 7)
+    assert(len(st) == 11)
     assert(st[-1].get_id() == "YV.ALPI..BHZ")
 
 

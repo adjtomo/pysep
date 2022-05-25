@@ -590,14 +590,14 @@ class Pysep:
         by the internal `inv` attribute detailing station information,
         and reference times for start and end times.
 
+        .. note::
+            We do not use the `minimumlength` variable so that we can figure
+            out which stations have data gaps
+
         :rtype: obspy.core.stream.Stream
         :return: Stream of channel-separated waveforms
         """
         logger.info(f"querying client '{self.client.upper()}' for waveforms")
-
-        minimumlength = self.seconds_before_ref + self.seconds_after_ref
-        logger.debug(f"asserting that the minimum waveform length should be"
-                     f"{minimumlength:.2f}")
 
         # PH5 should not be queried in bulk as it is a small request
         if self.client.upper() == "PH5":
@@ -606,7 +606,6 @@ class Pysep:
                 station=self.stations, channel=self.channels,
                 starttime=self.origin_time - self.seconds_before_ref,
                 endtime=self.origin_time - self.seconds_after_ref,
-                minimumlength=minimumlength
             )
         else:
             st = self._bulk_query_waveforms_from_client()
@@ -636,7 +635,7 @@ class Pysep:
 
         try:
             logger.info(f"querying {len(bulk)} lines in bulk client request...")
-            st = self.c.get_waveforms_bulk(bulk=bulk, minimumlength=t2-t1)
+            st = self.c.get_waveforms_bulk(bulk=bulk)
         except FDSNBadRequestException:
             logger.warning(f"client {self.client} returned no waveforms, "
                            f"please check your event and station "
@@ -795,10 +794,8 @@ class Pysep:
         for weights_fid in ["weights_dist", "weights_az", "weights_code"]:
             if weights_fid in write_files or "all" in write_files:
                 order_by = weights_fid.split("_")[1]
-                write_cap_weights_files(
-                    st=self.st, event=self.event, order_by=order_by,
-                    path_out=self.output_dir
-                )
+                write_cap_weights_files(st=self.st, order_by=order_by,
+                                        path_out=self.output_dir)
 
         if "config_file" in write_files or "all" in write_files:
             logger.info("writing config YAML file")
@@ -1000,6 +997,9 @@ def parse_args():
                         help="Username if required to access IRIS webservices")
     parser.add_argument("-P", "--password", default=None, type=str, nargs="?",
                         help="Password if required to access IRIS webservices")
+    parser.add_argument("-W", "--write", default=False, action="store_true",
+                        help="Write out a blank configuration file to be "
+                             "filled in by the User")
     parser.add_argument("-l", "--list", default=False, action="store_true",
                         help="list out avaialable `preset` config options")
     parser.add_argument("-L", "--log_level", default="INFO", type=str,
@@ -1079,6 +1079,11 @@ def main():
         $ pysep -c config.yaml
     """
     args = parse_args()
+    if args.write:
+        sep = Pysep()
+        sep.write_config()
+        return
+
     # Allow grabbing preset Config files from inside the repo
     if args.preset or args.list:
         pysep_dir = Path(__file__).parent.absolute()

@@ -24,7 +24,7 @@ SACDICT = {
 }
 
 
-def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
+def write_cap_weights_files(st, path_out="./", order_by="dist"):
     """
     Write CAP (Cut-and-Paste) moment tensor inversion code weight files,
     assuming that SAC headers are already present.
@@ -74,15 +74,15 @@ def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
     p_arrival = 0.  # default value
     for code in codes:
         net, sta, loc, cha = code.split(".")
-        for pick in event.picks:
-            # TODO place p_arrival calculation here
-            pass
+
         # Grab any component as they all have the same dist and azimuth
         tr = st.select(network=net, station=sta, location=loc, channel=cha)[0]
         # [code, dist_km, az, p_arrival]
         code_list.append([f"{tr.stats.sac['kevnm']}.{code}",
                           tr.stats.sac["dist"], tr.stats.sac["az"],
                           p_arrival])
+        import pdb;
+        pdb.set_trace()
 
     # Order codes based on distance, name or azimuth
     idx = ["code", "dist", "az"].index(order_by)
