@@ -201,16 +201,18 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phases=None):
     for tr in st_out[:]:
         arrivals = phase_dict[tr.get_id()]
         # Find earliest arriving P-wave (!!! Assuming it's the P or p wave)
-        idx, _ = min([(i, a.time) for i, a in enumerate(arrivals) if
-                      a.name.upper() == "P"])
+        idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
+                      a.name.upper() == "P"]
+        idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
         tr.stats.sac["A"] = arrivals[idx].time  # first P-arrival time
         tr.stats.sac["KA"] = f"{arrivals[idx].name}_{model}"  # first arrival ID
         tr.stats.sac["user3"] = arrivals[idx].takeoff_angle
         tr.stats.sac["user4"] = arrivals[idx].incident_angle
 
         # Find earliest arriving S-wave
-        idx, _ = min([(i, a.time) for i, a in enumerate(arrivals) if
-                      a.name.upper() == "S"])
+        idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
+                      a.name.upper() == "S"]
+        idx, _ = min(idx_times, key=lambda x: x[1])  # find indx of min time
         tr.stats.sac["T5"] = arrivals[idx].time  # first S-arrival time
         tr.stats.sac["KA"] = f"{arrivals[idx].name}_{model}"  # first arrival ID
         tr.stats.sac["user5"] = arrivals[idx].takeoff_angle
