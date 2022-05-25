@@ -24,6 +24,7 @@ from obspy.core.event import Event, Origin, Magnitude
 
 from pysep import logger
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
+                                 format_sac_header_w_taup_traveltimes,
                                  format_sac_headers_post_rotation)
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
@@ -54,7 +55,7 @@ class Pysep:
                  phase_list=None,
                  seconds_before_event=20, seconds_after_event=20,
                  seconds_before_ref=100, seconds_after_ref=300,
-                 taupmodel="ak135", output_unit="VEL",  user=None,
+                 taup_model="ak135", output_unit="VEL",  user=None,
                  password=None, client_debug=False, log_level="DEBUG",
                  timeout=600, write_files="all", plot_files="all",
                  llnl_db_path=None, output_dir=None, overwrite=False, **kwargs):
@@ -143,8 +144,8 @@ class Pysep:
         :param seconds_before_ref: time before origintime to fetch waveform data
         :type seconds_after_ref: float
         :param seconds_after_ref: time after origintime to fetch waveform data
-        :type taupmodel: str
-        :param taupmodel: name of TauP model to use to calculate phase arrivals
+        :type taup_model: str
+        :param taup_model: name of TauP model to use to calculate phase arrivals
         :type output_unit: str
         :param output_unit: the output format of the waveforms, something like
             'DISP', 'VEL', 'ACC'
@@ -164,6 +165,7 @@ class Pysep:
         self.timeout = timeout
         self._user = user
         self._password = password
+        self.taup_model = taup_model
 
         # Parameters related to event selection
         self.event_selection = event_selection
@@ -960,6 +962,7 @@ class Pysep:
             self.st = st
         self.st = quality_check_waveforms_before_processing(self.st)
         self.st = append_sac_headers(self.st, self.event, self.inv)
+        self.st = format_sac_header_w_taup_traveltimes(self.st, self.taup_model)
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()

@@ -11,6 +11,7 @@ from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
 from pysep import logger
 from pysep.utils.fmt import format_event_tag
+from pysep.utils.fetch import get_taup_arrivals_with_sac_headers
 
 
 def write_cap_weights_files(st, event, path_out="./", order_by="dist"):
@@ -105,6 +106,9 @@ def append_sac_headers(st, event, inv):
     :param event: Event with metadata for SAC header
     :type inv: obspy.core.inventory.Inventory
     :param event: StationXML with metadata for SAC header
+    :type model: str
+    :param model: name of the TauP model to use for arrival times etc.
+        defaults to 'ak135'
     :rtype: obspy.core.stream.Stream
     :return: Stream with SAC headers, those that could not be appended to
         have been removed from the stream
@@ -154,8 +158,6 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_km = dist_m * 1E-3  # units: m -> km
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
-    # Get some information from TauP regarding incident angle, takeoff angle
-
     sac_header = {
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
@@ -169,7 +171,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "az": az,  # degrees
         "baz": baz,  # degrees
         "gcarc": dist_deg,  # degrees
-        "cmpinc": cha.dip,  # channel dip/inclination in degrees  TODO this is incident angle
+        "cmpinc": cha.dip,  # channel dip/inclination in degrees  TODO this is incident angle?
         "cmpaz": cha.azimuth,  # channel azimuth in degrees
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
@@ -179,6 +181,42 @@ def _append_sac_headers_trace(tr, event, inv):
     tr.stats.back_azimuth = baz
 
     return tr
+
+
+def format_sac_header_w_taup_traveltimes(st, model="ak135", phases=None):
+    """
+    Add TauP travel times to the SAC headers using information in the SAC header
+    Also get some information from TauP regarding incident angle, takeoff angle
+    By default we only care about direct arrivals (both upgoing and downgoing)
+
+    TODO Proabbly find better ways to store arrival time and incidence angles
+    """
+    st_out = st.copy()
+
+    if phases is None:
+        phases = ["p", "P", "s", "S"]
+    phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
+                                                    phase_list=phases)
+    # Arrivals may return multiple entires for each phase, pick earliest
+    for tr in st_out[:]:
+        arrivals = phase_dict[tr.get_id()]
+        # Find earliest arriving P-wave (!!! Assuming it's the P or p wave)
+        idx, _ = min([(i, a.time) for i, a in enumerate(arrivals) if
+                      a.name.upper() == "P"])
+        tr.stats.sac["A"] = arrivals[idx].time  # first P-arrival time
+        tr.stats.sac["KA"] = f"{arrivals[idx].name}_{model}"  # first arrival ID
+        tr.stats.sac["user3"] = arrivals[idx].takeoff_angle
+        tr.stats.sac["user4"] = arrivals[idx].incident_angle
+
+        # Find earliest arriving S-wave
+        idx, _ = min([(i, a.time) for i, a in enumerate(arrivals) if
+                      a.name.upper() == "S"])
+        tr.stats.sac["T5"] = arrivals[idx].time  # first S-arrival time
+        tr.stats.sac["KA"] = f"{arrivals[idx].name}_{model}"  # first arrival ID
+        tr.stats.sac["user5"] = arrivals[idx].takeoff_angle
+        tr.stats.sac["user6"] = arrivals[idx].incident_angle
+
+    return st_out
 
 
 def format_sac_headers_post_rotation(st):

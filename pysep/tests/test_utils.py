@@ -7,7 +7,8 @@ TODO add function testing clipped station, need to find example data
 import pytest
 from obspy import read, read_events, read_inventory
 
-from pysep.utils.cap_sac import append_sac_headers
+from pysep.utils.cap_sac import (append_sac_headers,
+                                 format_sac_header_w_taup_traveltimes)
 from pysep.utils.fmt import format_event_tag
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
@@ -50,6 +51,15 @@ def test_append_sac_headers(test_st, test_inv, test_event):
     # while were here, make sure event tagging works
     tag = format_event_tag(test_event)
     assert(tag == "2009-04-07T201255_SOUTHERN_ALASKA")
+
+
+def test_format_sac_headers_w_taup_traveltimes(test_st, test_inv, test_event):
+    """
+    Make sure we can write SAC headers correctly
+    """
+    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
+    st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
+    assert(pytest.approx(st[0].stats.sac["user5"], .01) == 57.66)
 
 
 def test_rename_channels(test_st):
