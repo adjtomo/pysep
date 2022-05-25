@@ -1,12 +1,13 @@
-PySEP: Python Seismogram Extraction and Processing
-==================================================
+Python Seismogram Extraction and Processing
+===========================================
 
 `PySEP` uses ObsPy tools to request seismic data and metadata, process, 
 standardize and format the data, and write out SAC files with the underlying 
-of preparing data for moment tensor inversions, although the written files can
-be used for other purposes.
+motivation of preparing data for moment tensor inversions, although the 
+written files can be used for other purposes.
 
-`PySEP` contains pre-defined configuration files which can be used to reproduce
+>> **_Note:_** `PySEP` contains pre-defined configuration files which can be 
+               used to reproduce
 data gathering from previous published studies, workshops, etc.
 
 The main processing steps taken by `PySEP` are:
@@ -59,6 +60,16 @@ $ cd tests
 $ pytest
 ```
 
+### Gallery
+
+An example record section produced by the `recsec` tool inside PySEP
+
+![](docs/images/record_section.png)
+
+An example station map generated from collected metadata during a PySEP run
+
+![](docs/images/station_map.png)
+
 --------------------------------------------------------------------------------
 
 ## Command Line Usage
@@ -101,6 +112,7 @@ To run this newly created configuration file
 $ pysep -c pysep_config.yaml
 ```
 
+
 --------------------------------------------------------------------------------
 
 ### Record Section plotter
@@ -108,6 +120,7 @@ $ pysep -c pysep_config.yaml
 PySEP also comes with a pretty sophisticated record section tool, which plots
 seismic data acquired by PySEP. When you have successfully collected your data,
 it will reside in the /SAC folder of the PySEP output directory. 
+
 
 To see available record section plotting commands
 
