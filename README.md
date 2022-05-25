@@ -182,8 +182,8 @@ class, making PySEP a bit more flexible.
 
 ```python
 >>> from pysep import Pysep
->>> sep = Pysep(origin_time="2000-01-01T00:00:00", event_latitude=43.254,
-                event_longitude=156.443, event_depth_km=15., ....
+>>> sep = Pysep(origin_time="2000-01-01T00:00:00", event_latitude=64.8596,
+                event_longitude=-147.8498, event_depth_km=15., ....
                 )
 ```
 
