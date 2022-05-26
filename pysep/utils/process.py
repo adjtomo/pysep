@@ -14,8 +14,11 @@ def format_streams_for_rotation(st):
     ObsPy requires specific channel naming to get stream rotation working.
     Comb through the stream and check that this is correct before passing
     stream to rotation
-    :param st:
-    :return:
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to format for rotation
+    :rtype st: obspy.core.stream.Stream
+    :return st: Stream that has been formatted for rotation
     """
     st_original = st.copy()
     logger.info(f"formatting stream of length {len(st)} for component rotation")
@@ -59,6 +62,17 @@ def format_streams_for_rotation(st):
 def _append_null_trace(st, component, cmpaz=None, cmpinc=None):
     """
     Create a copy of a trace with zeroed out data, used for rotation
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream with missing components
+    :type component: str
+    :param component: component of data to turn into a null trace
+    :type cmpaz: float
+    :param cmpaz: component azimuth for SAC header
+    :type cmpinc: float
+    :param cmpinc: component inclination for SAC header
+    :rtype st: obspy.core.stream.Stream
+    :return st: Stream that has had null traces appended
     """
     st_out = st.copy()
     trace_null = st_out[0].copy()
@@ -76,6 +90,12 @@ def _append_null_trace(st, component, cmpaz=None, cmpinc=None):
 def _check_component_availability(st):
     """
     Quick logic check to see if stream is missing horizontals or vertical
+
+    :type st: obspy.core.stream.Stream
+    :param st: Steam to check
+    :rtype: tuple of bool
+    :return: (is the vertical component missing?,
+              is one or both horizontal components missing?)
     """
     comps = sorted([tr.stats.component.upper() for tr in st])
     missing_vertical, missing_horizontal = False, False
@@ -117,8 +137,9 @@ def rotate_to_uvw(st):
                                                   978-3-642-36197-5_194-1#page-1
 
     :type st: obspy.core.stream.Stream
-    :param st: three-component stream
-    :return:
+    :param st: three-component stream to rotate the UVW
+    :rtype: obspy.core.stream.Stream
+    :return: Stream that has been rotated to UVW
     """
     st_out = st.copy()
     assert(len(st) == 3), f"UVW rotation requires 3 component stream input"
@@ -159,9 +180,13 @@ def merge_and_trim_start_end_times(st):
 
     .. note::
         A note from the old code said we that interpolation and resampling
-        are NOT intended functionalities, so we replafe the old 'interpolate'
+        are NOT intended functionalities, so we replace the old 'interpolate'
         function with a trim.
 
+    :type st: obspy.core.stream.Stream
+    :param st: stream to merge and trim start and end times for
+    :rtype: obspy.core.stream.Stream
+    :return: Stream that has been trimmed
     """
     st_edit = st.copy()
 
@@ -202,6 +227,8 @@ def resample_data(st, resample_freq, method="interpolate"):
     TODO did not refactor `resample_cut` which doesn't seem to do anything but
         is included in old code
 
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to resample data for
     :type resample_freq: float
     :param resample_freq: frequency to resample for
     :type method: str
@@ -209,7 +236,8 @@ def resample_data(st, resample_freq, method="interpolate"):
         - interpolate: interpolate data, requires anti-aliasing lowpass filter
             before interpolating
         - resample: reample data with fourier methods
-    :return:
+    :rtype: obspy.core.stream.Stream
+    :return: Stream that has been resampled and maybe filtered
     """
     if method not in ["interpolate", "resample"]:
         logger.warning(f"unexpected resample method {method}, defaulting to "

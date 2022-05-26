@@ -29,6 +29,9 @@ def write_cap_weights_files(st, path_out="./", order_by="dist"):
     Write CAP (Cut-and-Paste) moment tensor inversion code weight files,
     assuming that SAC headers are already present.
 
+    TODO re-add Ptime setting with event.picks
+
+
     Replaces `write_cap_weights`
 
     The weight file has columns corresponding to the following:
@@ -46,8 +49,18 @@ def write_cap_weights_files(st, path_out="./", order_by="dist"):
         10: LEGACY (unused)
         11: STATIC CORRECTION RAYLEIGH
 
-    TODO re-add Ptime setting with event.picks
-    :return:
+    :type st: obspy.core.stream.Stream
+    :param st: input stream to use to write CAP weight files, expected to
+        have SAC header
+    :type path_out: str
+    :param path_out: path to write the weight file, filenames are set
+        by default inside the function
+    :type order_by: str
+    :param order_by: how to order the list of stations that gets written out
+        available options are:
+        * dist: order by smallest to largest source-receiver distance (default)
+        * az: order by smallest to largest azimuth (deg)
+        * code: order alphabetically by station name
     """
     assert(order_by in ["dist", "az", "code"]), (f"CAP weights sorting must be "
                                                  f"by 'dist', 'az', or 'code'")
@@ -116,9 +129,6 @@ def append_sac_headers(st, event, inv):
     :param event: Event with metadata for SAC header
     :type inv: obspy.core.inventory.Inventory
     :param event: StationXML with metadata for SAC header
-    :type model: str
-    :param model: name of the TauP model to use for arrival times etc.
-        defaults to 'ak135'
     :rtype: obspy.core.stream.Stream
     :return: Stream with SAC headers, those that could not be appended to
         have been removed from the stream
@@ -139,8 +149,6 @@ def _append_sac_headers_trace(tr, event, inv):
     Rewritten from: `util_write_cap.add_sac_metadata()`
 
     TODO Add back in information removed from original function
-        * Add P arrival time to stats.sac["a"]
-        * Add TauP phase arrivals, writing to t5, kt5, user1, kuser1
         * Add sensor type somewhere, previously stored in KT? (used for picks)
 
     :type tr: obspy.core.trace.Trace
@@ -193,11 +201,13 @@ def _append_sac_headers_trace(tr, event, inv):
     return tr
 
 
-def format_sac_header_w_taup_traveltimes(st, model="ak135", phases=None):
+def format_sac_header_w_taup_traveltimes(st, model="ak135"):
     """
     Add TauP travel times to the SAC headers using information in the SAC header
     Also get some information from TauP regarding incident angle, takeoff angle
-    By default we only care about direct arrivals (both upgoing and downgoing)
+    Hardcoded to only look at P and S arrivals (both upgoing and downgoing)
+
+    TODO Probably find better ways to store arrival time and incident angles
 
     .. note::
         This function expects that the Stream has been formatted with SAC header
@@ -206,13 +216,17 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phases=None):
         SAC header writing could probably be in a loop, but I think it's more
         readable to see P and S values getting written separately.
 
-    TODO Probably find better ways to store arrival time and incident angles
+    :type st: obspy.core.stream.Stream
+    :param st: Stream object with SAC headers which will be written to with
+        new SAC header attributser
+    :type model: str
+    :param model: name of the TauP model to use for arrival times etc.
+        defaults to 'ak135'
     """
     st_out = st.copy()
 
     # Call TauP with a specific model to retrieve travel times etc.
-    if phases is None:
-        phases = ["p", "P", "s", "S"]
+    phases = ["p", "P", "s", "S"]
     phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
                                                     phase_list=phases)
     # Arrivals may return multiple entires for each phase, pick earliest
@@ -260,8 +274,9 @@ def format_sac_headers_post_rotation(st):
 
     TODO is this necessary? Who is using the SAC headers and what info
         do they need? Or can we just re-run SAC header appending?
-    :param st:
-    :return:
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to append SAC headers for
     """
     azimuth_dict = {"E": 90., "N": 0., "Z": 0.}
     inclin_dict = {"E": 0., "N": 0., "Z": -90.}

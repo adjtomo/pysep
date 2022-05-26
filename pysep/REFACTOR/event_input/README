@@ -1,8 +1,0 @@
-pysep event input files
-
-The example files here should be for FINISHED projects, whereby another user might want to recreate published results.
-
-For UAF seismologists, please store work-in-progress input files in the GEOTOOLS repository, at the following path:
-GEOTOOLS/python_util/pysep_dev/
-
-At the top of each event_input_XXXX.py file, please explain what the set of events is for.

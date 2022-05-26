@@ -9,13 +9,28 @@ from pysep import logger
 from pysep.utils.fmt import get_codes
 
 
-def curtail_by_station_distance_azimuth(event, inv, mindistance=0,
-                                        maxdistance=1E6, minazimuth=0,
-                                        maxazimuth=360):
+def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
+                                        maxdistance=1E6, minazimuth=0.,
+                                        maxazimuth=360.):
     """
     Remove stations that are greater than a certain distance from event
     Replaces the old `sta_limit_distance` function
-    :return:
+
+    :type event: obspy.core.event.Event
+    :param event: Event object to get location from
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: inventory object to get locations from
+    :type mindistance: float
+    :param mindistance: minimum acceptable source-receiver distance in km
+    :type maxdistance: float
+    :param maxdistance: maximum acceptable source-receiver distance in km
+    :type minazimuth: float
+    :param minazimuth: minimum acceptable azimuth in deg
+    :type maxazimuth: float
+    :param maxazimuth: maximum acceptable azimuth in deg
+    :rtype: obspy.core.inventory.Inventory
+    :return: a curtailed inventory object which has had stations removed for
+        unacceptable distance and azimuth values
     """
     event_latitude = event.preferred_origin().latitude
     event_longitude = event.preferred_origin().longitude
@@ -65,6 +80,9 @@ def quality_check_waveforms_before_processing(st):
     """
     Quality assurance to deal with bad data before running the
     preprocessing steps. Replaces: `do_waveform_QA`
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream object to pass through QA procedures
     """
     st_out = st.copy()
 
@@ -80,6 +98,9 @@ def quality_check_waveforms_after_processing(st):
     Quality assurance to deal with bad data after preprocessing, because
     preprocesing step will merge, filter and rotate data.
     Replaces: `do_waveform_QA`
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream object to pass through QA procedures
     """
     st_out = st.copy()
 
@@ -91,9 +112,13 @@ def quality_check_waveforms_after_processing(st):
 def remove_for_clipped_amplitudes(st):
     """
     Removed stations with clipped amplitudes
-
     replaces `clipping_handler.remove_clipped`
     TODO where is that clip factor coming from?
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to check clipping for
+    :rtype st: obspy.core.stream.Stream
+    :return st: curtailed stream with clipped traces removed
     """
     st_out = st.copy()
     clip_factor = 0.8 * ((2 ** (24 - 1)) ** 2) ** 0.5  # For a 24-bit signal
@@ -119,6 +144,11 @@ def rename_channels(st):
     TODO old code strips channels down to 3 letters if they're 4. But
          can't we have 4 letter channel names? NZ does this.
     TODO Do we only expect location codes to be appended to channels?
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to check incorrect channel naming for
+    :rtype st: obspy.core.stream.Stream
+    :return st: Stream with renamed channels and locations
     """
     logger.info("cleaning up channel naming")
     st_out = st.copy()
@@ -141,6 +171,8 @@ def remove_stations_for_missing_channels(st, required_number_channels=3,
     LLNL data is already problematic, so if there are signs of too many
     issues / problems for a given station then remove that station.
 
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to check missing channels for
     :type required_number_channels: int
     :param required_number_channels: expected channels for each station
     :type networks: str
@@ -173,6 +205,10 @@ def remove_stations_for_insufficient_length(st):
     """
     Remove stations if the length does not match the mode of all other lengths
     in the stream, which is assumed to be the expected length
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to check for data gaps and insufficient start and
+        end times
     """
     st_out = st.copy()
 

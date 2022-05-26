@@ -10,6 +10,8 @@ def get_codes(st=None, choice=None, suffix=None, up_to=True):
     codes are formatted NN.SSS.LL.CCc where N=network, S=station,
     L=location, C=channel, and c=component
 
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to get codes from by running: tr.get_id()
     :type choice: str
     :param choice: choice of the part of the code returned, available:
         * 'network': return unique network codes (e.g., NN)

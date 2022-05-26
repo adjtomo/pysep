@@ -13,6 +13,9 @@ def return_llnl_catalog_origin_times(event=None):
 
     :type event: str
     :param event: returns only a specific event based on the event names
+    :rtype: dict
+    :return: a dictionary where keys are event names (uppercase) and values
+        are catalog origin times (UTCDateTime)
     """
     llnl_catalog = {
         # Explosions
@@ -81,6 +84,11 @@ def scale_llnl_waveform_amplitudes(st):
         * HOYA LL.LH and LL.BB require a sign flip. Otherwise the surface
             waveform inversions produce a -ISO result.
         * HOYA LL.LH and LL.BB body do not require flip.
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream containing LLNL waveforms
+    :rtype: obspy.core.stream.Stream
+    :return: Stream with scaled LLNL waveforms
     """
     st_out = st.copy()
 
@@ -117,5 +125,7 @@ def rename_llnl_event():
     """
     Check origin time against a known LLNL event catalog, and rename event
     based on this origin time. Replaces `rename_if_LLNL_event`
-    :return:
+
+    TODO complete this and add into main PySEP.run()
     """
+    pass

@@ -18,6 +18,18 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
                              projection=None, show=False):
     """
     Simple utility to plot station and event on a single map with Cartopy
+
+    :type event: obspy.core.event.Event
+    :param event: event to get location from
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: inventory to get locatiosn from
+    :type save: str
+    :param save: filename to save station map, defaults: ./station_map.png
+    :type projection: str
+    :param projection: map projection, 'local, 'ortho', 'global' or None. If
+        None, will be determined based on largest src-rcv distance
+    :type show: bool
+    :param show: show the figure in the GUI
     """
     if projection is None:
         # Calculate the maximum source receiver distance to determine what

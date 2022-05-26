@@ -12,6 +12,11 @@ from obspy.geodetics import gps2dist_azimuth
 def read_yaml(fid):
     """
     Read a YAML file and return a dictionary
+
+    :type fid: str
+    :param fid: YAML file to read from
+    :rtype: dict
+    :return: YAML keys and variables in a dictionary
     """
     # work around PyYAML bugs
     yaml.SafeLoader.add_implicit_resolver(
@@ -41,6 +46,15 @@ def read_yaml(fid):
 def write_stations_file(inv, event, fid="./stations_list.txt"):
     """
     Write a list of station codes, distances, etc.
+
+    :type event: obspy.core.event.Event
+    :param event: optional user-provided event object which will force a
+        skip over QuakeML/event searching
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: optional user-provided inventory object which will force a
+        skip over StationXML/inventory searching
+    :type fid: str
+    :param fid: name of the file to write to. defaults to ./stations_list.txt
     """
     event_latitude = event.preferred_origin().latitude
     event_longitude = event.preferred_origin().longitude

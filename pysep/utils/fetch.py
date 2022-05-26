@@ -20,6 +20,18 @@ def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
         https://docs.obspy.org/packages/obspy.taup.html
     OR internally at:
         pysep/pysep/data/taup_models
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream with appended SAC headers which will be used to gather
+        TaupP arrivals from a given `model`
+    :type phase_list: list of str
+    :param phase_list: phases to search TauP for. Defaults to 'P' and 'S'
+    :type model: str
+    :param model: Model to query TauP with. Looks at ObsPy and PySEP models
+    :rtype: dict
+    :return: a dictionary where keys are trace ID's (from trace.get_id()), and
+        values are TauP Arrivals() instances which contain information about
+        phase arrivals
     """
     phase_dict = {}
     if phase_list is None:
@@ -62,6 +74,23 @@ def get_taup_arrivals(event, inv, phase_list=None, model="ak135", network=None,
         https://docs.obspy.org/packages/obspy.taup.html
     OR internally at:
         pysep/pysep/data/taup_models
+
+    :type event: obspy.core.event.Event
+    :param event: Event object to get location from
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: inventory object to get locations from
+    :type phase_list: list of str
+    :param phase_list: phases to search TauP for. Defaults to 'P' and 'S'
+    :type model: str
+    :param model: Model to query TauP with. Looks at ObsPy and PySEP models
+    :type network: str
+    :param network: query only a specific network
+    :type station: str
+    :param station: query only a specific station
+    :rtype: dict
+    :return: a dictionary where keys are trace ID's (from trace.get_id()), and
+        values are TauP Arrivals() instances which contain information about
+        phase arrivals
     """
     phase_dict = {}
     if phase_list is None:
