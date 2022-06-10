@@ -103,9 +103,6 @@ def get_ev_info(ev_info,iex):
         ev_info.rotateENZ = True
         ev_info.rotateRTZ = True
 
-        ev_info.user = 'ctape@alaska.edu'
-        ev_info.password = 'dln3mjKtap3m9'
-
         #Anchorage aftershock
         ev_info.otime = obspy.UTCDateTime("2019-02-18 17:02:46.710")
         ev_info.elat = 61.4682
@@ -157,9 +154,6 @@ def get_ev_info(ev_info,iex):
 
         #ev_info.ifph5 = True #must be true for nodes and false (commented out) for permanent stations
 
-        ev_info.user = 'ctape@alaska.edu'
-        ev_info.password = 'dln3mjKtap3m9'
-
         #ev_info.phase_window = True #WARNING this will cut your waveforms near your chosen phase
         #ev_info.phases = ["P","S"] # Choosing time period with respect to P & S
         #ev_info.write_sac_phase = True #note: cap reads in picks from header (if set to true, be sure you want this)
@@ -209,9 +203,6 @@ def get_ev_info(ev_info,iex):
         ev_info.isave_raw_processed = True
         ev_info.rotateENZ = True
         ev_info.rotateRTZ = True
-
-        ev_info.user = 'ctape@alaska.edu'
-        ev_info.password = 'dln3mjKtap3m9'
 
         # see paper_nodal_parks.m
         ievent = 1
