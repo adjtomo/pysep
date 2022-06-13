@@ -236,7 +236,7 @@ object as input. Tunable parameters can be fed in as input variables.
 ```python
 >>> from obspy import read
 >>> from recsec import plotw_rs
->>> st = Stream()
+>>> st = read()
 >>> plotw_rs(st=st, sort_by="distance")
 ```
 
