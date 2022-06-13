@@ -30,7 +30,7 @@ from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing)
 from pysep.utils.fmt import format_event_tag, get_codes
-from pysep.utils.io import read_yaml, write_stations_file
+from pysep.utils.io import read_yaml, read_event_file, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw)
@@ -269,11 +269,6 @@ class Pysep:
             raise ValueError("`event_selection` must be one of the following: "
                              "'search' or 'default'")
 
-        if self.client.upper() == "PH5":
-            assert(self._user is not None and self._password is not None), (
-                "`client`=='PH5' requires `-U/--user` and `-P/--password`"
-            )
-
         if self.client.upper() == "LLNL":
             assert(os.path.exists(self.llnl_db_path)), (
                 f"`llnl_db_path` {self.llnl_db_path} does not exist but must "
@@ -393,12 +388,21 @@ class Pysep:
 
         return c
 
-    def load(self, config_file=None):
+    def load(self, config_file=None, overwrite_event=True):
         """
         Overwrite default parameters using a YAML config file
+
+        :type config_file: str
+        :param config_file: YAML configuration file to load from
+        :type overwrite_event: bool
+        :param overwrite_event: overwrite event search parameters (origin time,
+            lat, lon etc.) from the YAML config file. Defaults to True
         """
         if config_file is None:
             config_file = self.config_file
+        if not overwrite_event:
+            logger.info("will NOT overwrite event search parameters with "
+                         "config file")
 
         if config_file is not None:
             logger.info(f"overwriting default parameters with config file: "
@@ -406,6 +410,9 @@ class Pysep:
             config = read_yaml(config_file)
             for key, val in config.items():
                 if hasattr(self, key):
+                    if not overwrite_event and \
+                            key.startswith(("event_", "origin_time")):
+                        continue
                     old_val = getattr(self, key)
                     if val != old_val:
                         logger.debug(f"{key}: {old_val} -> {val}")
@@ -605,7 +612,7 @@ class Pysep:
                 network=self.networks, location=self.locations,
                 station=self.stations, channel=self.channels,
                 starttime=self.origin_time - self.seconds_before_ref,
-                endtime=self.origin_time - self.seconds_after_ref,
+                endtime=self.origin_time + self.seconds_after_ref,
             )
         else:
             st = self._bulk_query_waveforms_from_client()
@@ -911,7 +918,7 @@ class Pysep:
             sys.exit(0)
         return event_tag, full_output_dir
 
-    def run(self, event=None, inv=None, st=None):
+    def run(self, event=None, inv=None, st=None, **kwargs):
         """
         Run PySEP: Seismogram Extraction and Processing. Steps in order are:
 
@@ -935,7 +942,7 @@ class Pysep:
             skip over waveform searching
         """
         # Overload default parameters with event input file and check validity
-        self.load()
+        self.load(**kwargs)
         self.check()
         self.c = self.get_client()
 
@@ -993,6 +1000,11 @@ def parse_args():
                              "config may define >1 event. This flag determines"
                              "which event to run. If `event`=='all', will "
                              "gather ALL events in the preset.")
+    parser.add_argument("-E", "--event_file", default="", type=str, nargs="?",
+                        help="Allows using a single config file to gather"
+                             "data for multiple events. Overwrites "
+                             "'origin_time' parameter in the original config "
+                             "file.")
     parser.add_argument("-U", "--user", default=None, type=str, nargs="?",
                         help="Username if required to access IRIS webservices")
     parser.add_argument("-P", "--password", default=None, type=str, nargs="?",
@@ -1070,6 +1082,64 @@ def get_data(config_file=None, event=None, inv=None, st=None, write_files=None,
     return sep.event, sep.inv, sep.st
 
 
+def _print_preset_configs():
+    """
+    Print out a list of Config files that can be used to run PySEP
+    """
+    pysep_dir = Path(__file__).parent.absolute()
+
+    filelist = glob(os.path.join(pysep_dir, "configs", "*", "*yaml"))
+    filelist = sorted([fid.split("/")[-2:] for fid in filelist])
+    print(f"-p/--preset -e/--event")
+    for i, fid in enumerate(filelist):
+        preset, event = fid
+        print(f"-p {preset} -e {event}")
+
+
+def _return_matching_preset_configs(args):
+    """
+    Return a list of preset configs from the itnernal PySEP directory
+    Searches through the internal pysep/configs/*/*.yaml files for matching
+    user queries.
+
+    :type args: argparser args
+    :param args: command line argumments
+    :rtype: list
+    :return: matching config files that will be used to run PySEP
+    """
+    pysep_dir = Path(__file__).parent.absolute()
+
+    preset_glob = os.path.join(pysep_dir, "configs", "*")
+    # Ignore the template config files, only look at directories
+    presets = [os.path.basename(_) for _ in glob(preset_glob)
+               if not _.endswith(".yaml")]
+    if not args.list:
+        assert (args.preset in presets), (
+            f"chosen preset (-p/--preset) {args.preset} not in available: "
+            f"{presets}"
+        )
+
+    event_glob = os.path.join(pysep_dir, "configs", args.preset, "*")
+    event_paths = sorted(glob(event_glob))
+    event_names = [os.path.basename(_) for _ in event_paths]
+
+    # 'event' arg can be an index (int) or a name (str)
+    try:
+        event_idx = int(args.event)
+        config_files = [event_paths[event_idx]]
+    except (ValueError, TypeError):
+        if args.event.upper() == "ALL":
+            config_files = event_paths
+        else:
+            assert (args.event in event_names), (
+                f"chosen event (-e/--event) must be an integer "
+                f"index < {len(event_names)} or one of: {event_names}"
+            )
+            config_files = [event_paths[event_names.index(args.event)]]
+
+    return config_files
+
+
 def main():
     """
     Command-line-tool function which parses command line arguments and runs
@@ -1078,66 +1148,50 @@ def main():
     .. rubric::
         $ pysep -c config.yaml
     """
+    config_files, events = [], None
     args = parse_args()
+    # Write out a blank configuration file to use as a template
     if args.write:
         sep = Pysep()
         sep.write_config()
         return
-
-    # Allow grabbing preset Config files from inside the repo
-    if args.preset or args.list:
-        pysep_dir = Path(__file__).parent.absolute()
-        # If '-l/--list', just print out available config objects
-        if args.list:
-            filelist = glob(os.path.join(pysep_dir, "configs", "*", "*"))
-            filelist = sorted([fid.split("/")[-2:] for fid in filelist])
-            print(f"-p/--preset -e/--event")
-            for i, fid in enumerate(filelist):
-                preset, event = fid
-                print(f"-p {preset} -e {event}")
-            return
-
-        preset_glob = os.path.join(pysep_dir, "configs", "*")
-        # Ignore the template config files, only look at directories
-        presets = [os.path.basename(_) for _ in glob(preset_glob)
-                   if not _.endswith(".yaml")]
-        if not args.list:
-            assert(args.preset in presets), (
-                f"chosen preset (-p/--preset) {args.preset} not in available: "
-                f"{presets}"
-            )
-
-        event_glob = os.path.join(pysep_dir, "configs", args.preset, "*")
-        event_paths = sorted(glob(event_glob))
-        event_names = [os.path.basename(_) for _ in event_paths]
-
-        # 'event' arg can be an index (int) or a name (str)
-        try:
-            event_idx = int(args.event)
-            config_files = [event_paths[event_idx]]
-        except (ValueError, TypeError):
-            if args.event.upper() == "ALL":
-                config_files = event_paths
-            else:
-                assert(args.event in event_names), (
-                    f"chosen event (-e/--event) must be an integer "
-                    f"index < {len(event_names)} or one of: {event_names}"
-                )
-                config_files = [event_paths[event_names.index(args.event)]]
-    # If not preset, user should specify the config file
+    # List out available configurations inside the repo
+    elif args.list:
+        _print_preset_configs()
+        return
+    # Choose one of the available preset configuration files to run
+    elif args.preset:
+        config_files = _return_matching_preset_configs(args)
+    # If not preset, user should specify the config file themselves
     elif args.config:
         assert(os.path.exists(args.config)), (
             f"config file (-c/--config) {args.config} does not exist"
         )
         config_files = [args.config]
-    # Finally, allow user to manually set all the input parameters through
-    # the command line using '--' flags. Not recommended
+        if args.event_file:
+            events = read_event_file(args.event_file)
+
+    # Or allow user to manually set all the input parameters through CLI
     else:
         config_files = [None]
 
-    for config_file in config_files:
-        sep = Pysep(config_file=config_file, **vars(args))
-        sep.run()
+    if events is None:
+        # Normal run: parse through config files and run PySEP
+        for config_file in config_files:
+            sep = Pysep(config_file=config_file, **vars(args))
+            sep.run()
+    else:
+        # Event File run, use the same config by parse through events
+        for event in events:
+            sep = Pysep(config_file=config_files[0],
+                        origin_time=event["origin_time"],
+                        event_latitude=event["event_latitude"],
+                        event_longitude=event["event_longitude"],
+                        event_depth_km=event["event_depth_km"],
+                        event_magnitude=event["event_magnitude"],
+                        **vars(args))
+            sep.run(overwrite_event=False)
+
 
 
 if __name__ == "__main__":

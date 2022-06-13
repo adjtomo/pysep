@@ -2,11 +2,40 @@
 Read utilities for Pysep
 """
 import re
-import os
 import yaml
 import numpy as np
 
+from obspy import UTCDateTime
 from obspy.geodetics import gps2dist_azimuth
+
+
+def read_event_file(fid):
+    """
+    Read an event input file which is just a text file that should contain
+    information on different events and their hypocenters
+
+    :type fid: str
+    :param fid: event input file
+    :rtype: list of dict
+    :return: parsed in event information
+    """
+    list_out = []
+    with open(fid, "r") as f:
+        lines = f.readlines()
+    for line in lines:
+        # Commented out lines are skipped
+        if line.strip().startswith("#"):
+            continue
+        origin_time, longitude, latitude, depth_km, mag = line.strip().split()
+        dict_out = {"origin_time": UTCDateTime(origin_time),
+                    "event_longitude": float(longitude),
+                    "event_latitude": float(latitude),
+                    "event_depth_km": float(depth_km),
+                    "event_magnitude": float(mag)
+                    }
+        list_out.append(dict_out)
+
+    return list_out
 
 
 def read_yaml(fid):

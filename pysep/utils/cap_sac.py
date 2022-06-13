@@ -94,8 +94,6 @@ def write_cap_weights_files(st, path_out="./", order_by="dist"):
         code_list.append([f"{tr.stats.sac['kevnm']}.{code}",
                           tr.stats.sac["dist"], tr.stats.sac["az"],
                           p_arrival])
-        import pdb;
-        pdb.set_trace()
 
     # Order codes based on distance, name or azimuth
     idx = ["code", "dist", "az"].index(order_by)

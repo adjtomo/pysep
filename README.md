@@ -106,7 +106,25 @@ To run this newly created configuration file
 $ pysep -c pysep_config.yaml
 ```
 
+--------------------------------------------------------------------------------
+### Multiple Event Input
 
+To use the same configuration file with multiple events, you can use an event 
+file passed to PySEP through the command line. 
+
+When using this option, the event parameters inside the config file will be
+ignored, but all the other parameters will be used to gather data and metadata.
+
+Event input files should be text files where each row describes one event with 
+the following parameters as columns:
+
+> ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
+
+For an example event input file called 'event_input.txt', call structure is:
+
+```bash
+$ pysep -c pysep_config.yaml -E event_input.txt
+```
 --------------------------------------------------------------------------------
 
 ### Record Section plotter
