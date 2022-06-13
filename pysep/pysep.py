@@ -890,6 +890,7 @@ class Pysep:
         TODO improve source receiver map plotting
         """
         if "map" in self.plot_files or "all" in self.plot_files:
+            logger.info("plotting source receiver map")
             fid = os.path.join(self.output_dir, f"station_map.png")
             plot_source_receiver_map(self.inv, self.event, save=fid)
 

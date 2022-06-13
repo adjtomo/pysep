@@ -76,11 +76,11 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         >>> import os
         >>> from glob import glob
         >>> from obspy import read
-        >>> from recsec import plot_record_section
+        >>> from recsec import plotw_rs
         >>> st = Stream()
         >>> for fid in glob(os.path.join("20200404015318920", "*.?")):
         >>>     st += read(fid)
-        >>> plot_record_section(st=st, sort_by="distance_r")
+        >>> plotw_rs(st=st, sort_by="distance_r")
 """
 import os
 import sys
@@ -374,7 +374,7 @@ class RecordSection:
             to set their parameters correctly
 
         :raises AssertionError: If any parameters are not set as expected by
-            plot_record_section functionality
+            plotw_rs functionality
         """
         logger.info("checking parameter acceptability")
 

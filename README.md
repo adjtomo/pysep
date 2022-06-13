@@ -164,7 +164,7 @@ for more options.
 
 --------------------------------------------------------------------------------
 
-## Scripting Usage
+## Scripting PySEP
 
 More advanced users can use PySEP as a scripting tool rather than a command 
 line tool. 
@@ -219,6 +219,26 @@ To append SAC headers to your own seismic data, you can directly use the
 ```
 
 Check out the Pysep.run() function for other API options for using PySEP.
+
+> __Pointing PySEP to custom, local databases:__
+Data are often stored in custom databases that we cannot predict the 
+structure of. To point PySEP at your local databases, the simplest method would
+be to find a way to read your data and metadata into ObsPy objects, which 
+you can then feed into the PySEP machinery. Similar to the SAC header example 
+given above.
+
+
+### Scripting RecSec
+
+The RECord SECtion tool can also be scripted. It simply requires an ObsPy Stream
+object as input. Tunable parameters can be fed in as input variables.
+
+```python
+>>> from obspy import read
+>>> from recsec import plotw_rs
+>>> st = Stream()
+>>> plotw_rs(st=st, sort_by="distance")
+```
 
 --------------------------------------------------------------------------------
 
