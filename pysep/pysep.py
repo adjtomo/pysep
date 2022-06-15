@@ -40,7 +40,7 @@ from pysep.recsec import plotw_rs
 
 class Pysep:
     """
-    Download, preprocess, and save waveform data from IRIS using ObsPy
+    Download, preprocess, and save waveform data using ObsPy
     """
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
@@ -1171,7 +1171,6 @@ def main():
         config_files = [args.config]
         if args.event_file:
             events = read_event_file(args.event_file)
-
     # Or allow user to manually set all the input parameters through CLI
     else:
         config_files = [None]
