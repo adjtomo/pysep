@@ -39,7 +39,7 @@ This will set two command line tools `pysep` and `recsec`
 ```bash
 $ conda create -n pysep python=3.10
 $ conda activate pysep
-$ git clone https://github.com/uafgeotools/pysep.git
+$ git clone --branch devel https://github.com/uafgeotools/pysep.git
 $ cd pysep
 $ conda install --file requirements.txt
 $ pip install -e .
