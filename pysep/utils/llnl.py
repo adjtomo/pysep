@@ -81,9 +81,9 @@ def scale_llnl_waveform_amplitudes(st):
 
     .. note::
         scales based on tests with events HOYA, BEXAR
-        * HOYA LL.LH and LL.BB require a sign flip. Otherwise the surface
-            waveform inversions produce a -ISO result.
-        * HOYA LL.LH and LL.BB body do not require flip.
+        * LL.HOYA..LH? and LL.HOYA..BB? require a sign flip. Otherwise the 
+            surface waveform inversions produce a -ISO result.
+        * LL.HOYA..LH? and LL.HOYA..BB? body do not require flip.
 
     :type st: obspy.core.stream.Stream
     :param st: Stream containing LLNL waveforms
@@ -108,7 +108,8 @@ def scale_llnl_waveform_amplitudes(st):
     for tr in st_out:
         if tr.stats.network == "LL":
             try:
-                scale_factor_llnl = llnl_scale_factors[tr.stats.station]
+                channel_prefix = tr.stats.channel[:-1]
+                scale_factor_llnl = llnl_scale_factors[channel_prefix]
             except KeyError:
                 logger.warning(f"unexpected LLNL station: {tr.stats.station}")
                 continue
@@ -120,12 +121,3 @@ def scale_llnl_waveform_amplitudes(st):
 
     return st_out
 
-
-def rename_llnl_event():
-    """
-    Check origin time against a known LLNL event catalog, and rename event
-    based on this origin time. Replaces `rename_if_LLNL_event`
-
-    TODO complete this and add into main PySEP.run()
-    """
-    pass

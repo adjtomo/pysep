@@ -559,6 +559,12 @@ class Pysep:
         logger.debug(f"{len(cat)} events in LLNL catalog, picking zeroth index")
         event = cat[0]
 
+        # Apply preferred magnitude and origin if not already
+        if not event.preferred_magnitude():
+            event.preferred_magnitude_id = event.magnitudes[0].resource_id.id
+        if not event.preferred_origin():
+            event.preferred_origin_id = event.origins[0].resource_id.id
+
         return event
 
     def get_stations(self):
@@ -571,15 +577,29 @@ class Pysep:
         :return: Station metadata queried from Client
         """
         logger.info(f"querying {self.client.upper()} for station metadata")
-        inv = self.c.get_stations(
-            network=self.networks, location=self.locations,
-            station=self.stations, channel=self.channels,
-            starttime=self.origin_time - self.seconds_before_ref,
-            endtime=self.origin_time + self.seconds_after_ref,
-            minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
-            minlongitude=self.minlongitude, maxlongitude=self.maxlongitude,
-            level="response"
-        )
+        if self.client.upper() == "LLNL":
+            # LLNL DB client behaves differently than ObsPy clients
+            inv = self.c.get_inventory()
+            inv = inv.select(
+                    network=self.networks, location=self.locations,
+                    station=self.stations, channel=self.channels,
+                    starttime=self.origin_time - self.seconds_before_ref,  
+                    endtime=self.origin_time + self.seconds_after_ref,  
+                    minlatitude=self.minlatitude, maxlatitude=self.maxlatitude, 
+                    minlongitude=self.minlongitude, 
+                    maxlongitude=self.maxlongitude
+                    )
+        else:
+            # Standard behavior is to simply wrap get_stations()
+            inv = self.c.get_stations(
+                network=self.networks, location=self.locations,
+                station=self.stations, channel=self.channels,
+                starttime=self.origin_time - self.seconds_before_ref,
+                endtime=self.origin_time + self.seconds_after_ref,
+                minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
+                minlongitude=self.minlongitude, maxlongitude=self.maxlongitude,
+                level="response"
+            )
 
         nnet = len(inv)
         ncha = len(inv.get_contents()["channels"])
@@ -614,6 +634,10 @@ class Pysep:
                 starttime=self.origin_time - self.seconds_before_ref,
                 endtime=self.origin_time + self.seconds_after_ref,
             )
+        # LLNL DB has custom interface to client
+        elif self.client.upper() == "LLNL":
+            event_id = int(self.event.event_descriptions[0].text)
+            st = self.c.get_waveforms_for_event(event_id)  # looks for integers
         else:
             st = self._bulk_query_waveforms_from_client()
 
@@ -689,24 +713,30 @@ class Pysep:
         if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
-            for code in get_codes(st=self.st, choice="channel", suffix="?",
-                                  up_to=True):
-                net, sta, loc, cha = code.split(".")
-                st_sta = st_out.select(network=net, station=sta, location=loc,
-                                       channel=cha)
-                try:
-                    st_sta.remove_response(inventory=self.inv,
-                                           water_level=self.water_level,
-                                           pre_filt=self.pre_filt,
-                                           taper=bool(self.taper_percentage),
-                                           taper_fraction=self.taper_percentage,
-                                           zero_mean=self.demean,
-                                           output=self.output_unit)
-                except ValueError as e:
-                    for tr in st_sta:
-                        logger.warning(f"can't remove response {code}: {e}"
-                                       f"removing trace from stream")
-                        st_out.remove(tr)
+            if self.client.upper() == "LLNL":
+                st_out = self._remove_response_llnl(st_out)
+            else:
+                for code in get_codes(st=self.st, choice="channel", suffix="?",
+                                      up_to=True):
+                    net, sta, loc, cha = code.split(".")
+                    st_sta = st_out.select(network=net, station=sta, 
+                                           location=loc, channel=cha
+                                           )
+                    try:
+                        st_sta.remove_response(
+                                inventory=self.inv,
+                                water_level=self.water_level,
+                                pre_filt=self.pre_filt,
+                                taper=bool(self.taper_percentage),
+                                taper_fraction=self.taper_percentage,
+                                zero_mean=self.demean,
+                                output=self.output_unit
+                                )
+                    except ValueError as e:
+                        for tr in st_sta:
+                            logger.warning(f"can't remove response {code}: {e}"
+                                           f"removing trace from stream")
+                            st_out.remove(tr)
         if self.scale_factor:
             logger.info(f"applying amplitude scale factor: {self.scale_factor}")
             for tr in st_out:
@@ -719,6 +749,45 @@ class Pysep:
         # Apply pre-resample lowpass, resample waveforms, make contiguous
         st_out = merge_and_trim_start_end_times(st_out)
         st_out = resample_data(st_out, resample_freq=self.resample_freq)
+
+        return st_out
+
+    def _remove_response_llnl(self, st):
+        """
+        Remove response information from LLNL stations. This requires using
+        the custom LLNL DB client. There are also some internal checks that 
+        need to be bypassed else they cause the program to crash
+        """
+        st_out = st.copy()
+
+        # Mimicing the client check statements to remove stations that
+        # have no response or matching time span
+        for tr in st_out[:]:
+            net = tr.stats.network
+            sta = tr.stats.station
+            cha = tr.stats.channel
+            # Check that response info is available
+            if (sta, cha) not in self.c.sensors:
+                logger.warning(f"no response for {net}.{sta}.{cha}")
+                st_out.remove(tr)
+                continue
+            # Check epoch times against the stream midpoint
+            time = tr.stats.starttime + \
+                    (tr.stats.endtime - tr.stats.starttime) / 2.
+            for epoch in self.c.sensors[(sta, cha)]:
+                if epoch.starttime <= time <= epoch.endtime:
+                    break
+                else:
+                    logger.warning(f"wrong epoch for {net}.{sta}.{cha}")
+                    try:
+                        st_out.remove(tr)
+                    except ValueError:
+                        pass
+                    continue
+
+        self.c.remove_response(st_out, water_level=self.water_level, 
+                               output=self.output_unit, 
+                               pre_filt=self.pre_filt)
 
         return st_out
 
