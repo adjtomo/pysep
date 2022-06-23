@@ -165,7 +165,6 @@ def _append_sac_headers_trace(tr, event, inv):
     # All of these are subsets of an inventory
     net = inv_unique[0]
     sta = net[0]
-    cha = sta[0]
     dist_m, az, baz = gps2dist_azimuth(
         lat1=event.preferred_origin().latitude,
         lon1=event.preferred_origin().longitude,
@@ -187,11 +186,16 @@ def _append_sac_headers_trace(tr, event, inv):
         "az": az,  # degrees
         "baz": baz,  # degrees
         "gcarc": dist_deg,  # degrees
-        "cmpinc": cha.dip,  # channel dip/inclination in degrees
-        "cmpaz": cha.azimuth,  # channel azimuth in degrees
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
+    # Some Inventory objects will not go all the way to channel, only to station
+    try:
+        cha = sta[0]
+        sac_header["cmpinc"] = cha.dip  # channel dip/inclination in degrees
+        sac_header["cmpaz"] = cha.azimuth  # channel azimuth in degrees
+    except IndexError:
+        pass
 
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz

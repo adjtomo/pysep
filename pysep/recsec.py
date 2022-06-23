@@ -139,9 +139,9 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input, 
     3) produces record section waveform figures.
     """
-    def __init__(self, pysep_path=None, st=None, st_syn=None, sort_by="default",
-                 scale_by=None, time_shift_s=None, move_out=None,
-                 min_period_s=None, max_period_s=None,
+    def __init__(self, pysep_path=None, syn_path=None, st=None, st_syn=None,
+                 sort_by="default", scale_by=None, time_shift_s=None,
+                 move_out=None, min_period_s=None, max_period_s=None,
                  preprocess="st", max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1, 
@@ -157,6 +157,8 @@ class RecordSection:
         :type pysep_path: str
         :param pysep_path: path to Pysep output, which is expected to contain
             trace-wise SAC waveform files which will be read
+        :type syn_path: str
+        :param syn_path: path to SPECFEM generated ASCII synthetics.
         :type st: obspy.core.stream.Stream
         :param st: Stream objects containing observed time series to be plotted
             on the record section. Can contain any number of traces
@@ -300,8 +302,11 @@ class RecordSection:
                 st = Stream()
                 for fid in fids:
                     st += read(fid)
+        if syn_path is not None and os.path.exists(syn_path):
+            fids = glob(os.path.join(syn_path, "*"))
+
         assert st, ("Stream object not found, please check inputs `st` "
-                     "and `pysep_path")
+                    "and `pysep_path")
 
         # User defined parameters, do some type-setting
         self.st = st.copy()
@@ -423,7 +428,7 @@ class RecordSection:
 
         if self.scale_by is not None:
             acceptable_scale_by = ["normalize", "global_norm",
-                                    "geometric_spreading"]
+                                   "geometric_spreading"]
             if self.scale_by not in acceptable_scale_by:
                 err.scale_by = f"must be in {acceptable_scale_by}"
 

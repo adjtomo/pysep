@@ -6,7 +6,8 @@ TODO add function testing clipped station, need to find example data
 """
 import os
 import pytest
-from obspy import read, read_events, read_inventory
+from glob import glob
+from obspy import read, read_events, read_inventory, Stream
 
 from pysep.utils.cap_sac import (append_sac_headers,
                                  format_sac_header_w_taup_traveltimes)
@@ -15,6 +16,7 @@ from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_insufficient_length)
 from pysep.utils.fmt import format_event_tag
 from pysep.utils.plot import plot_source_receiver_map
+from pysep.utils.io import read_synthetics
 
 
 @pytest.fixture
@@ -112,6 +114,22 @@ def test_plot_map(test_event, test_inv):
     """
     plot_source_receiver_map(inv=test_inv, event=test_event, save=False,
                              show=False)
+
+
+def test_read_synthetics():
+    """
+    Test reading SPECFEM-generated synthetics in as SAC formatted files
+    """
+    test_synthetics = glob("./test_data/test_synthetics/*.semd")
+    test_stations = "./test_data/test_STATIONS"
+    test_cmtsolution = "./test_data/test_CMTSOLUTION_2014p715167"
+
+    st = Stream()
+    for test_synthetic in test_synthetics:
+        st += read_synthetics(fid=test_synthetic, cmtsolution=test_cmtsolution,
+                              stations=test_stations)
+
+    assert(st[0].stats.sac.evla == -40.5405)
 
 
 @pytest.mark.skip(reason="need to find correct clipped example data")
