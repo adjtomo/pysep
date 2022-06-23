@@ -96,6 +96,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
+from pysep.utils.io import read_synthetics
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -139,7 +140,8 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input, 
     3) produces record section waveform figures.
     """
-    def __init__(self, pysep_path=None, syn_path=None, st=None, st_syn=None,
+    def __init__(self, pysep_path=None, syn_path=None, stations=None,
+                 cmtsolution=None, st=None, st_syn=None,
                  sort_by="default", scale_by=None, time_shift_s=None,
                  move_out=None, min_period_s=None, max_period_s=None,
                  preprocess="st", max_traces_per_rs=None, integrate=0,
@@ -296,15 +298,28 @@ class RecordSection:
         if pysep_path is not None and os.path.exists(pysep_path):
             # Expecting to find SAC files labelled as such
             fids = glob(os.path.join(pysep_path, "*.sac"))
-            logger.info(f"Reading {len(fids)} files from: {pysep_path}")
             if fids:
+                logger.info(f"Reading {len(fids)} files from: {pysep_path}")
                 # Overwrite stream, so reading takes precedence
                 st = Stream()
                 for fid in fids:
                     st += read(fid)
-        if syn_path is not None and os.path.exists(syn_path):
-            fids = glob(os.path.join(syn_path, "*"))
 
+        # Read in SPECFEM generated synthetics and generate SAC headed streams
+        if syn_path is not None and os.path.exists(syn_path):
+            assert(cmtsolution is not None and os.path.exists(cmtsolution))
+            assert(stations is not None and os.path.exists(stations))
+            fids = glob(os.path.join(syn_path, "??.*.*.sem?*"))
+            if fids:
+                logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
+                st_syn = Stream()
+                for fid in fids:
+                    st_syn += read_synthetics(fid=fid, cmtsolution=cmtsolution,
+                                              stations=stations)
+        # Allow plotting ONLY synthetics and no data
+        if st is None:
+            st = st_syn.copy()
+            st_syn = None
         assert st, ("Stream object not found, please check inputs `st` "
                     "and `pysep_path")
 
@@ -1583,6 +1598,15 @@ def parse_args():
                         help="path to Pysep output, which is expected to "
                              "contain trace-wise SAC waveform files which will "
                              "be read")
+    parser.add_argument("--syn_path", default=None, type=str, nargs="?",
+                        help="path to SPECFEM generated synthetics. Also "
+                             "requires --cmtsolution_file and --stations_file")
+    parser.add_argument("--cmtsolution", default=None, type=str, nargs="?",
+                        help="required for synthetics, path to the CMTSOLUTION "
+                             "file used to generate SPECFEM synthetics")
+    parser.add_argument("--stations", default=None, type=str, nargs="?",
+                        help="required for synthetics, path to the STATIONS "
+                             "file used to generate SPECFEM synthetics")
     parser.add_argument("--sort_by", default="distance", type=str, nargs="?",
                         help=textwrap.dedent("""
             How to sort the Y-axis of the record section
