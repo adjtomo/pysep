@@ -1691,7 +1691,7 @@ def parse_args():
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
-    parser.add_argument("--overwrite", default=False, action="store_true",
+    parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--log_level", default="DEBUG", type=str,
                         help="verbosity of logger: 'WARNING', 'INFO', 'DEBUG'")

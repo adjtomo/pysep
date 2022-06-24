@@ -72,7 +72,7 @@ def format_event_tag(event):
 
     client = Client()
     region = client.flinnengdahl(lat=event_lat, lon=event_lon, rtype="region")
-    region = region.replace(" ", "_").upper()
+    region = region.replace(" ", "_").replace(",", "").upper()
 
     # Presumed to be event name specified by origintime
     event_time = event.preferred_origin().time.strftime("%Y-%m-%dT%H%M%S")
