@@ -161,6 +161,30 @@ $ recsec --pysep_path ./SAC --sort_by azimuth
 Have a look at the -h/--help message and the docstring at the top of `recsec.py`
 for more options.
 
+#### Plotting SPECFEM synthetics
+
+RecSec can plot SPECFEM-generated synthetic seismograms in ASCII format. 
+These can be plotted standalone, or alongside observed seismograms to look at
+data-synthetic misfit. 
+
+To access metadata, RecSec requires the CMTSOLUTION and STATIONS file that were 
+used by SPECFEM to generate the synthetics. Based on a standard 
+SPECFEM3D_Cartesian working directory, plotting synthetics only would have 
+the following call structure:
+
+```bash
+$ recsec --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS
+```
+
+To compare observed and synthetic data, you would have name the --pysep_path
+and tell RecSec to preprocess both data streams identically
+
+```bash
+$ recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
+```
+
+Preprocessing flags such as filtering and move out will be applied to both
+observed and synthetic data.
 
 --------------------------------------------------------------------------------
 
@@ -181,25 +205,6 @@ with typical ObsPy naming schema
 >>> sep.event
 ```
 
-If you already have data but want to benefit from the processing and quality
-assurance/formatting capabilities of PySEP, you can provide your own ObsPy
-objects
-
-```python
->>> from pysep import Pysep
->>> from obspy import read, read_events, read_inventory
->>> st = read()
->>> inv = read_inventory()
->>> event = read_events()[0]
->>> sep = Pysep(st=st, inv=inv, event=event, config_file="config.yaml")
-```
-
-> __Pointing PySEP to custom, local databases:__
-Data are often stored in custom databases that we cannot predict the 
-structure of. To point PySEP at your local databases, the simplest method would
-be to find a way to read your data and metadata into ObsPy objects, which 
-you can then feed into the PySEP machinery. Similar to the above example.
-
 Although not the preferred method of interacting with PySEP, you can forgo the 
 config file and pass parameters directly to the instantiation of the PySEP 
 class, making PySEP a bit more flexible.
@@ -209,19 +214,6 @@ class, making PySEP a bit more flexible.
 >>> sep = Pysep(origin_time="2000-01-01T00:00:00", event_latitude=64.8596,
                 event_longitude=-147.8498, event_depth_km=15., ....
                 )
-```
-
-To append SAC headers to your own seismic data, you can directly use the
-`PySEP` utility functions
-
-```python
->>> from pysep.utils.cap_sac import append_sac_headers, format_sac_header_w_taup_traveltimes
->>> from obspy import read, read_events, read_inventory
->>> st = read()
->>> inv = read_inventory()
->>> event = read_events()[0]
->>> st = append_sac_headers(st=st, inv=inv, event=event)
->>> st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
 ```
 
 Check out the Pysep.run() function for other API options for using PySEP.
@@ -237,6 +229,56 @@ object as input. Tunable parameters can be fed in as input variables.
 >>> st = read()
 >>> plotw_rs(st=st, sort_by="distance")
 ```
+
+### Miscellaneous Functionality
+
+#### Append SAC headers to existing Streams
+
+To append SAC headers to your own seismic data, you can directly use the
+`PySEP` utility functions `append_sac_headers` and 
+`format_sac_header_w_taup_traveltimes`
+
+```python
+>>> from pysep.utils.cap_sac import append_sac_headers, format_sac_header_w_taup_traveltimes
+>>> from obspy import read, read_events, read_inventory
+>>> st = read()
+>>> inv = read_inventory()
+>>> event = read_events()[0]
+>>> st = append_sac_headers(st=st, inv=inv, event=event)
+>>> st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
+```
+
+#### Reading in SPECFEM-generated synthetics
+
+PySEP contains a utility function `read_synthetics` to read in 
+SPECFEM-generated synthetics with appropriately crafted SAC headers. 
+Given a standard SPECFEM3D working directory, reading in SPECFEM synthetics 
+might look something like:
+
+```python
+>>> from pysep.utils.io import read_synthetics
+>>> st = read_synthetics(fid="OUTPUT_FILES/NZ.BFZ.BXE.semd", 
+                         cmtsolution="DATA/CMTSOLUTION", 
+                         stations="DATA/STATIONS")
+>>> print(st)
+```
+
+####  Pointing PySEP to custom, local databases 
+Data are often stored in custom databases that we cannot predict the 
+structure of. To point PySEP at your local databases, the simplest method would
+be to find a way to read your data and metadata into ObsPy objects, which 
+you can then feed into the PySEP machinery. 
+
+```python
+>>> from pysep import Pysep
+>>> from obspy import read, read_events, read_inventory
+>>> st = read()
+>>> inv = read_inventory()
+>>> event = read_events()[0]
+>>> sep = Pysep(st=st, inv=inv, event=event, config_file="config.yaml")
+```
+
+
 
 --------------------------------------------------------------------------------
 
