@@ -14,8 +14,7 @@ from obspy.geodetics import gps2dist_azimuth
 from pysep.utils.cap_sac import append_sac_headers
 
 
-def read_synthetics(fid, cmtsolution, stations, location="",
-                            precision=4):
+def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     """
     Specfem3D outputs seismograms to ASCII (.sem?) files. Converts SPECFEM
     .sem? files into Stream objects with the correct header
@@ -81,7 +80,13 @@ def read_synthetics(fid, cmtsolution, stations, location="",
     origintime += times[0]
 
     # Write out the header information
-    net, sta, cha, fmt = os.path.basename(fid).split('.')
+    try:
+        # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd
+        net, sta, cha, fmt = os.path.basename(fid).split(".")
+    except ValueError:
+        # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
+        net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
+
     stats = {"network": net, "station": sta, "location": location,
              "channel": cha, "starttime": origintime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'},
