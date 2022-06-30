@@ -1,10 +1,15 @@
 Python Seismogram Extraction and Processing
 ===========================================
 
+`PySEP` is a waveform and metadata download tool. The package also contains
+`RecSec`, a record section plotting tool. 
+
+## Introduction
+
 `PySEP` uses ObsPy tools to request seismic data and metadata, process, 
-standardize and format the data, and write out SAC files with the underlying 
+standardize and format waveform data, and write out SAC files with the underlying 
 motivation of preparing data for moment tensor inversions, although the 
-written files can be used for other purposes.
+written files can be used for other purposes. 
 
 The main processing steps taken by `PySEP` are:
 
@@ -23,7 +28,7 @@ The main processing steps taken by `PySEP` are:
 11. Write config YAML files which can be used to re-run data gathering/processing
 12. Plot a record section and source-receiver map
 
-PySEP also has the capacity to:
+`PySEP` also has the capacity to:
 
 * Interface with a Lawrence Livermore National Laboratory database of nuclear
   explosion and earthquake waveforms (see note)
@@ -31,30 +36,30 @@ PySEP also has the capacity to:
 * Access pre-defined configuration files for data used in previous studies 
 * Input custom TauP models for arrival time estimation
 
-### Installation
+## Installation
 
 We recommend installing PySEP into a Conda environment. Dependencies are 
 installed via Conda where possible, with Pip used to install PySEP itself. 
 This will set two command line tools `pysep` and `recsec`
 ```bash
-$ conda create -n pysep python=3.10
-$ conda activate pysep
-$ git clone https://github.com/uafgeotools/pysep.git
-$ cd pysep
-$ conda install --file requirements.txt
-$ pip install -e .
+conda create -n pysep python=3.10
+conda activate pysep
+git clone https://github.com/uafgeotools/pysep.git
+cd pysep
+conda install --file requirements.txt
+pip install -e .
 ```
 
-### Running Tests
+## Running Tests
 
 PySEP comes with unit testing which should be run before and after making any
 changes to see if your changes have altered the expected code behavior.
 ```bash
-$ cd pysep/tests
-$ pytest
+cd pysep/tests
+pytest
 ```
 
-### Gallery
+## Gallery
 
 An example record section produced by the `recsec` tool inside PySEP
 
@@ -73,13 +78,14 @@ Normal users should use PySEP as a command line tool.
 To bring up the command line tool help message:
 
 ```bash
-$ pysep -h 
+pysep -h 
 ```
 
 To list out available pre-defined configuration files
 
 ```bash
-$ pysep -l  # or pysep --list
+pysep -l  # or pysep --list
+
 -p/--preset -e/--event
 -p MTUQ2022_workshop -e 2009-04-07T201255_ANCHORAGE.yaml
 -p MTUQ2022_workshop -e 2014-08-25T161903_ICELAND.yaml
@@ -90,20 +96,20 @@ $ pysep -l  # or pysep --list
 To run one of the pre-defined configuration files
 
 ``` bash
-$ pysep -p MTUQ2022_workshop -e 2017-09-03T033001_NORTH_KOREA.yaml 
+pysep -p MTUQ2022_workshop -e 2017-09-03T033001_NORTH_KOREA.yaml 
 ```
 
 To create a template configuration file that you must fill out with your own
 parameters
 
 ```bash
-$ pysep -W  # or pysep --write
+pysep -W  # or pysep --write
 ```
 
 To run this newly created configuration file
 
 ```bash
-$ pysep -c pysep_config.yaml
+pysep -c pysep_config.yaml
 ```
 
 --------------------------------------------------------------------------------
@@ -123,11 +129,11 @@ the following parameters as columns:
 For an example event input file called 'event_input.txt', call structure is:
 
 ```bash
-$ pysep -c pysep_config.yaml -E event_input.txt
+pysep -c pysep_config.yaml -E event_input.txt
 ```
 --------------------------------------------------------------------------------
 
-### Record Section plotter
+## Record Section plotter
 
 PySEP also comes with a pretty sophisticated record section tool, which plots
 seismic data acquired by PySEP. When you have successfully collected your data,
@@ -137,31 +143,31 @@ it will reside in the /SAC folder of the PySEP output directory.
 To see available record section plotting commands
 
 ```bash
-$ recsec -h  # RECordSECtion
+recsec -h  # RECordSECtion
 ```
 
 To plot the waveform data in a record section with default parameters
 
 ```bash
-$ recsec --pysep_path ./SAC
+recsec --pysep_path ./SAC
 ```
 
 To plot a record section with a 7km/s move out, high-pass filtered at 1s
 
 ```bash
-$ recsec --pysep_path ./SAC --move_out 7 --min_period_s 1
+recsec --pysep_path ./SAC --move_out 7 --min_period_s 1
 ```
 
 To sort your record section by azimuth and not distance (default sorting)
 
 ```bash
-$ recsec --pysep_path ./SAC --sort_by azimuth
+recsec --pysep_path ./SAC --sort_by azimuth
 ```
 
 Have a look at the -h/--help message and the docstring at the top of `recsec.py`
 for more options.
 
-#### Plotting SPECFEM synthetics
+### Plotting SPECFEM synthetics
 
 RecSec can plot SPECFEM-generated synthetic seismograms in ASCII format. 
 These can be plotted standalone, or alongside observed seismograms to look at
@@ -173,14 +179,14 @@ SPECFEM3D_Cartesian working directory, plotting synthetics only would have
 the following call structure:
 
 ```bash
-$ recsec --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS
+recsec --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS
 ```
 
 To compare observed and synthetic data, you would have name the --pysep_path
 and tell RecSec to preprocess both data streams identically
 
 ```bash
-$ recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
+recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
 ```
 
 Preprocessing flags such as filtering and move out will be applied to both
@@ -230,9 +236,9 @@ object as input. Tunable parameters can be fed in as input variables.
 >>> plotw_rs(st=st, sort_by="distance")
 ```
 
-### Miscellaneous Functionality
+## Miscellaneous Functionality
 
-#### Append SAC headers to existing Streams
+### Append SAC headers to existing Streams
 
 To append SAC headers to your own seismic data, you can directly use the
 `PySEP` utility functions `append_sac_headers` and 
@@ -248,7 +254,7 @@ To append SAC headers to your own seismic data, you can directly use the
 >>> st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
 ```
 
-#### Reading in SPECFEM-generated synthetics
+### Reading in SPECFEM-generated synthetics
 
 PySEP contains a utility function `read_synthetics` to read in 
 SPECFEM-generated synthetics with appropriately crafted SAC headers. 
@@ -263,7 +269,7 @@ might look something like:
 >>> print(st)
 ```
 
-####  Pointing PySEP to custom, local databases 
+###  Pointing PySEP to custom, local databases 
 Data are often stored in custom databases that we cannot predict the 
 structure of. To point PySEP at your local databases, the simplest method would
 be to find a way to read your data and metadata into ObsPy objects, which 
@@ -282,7 +288,7 @@ you can then feed into the PySEP machinery.
 
 --------------------------------------------------------------------------------
 
-### LLNL Note
+## LLNL Note
 
 `PySEP` interfaces with the databases of:
 
