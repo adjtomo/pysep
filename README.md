@@ -50,7 +50,7 @@ $ pip install -e .
 PySEP comes with unit testing which should be run before and after making any
 changes to see if your changes have altered the expected code behavior.
 ```bash
-$ cd pytest/tests
+$ cd pysep/tests
 $ pytest
 ```
 
