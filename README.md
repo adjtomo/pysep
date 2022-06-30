@@ -254,19 +254,20 @@ To append SAC headers to your own seismic data, you can directly use the
 >>> st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
 ```
 
-### Reading in SPECFEM-generated synthetics
+### Converting SPECFEM-generated synthetics
 
 PySEP contains a utility function `read_synthetics` to read in 
 SPECFEM-generated synthetics with appropriately crafted SAC headers. 
 Given a standard SPECFEM3D working directory, reading in SPECFEM synthetics 
-might look something like:
+and saving them as SAC files might look something like:
 
 ```python
 >>> from pysep.utils.io import read_synthetics
 >>> st = read_synthetics(fid="OUTPUT_FILES/NZ.BFZ.BXE.semd", 
                          cmtsolution="DATA/CMTSOLUTION", 
                          stations="DATA/STATIONS")
->>> print(st)
+>>> for tr in st:
+>>>     st.write(f"{tr.get_id()}.sac", format="SAC")
 ```
 
 ###  Pointing PySEP to custom, local databases 
