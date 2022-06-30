@@ -39,7 +39,7 @@ This will set two command line tools `pysep` and `recsec`
 ```bash
 $ conda create -n pysep python=3.10
 $ conda activate pysep
-$ git clone --branch devel https://github.com/uafgeotools/pysep.git
+$ git clone https://github.com/uafgeotools/pysep.git
 $ cd pysep
 $ conda install --file requirements.txt
 $ pip install -e .
@@ -50,7 +50,7 @@ $ pip install -e .
 PySEP comes with unit testing which should be run before and after making any
 changes to see if your changes have altered the expected code behavior.
 ```bash
-$ cd tests
+$ cd pytest/tests
 $ pytest
 ```
 
