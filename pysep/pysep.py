@@ -52,14 +52,14 @@ class Pysep:
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=50, scale_factor=1,
-                 phase_list=None,
-                 seconds_before_event=20, seconds_after_event=20,
-                 seconds_before_ref=100, seconds_after_ref=300,
-                 taup_model="ak135", output_unit="VEL",  user=None,
-                 password=None, client_debug=False, log_level="DEBUG",
-                 timeout=600, write_files="all", plot_files="all",
-                 llnl_db_path=None, output_dir=None, overwrite=False,
-                 legacy_naming=False, event_tag=None, **kwargs):
+                 phase_list=None, seconds_before_event=20,
+                 seconds_after_event=20, seconds_before_ref=100,
+                 seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
+                 user=None, password=None, client_debug=False,
+                 log_level="DEBUG", timeout=600, write_files="all",
+                 plot_files="all", llnl_db_path=None, output_dir=None,
+                 overwrite=False, legacy_naming=False, overwrite_event_tag=None,
+                 **kwargs):
         """
         Define a default set of parameters
 
@@ -154,6 +154,15 @@ class Pysep:
         :param user: User ID if IRIS embargoes data behind passwords
         :type password: str
         :param password: Password if IRIS embargoes data behind passwords
+        :type overwrite: bool
+        :param overwrite: overwrite an existing PySEP event directory if
+            the current process is trying to write to it
+        :type legacy_naming: bool
+        :param legacy_naming: revert to old PySEP naming schema for event tag,
+            which names the directory and output SAC files
+        :type overwrite_event_tag: str
+        :param overwrite_event_tag: option to allow the user to set their own
+            event tag, rather than the automatically generated one
         """
         # Internal attribute but define first so that it sits at the top of
         # written config files
@@ -227,12 +236,12 @@ class Pysep:
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
-        self.event_tag = event_tag
         self.write_files = write_files
         self.plot_files = plot_files
         self.log_level = log_level
-        self.legacy_naming = legacy_naming
+        self._legacy_naming = legacy_naming
         self._overwrite = overwrite
+        self._overwrite_event_tag = overwrite_event_tag
 
         # Internally filled attributes
         self.c = None
@@ -405,7 +414,7 @@ class Pysep:
             config_file = self.config_file
         if not overwrite_event:
             logger.info("will NOT overwrite event search parameters with "
-                         "config file")
+                        "config file")
 
         if config_file is not None:
             logger.info(f"overwriting default parameters with config file: "
@@ -586,10 +595,10 @@ class Pysep:
             inv = inv.select(
                     network=self.networks, location=self.locations,
                     station=self.stations, channel=self.channels,
-                    starttime=self.origin_time - self.seconds_before_ref,  
-                    endtime=self.origin_time + self.seconds_after_ref,  
-                    minlatitude=self.minlatitude, maxlatitude=self.maxlatitude, 
-                    minlongitude=self.minlongitude, 
+                    starttime=self.origin_time - self.seconds_before_ref,
+                    endtime=self.origin_time + self.seconds_after_ref,
+                    minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
+                    minlongitude=self.minlongitude,
                     maxlongitude=self.maxlongitude
                     )
         else:
@@ -722,7 +731,7 @@ class Pysep:
                 for code in get_codes(st=self.st, choice="channel", suffix="?",
                                       up_to=True):
                     net, sta, loc, cha = code.split(".")
-                    st_sta = st_out.select(network=net, station=sta, 
+                    st_sta = st_out.select(network=net, station=sta,
                                            location=loc, channel=cha
                                            )
                     try:
@@ -758,7 +767,7 @@ class Pysep:
     def _remove_response_llnl(self, st):
         """
         Remove response information from LLNL stations. This requires using
-        the custom LLNL DB client. There are also some internal checks that 
+        the custom LLNL DB client. There are also some internal checks that
         need to be bypassed else they cause the program to crash
         """
         st_out = st.copy()
@@ -776,7 +785,7 @@ class Pysep:
                 continue
             # Check epoch times against the stream midpoint
             time = tr.stats.starttime + \
-                    (tr.stats.endtime - tr.stats.starttime) / 2.
+                   (tr.stats.endtime - tr.stats.starttime) / 2.
             for epoch in self.c.sensors[(sta, cha)]:
                 if epoch.starttime <= time <= epoch.endtime:
                     break
@@ -788,8 +797,8 @@ class Pysep:
                         pass
                     continue
 
-        self.c.remove_response(st_out, water_level=self.water_level, 
-                               output=self.output_unit, 
+        self.c.remove_response(st_out, water_level=self.water_level,
+                               output=self.output_unit,
                                pre_filt=self.pre_filt)
 
         return st_out
@@ -928,14 +937,14 @@ class Pysep:
         if "sac" in write_files or "all" in write_files:
             logger.info("writing each waveform trace in SAC format")
             # Old PySEP dumped all files into output dir. New PySEP makes subdir
-            if self.legacy_naming:
+            if self._legacy_naming:
                 _output_dir = self.output_dir
             else:
                 _output_dir = os.path.join(self.output_dir, "SAC")
             if not os.path.exists(_output_dir):
                 os.makedirs(_output_dir)
             for tr in self.st:
-                if self.legacy_naming:
+                if self._legacy_naming:
                     # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
                     _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
                     tag = f"{self.event_tag}.{_trace_id}"
@@ -1007,13 +1016,16 @@ class Pysep:
         :rtype: tuple of str
         :return: (unique event tag, path to output directory)
         """
-        # Options for choosing how to name things. Legacy, new-style or manually
-        if self.legacy_naming and not self.event_tag:
+        # Options for choosing how to name things. Legacy, manual or new-style
+        if self._legacy_naming:
+            logger.debug("reverting to legacy style file naming")
             event_tag = format_event_tag_legacy(self.event)
-        elif not self.legacy_naming:
-            event_tag = format_event_tag(self.event)
         else:
-            event_tag = self.event_tag
+            event_tag = format_event_tag(self.event)
+
+        if self._overwrite_event_tag:
+            logger.debug("overwriting automatically generated event tag")
+            event_tag = self._overwrite_event_tag
 
         logger.info(f"event tag is: {event_tag}")
         full_output_dir = os.path.join(self.output_dir, event_tag)
@@ -1128,7 +1140,8 @@ def parse_args():
     parser.add_argument("--legacy_naming", default=False, action="store_true",
                         help="use the file naming schema and directory "
                              "structure of the legacy version of PySEP.")
-    parser.add_argument("--event_tag", default="", type=str, nargs="?",
+    parser.add_argument("--overwrite_event_tag", default="", type=str,
+                        nargs="?",
                         help="Manually set the event tag used to name the "
                              "output directory and SAC files. If None, will "
                              "default to a tag consisting of event origin time "
