@@ -143,7 +143,7 @@ argument in the command line. This will change how the event tag is formatted,
 how the output directory is structured, and how the output SAC files are named.
 
 ```bash
-$ pysep -c pysep_config.yaml --legacy_naming
+pysep -c pysep_config.yaml --legacy_naming
 ```
 
 --------------------------------------------------------------------------------
@@ -156,7 +156,7 @@ region (or just origin time if ``--legacy_naming`` is used). Other output files
 such as the config file and ObsPy objects can be set as in the following: 
 
 ```bash
-$ pysep -c pysep_config.yaml \
+pysep -c pysep_config.yaml \
     --event_tag event_abc \
     --config_fid event_abc.yaml \
     --stations_fid event_abc_stations.txt \
