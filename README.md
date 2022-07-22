@@ -131,6 +131,44 @@ For an example event input file called 'event_input.txt', call structure is:
 ```bash
 pysep -c pysep_config.yaml -E event_input.txt
 ```
+
+--------------------------------------------------------------------------------
+### Legacy Filenaming Schema
+
+The new version of PySEP uses a file naming schema that is incompatible with 
+previous versions, which may lead to problems in established workflows. 
+
+To honor the legacy naming schema of PySEP, simply use the ``--legacy_naming`` 
+argument in the command line. This will change how the event tag is formatted,
+how the output directory is structured, and how the output SAC files are named.
+
+```bash
+$ pysep -c pysep_config.yaml --legacy_naming
+```
+
+--------------------------------------------------------------------------------
+### Output Filename Control
+
+The event tag used to name the output directory and written SAC files can be set
+manually by the user using the ``--event_tag`` argument. If not given, the tag 
+will default to a string consisting of event origin time and Flinn-Engdahl 
+region (or just origin time if ``--legacy_naming`` is used). Other output files 
+such as the config file and ObsPy objects can be set as in the following: 
+
+```bash
+$ pysep -c pysep_config.yaml \
+    --event_tag event_abc \
+    --config_fid event_abc.yaml \
+    --stations_fid event_abc_stations.txt \
+    --inv_fid event_abc_inv.xml \
+    --event_fid event_abc_event.xml \
+    --stream_fid event_abc_st.ms
+```
+
+Please note: the output SAC file names are hardcoded and cannot be changed 
+by the user. If this is a required feature, please open up a GitHub issue, and 
+the developers will address this need.
+
 --------------------------------------------------------------------------------
 
 ## Record Section plotter

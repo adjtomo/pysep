@@ -78,3 +78,17 @@ def format_event_tag(event):
     event_time = event.preferred_origin().time.strftime("%Y-%m-%dT%H%M%S")
 
     return f"{event_time}_{region}"
+
+
+def format_event_tag_legacy(event):
+    """
+    Generate a unique event tag based on the event time. This was how the
+    previous version of PySEP named directories and files. Replaces the old
+    `otime2eid` from `util_helpers`
+
+    :type event: obspy.core.event.Event
+    :param event: event to generate tag from
+    :rtype: str
+    :return: event_name specified by event time
+    """
+    return event.preferred_origin().time.strftime("%Y%m%d%H%M%S%f")[:-3]
