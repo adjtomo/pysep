@@ -157,7 +157,7 @@ such as the config file and ObsPy objects can be set as in the following:
 
 ```bash
 pysep -c pysep_config.yaml \
-    --event_tag event_abc \
+    --overwrite_event_tag event_abc \
     --config_fid event_abc.yaml \
     --stations_fid event_abc_stations.txt \
     --inv_fid event_abc_inv.xml \

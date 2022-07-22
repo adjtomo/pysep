@@ -298,6 +298,10 @@ class RecordSection:
         if pysep_path is not None and os.path.exists(pysep_path):
             # Expecting to find SAC files labelled as such
             fids = glob(os.path.join(pysep_path, "*.sac"))
+            if not fids:
+                # Or if legacy naming schema, assume that the sac files have a
+                # given file format: event_tag.NN.SSS..LL.CC.c
+                fids = glob(os.path.join(pysep_path, "*.*.*.*.*.?"))
             if fids:
                 logger.info(f"Reading {len(fids)} files from: {pysep_path}")
                 # Overwrite stream, so reading takes precedence
