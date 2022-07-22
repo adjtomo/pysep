@@ -29,7 +29,7 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing)
-from pysep.utils.fmt import format_event_tag, get_codes
+from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
@@ -58,7 +58,8 @@ class Pysep:
                  taup_model="ak135", output_unit="VEL",  user=None,
                  password=None, client_debug=False, log_level="DEBUG",
                  timeout=600, write_files="all", plot_files="all",
-                 llnl_db_path=None, output_dir=None, overwrite=False, **kwargs):
+                 llnl_db_path=None, output_dir=None, overwrite=False,
+                 legacy_naming=False, event_tag=None, **kwargs):
         """
         Define a default set of parameters
 
@@ -226,9 +227,11 @@ class Pysep:
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
+        self.event_tag = event_tag
         self.write_files = write_files
         self.plot_files = plot_files
         self.log_level = log_level
+        self.legacy_naming = legacy_naming
         self._overwrite = overwrite
 
         # Internally filled attributes
@@ -819,7 +822,9 @@ class Pysep:
 
         return st_out
 
-    def write(self, write_files=None, _return_filenames=False):
+    def write(self, write_files=None, _return_filenames=False,
+              config_fid=None, stations_fid=None, inv_fid=None, event_fid=None,
+              stream_fid=None, **kwargs):
         """
         Write out various files specifying information about the collected
         stations and waveforms.
@@ -846,6 +851,19 @@ class Pysep:
             but just return a list of acceptable filenames. This keeps all the
             file naming definitions in one function. This is only required by
             the check() function.
+        :type config_fid: str
+        :param config_fid: optional name for the configuration file name
+            defaults to 'pysep_config.yaml'
+        :type stations_fid: str
+        :param stations_fid: optional name for the stations list file name
+            defaults to 'station_list.txt'
+        :type inv_fid: str
+        :param inv_fid: optional name for saved ObsPy inventory object,
+            defaults to 'inv.xml'
+        :type event_fid: optional name for saved ObsPy Event object, defaults to
+            'event.xml'
+        :type stream_fid: optional name for saved ObsPy Stream miniseed object,
+            defaults to 'stream.ms'
         """
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
@@ -875,29 +893,31 @@ class Pysep:
 
         if "config_file" in write_files or "all" in write_files:
             logger.info("writing config YAML file")
-            fid = os.path.join(self.output_dir, f"pysep_config.yaml")
+            fid = os.path.join(self.output_dir,
+                               config_fid or f"pysep_config.yaml")
             self.write_config(fid=fid)
 
         if "station_list" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, "stations_list.txt")
+            fid = os.path.join(self.output_dir,
+                               stations_fid or "stations_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
             write_stations_file(self.inv, self.event, fid)
 
         if "inv" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, f"inv.xml")
+            fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
             logger.info("writing inventory as StationXML")
             logger.debug(fid)
             self.inv.write(fid, format="STATIONXML")
 
         if "event" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, f"event.xml")
+            fid = os.path.join(self.output_dir, event_fid or f"event.xml")
             logger.info("writing event as QuakeML")
             logger.debug(fid)
             self.event.write(fid, format="QuakeML")
 
         if "stream" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, f"stream.ms")
+            fid = os.path.join(self.output_dir, stream_fid or f"stream.ms")
             logger.info("writing waveform stream in MiniSEED")
             logger.debug(fid)
             with warnings.catch_warnings():
@@ -907,12 +927,22 @@ class Pysep:
 
         if "sac" in write_files or "all" in write_files:
             logger.info("writing each waveform trace in SAC format")
-            _output_dir = os.path.join(self.output_dir, "SAC")
+            # Old PySEP dumped all files into output dir. New PySEP makes subdir
+            if self.legacy_naming:
+                _output_dir = self.output_dir
+            else:
+                _output_dir = os.path.join(self.output_dir, "SAC")
             if not os.path.exists(_output_dir):
                 os.makedirs(_output_dir)
             for tr in self.st:
-                # e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
-                tag = f"{self.event_tag}.{tr.get_id()}.sac"
+                if self.legacy_naming:
+                    # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
+                    _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
+                    tag = f"{self.event_tag}.{_trace_id}"
+                else:
+                    # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
+                    tag = f"{self.event_tag}.{tr.get_id()}.sac"
+
                 fid = os.path.join(_output_dir, tag)
                 logger.debug(os.path.basename(fid))
                 tr.write(fid, format="SAC")
@@ -977,8 +1007,15 @@ class Pysep:
         :rtype: tuple of str
         :return: (unique event tag, path to output directory)
         """
-        event_tag = format_event_tag(self.event)
-        logger.info(f"event tag is: {self.event_tag}")
+        # Options for choosing how to name things. Legacy, new-style or manually
+        if self.legacy_naming and not self.event_tag:
+            event_tag = format_event_tag_legacy(self.event)
+        elif not self.legacy_naming:
+            event_tag = format_event_tag(self.event)
+        else:
+            event_tag = self.event_tag
+
+        logger.info(f"event tag is: {event_tag}")
         full_output_dir = os.path.join(self.output_dir, event_tag)
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
@@ -1021,6 +1058,7 @@ class Pysep:
             self.event = self.get_event()
         else:
             self.event = event
+
         self.event_tag, self.output_dir = self._event_tag_and_output_dir()
 
         if inv is None:
@@ -1044,7 +1082,7 @@ class Pysep:
         self.st = quality_check_waveforms_after_processing(self.st)
 
         # Generate outputs for user consumption
-        self.write()
+        self.write(**kwargs)
         self.plot()
 
 
@@ -1087,6 +1125,15 @@ def parse_args():
     parser.add_argument("-L", "--log_level", default="INFO", type=str,
                         nargs="?", help="verbosity of logging: 'WARNING', "
                                         "'INFO', 'DEBUG'")
+    parser.add_argument("--legacy_naming", default=False, action="store_true",
+                        help="use the file naming schema and directory "
+                             "structure of the legacy version of PySEP.")
+    parser.add_argument("--event_tag", default="", type=str, nargs="?",
+                        help="Manually set the event tag used to name the "
+                             "output directory and SAC files. If None, will "
+                             "default to a tag consisting of event origin time "
+                             "and region, or just origin time if using "
+                             "`--legacy_naming`")
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing directory which matches "
                              "the unique event tag")
@@ -1260,7 +1307,6 @@ def main():
                         event_magnitude=event["event_magnitude"],
                         **vars(args))
             sep.run(overwrite_event=False)
-
 
 
 if __name__ == "__main__":
