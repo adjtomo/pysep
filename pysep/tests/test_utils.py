@@ -14,7 +14,7 @@ from pysep.utils.cap_sac import (append_sac_headers,
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
                                  remove_stations_for_insufficient_length)
-from pysep.utils.fmt import format_event_tag
+from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.utils.io import read_synthetics
 
@@ -52,9 +52,17 @@ def test_append_sac_headers(test_st, test_inv, test_event):
     assert(hasattr(st[0].stats, "sac"))
     assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
 
+
+def test_event_tag_legacy(test_event):
+    """
+    Check that event tagging works as expected
+    """
     # while were here, make sure event tagging works
     tag = format_event_tag(test_event)
     assert(tag == "2009-04-07T201255_SOUTHERN_ALASKA")
+
+    tag = format_event_tag_legacy(test_event)
+    assert(tag == "20090407201255351")
 
 
 def test_format_sac_headers_w_taup_traveltimes(test_st, test_inv, test_event):
