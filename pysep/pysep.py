@@ -1086,7 +1086,9 @@ class Pysep:
             self.st = st
         self.st = quality_check_waveforms_before_processing(self.st)
         self.st = append_sac_headers(self.st, self.event, self.inv)
-        self.st = format_sac_header_w_taup_traveltimes(self.st, self.taup_model)
+        if self.taup_model is not None:
+            self.st = format_sac_header_w_taup_traveltimes(self.st, 
+                                                           self.taup_model)
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()

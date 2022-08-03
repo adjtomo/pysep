@@ -72,9 +72,10 @@ def format_event_tag(event):
 
     client = Client()
     region = client.flinnengdahl(lat=event_lat, lon=event_lon, rtype="region")
+    # e.g. NORTH ISLAND, NEW ZEALAND > NORTH_ISLAND_NEW_ZEALAND
     region = region.replace(" ", "_").replace(",", "").upper()
 
-    # Presumed to be event name specified by origintime
+    # Presumed to be event name specified by origintime, e..g, 20090407T201255
     event_time = event.preferred_origin().time.strftime("%Y-%m-%dT%H%M%S")
 
     return f"{event_time}_{region}"
