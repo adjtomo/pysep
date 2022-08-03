@@ -10,7 +10,7 @@ from obspy.core.stream import Stream
 from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
 from pysep import logger
-from pysep.utils.fmt import format_event_tag
+from pysep.utils.fmt import format_event_tag_legacy
 from pysep.utils.fetch import get_taup_arrivals_with_sac_headers
 
 # SAC HEADER CONSTANTS DEFINING NON-INTUITIVE QUANTITIES
@@ -174,6 +174,7 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
     sac_header = {
+        "o": tr.stats.starttime - event.preferred_origin().time,
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
         "evdp": event.preferred_origin().depth / 1E3,  # depth in km
@@ -181,7 +182,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "stla": sta.latitude,
         "stlo": sta.longitude,
         "stel": sta.elevation / 1E3,  # elevation in km
-        "kevnm": format_event_tag(event),
+        "kevnm": format_event_tag_legacy(event),  # only take date code
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees
