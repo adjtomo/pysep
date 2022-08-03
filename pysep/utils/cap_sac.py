@@ -149,6 +149,11 @@ def _append_sac_headers_trace(tr, event, inv):
     TODO Add back in information removed from original function
         * Add sensor type somewhere, previously stored in KT? (used for picks)
 
+    .. note::
+        We explicitely set 'iztype, 'b' and 'e' in the SAC header to tell ObsPy
+        that the trace start is NOT the origin time. Otherwise all the relative
+        timing (e.g., picks) will be wrong.
+
     :type tr: obspy.core.trace.Trace
     :param tr: Trace to append SAC header to
     :type event: obspy.core.event.Event
@@ -174,7 +179,9 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
     sac_header = {
-        "o": tr.stats.starttime - event.preferred_origin().time,
+        "iztype": 9,  # Ref time equivalence, IB (9): Begin time
+        "b": tr.stats.starttime - event.preferred_origin().time,  # begin time
+        "e": tr.stats.npts * tr.stats.delta,  # end time
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
         "evdp": event.preferred_origin().depth / 1E3,  # depth in km
