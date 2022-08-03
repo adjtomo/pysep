@@ -53,7 +53,7 @@ def test_append_sac_headers(test_st, test_inv, test_event):
     assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
 
 
-def test_event_tag_legacy(test_event):
+def test_event_tag_and_event_tag_legacy(test_event):
     """
     Check that event tagging works as expected
     """
