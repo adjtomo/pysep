@@ -15,6 +15,7 @@ from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
                                  remove_stations_for_insufficient_length)
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
+from pysep.utils.process import estimate_prefilter_corners
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.utils.io import read_synthetics
 
@@ -149,6 +150,18 @@ def test_read_synthetics():
                               stations=test_stations)
 
     assert(st[0].stats.sac.evla == -40.5405)
+
+
+def test_estimate_prefilter_corners(test_st):
+    """
+    Test prefilter corner estimation based on trace starts time and samp rate
+    """
+    for tr in test_st:
+        f0, f1, f2, f3 = estimate_prefilter_corners(tr)
+        assert(f0 == pytest.approx(.0214, 3))
+        assert(f1 == pytest.approx(.0427, 3))
+        assert(f2 == pytest.approx(12.5, 3))
+        assert(f3 == pytest.approx(25.0, 3))
 
 
 @pytest.mark.skip(reason="need to find correct clipped example data")

@@ -33,7 +33,8 @@ from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
-                                 format_streams_for_rotation, rotate_to_uvw)
+                                 format_streams_for_rotation, rotate_to_uvw,
+                                 estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.recsec import plotw_rs
 
@@ -48,8 +49,9 @@ class Pysep:
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, water_level=60, detrend=True,
-                 demean=True, taper_percentage=0, rotate=None, pre_filt=None,
-                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
+                 demean=True, taper_percentage=0, rotate=None,
+                 pre_filt="default", mindistance=0, maxdistance=20E3,
+                 minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=50, scale_factor=1,
                  phase_list=None, seconds_before_event=20,
@@ -103,6 +105,16 @@ class Pysep:
             * ZNE: Rotate from arbitrary components to North, East, Up
             * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
             * UVW: Rotate from ZNE to orthogonal UVW orientation
+        :type prefilt: str, tuple or NoneType
+        :param prefilt: apply a pre-filter to the waveforms before deconvolving
+            instrument response. Options are:
+            * 'default': automatically calculate (f0, f1, f2, f3) based on the
+                length of the waveform (dictating longest allowable period) and
+                the sampling rate (dictating shortest allowable period). This is
+                the default behavior.
+            * NoneType: do not apply any pre-filtering
+            * tuple of float: (f0, f1, f2, f3) define the corners of your pre
+                filter in units of frequency (Hz)
         :type mindistance: float
         :param mindistance: get waveforms from stations starting from a minimum
             distance away  from event (km)
@@ -336,7 +348,7 @@ class Pysep:
             f"unnacceptable `output_unit` {self.output_unit}, must be in "
             f"{acceptable_units}")
 
-        if self.pre_filt is not None:
+        if self.pre_filt not in [None, "default"]:
             assert(len(self.pre_filt) == 4), (
                 f"`pre_filt` must be a tuple of length 4, representing four "
                 f"corner frequencies for a bandpass filter (f1, f2, f3, f4)"
@@ -725,6 +737,8 @@ class Pysep:
         if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
+            if self.pre_filt is not None:
+                logger.info(f"will apply pre-filter: {self.pre_filt}")
             if self.client.upper() == "LLNL":
                 st_out = self._remove_response_llnl(st_out)
             else:
@@ -734,18 +748,23 @@ class Pysep:
                     st_sta = st_out.select(network=net, station=sta,
                                            location=loc, channel=cha
                                            )
-                    try:
-                        st_sta.remove_response(
+                    for tr in st_sta:
+                        # Get trace-dependent pre-filtering if desired
+                        if self.pre_filt == "default":
+                            _pre_filt = estimate_prefilter_corners(tr)
+                        else:
+                            _pre_filt = self.pre_filt
+                        try:
+                            tr.remove_response(
                                 inventory=self.inv,
                                 water_level=self.water_level,
-                                pre_filt=self.pre_filt,
+                                pre_filt=_pre_filt,
                                 taper=bool(self.taper_percentage),
                                 taper_fraction=self.taper_percentage,
                                 zero_mean=self.demean,
                                 output=self.output_unit
                                 )
-                    except ValueError as e:
-                        for tr in st_sta:
+                        except ValueError as e:
                             logger.warning(f"can't remove response {code}: {e}"
                                            f"removing trace from stream")
                             st_out.remove(tr)
