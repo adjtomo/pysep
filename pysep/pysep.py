@@ -34,7 +34,8 @@ from pysep.utils.io import read_yaml, read_event_file, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw,
-                                 estimate_prefilter_corners)
+                                 estimate_prefilter_corners,
+                                 append_back_azimuth_to_stats)
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.recsec import plotw_rs
 
@@ -834,8 +835,9 @@ class Pysep:
             with SAC headers that have been adjusted for the rotation
         """
         st_out = self.st.copy()
-
         st_out = format_streams_for_rotation(st_out)
+        st_out = append_back_azimuth_to_stats(st=st_out, inv=self.inv,
+                                              event=self.event)
         if "ZNE" in self.rotate:
             logger.info("rotating to components ZNE")
             st_out.rotate(method="->ZNE", inventory=self.inv)
@@ -1111,7 +1113,8 @@ class Pysep:
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
-        self.st = self.rotate_streams()
+        if self.rotate is not None:
+            self.st = self.rotate_streams()
         self.st = quality_check_waveforms_after_processing(self.st)
 
         # Generate outputs for user consumption

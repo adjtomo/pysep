@@ -74,3 +74,4 @@ def test_curtail_stations(test_pysep):
     nsta_post_curtail = len(inv.get_contents()["channels"])
 
     assert(nsta_pre_curtail - nsta_post_curtail == 6)
+

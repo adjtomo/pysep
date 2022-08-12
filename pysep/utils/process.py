@@ -5,6 +5,7 @@ import numpy as np
 from scipy import signal
 
 from obspy import Stream
+from obspy.geodetics import gps2dist_azimuth
 from pysep import logger
 from pysep.utils.fmt import get_codes
 
@@ -56,6 +57,37 @@ def format_streams_for_rotation(st):
 
     logger.info(f"stream formatting returned {len(st_out)} traces")
 
+    return st_out
+
+
+def append_back_azimuth_to_stats(st, inv, event):
+    """
+    ObsPy rotation requires back azimuth information which is accessed through
+    trace.stats.back_azimuth. This function appends back azimuth values to the
+    stream by cacluating using metadata from the inventory and event objects.
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream with missing components
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: optional user-provided inventory object which will force a
+        skip over StationXML/inventory searching
+    :type event: obspy.core.event.Event
+    :param event: optional user-provided event object which will force a
+        skip over QuakeML/event searching
+    :rtype: obspy.core.stream.Stream
+    :return: stream with back azimuth values appended
+    """
+    st_out = st.copy()
+    ev_lat = event.preferred_origin().latitude
+    ev_lon = event.preferred_origin().longitude
+    for net in inv:
+        for sta in net:
+            _, _, baz = gps2dist_azimuth(lat1=ev_lat, lon1=ev_lon,
+                                         lat2=sta.latitude, lon2=sta.longitude
+                                         )
+            # Apply back azimuth changes to stream in place
+            for tr in st_out.select(network=net.code, station=sta.code):
+                tr.stats.back_azimuth = baz
     return st_out
 
 
