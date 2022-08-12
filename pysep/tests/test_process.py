@@ -127,11 +127,12 @@ def test_append_back_azimuth_to_stats(test_st, test_inv, test_event):
                pytest.approx(tr.stats.back_azimuth, 3))
 
 
-def test_rotate_streams(test_st, test_inv, test_event):
+def test_rotate_streams_fail(test_st, test_inv, test_event):
     """
-    Ensure that stream rotation works as expected
+    Ensure that stream rotation does not go ahead if no back azimuth values are
+    specified
     """
-    sep = Pysep(log_level="CRITICAL")
+    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
     for tr in test_st:
         del tr.stats.back_azimuth
     assert("back_azimuth" not in test_st[0].stats)
@@ -140,17 +141,26 @@ def test_rotate_streams(test_st, test_inv, test_event):
     sep.inv = test_inv
     sep.event = test_event
     sep.st = sep.preprocess()  # make sure that streams are formatted correctly
-    st_rotated = sep.rotate_streams()
-    # Make sure components have been rotated
-    for tr in sep.st:
-        assert(tr.stats.component not in ["R", "T"])
-    for tr in st_rotated:
-        assert(tr.stats.component not in ["N", "E"])
+    with pytest.raises(TypeError):
+        sep.rotate_streams()
 
-    # check that data has been changed for horizontal components
-    for tr, tr_rot in zip(sep.st, st_rotated):
-        assert(tr.stats.station == tr_rot.stats.station)
-        if tr.stats.component == "Z":
-            assert(np.any(tr.data == tr_rot.data))
-        else:
-            assert(np.any(tr.data != tr_rot.data))
+
+def test_rotate_streams(test_st, test_inv, test_event):
+    """
+    Ensure that stream rotation works as expected after we format SAC headers
+    """
+    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
+    for tr in test_st:
+        del tr.stats.back_azimuth
+    assert("back_azimuth" not in test_st[0].stats)
+
+    sep.st = test_st
+    sep.inv = test_inv
+    sep.event = test_event
+    sep.st = append_sac_headers(sep.st, sep.event, sep.inv)
+    sep.st = sep.preprocess()  # make sure that streams are formatted correctly
+    st_rotated = sep.rotate_streams()
+    assert(len(st_rotated) == 14)
+    # Make sure components have been rotated
+    for tr in st_rotated:
+        assert(tr.stats.component in ["R", "T", "Z", "N", "E"])
