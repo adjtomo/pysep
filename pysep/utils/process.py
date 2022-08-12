@@ -66,6 +66,10 @@ def append_back_azimuth_to_stats(st, inv, event):
     trace.stats.back_azimuth. This function appends back azimuth values to the
     stream by cacluating using metadata from the inventory and event objects.
 
+    .. note::
+        This was written and then I realized that `_append_sac_headers_trace`
+        already does this, so it is unused, but left incase it's useful later.
+
     :type st: obspy.core.stream.Stream
     :param st: Stream with missing components
     :type inv: obspy.core.inventory.Inventory
