@@ -2,7 +2,9 @@ Python Seismogram Extraction and Processing
 ===========================================
 
 `PySEP` is a waveform and metadata download tool. The package also contains
-`RecSec`, a record section plotting tool. 
+`RecSec`, a record section plotting tool. As part of the
+[SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` is included in the 
+[SCOPED Base container](https://github.com/SeisSCOPED/container-base).
 
 ## Introduction
 
