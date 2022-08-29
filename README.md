@@ -342,7 +342,7 @@ Chinook.
 ```bash
 module load singularity
 singularity pull docker://ghcr.io/seisscoped/container-base:centos7
-singularity exec -c container-base:centos7.sif pysep -h
+singularity exec -c container-base_centos7.sif pysep -h
 ```
 
 To run a data download we will need to mount the local filesystem into the
