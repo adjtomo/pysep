@@ -349,7 +349,7 @@ To run a data download we will need to mount the local filesystem into the
 container using the ``--bind`` command. Using the Anchorage example event:
 
 ```bash
-singularity exec -c --bind $(pwd):/home1 container-base:centos7.sf \
+singularity exec -c --bind $(pwd):/home1 container-base_centos7.sif \
     bash -c "cd /home1/; pysep -p mtuq_workshop_2022 -e 2009-04-07T201255_ANCHORAGE.yaml"
 ```
 
