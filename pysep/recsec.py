@@ -317,8 +317,12 @@ class RecordSection:
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
         if syn_path is not None and os.path.exists(syn_path):
-            assert(cmtsolution is not None and os.path.exists(cmtsolution))
-            assert(stations is not None and os.path.exists(stations))
+            assert(cmtsolution is not None and os.path.exists(cmtsolution)), (
+                f"If `syn_path` is given, RecSec also requires `cmtsolution`"
+            )
+            assert(stations is not None and os.path.exists(stations)), (
+                f"If `syn_path` is given, RecSec also requires `stations`"
+            )
             fids = glob(os.path.join(syn_path, "??.*.*.sem?*"))
             if fids:
                 logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
@@ -527,10 +531,11 @@ class RecordSection:
             err.save = (f"path {self.save} already exists. Use '--overwrite' " 
                         f"flag to save over existing figures.")
 
-        _dirname = os.path.abspath(os.path.dirname(self.save))
-        if not os.path.exists(_dirname):
-            logger.info(f"creating output directory {_dirname}")
-            os.makedirs(_dirname)
+        if self.save:
+            _dirname = os.path.abspath(os.path.dirname(self.save))
+            if not os.path.exists(_dirname):
+                logger.info(f"creating output directory {_dirname}")
+                os.makedirs(_dirname)
 
         if err:
             out = "ERROR - Parameter errors, please make following changes:\n"
@@ -608,7 +613,8 @@ class RecordSection:
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
         for tr, xlim in zip(self.st, self.xlim):
             start, stop = xlim
-            self.max_amplitudes.append(max(abs(tr.data[start:stop])))
+            self.max_amplitudes = np.append(self.max_amplitudes,
+                                            max(abs(tr.data[start:stop])))
         self.max_amplitudes = np.array(self.max_amplitudes)
 
         # Figure out which indices we'll be plotting
@@ -1366,7 +1372,7 @@ class RecordSection:
             else:
                 loc = self.y_label_loc
             self._set_y_axis_text_labels(start=start, stop=stop, loc=loc)
-        logger.info(f"placing station labels on y-axis at: {loc}")
+            logger.info(f"placing station labels on y-axis at: {loc}")
 
         # User requests that we turn off y-axis
         if self.y_label_loc is None:
