@@ -2,7 +2,9 @@ Python Seismogram Extraction and Processing
 ===========================================
 
 `PySEP` is a waveform and metadata download tool. The package also contains
-`RecSec`, a record section plotting tool. 
+`RecSec`, a record section plotting tool. As part of the
+[SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` is included in the 
+[SCOPED Base container](https://github.com/SeisSCOPED/container-base).
 
 ## Introduction
 
@@ -326,6 +328,45 @@ you can then feed into the PySEP machinery.
 
 
 --------------------------------------------------------------------------------
+
+## Running PySEP on UAF Chinook
+
+Chinook is University of Alaska Fairbanks' (UAF) high performance computer. 
+We can run PySEP on Chinook using Docker containers through 
+Singularity/Apptainer. 
+
+By default, PySEP is included in the SCOPED base-container. The following code 
+snippet downloads the correct container and runs the PySEP help message on
+Chinook.
+
+```bash
+module load singularity
+singularity pull docker://ghcr.io/seisscoped/container-base:centos7
+singularity exec -c container-base_centos7.sif pysep -h
+```
+
+To run a data download we will need to mount the local filesystem into the
+container using the ``--bind`` command. Using the Anchorage example event:
+
+```bash
+singularity exec -c --bind $(pwd):/home1 container-base_centos7.sif \
+    bash -c "cd /home1/; pysep -p mtuq_workshop_2022 -e 2009-04-07T201255_ANCHORAGE.yaml"
+```
+
+In the above example, the `-c/--contain` flag preserves the internal container
+filesystem, the `-B/--bind` flag binds the current working directory on Chinook
+(i.e., pwd)to a directory called */home1* within the container, and then the 
+`bash -c` command changes to this */home1* directory and runs PySEP. Files are 
+subsequently saved to the local filesystem in our current working directory.
+
+`RecSec`, the record section plotting tool, can be run from the command line 
+using a similar format. With the Anchorange example files we just generated:
+
+```bash
+cd 2009-04-07T201255_SOUTHERN_ALASKA/
+singularity exec -c --bind $(pwd):/home1 ../container-base_centos7.sif \
+    bash -c "cd /home1; recsec --pysep_path SAC/ --min_period 10 --save record_section_tmin10.png"
+```
 
 ## LLNL Note
 
