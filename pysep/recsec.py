@@ -141,12 +141,12 @@ class RecordSection:
     3) produces record section waveform figures.
     """
     def __init__(self, pysep_path=None, syn_path=None, stations=None,
-                 cmtsolution=None, st=None, st_syn=None,
-                 sort_by="default", scale_by=None, time_shift_s=None,
+                 cmtsolution=None, st=None, st_syn=None, sort_by="default",
+                 scale_by=None, time_shift_s=None, zero_pad_s=None,
                  move_out=None, min_period_s=None, max_period_s=None,
                  preprocess="st", max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
-                 y_axis_spacing=1, amplitude_scale_factor=1, 
+                 y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", 
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None, 
                  figsize=(9, 11), show=True, save="./record_section.png", 
@@ -207,6 +207,12 @@ class RecordSection:
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
                 match the number of traces in your input stream.
+        :type zero_pad_s: list
+        :param zero_pad_s: zero pad data in units of seconsd. applied after
+            tapering and before filtering. Input as a tuple of floats,
+            * (start, end): a list of floats will zero-pad the START and END
+                of the trace. Either can be 0 to ignore zero-padding at either
+                end
         :type amplitude_scale_factor: float OR list of float
         :param amplitude_scale_factor: apply scale factor to all amplitudes.
             Used as a dial to adjust amplitudes manually. Defaults to 1.
@@ -349,6 +355,7 @@ class RecordSection:
         # Time shift parameters
         self.move_out = move_out
         self.time_shift_s = time_shift_s
+        self.zero_pad_s = zero_pad_s
 
         # Filtering parameters
         self.min_period_s = min_period_s
@@ -459,6 +466,18 @@ class RecordSection:
                     len(self.time_shift_s) != len(self.st):
                 err.time_shift_s = f"must be list of length {len(self.st)}"
 
+        if self.zero_pad_s is not None:
+            assert(isinstance(self.zero_pad_s, list)), (
+                f"`zero_pad_s` must be a list of floats representing the " 
+                f"[`start`, `end`] amount to pad around trace, units seconds"
+            )
+            assert(len(self.zero_pad_s) == 2), (
+                f"`zero_pad_s` must be a list of floats length 2"
+            )
+            _start, _end = self.zero_pad_s
+            assert(_start >= 0. and _end >= 0.), \
+                f"`zero_pad_s` values must be >= 0"
+
         # Defaults to float value of 1
         acceptable_scale_factor = [int, float, list]
         if type(self.amplitude_scale_factor) not in acceptable_scale_factor:
@@ -472,9 +491,14 @@ class RecordSection:
                 err.min_period_s = "must be less than `max_period_s`"
 
         if self.preprocess is not None:
-            acceptable_preprocess = ["both", "st"]
+            acceptable_preprocess = ["both", "st", "st_syn"]
             if self.preprocess not in acceptable_preprocess:
                 err.preprocess = f"must be in {acceptable_preprocess}"
+        if self.preprocess in ["st_syn", "both"]:
+            assert(self.st is not None and self.st_syn is not None), (
+                f"`preprocess` choice requires both `st` & `st_syn` to exist."
+                f"If you only have one or the other, set: `preprocess`=='st'"
+            )
 
         # Overwrite the max traces per record section, enforce type int
         if self.max_traces_per_rs is None:
@@ -1066,6 +1090,16 @@ class RecordSection:
             st.detrend("demean")
             st.taper(max_percentage=0.05, type="cosine")
 
+            # Zero pad start and end of data if requested by user
+            if self.zero_pad_s:
+                _start, _end = self.zero_pad_s
+                logger.info(f"padding zeros to traces with {_start}s before "
+                            f"and {_end}s after")
+                for idx, tr in enumerate(st):
+                    tr.trim(starttime=tr.stats.starttime - _start,
+                            endtime=tr.stats.endtime + _end,
+                            pad=True, fill_value=0)
+
             # Allow multiple filter options based on user input
             # Min period but no max period == low-pass
             if self.max_period_s is not None and self.min_period_s is None:
@@ -1197,8 +1231,10 @@ class RecordSection:
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         tshift = self.time_shift_s[idx]
         
-        # These are still the entire waveform
-        x = tr.times() + tshift
+        # These are still the entire waveform. Make sure we honor zero padding
+        # and any time shift applied
+        zero_pad_start, zero_pad_end = self.zero_pad_s
+        x = tr.times() + tshift - zero_pad_start
         y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. 
@@ -1669,6 +1705,12 @@ def parse_args():
     parser.add_argument("--xlim_s", default=None, type=int, nargs="+",
                         help="Min and max x limits in units seconds. Input as "
                              "a list, e.g., --xlim_s 10 200 ...")
+    parser.add_argument("--zero_pad_s", default=None, type=float, nargs="+",
+                        help="Zero pad the start and end of each trace. Input "
+                             "as two values in units of seconds."
+                             "i.e., --zero_pad_s `START` `END` or"
+                             "e.g., --zero_pad_s 30 0 to pad 30s before start "
+                             "0s at end of trace")
     parser.add_argument("--components", default="ZRTNE12", type=str, nargs="?",
                         help="Ordered component list specifying 1) which "
                              "components will be shown, and in what order. "
