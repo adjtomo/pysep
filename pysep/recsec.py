@@ -653,7 +653,19 @@ class RecordSection:
             for tr, tshift in zip(self.st, self.time_shift_s):
                 start, stop = [int(_/tr.stats.delta) for _ in self.xlim_s]
                 sshift = int(tshift / tr.stats.delta)  # unit: samples
-                xlim.append((start-sshift, stop-sshift))
+                # These indices define the index of the user-chosen timestamp
+                start_index = start - sshift
+                end_index = stop - sshift
+                # Shift by the total amount that the zero pad adjusted starttime
+                if self.zero_pad_s:
+                    zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
+                    start_index += zero_pad_index
+                    end_index += zero_pad_index
+                assert(start_index >= 0), (
+                    f"trying to access negative time but trace has no negative "
+                    f"time values. Please check your choice for `xlim_s`"
+                )
+                xlim.append((start_index, end_index))
 
         xlim = np.array(xlim)
         return xlim
