@@ -1554,6 +1554,11 @@ class RecordSection:
         y_fmt = f"Y_FMT: NET.STA.LOC.CHA|{az_str}|DIST"
         if self.time_shift_s.sum() != 0:
             y_fmt += "|TSHIFT"
+        # Zero pad is either a list of length or None
+        if self.zero_pad_s:
+            _start, _end = self.zero_pad_s
+        else:
+            _start, _end = 0, 0
 
         title = "\n".join([
             title_top,
@@ -1566,6 +1571,7 @@ class RecordSection:
             f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
             f"FILT: [{self.min_period_s}, {self.max_period_s}]s; "
             f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s",
+            f"ZERO_PAD: {_start}s, {_end}s",
         ])
         self.ax.set_title(title)
 
