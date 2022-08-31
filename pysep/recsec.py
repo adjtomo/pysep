@@ -1559,11 +1559,14 @@ class RecordSection:
             _start, _end = self.zero_pad_s
         else:
             _start, _end = 0, 0
+        # Origintime needs to be shifted by the zero pad offset value which has
+        # changed the 'starttime'
+        origintime = min([tr.stats.starttime + _start for tr in self.st])
 
         title = "\n".join([
             title_top,
             f"{'/' * len(title_top*2)}",
-            f"ORIGINTIME: {min([tr.stats.starttime for tr in self.st])}",
+            f"ORIGINTIME: {origintime}",
             f"{y_fmt}",
             f"NWAV: {nwav}; NEVT: {self.stats.nevents}; "
             f"NSTA: {self.stats.nstation}; COMP: {cmp}",
