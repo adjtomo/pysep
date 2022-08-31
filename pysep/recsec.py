@@ -1233,8 +1233,9 @@ class RecordSection:
         
         # These are still the entire waveform. Make sure we honor zero padding
         # and any time shift applied
-        zero_pad_start, zero_pad_end = self.zero_pad_s
-        x = tr.times() + tshift - zero_pad_start
+        x = tr.times() + tshift
+        if self.zero_pad_s is not None:
+            x -= self.zero_pad_s[0]  # index 0 is start, index 1 is end
         y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. 
