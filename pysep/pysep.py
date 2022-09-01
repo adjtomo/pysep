@@ -17,7 +17,7 @@ import llnl_db_client
 
 from glob import glob
 from pathlib import Path
-from obspy import UTCDateTime
+from obspy import UTCDateTime, Stream
 from obspy.clients.fdsn import Client
 from obspy.clients.fdsn.header import FDSNBadRequestException
 from obspy.core.event import Event, Origin, Magnitude
@@ -829,22 +829,46 @@ class Pysep:
         TODO Original code had a really complicated method for rotating,
             was that necesssary? Why was st.rotate() not acceptable?
 
+        .. warning::
+            This function combines all traces, both rotated and non-rotated
+            components (ZNE, RTZ, UVW, but not raw, e.g., 12Z), into a single
+            stream. This is deemed okay because we don't do any
+            component-specific operations after rotation.
+
         :rtype: obspy.core.stream.Stream
         :return: a stream that has been rotated to desired coordinate system
-            with SAC headers that have been adjusted for the rotation
+            with SAC headers that have been adjusted for the rotation, as well
+            as non-rotated streams which are saved incase user needs access to
+            other components
         """
-        st_out = self.st.copy()
+        st_raw = self.st.copy()
+        st_raw = format_streams_for_rotation(st_raw)
+        # Empty stream so we can take advantage of class __add__ method
+        st_out = Stream()
 
-        st_out = format_streams_for_rotation(st_out)
-        if "ZNE" in self.rotate:
+        # RTZ requires rotating to ZNE first. Make sure this happens even if the
+        # user doesn't specify ZNE rotation.
+        if "ZNE" in self.rotate or "RTZ" in self.rotate:
             logger.info("rotating to components ZNE")
-            st_out.rotate(method="->ZNE", inventory=self.inv)
+            st_zne = st_raw.copy()
+            st_zne.rotate(method="->ZNE", inventory=self.inv)
+            st_out += st_zne
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
-            st_out = rotate_to_uvw(st_out)
+            st_uvw = rotate_to_uvw(st_out)
+            st_out += st_uvw
         elif "RTZ" in self.rotate:
             logger.info("rotating to components RTZ")
-            st_out.rotate("NE->RT", inventory=self.inv)
+            # For some reason, when we rotate the ENTIRE stream at once, T and R
+            # components get flipped and shifted (i.e., WRONG). But if we go
+            # station by station, rotation results comes out differently (i.e.,
+            # they match Legacy PySEP results)
+            st_rtz = st_raw.copy()
+            stations = set([tr.stats.station for tr in st_rtz])
+            for sta in stations:
+                _st = st_rtz.select(station=sta)
+                _st.rotate("NE->RT")  # in place rot.
+            st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
 
@@ -897,7 +921,7 @@ class Pysep:
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "all"}
+                             "config_file", "sac", "sac_rotated", "all"}
         if _return_filenames:
             return _acceptable_files
 
@@ -1111,7 +1135,13 @@ class Pysep:
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
-        self.st = self.rotate_streams()
+
+        # Rotation to various orientations. The output stream will have ALL
+        # components, both rotated and non-rotated
+        if self.rotate is not None:
+            self.st = self.rotate_streams()
+
+        # Final quality checks on ALL waveforms before we write them out
         self.st = quality_check_waveforms_after_processing(self.st)
 
         # Generate outputs for user consumption

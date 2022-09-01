@@ -142,7 +142,8 @@ def append_sac_headers(st, event, inv):
 
 def _append_sac_headers_trace(tr, event, inv):
     """
-    Append SAC headers to ObsPy streams given event and station metadata
+    Append SAC headers to ObsPy streams given event and station metadata.
+    Also add 'back_azimuth' to Stream stats which can be used for rotation.
 
     Rewritten from: `util_write_cap.add_sac_metadata()`
 
@@ -205,6 +206,7 @@ def _append_sac_headers_trace(tr, event, inv):
     except IndexError:
         pass
 
+    # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
 

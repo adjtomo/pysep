@@ -9,11 +9,11 @@ import pytest
 import numpy as np
 from obspy import read, read_events, read_inventory
 
-from pysep import logger
+from pysep import logger, Pysep
 from pysep.utils.cap_sac import append_sac_headers
 from pysep.utils.process import (merge_and_trim_start_end_times,
                                  resample_data, format_streams_for_rotation,
-                                 rotate_to_uvw)
+                                 rotate_to_uvw, append_back_azimuth_to_stats)
 
 logger.setLevel("DEBUG")  # DELETEME
 
@@ -109,3 +109,58 @@ def test_rotate_to_uvw(test_st):
     for tr in st_out:
         assert(tr.stats.component in ["U", "V", "W"])
 
+
+def test_append_back_azimuth_to_stats(test_st, test_inv, test_event):
+    """
+    Check that back azimuth values are appended correctly
+    """
+    # ensure that test data doesn't have any back azimuth stats
+    for tr in test_st:
+        del tr.stats.back_azimuth
+    assert("back_azimuth" not in test_st[0].stats)
+
+    st = append_back_azimuth_to_stats(st=test_st, inv=test_inv,
+                                      event=test_event)
+    check_dict = {"ATKA": 45.514, "BESE": 297.444, "ALPI": 335.115}
+    for tr in st:
+        assert(check_dict[tr.stats.station] ==
+               pytest.approx(tr.stats.back_azimuth, 3))
+
+
+def test_rotate_streams_fail(test_st, test_inv, test_event):
+    """
+    Ensure that stream rotation does not go ahead if no back azimuth values are
+    specified
+    """
+    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
+    for tr in test_st:
+        del tr.stats.back_azimuth
+    assert("back_azimuth" not in test_st[0].stats)
+
+    sep.st = test_st
+    sep.inv = test_inv
+    sep.event = test_event
+    sep.st = sep.preprocess()  # make sure that streams are formatted correctly
+    with pytest.raises(TypeError):
+        sep.rotate_streams()
+
+
+def test_rotate_streams(test_st, test_inv, test_event):
+    """
+    Ensure that stream rotation works as expected after we format SAC headers
+    """
+    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
+    for tr in test_st:
+        del tr.stats.back_azimuth
+    assert("back_azimuth" not in test_st[0].stats)
+
+    sep.st = test_st
+    sep.inv = test_inv
+    sep.event = test_event
+    sep.st = append_sac_headers(sep.st, sep.event, sep.inv)
+    sep.st = sep.preprocess()  # make sure that streams are formatted correctly
+    st_rotated = sep.rotate_streams()
+    assert(len(st_rotated) == 14)
+    # Make sure components have been rotated
+    for tr in st_rotated:
+        assert(tr.stats.component in ["R", "T", "Z", "N", "E"])
