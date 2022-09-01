@@ -859,8 +859,15 @@ class Pysep:
             st_out += st_uvw
         elif "RTZ" in self.rotate:
             logger.info("rotating to components RTZ")
+            # For some reason, when we rotate the ENTIRE stream at once, T and R
+            # components get flipped and shifted (i.e., WRONG). But if we go
+            # station by station, rotation results comes out differently (i.e.,
+            # they match Legacy PySEP results)
             st_rtz = st_raw.copy()
-            st_rtz.rotate("NE->RT", inventory=self.inv)
+            stations = set([tr.stats.station for tr in st_rtz])
+            for sta in stations:
+                _st = st_rtz.select(station=sta)
+                _st.rotate("NE->RT")  # in place rot.
             st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
