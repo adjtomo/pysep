@@ -690,6 +690,13 @@ class Pysep:
                 # net sta loc cha t1 t2
                 bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
 
+        # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
+        assert(bulk), (
+            f"station curtailing has removed any stations to query data for. "
+            f"please check your `distance` and `azimuth` curtailing criteria "
+            f"and try again"
+            )
+
         try:
             logger.info(f"querying {len(bulk)} lines in bulk client request...")
             st = self.c.get_waveforms_bulk(bulk=bulk)
@@ -860,7 +867,11 @@ class Pysep:
         if "ZNE" in self.rotate or "RTZ" in self.rotate:
             logger.info("rotating to components ZNE")
             st_zne = st_raw.copy()
-            st_zne.rotate(method="->ZNE", inventory=self.inv)
+            stations = set([tr.stats.station for tr in st_zne])
+            for sta in stations:
+                _st = st_zne.select(station=sta)
+                _inv = self.inv.select(station=sta)
+                _st.rotate(method="->ZNE", inventory=self.inv)
             st_out += st_zne
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
@@ -868,15 +879,14 @@ class Pysep:
             st_out += st_uvw
         elif "RTZ" in self.rotate:
             logger.info("rotating to components RTZ")
-            # For some reason, when we rotate the ENTIRE stream at once, T and R
-            # components get flipped and shifted (i.e., WRONG). But if we go
-            # station by station, rotation results comes out differently (i.e.,
-            # they match Legacy PySEP results)
+            # If we rotate the ENTIRE stream at once, ObsPy will only use the 
+            # first backazimuth value which will create incorrect outputs
+            # https://github.com/obspy/obspy/issues/2623
             st_rtz = st_raw.copy()
             stations = set([tr.stats.station for tr in st_rtz])
             for sta in stations:
                 _st = st_rtz.select(station=sta)
-                _st.rotate("NE->RT")  # in place rot.
+                _st.rotate(method="NE->RT")  # in place rot.
             st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
