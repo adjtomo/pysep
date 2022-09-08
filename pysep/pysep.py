@@ -864,7 +864,7 @@ class Pysep:
 
         # RTZ requires rotating to ZNE first. Make sure this happens even if the
         # user doesn't specify ZNE rotation.
-        if "ZNE" in self.rotate or "RTZ" in self.rotate:
+        if "ENZ" in self.rotate or "RTZ" in self.rotate:
             logger.info("rotating to components ZNE")
             st_zne = st_raw.copy()
             stations = set([tr.stats.station for tr in st_zne])
@@ -880,7 +880,12 @@ class Pysep:
                                 f"{_net.code}.{_sta.code}.{_cha.code} with "
                                 f"az={_cha.azimuth}, dip={_cha.dip}"
                             )
-                _st.rotate(method="->ZNE", inventory=self.inv)
+                # components=['ZNE'] FORCES rotation using azimuth and dip 
+                # values, even if components are already in 'ZNE'. This is 
+                # important as some IRIS data will be in ZNE but not be aligned
+                # https://github.com/obspy/obspy/issues/2056
+                _st.rotate(method="->ZNE", inventory=self.inv, 
+                           components=["ZNE"])
             st_out += st_zne
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
@@ -891,11 +896,11 @@ class Pysep:
             # If we rotate the ENTIRE stream at once, ObsPy will only use the 
             # first backazimuth value which will create incorrect outputs
             # https://github.com/obspy/obspy/issues/2623
-            st_rtz = st_raw.copy()
+            st_rtz = st_zne.copy()  # `st_zne` has been rotated to ZNE 
             stations = set([tr.stats.station for tr in st_rtz])
             for sta in stations:
                 _st = st_rtz.select(station=sta)
-                logger.debug(f"{sta}: BAz=")
+                logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
                 _st.rotate(method="NE->RT")  # in place rot.
             st_out += st_rtz
 
