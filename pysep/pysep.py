@@ -260,6 +260,7 @@ class Pysep:
         self.st = None
         self.inv = None
         self.event = None
+        self.st_raw = None
 
         # Allow the user to manipulate the logger during __init__
         if log_level is not None:
@@ -359,10 +360,11 @@ class Pysep:
             self.write_files = {}
         else:
             try:
-                self.write_files = {self.write_files}
+                self.write_files = set(self.write_files.split(","))
             # TypeError thrown if we're trying to do {{*}}
             except TypeError:
                 pass
+
             acceptable_write_files = self.write(_return_filenames=True)
             assert(self.write_files.issubset(acceptable_write_files)), (
                 f"`write_files` must be a list of some or all of: "
@@ -373,7 +375,7 @@ class Pysep:
             self.plot_files = {}
         else:
             try:
-                self.plot_files = {self.plot_files}
+                self.plot_files = set(self.plot_files.split(","))
             except TypeError:
                 pass
             acceptable_plot_files = {"map", "record_section", "all"}
@@ -843,6 +845,13 @@ class Pysep:
         """
         st_raw = self.st.copy()
         st_raw = format_streams_for_rotation(st_raw)
+
+        # For writing RAW seismograms (prior to ANY rotation). Must be 
+        # specifically requested by User by explicitely adding 'raw' to 
+        # `write_files` list
+        if "sac_raw" in self.write_files:
+            self.st_raw = st_raw.copy()
+
         # Empty stream so we can take advantage of class __add__ method
         st_out = Stream()
 
@@ -921,7 +930,8 @@ class Pysep:
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "sac_rotated", "all"}
+                             "config_file", "sac", "sac_raw", "sac_rotated", 
+                             "all"}
         if _return_filenames:
             return _acceptable_files
 
@@ -984,20 +994,33 @@ class Pysep:
                 _output_dir = self.output_dir
             else:
                 _output_dir = os.path.join(self.output_dir, "SAC")
-            if not os.path.exists(_output_dir):
-                os.makedirs(_output_dir)
-            for tr in self.st:
-                if self._legacy_naming:
-                    # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
-                    _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
-                    tag = f"{self.event_tag}.{_trace_id}"
-                else:
-                    # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
-                    tag = f"{self.event_tag}.{tr.get_id()}.sac"
+            self._write_sac(st=self.st, output_dir=_output_dir)
 
-                fid = os.path.join(_output_dir, tag)
-                logger.debug(os.path.basename(fid))
-                tr.write(fid, format="SAC")
+            # Write RAW sac files
+            if self.st_raw is not None:
+                self._write_sac(st=self.st_raw,
+                                output_dir=os.path.join(_output_dir, "RAW"))
+
+    def _write_sac(self, st, output_dir=os.getcwd()):
+        """
+        Write SAC files with a specific naming schema, which allows for both
+        legacy (old PySEP) or non-legacy (new PySEP) naming.
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        for tr in st:
+            if self._legacy_naming:
+                # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
+                _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
+                tag = f"{self.event_tag}.{_trace_id}"
+            else:
+                # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
+                tag = f"{self.event_tag}.{tr.get_id()}.sac"
+
+            fid = os.path.join(output_dir, tag)
+            logger.debug(os.path.basename(fid))
+            tr.write(fid, format="SAC")
 
     def write_config(self, fid=None):
         """
