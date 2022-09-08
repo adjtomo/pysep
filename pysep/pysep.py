@@ -871,6 +871,15 @@ class Pysep:
             for sta in stations:
                 _st = st_zne.select(station=sta)
                 _inv = self.inv.select(station=sta)
+                # Print out azimuth and dip angles for debugging purposes
+                for _net in _inv:
+                    for _sta in _net:
+                        for _cha in _sta:
+                            logger.debug(
+                                f"rotating -> ZNE "
+                                f"{_net.code}.{_sta.code}.{_cha.code} with "
+                                f"az={_cha.azimuth}, dip={_cha.dip}"
+                            )
                 _st.rotate(method="->ZNE", inventory=self.inv)
             st_out += st_zne
         if "UVW" in self.rotate:
@@ -886,6 +895,7 @@ class Pysep:
             stations = set([tr.stats.station for tr in st_rtz])
             for sta in stations:
                 _st = st_rtz.select(station=sta)
+                logger.debug(f"{sta}: BAz=")
                 _st.rotate(method="NE->RT")  # in place rot.
             st_out += st_rtz
 
@@ -1051,7 +1061,7 @@ class Pysep:
         dict_out = {key: val for key, val in dict_out.items()
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
-        attr_remove_list = ["st", "event", "inv", "c", "write_files",
+        attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
                             "plot_files", "output_dir"]
 
         if self.client.upper() != "LLNL":
