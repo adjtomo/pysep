@@ -141,12 +141,12 @@ class RecordSection:
     3) produces record section waveform figures.
     """
     def __init__(self, pysep_path=None, syn_path=None, stations=None,
-                 cmtsolution=None, st=None, st_syn=None,
-                 sort_by="default", scale_by=None, time_shift_s=None,
+                 cmtsolution=None, st=None, st_syn=None, sort_by="default",
+                 scale_by=None, time_shift_s=None, zero_pad_s=None,
                  move_out=None, min_period_s=None, max_period_s=None,
                  preprocess="st", max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
-                 y_axis_spacing=1, amplitude_scale_factor=1, 
+                 y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", 
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None, 
                  figsize=(9, 11), show=True, save="./record_section.png", 
@@ -207,6 +207,12 @@ class RecordSection:
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
                 match the number of traces in your input stream.
+        :type zero_pad_s: list
+        :param zero_pad_s: zero pad data in units of seconsd. applied after
+            tapering and before filtering. Input as a tuple of floats,
+            * (start, end): a list of floats will zero-pad the START and END
+                of the trace. Either can be 0 to ignore zero-padding at either
+                end
         :type amplitude_scale_factor: float OR list of float
         :param amplitude_scale_factor: apply scale factor to all amplitudes.
             Used as a dial to adjust amplitudes manually. Defaults to 1.
@@ -311,8 +317,12 @@ class RecordSection:
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
         if syn_path is not None and os.path.exists(syn_path):
-            assert(cmtsolution is not None and os.path.exists(cmtsolution))
-            assert(stations is not None and os.path.exists(stations))
+            assert(cmtsolution is not None and os.path.exists(cmtsolution)), (
+                f"If `syn_path` is given, RecSec also requires `cmtsolution`"
+            )
+            assert(stations is not None and os.path.exists(stations)), (
+                f"If `syn_path` is given, RecSec also requires `stations`"
+            )
             fids = glob(os.path.join(syn_path, "??.*.*.sem?*"))
             if fids:
                 logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
@@ -349,6 +359,7 @@ class RecordSection:
         # Time shift parameters
         self.move_out = move_out
         self.time_shift_s = time_shift_s
+        self.zero_pad_s = zero_pad_s
 
         # Filtering parameters
         self.min_period_s = min_period_s
@@ -459,6 +470,18 @@ class RecordSection:
                     len(self.time_shift_s) != len(self.st):
                 err.time_shift_s = f"must be list of length {len(self.st)}"
 
+        if self.zero_pad_s is not None:
+            assert(isinstance(self.zero_pad_s, list)), (
+                f"`zero_pad_s` must be a list of floats representing the " 
+                f"[`start`, `end`] amount to pad around trace, units seconds"
+            )
+            assert(len(self.zero_pad_s) == 2), (
+                f"`zero_pad_s` must be a list of floats length 2"
+            )
+            _start, _end = self.zero_pad_s
+            assert(_start >= 0. and _end >= 0.), \
+                f"`zero_pad_s` values must be >= 0"
+
         # Defaults to float value of 1
         acceptable_scale_factor = [int, float, list]
         if type(self.amplitude_scale_factor) not in acceptable_scale_factor:
@@ -472,9 +495,14 @@ class RecordSection:
                 err.min_period_s = "must be less than `max_period_s`"
 
         if self.preprocess is not None:
-            acceptable_preprocess = ["both", "st"]
+            acceptable_preprocess = ["both", "st", "st_syn"]
             if self.preprocess not in acceptable_preprocess:
                 err.preprocess = f"must be in {acceptable_preprocess}"
+        if self.preprocess in ["st_syn", "both"]:
+            assert(self.st is not None and self.st_syn is not None), (
+                f"`preprocess` choice requires both `st` & `st_syn` to exist."
+                f"If you only have one or the other, set: `preprocess`=='st'"
+            )
 
         # Overwrite the max traces per record section, enforce type int
         if self.max_traces_per_rs is None:
@@ -503,10 +531,11 @@ class RecordSection:
             err.save = (f"path {self.save} already exists. Use '--overwrite' " 
                         f"flag to save over existing figures.")
 
-        _dirname = os.path.abspath(os.path.dirname(self.save))
-        if not os.path.exists(_dirname):
-            logger.info(f"creating output directory {_dirname}")
-            os.makedirs(_dirname)
+        if self.save:
+            _dirname = os.path.abspath(os.path.dirname(self.save))
+            if not os.path.exists(_dirname):
+                logger.info(f"creating output directory {_dirname}")
+                os.makedirs(_dirname)
 
         if err:
             out = "ERROR - Parameter errors, please make following changes:\n"
@@ -584,7 +613,8 @@ class RecordSection:
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
         for tr, xlim in zip(self.st, self.xlim):
             start, stop = xlim
-            self.max_amplitudes.append(max(abs(tr.data[start:stop])))
+            self.max_amplitudes = np.append(self.max_amplitudes,
+                                            max(abs(tr.data[start:stop])))
         self.max_amplitudes = np.array(self.max_amplitudes)
 
         # Figure out which indices we'll be plotting
@@ -623,7 +653,19 @@ class RecordSection:
             for tr, tshift in zip(self.st, self.time_shift_s):
                 start, stop = [int(_/tr.stats.delta) for _ in self.xlim_s]
                 sshift = int(tshift / tr.stats.delta)  # unit: samples
-                xlim.append((start-sshift, stop-sshift))
+                # These indices define the index of the user-chosen timestamp
+                start_index = start - sshift
+                end_index = stop - sshift
+                # Shift by the total amount that the zero pad adjusted starttime
+                if self.zero_pad_s:
+                    zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
+                    start_index += zero_pad_index
+                    end_index += zero_pad_index
+                assert(start_index >= 0), (
+                    f"trying to access negative time but trace has no negative "
+                    f"time values. Please check your choice for `xlim_s`"
+                )
+                xlim.append((start_index, end_index))
 
         xlim = np.array(xlim)
         return xlim
@@ -1066,6 +1108,16 @@ class RecordSection:
             st.detrend("demean")
             st.taper(max_percentage=0.05, type="cosine")
 
+            # Zero pad start and end of data if requested by user
+            if self.zero_pad_s:
+                _start, _end = self.zero_pad_s
+                logger.info(f"padding zeros to traces with {_start}s before "
+                            f"and {_end}s after")
+                for idx, tr in enumerate(st):
+                    tr.trim(starttime=tr.stats.starttime - _start,
+                            endtime=tr.stats.endtime + _end,
+                            pad=True, fill_value=0)
+
             # Allow multiple filter options based on user input
             # Min period but no max period == low-pass
             if self.max_period_s is not None and self.min_period_s is None:
@@ -1197,8 +1249,11 @@ class RecordSection:
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         tshift = self.time_shift_s[idx]
         
-        # These are still the entire waveform
+        # These are still the entire waveform. Make sure we honor zero padding
+        # and any time shift applied
         x = tr.times() + tshift
+        if self.zero_pad_s is not None:
+            x -= self.zero_pad_s[0]  # index 0 is start, index 1 is end
         y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. 
@@ -1329,7 +1384,7 @@ class RecordSection:
             else:
                 loc = self.y_label_loc
             self._set_y_axis_text_labels(start=start, stop=stop, loc=loc)
-        logger.info(f"placing station labels on y-axis at: {loc}")
+            logger.info(f"placing station labels on y-axis at: {loc}")
 
         # User requests that we turn off y-axis
         if self.y_label_loc is None:
@@ -1511,11 +1566,19 @@ class RecordSection:
         y_fmt = f"Y_FMT: NET.STA.LOC.CHA|{az_str}|DIST"
         if self.time_shift_s.sum() != 0:
             y_fmt += "|TSHIFT"
+        # Zero pad is either a list of length or None
+        if self.zero_pad_s:
+            _start, _end = self.zero_pad_s
+        else:
+            _start, _end = 0, 0
+        # Origintime needs to be shifted by the zero pad offset value which has
+        # changed the 'starttime'
+        origintime = min([tr.stats.starttime + _start for tr in self.st])
 
         title = "\n".join([
             title_top,
             f"{'/' * len(title_top*2)}",
-            f"ORIGINTIME: {min([tr.stats.starttime for tr in self.st])}",
+            f"ORIGINTIME: {origintime}",
             f"{y_fmt}",
             f"NWAV: {nwav}; NEVT: {self.stats.nevents}; "
             f"NSTA: {self.stats.nstation}; COMP: {cmp}",
@@ -1523,6 +1586,7 @@ class RecordSection:
             f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
             f"FILT: [{self.min_period_s}, {self.max_period_s}]s; "
             f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s",
+            f"ZERO_PAD: {_start}s, {_end}s",
         ])
         self.ax.set_title(title)
 
@@ -1669,6 +1733,12 @@ def parse_args():
     parser.add_argument("--xlim_s", default=None, type=int, nargs="+",
                         help="Min and max x limits in units seconds. Input as "
                              "a list, e.g., --xlim_s 10 200 ...")
+    parser.add_argument("--zero_pad_s", default=None, type=float, nargs="+",
+                        help="Zero pad the start and end of each trace. Input "
+                             "as two values in units of seconds."
+                             "i.e., --zero_pad_s `START` `END` or"
+                             "e.g., --zero_pad_s 30 0 to pad 30s before start "
+                             "0s at end of trace")
     parser.add_argument("--components", default="ZRTNE12", type=str, nargs="?",
                         help="Ordered component list specifying 1) which "
                              "components will be shown, and in what order. "

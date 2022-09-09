@@ -17,7 +17,7 @@ import llnl_db_client
 
 from glob import glob
 from pathlib import Path
-from obspy import UTCDateTime
+from obspy import UTCDateTime, Stream
 from obspy.clients.fdsn import Client
 from obspy.clients.fdsn.header import FDSNBadRequestException
 from obspy.core.event import Event, Origin, Magnitude
@@ -33,7 +33,8 @@ from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
-                                 format_streams_for_rotation, rotate_to_uvw)
+                                 format_streams_for_rotation, rotate_to_uvw,
+                                 estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.recsec import plotw_rs
 
@@ -48,8 +49,9 @@ class Pysep:
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, water_level=60, detrend=True,
-                 demean=True, taper_percentage=0, rotate=None, pre_filt=None,
-                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
+                 demean=True, taper_percentage=0, rotate=None,
+                 pre_filt="default", mindistance=0, maxdistance=20E3,
+                 minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=50, scale_factor=1,
                  phase_list=None, seconds_before_event=20,
@@ -103,6 +105,16 @@ class Pysep:
             * ZNE: Rotate from arbitrary components to North, East, Up
             * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
             * UVW: Rotate from ZNE to orthogonal UVW orientation
+        :type prefilt: str, tuple or NoneType
+        :param prefilt: apply a pre-filter to the waveforms before deconvolving
+            instrument response. Options are:
+            * 'default': automatically calculate (f0, f1, f2, f3) based on the
+                length of the waveform (dictating longest allowable period) and
+                the sampling rate (dictating shortest allowable period). This is
+                the default behavior.
+            * NoneType: do not apply any pre-filtering
+            * tuple of float: (f0, f1, f2, f3) define the corners of your pre
+                filter in units of frequency (Hz)
         :type mindistance: float
         :param mindistance: get waveforms from stations starting from a minimum
             distance away  from event (km)
@@ -248,6 +260,7 @@ class Pysep:
         self.st = None
         self.inv = None
         self.event = None
+        self.st_raw = None
 
         # Allow the user to manipulate the logger during __init__
         if log_level is not None:
@@ -336,7 +349,7 @@ class Pysep:
             f"unnacceptable `output_unit` {self.output_unit}, must be in "
             f"{acceptable_units}")
 
-        if self.pre_filt is not None:
+        if self.pre_filt not in [None, "default"]:
             assert(len(self.pre_filt) == 4), (
                 f"`pre_filt` must be a tuple of length 4, representing four "
                 f"corner frequencies for a bandpass filter (f1, f2, f3, f4)"
@@ -347,10 +360,11 @@ class Pysep:
             self.write_files = {}
         else:
             try:
-                self.write_files = {self.write_files}
+                self.write_files = set(self.write_files.split(","))
             # TypeError thrown if we're trying to do {{*}}
             except TypeError:
                 pass
+
             acceptable_write_files = self.write(_return_filenames=True)
             assert(self.write_files.issubset(acceptable_write_files)), (
                 f"`write_files` must be a list of some or all of: "
@@ -361,7 +375,7 @@ class Pysep:
             self.plot_files = {}
         else:
             try:
-                self.plot_files = {self.plot_files}
+                self.plot_files = set(self.plot_files.split(","))
             except TypeError:
                 pass
             acceptable_plot_files = {"map", "record_section", "all"}
@@ -676,6 +690,13 @@ class Pysep:
                 # net sta loc cha t1 t2
                 bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
 
+        # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
+        assert(bulk), (
+            f"station curtailing has removed any stations to query data for. "
+            f"please check your `distance` and `azimuth` curtailing criteria "
+            f"and try again"
+            )
+
         try:
             logger.info(f"querying {len(bulk)} lines in bulk client request...")
             st = self.c.get_waveforms_bulk(bulk=bulk)
@@ -725,6 +746,8 @@ class Pysep:
         if self.remove_response:
             logger.info(f"removing response, output units in: "
                         f"{self.output_unit}")
+            if self.pre_filt is not None:
+                logger.info(f"will apply pre-filter: {self.pre_filt}")
             if self.client.upper() == "LLNL":
                 st_out = self._remove_response_llnl(st_out)
             else:
@@ -734,18 +757,23 @@ class Pysep:
                     st_sta = st_out.select(network=net, station=sta,
                                            location=loc, channel=cha
                                            )
-                    try:
-                        st_sta.remove_response(
+                    for tr in st_sta:
+                        # Get trace-dependent pre-filtering if desired
+                        if self.pre_filt == "default":
+                            _pre_filt = estimate_prefilter_corners(tr)
+                        else:
+                            _pre_filt = self.pre_filt
+                        try:
+                            tr.remove_response(
                                 inventory=self.inv,
                                 water_level=self.water_level,
-                                pre_filt=self.pre_filt,
+                                pre_filt=_pre_filt,
                                 taper=bool(self.taper_percentage),
                                 taper_fraction=self.taper_percentage,
                                 zero_mean=self.demean,
                                 output=self.output_unit
                                 )
-                    except ValueError as e:
-                        for tr in st_sta:
+                        except ValueError as e:
                             logger.warning(f"can't remove response {code}: {e}"
                                            f"removing trace from stream")
                             st_out.remove(tr)
@@ -810,22 +838,71 @@ class Pysep:
         TODO Original code had a really complicated method for rotating,
             was that necesssary? Why was st.rotate() not acceptable?
 
+        .. warning::
+            This function combines all traces, both rotated and non-rotated
+            components (ZNE, RTZ, UVW, but not raw, e.g., 12Z), into a single
+            stream. This is deemed okay because we don't do any
+            component-specific operations after rotation.
+
         :rtype: obspy.core.stream.Stream
         :return: a stream that has been rotated to desired coordinate system
-            with SAC headers that have been adjusted for the rotation
+            with SAC headers that have been adjusted for the rotation, as well
+            as non-rotated streams which are saved incase user needs access to
+            other components
         """
-        st_out = self.st.copy()
+        st_raw = self.st.copy()
+        st_raw = format_streams_for_rotation(st_raw)
 
-        st_out = format_streams_for_rotation(st_out)
-        if "ZNE" in self.rotate:
+        # For writing RAW seismograms (prior to ANY rotation). Must be 
+        # specifically requested by User by explicitely adding 'raw' to 
+        # `write_files` list
+        if "sac_raw" in self.write_files:
+            self.st_raw = st_raw.copy()
+
+        # Empty stream so we can take advantage of class __add__ method
+        st_out = Stream()
+
+        # RTZ requires rotating to ZNE first. Make sure this happens even if the
+        # user doesn't specify ZNE rotation.
+        if "ENZ" in self.rotate or "RTZ" in self.rotate:
             logger.info("rotating to components ZNE")
-            st_out.rotate(method="->ZNE", inventory=self.inv)
+            st_zne = st_raw.copy()
+            stations = set([tr.stats.station for tr in st_zne])
+            for sta in stations:
+                _st = st_zne.select(station=sta)
+                _inv = self.inv.select(station=sta)
+                # Print out azimuth and dip angles for debugging purposes
+                for _net in _inv:
+                    for _sta in _net:
+                        for _cha in _sta:
+                            logger.debug(
+                                f"rotating -> ZNE "
+                                f"{_net.code}.{_sta.code}.{_cha.code} with "
+                                f"az={_cha.azimuth}, dip={_cha.dip}"
+                            )
+                # components=['ZNE'] FORCES rotation using azimuth and dip 
+                # values, even if components are already in 'ZNE'. This is 
+                # important as some IRIS data will be in ZNE but not be aligned
+                # https://github.com/obspy/obspy/issues/2056
+                _st.rotate(method="->ZNE", inventory=self.inv, 
+                           components=["ZNE"])
+            st_out += st_zne
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
-            st_out = rotate_to_uvw(st_out)
+            st_uvw = rotate_to_uvw(st_out)
+            st_out += st_uvw
         elif "RTZ" in self.rotate:
             logger.info("rotating to components RTZ")
-            st_out.rotate("NE->RT", inventory=self.inv)
+            # If we rotate the ENTIRE stream at once, ObsPy will only use the 
+            # first backazimuth value which will create incorrect outputs
+            # https://github.com/obspy/obspy/issues/2623
+            st_rtz = st_zne.copy()  # `st_zne` has been rotated to ZNE 
+            stations = set([tr.stats.station for tr in st_rtz])
+            for sta in stations:
+                _st = st_rtz.select(station=sta)
+                _st.rotate(method="NE->RT")  # in place rot.
+                logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
+            st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
 
@@ -878,7 +955,8 @@ class Pysep:
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "all"}
+                             "config_file", "sac", "sac_raw", "sac_rotated", 
+                             "all"}
         if _return_filenames:
             return _acceptable_files
 
@@ -941,20 +1019,33 @@ class Pysep:
                 _output_dir = self.output_dir
             else:
                 _output_dir = os.path.join(self.output_dir, "SAC")
-            if not os.path.exists(_output_dir):
-                os.makedirs(_output_dir)
-            for tr in self.st:
-                if self._legacy_naming:
-                    # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
-                    _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
-                    tag = f"{self.event_tag}.{_trace_id}"
-                else:
-                    # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
-                    tag = f"{self.event_tag}.{tr.get_id()}.sac"
+            self._write_sac(st=self.st, output_dir=_output_dir)
 
-                fid = os.path.join(_output_dir, tag)
-                logger.debug(os.path.basename(fid))
-                tr.write(fid, format="SAC")
+            # Write RAW sac files
+            if self.st_raw is not None:
+                self._write_sac(st=self.st_raw,
+                                output_dir=os.path.join(_output_dir, "RAW"))
+
+    def _write_sac(self, st, output_dir=os.getcwd()):
+        """
+        Write SAC files with a specific naming schema, which allows for both
+        legacy (old PySEP) or non-legacy (new PySEP) naming.
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        for tr in st:
+            if self._legacy_naming:
+                # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
+                _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
+                tag = f"{self.event_tag}.{_trace_id}"
+            else:
+                # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
+                tag = f"{self.event_tag}.{tr.get_id()}.sac"
+
+            fid = os.path.join(output_dir, tag)
+            logger.debug(os.path.basename(fid))
+            tr.write(fid, format="SAC")
 
     def write_config(self, fid=None):
         """
@@ -975,7 +1066,7 @@ class Pysep:
         dict_out = {key: val for key, val in dict_out.items()
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
-        attr_remove_list = ["st", "event", "inv", "c", "write_files",
+        attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
                             "plot_files", "output_dir"]
 
         if self.client.upper() != "LLNL":
@@ -1086,11 +1177,19 @@ class Pysep:
             self.st = st
         self.st = quality_check_waveforms_before_processing(self.st)
         self.st = append_sac_headers(self.st, self.event, self.inv)
-        self.st = format_sac_header_w_taup_traveltimes(self.st, self.taup_model)
+        if self.taup_model is not None:
+            self.st = format_sac_header_w_taup_traveltimes(self.st, 
+                                                           self.taup_model)
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
-        self.st = self.rotate_streams()
+
+        # Rotation to various orientations. The output stream will have ALL
+        # components, both rotated and non-rotated
+        if self.rotate is not None:
+            self.st = self.rotate_streams()
+
+        # Final quality checks on ALL waveforms before we write them out
         self.st = quality_check_waveforms_after_processing(self.st)
 
         # Generate outputs for user consumption

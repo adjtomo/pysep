@@ -10,7 +10,7 @@ from obspy.core.stream import Stream
 from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
 from pysep import logger
-from pysep.utils.fmt import format_event_tag
+from pysep.utils.fmt import format_event_tag_legacy
 from pysep.utils.fetch import get_taup_arrivals_with_sac_headers
 
 # SAC HEADER CONSTANTS DEFINING NON-INTUITIVE QUANTITIES
@@ -142,12 +142,18 @@ def append_sac_headers(st, event, inv):
 
 def _append_sac_headers_trace(tr, event, inv):
     """
-    Append SAC headers to ObsPy streams given event and station metadata
+    Append SAC headers to ObsPy streams given event and station metadata.
+    Also add 'back_azimuth' to Stream stats which can be used for rotation.
 
     Rewritten from: `util_write_cap.add_sac_metadata()`
 
     TODO Add back in information removed from original function
         * Add sensor type somewhere, previously stored in KT? (used for picks)
+
+    .. note::
+        We explicitely set 'iztype, 'b' and 'e' in the SAC header to tell ObsPy
+        that the trace start is NOT the origin time. Otherwise all the relative
+        timing (e.g., picks) will be wrong.
 
     :type tr: obspy.core.trace.Trace
     :param tr: Trace to append SAC header to
@@ -174,6 +180,9 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
     sac_header = {
+        "iztype": 9,  # Ref time equivalence, IB (9): Begin time
+        "b": tr.stats.starttime - event.preferred_origin().time,  # begin time
+        "e": tr.stats.npts * tr.stats.delta,  # end time
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
         "evdp": event.preferred_origin().depth / 1E3,  # depth in km
@@ -181,7 +190,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "stla": sta.latitude,
         "stlo": sta.longitude,
         "stel": sta.elevation / 1E3,  # elevation in km
-        "kevnm": format_event_tag(event),
+        "kevnm": format_event_tag_legacy(event),  # only take date code
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees
@@ -197,6 +206,7 @@ def _append_sac_headers_trace(tr, event, inv):
     except IndexError:
         pass
 
+    # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
 

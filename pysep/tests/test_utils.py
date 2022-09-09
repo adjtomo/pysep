@@ -8,13 +8,14 @@ import os
 import pytest
 from glob import glob
 from obspy import read, read_events, read_inventory, Stream
-
+from obspy.io.sac.sactrace import SACTrace
 from pysep.utils.cap_sac import (append_sac_headers,
                                  format_sac_header_w_taup_traveltimes)
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
                                  remove_stations_for_insufficient_length)
-from pysep.utils.fmt import format_event_tag
+from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
+from pysep.utils.process import estimate_prefilter_corners
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.utils.io import read_synthetics
 
@@ -52,9 +53,17 @@ def test_append_sac_headers(test_st, test_inv, test_event):
     assert(hasattr(st[0].stats, "sac"))
     assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
 
+
+def test_event_tag_and_event_tag_legacy(test_event):
+    """
+    Check that event tagging works as expected
+    """
     # while were here, make sure event tagging works
     tag = format_event_tag(test_event)
     assert(tag == "2009-04-07T201255_SOUTHERN_ALASKA")
+
+    tag = format_event_tag_legacy(test_event)
+    assert(tag == "20090407201255351")
 
 
 def test_format_sac_headers_w_taup_traveltimes(test_st, test_inv, test_event):
@@ -64,6 +73,17 @@ def test_format_sac_headers_w_taup_traveltimes(test_st, test_inv, test_event):
     st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
     st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
     assert(pytest.approx(st[0].stats.sac["user4"], .01) == 57.66)
+
+
+def test_sac_header_correct_origin_time(tmpdir, test_st, test_inv, test_event):
+    """
+    Make sure SAC headers are being written with 0 as the event origin time and
+    not the trace start time
+    """
+    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
+    st[0].write(os.path.join(tmpdir, "test.sac"), format="SAC")  # only write 1
+    sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
+    assert(sac.reftime == test_event.preferred_origin().time)
 
 
 def test_rename_channels(test_st):
@@ -130,6 +150,18 @@ def test_read_synthetics():
                               stations=test_stations)
 
     assert(st[0].stats.sac.evla == -40.5405)
+
+
+def test_estimate_prefilter_corners(test_st):
+    """
+    Test prefilter corner estimation based on trace starts time and samp rate
+    """
+    for tr in test_st:
+        f0, f1, f2, f3 = estimate_prefilter_corners(tr)
+        assert(f0 == pytest.approx(.0214, 3))
+        assert(f1 == pytest.approx(.0427, 3))
+        assert(f2 == pytest.approx(12.5, 3))
+        assert(f3 == pytest.approx(25.0, 3))
 
 
 @pytest.mark.skip(reason="need to find correct clipped example data")
