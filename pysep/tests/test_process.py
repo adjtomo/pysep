@@ -6,6 +6,7 @@ Test the preprocessing functions which include standardization and rotation
     we expect ObsPy to be testing their own functionality
 """
 import pytest
+import random
 import numpy as np
 from obspy import read, read_events, read_inventory
 
@@ -141,6 +142,7 @@ def test_rotate_streams_fail(test_st, test_inv, test_event):
     sep.inv = test_inv
     sep.event = test_event
     sep.st = sep.preprocess()  # make sure that streams are formatted correctly
+
     with pytest.raises(TypeError):
         sep.rotate_streams()
 
@@ -164,3 +166,38 @@ def test_rotate_streams(test_st, test_inv, test_event):
     # Make sure components have been rotated
     for tr in st_rotated:
         assert(tr.stats.component in ["R", "T", "Z", "N", "E"])
+
+
+def test_rotate_streams_enz(test_st, test_inv):
+    """
+    Test that streams rotate from ENZ even if components are already ENZ
+    """
+    sep = Pysep(log_level="DEBUG", rotate=["ZNE"])
+    sep.st = test_st.select(station="ALPI").copy()
+    st_check = test_st.select(station="ALPI").copy()
+
+    sep.inv = test_inv.select(station="ALPI")
+    sep.event = test_event
+
+    st_rotated = sep.rotate_streams()
+
+    for component in ["E", "N", "Z"]:
+        st_rot = st_rotated.select(component=component)
+        st_check = st_check.select(component=component)
+        for tr_rot, tr_check in zip(st_rot, st_check):
+            assert(np.all(tr_rot.data == tr_check.data))
+
+    # Randomly assign azimuths and dips
+    for net in sep.inv:
+        for sta in net:
+            for cha in sta:
+                sta.azimuth = random.randint(1, 89)
+                sta.dip = random.randint(1, 89)
+    st_rotated = sep.rotate_streams()
+
+    for component in ["E", "N", "Z"]:
+        st_rot = st_rotated.select(component=component)
+        st_check = st_check.select(component=component)
+        for tr_rot, tr_check in zip(st_rot, st_check):
+            assert(not np.all(tr_rot.data == tr_check.data))
+

@@ -900,8 +900,8 @@ class Pysep:
             stations = set([tr.stats.station for tr in st_rtz])
             for sta in stations:
                 _st = st_rtz.select(station=sta)
-                logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
                 _st.rotate(method="NE->RT")  # in place rot.
+                logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
             st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
