@@ -1,10 +1,13 @@
 Python Seismogram Extraction and Processing
 ===========================================
 
+[![SCOPED](https://img.shields.io/endpoint?url=https://runkit.io/wangyinz/scoped/branches/master/pysep)](https://github.com/SeisSCOPED/container/pkgs/container/pysep)
+
 `PySEP` is a waveform and metadata download tool. The package also contains
 `RecSec`, a record section plotting tool. As part of the
-[SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` is included in the 
-[SCOPED Base container](https://github.com/SeisSCOPED/container-base).
+[SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` has been 
+[containerized](https://github.com/SeisSCOPED/pysep/pkgs/container/pysep) 
+using Docker.
 
 ## Introduction
 
@@ -335,21 +338,23 @@ Chinook is University of Alaska Fairbanks' (UAF) high performance computer.
 We can run PySEP on Chinook using Docker containers through 
 Singularity/Apptainer. 
 
-By default, PySEP is included in the SCOPED base-container. The following code 
-snippet downloads the correct container and runs the PySEP help message on
-Chinook.
+PySEP has been containerized directly, and any changes pushed to the repo will
+trigger the container to rebuild, keeping everything up-to-date.
+The following code snippet downloads the correct 
+[SCOPED container](https://github.com/SeisSCOPED/pysep/pkgs/container/pysep). 
+and runs the PySEP help message on Chinook.
 
 ```bash
 module load singularity
-singularity pull docker://ghcr.io/seisscoped/container-base:centos7
-singularity exec -c container-base_centos7.sif pysep -h
+singularity pull ghcr.io/seisscoped/pysep:centos7
+singularity exec -c pysep_centos7.sif pysep -h
 ```
 
 To run a data download we will need to mount the local filesystem into the
 container using the ``--bind`` command. Using the Anchorage example event:
 
 ```bash
-singularity exec -c --bind $(pwd):/home1 container-base_centos7.sif \
+singularity exec -c --bind $(pwd):/home1 pysep_centos7.sif \
     bash -c "cd /home1/; pysep -p mtuq_workshop_2022 -e 2009-04-07T201255_ANCHORAGE.yaml"
 ```
 
@@ -364,7 +369,7 @@ using a similar format. With the Anchorange example files we just generated:
 
 ```bash
 cd 2009-04-07T201255_SOUTHERN_ALASKA/
-singularity exec -c --bind $(pwd):/home1 ../container-base_centos7.sif \
+singularity exec -c --bind $(pwd):/home1 ../pysep_centos7.sif \
     bash -c "cd /home1; recsec --pysep_path SAC/ --min_period 10 --save record_section_tmin10.png"
 ```
 
