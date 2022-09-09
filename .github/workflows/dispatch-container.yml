@@ -1,0 +1,22 @@
+name: Dispatch Container Build
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'SeisSCOPED',
+              repo: 'pysep',
+              event_type: 'build_container'
+            })
