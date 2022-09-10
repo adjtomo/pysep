@@ -10,6 +10,7 @@ from obspy import UTCDateTime, Stream, Trace, read_events, Inventory
 from obspy.core.inventory.network import Network
 from obspy.core.inventory.station import Station
 from obspy.geodetics import gps2dist_azimuth
+from obspy.core.event import Event, Origin, Magnitude
 
 from pysep.utils.cap_sac import append_sac_headers
 
@@ -72,7 +73,11 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     delta = round(times[1] - times[0], precision)
 
     # Get metadata information from CMTSOLUTION and STATIONS files
-    event = read_events(cmtsolution)[0]
+    try:
+        event = read_events(cmtsolution)[0]
+    except TypeError:
+        event = read_specfem2d_source(cmtsolution)
+
     inv = read_stations(stations)
     origintime = event.preferred_origin().time
 
@@ -96,6 +101,68 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     st = append_sac_headers(st, event, inv)
 
     return st
+
+
+def read_specfem2d_source(path_to_source, origin_time=None):
+    """
+    Create a barebones ObsPy Event object from a SPECFEM2D Source file, which
+    contains information on location. The remainder are left as dummy values
+    because this will only be required by RecSec to access source location.
+
+    .. note::
+        This is modified from Pyatoa.utils.read.read_specfem2d_source
+
+    .. note::
+        Source files do not provide origin times so we just provide an
+        arbitrary value but allow user to set time
+    """
+    def _get_resource_id(name, res_type, tag=None):
+        """
+        Helper function to create consistent resource ids. From ObsPy
+        """
+        res_id = f"smi:local/source/{name:s}/{res_type:s}"
+        if tag is not None:
+            res_id += "#" + tag
+        return res_id
+
+    if origin_time is None:
+        origin_time = "2000-01-01T00:00:00"
+
+    with open(path_to_source, "r") as f:
+        lines = f.readlines()
+
+    # First line expected to be e.g.,: '## Source 1'
+    source_name = lines[0].strip().split()[-1]
+    source_dict = {}
+    for line in lines:
+        # Skip comments and newlines
+        if line.startswith("#") or line == "\n":
+            continue
+        key, val, *_ = line.strip().split("=")
+        # Strip trailing comments from values
+        val = val.split("#")[0].strip()
+        source_dict[key.strip()] = val.strip()
+
+    origin = Origin(
+        resource_id=_get_resource_id(source_name, "origin", tag="source"),
+        time=origin_time, longitude=source_dict["xs"],
+        latitude=source_dict["xs"], depth=source_dict["zs"]
+    )
+
+    magnitude = Magnitude(
+        resource_id=_get_resource_id(source_name, "magnitude"),
+        mag=None, magnitude_type="Mw", origin_id=origin.resource_id.id
+    )
+
+    event = Event(resource_id=_get_resource_id(name=source_name,
+                                               res_type="event"))
+    event.origins.append(origin)
+    event.magnitudes.append(magnitude)
+
+    event.preferred_origin_id = origin.resource_id.id
+    event.preferred_magnitude_id = magnitude.resource_id.id
+
+    return event
 
 
 def read_stations(path_to_stations):
@@ -140,6 +207,7 @@ def read_stations(path_to_stations):
         burial_ = float(sta[5])  # burial isnt an option in ObsPy, not used
 
         # Create the station object, temp store in a network
+        import pdb;pdb.set_trace()
         station = Station(code=station_, latitude=latitude_,
                           longitude=longitude_, elevation=elevation_,
                           creation_date=UTCDateTime()
@@ -152,7 +220,6 @@ def read_stations(path_to_stations):
         list_of_networks.append(Network(code=network, stations=stations))
 
     return Inventory(networks=list_of_networks, source="PYATOA")
-
 
 
 def read_event_file(fid):
