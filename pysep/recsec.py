@@ -96,7 +96,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
-from pysep.utils.io import read_synthetics
+from pysep.utils.io import read_synthetics, read_synthetics_cartesian
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -328,7 +328,8 @@ class RecordSection:
                 logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
                 st_syn = Stream()
                 for fid in fids:
-                    st_syn += read_synthetics(fid=fid, cmtsolution=cmtsolution,
+                    logger.debug(fid)
+                    st_syn += read_synthetics_cartesian(fid=fid, source=cmtsolution,
                                               stations=stations)
         # Allow plotting ONLY synthetics and no data
         if st is None:
@@ -848,7 +849,7 @@ class RecordSection:
             # Overwrite `dist`, could probably skip that calc above but
             # leaving for now as I don't think this option will be used heavily.
             dist_deg = np.sqrt(
-                ((tr.stats.sac.stlo - tr.stats.sac.evlo) ** 2) /
+                ((tr.stats.sac.stlo - tr.stats.sac.evlo) ** 2) +
                 ((tr.stats.sac.stla - tr.stats.sac.evla) ** 2)
             )
             dist = kilometers2degrees(dist_deg)  # units: km
