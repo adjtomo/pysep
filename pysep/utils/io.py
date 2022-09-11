@@ -10,7 +10,9 @@ from obspy import UTCDateTime, Stream, Trace, read_events, Inventory
 from obspy.core.inventory.network import Network
 from obspy.core.inventory.station import Station
 from obspy.geodetics import gps2dist_azimuth
+from obspy.core.event import Event, Origin, Magnitude
 
+from pysep.utils.fmt import format_event_tag_legacy
 from pysep.utils.cap_sac import append_sac_headers
 
 
@@ -32,7 +34,7 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     :param fid: path of the given ascii file
     :type cmtsolution: str
     :param cmtsolution: CMTSOLUTION file defining the event which generated
-        the synthetics. Used to grab event information
+        the synthetics. Used to grab event information.
     :type stations: str
     :param stations: STATIONS file defining the station locations for the
         SPECFEM generated synthetics
@@ -74,6 +76,7 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     # Get metadata information from CMTSOLUTION and STATIONS files
     event = read_events(cmtsolution)[0]
     inv = read_stations(stations)
+
     origintime = event.preferred_origin().time
 
     # Honor that Specfem doesn't start exactly on 0
@@ -98,6 +101,191 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     return st
 
 
+def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
+    """
+    Specfem2D and Specfem3D may have domains defined in a Cartesian coordinate
+    system. Because of this, the read_synthetics() function will fail because
+    the intermediate ObsPy objects and functions expect geographic coordinates.
+    This function bypasses these checks with some barebones objects which
+    mimic their behavior. Only used for RecSec to plot record sections.
+
+    .. note::
+        RecSec requires SAC header values `kevnm`, `dist`, `az`, `baz`,
+        `stlo`, `stla`, `evlo`, `evla`
+
+    :type fid: str
+    :param fid: path of the given ascii file
+    :type source: str
+    :param source: SOURCE or CMTSOLUTION file defining the event which
+        generated the synthetics. Used to grab event information.
+    :type stations: str
+    :param stations: STATIONS file defining the station locations for the
+        SPECFEM generated synthetics
+    :type location: str
+    :param location: location value for a given station/component
+    :rtype st: obspy.Stream.stream
+    :return st: stream containing header and data info taken from ascii file
+    """
+    # This was tested up to SPECFEM3D Cartesian git version 6895e2f7
+    try:
+        times = np.loadtxt(fname=fid, usecols=0)
+        data = np.loadtxt(fname=fid, usecols=1)
+
+    # At some point in 2018, the Specfem developers changed how the ascii files
+    # were formatted from two columns to comma separated values, and repeat
+    # values represented as 2*value_float where value_float represents the data
+    # value as a float
+    except ValueError:
+        times, data = [], []
+        with open(fid, 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            try:
+                time_, data_ = line.strip().split(',')
+            except ValueError:
+                if "*" in line:
+                    time_ = data_ = line.split('*')[-1]
+                else:
+                    raise ValueError
+            times.append(float(time_))
+            data.append(float(data_))
+
+        times = np.array(times)
+        data = np.array(data)
+
+    # We assume that dt is constant after 'precision' decimal points
+    delta = round(times[1] - times[0], precision)
+
+    # Get metadata information from CMTSOLUTION and STATIONS files
+    try:
+        event = read_events(source)[0]
+    except TypeError:
+        event = read_specfem2d_source(source)
+
+    # Generate a dictionary object to store station information
+    station_list = np.loadtxt(stations, dtype="str", ndmin=2)
+    stations = {}
+    for sta in station_list:
+        # NN.SSS = {latitude, longitude}
+        stations[f"{sta[1]}.{sta[0]}"] = {"stla": float(sta[2]),
+                                          "stlo": float(sta[3])
+                                          }
+
+    origintime = event.preferred_origin().time
+
+    # Honor that Specfem doesn't start exactly on 0
+    origintime += times[0]
+
+    # Write out the header information
+    try:
+        # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd
+        net, sta, cha, fmt = os.path.basename(fid).split(".")
+    except ValueError:
+        # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
+        net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
+
+    stats = {"network": net, "station": sta, "location": location,
+             "channel": cha, "starttime": origintime, "npts": len(data),
+             "delta": delta, "mseed": {"dataquality": 'D'},
+             "time_offset": times[0], "format": fmt
+             }
+    st = Stream([Trace(data=data, header=stats)])
+
+    # Manually append SAC header values here
+    for tr in st:
+        net_sta = f"{tr.stats.network}.{tr.stats.station}"
+        stla = stations[net_sta]["stla"]
+        stlo = stations[net_sta]["stlo"]
+        evla = event.preferred_origin().latitude
+        evlo = event.preferred_origin().longitude
+
+        # Calculate Cartesian distance and azimuth/backazimuth
+        dist_m = np.sqrt(((stlo - evlo) ** 2) + ((stla - evla) ** 2))
+
+        # https://gis.stackexchange.com/questions/108547/\
+        #     how-to-calculate-distance-azimuth-and-dip-from-two-xyz-coordinates
+        azimuth = np.degrees(np.arctan2((stlo - evlo), (stla - stlo))) % 360
+        backazimuth = (azimuth - 180) % 360
+
+        # Only values required by RecSec
+        sac_header = {
+            "stla": stations[net_sta]["stla"],
+            "stlo": stations[net_sta]["stlo"],
+            "evla": event.preferred_origin().latitude,
+            "evlo": event.preferred_origin().longitude,
+            "dist": dist_m * 1E-3,
+            "az": azimuth,
+            "baz": backazimuth,
+            "kevnm": format_event_tag_legacy(event),  # only take date code
+        }
+
+        tr.stats.sac = sac_header
+
+    return st
+
+
+def read_specfem2d_source(path_to_source, origin_time=None):
+    """
+    Create a barebones ObsPy Event object from a SPECFEM2D Source file, which
+    contains information on location. The remainder are left as dummy values
+    because this will only be required by RecSec to access source location.
+
+    .. note::
+        This is modified from Pyatoa.utils.read.read_specfem2d_source
+
+    .. note::
+        Source files do not provide origin times so we just provide an
+        arbitrary value but allow user to set time
+    """
+    def _get_resource_id(name, res_type, tag=None):
+        """
+        Helper function to create consistent resource ids. From ObsPy
+        """
+        res_id = f"smi:local/source/{name:s}/{res_type:s}"
+        if tag is not None:
+            res_id += "#" + tag
+        return res_id
+
+    if origin_time is None:
+        origin_time = "2000-01-01T00:00:00"
+
+    with open(path_to_source, "r") as f:
+        lines = f.readlines()
+
+    # First line expected to be e.g.,: '## Source 1'
+    source_name = lines[0].strip().split()[-1]
+    source_dict = {}
+    for line in lines:
+        # Skip comments and newlines
+        if line.startswith("#") or line == "\n":
+            continue
+        key, val, *_ = line.strip().split("=")
+        # Strip trailing comments from values
+        val = val.split("#")[0].strip()
+        source_dict[key.strip()] = val.strip()
+
+    origin = Origin(
+        resource_id=_get_resource_id(source_name, "origin", tag="source"),
+        time=origin_time, longitude=source_dict["xs"],
+        latitude=source_dict["xs"], depth=source_dict["zs"]
+    )
+
+    magnitude = Magnitude(
+        resource_id=_get_resource_id(source_name, "magnitude"),
+        mag=None, magnitude_type="Mw", origin_id=origin.resource_id.id
+    )
+
+    event = Event(resource_id=_get_resource_id(name=source_name,
+                                               res_type="event"))
+    event.origins.append(origin)
+    event.magnitudes.append(magnitude)
+
+    event.preferred_origin_id = origin.resource_id.id
+    event.preferred_magnitude_id = magnitude.resource_id.id
+
+    return event
+
+
 def read_stations(path_to_stations):
     """
     Convert a Specfem3D STATIONS file into an ObsPy Inventory object.
@@ -117,6 +305,9 @@ def read_stations(path_to_stations):
         with the Specfem3D DATA directory
     :rtype: obspy.core.inventory.Inventory
     :return: a station-level Inventory object
+    :raises ValueError: if latitude and longitude values are not in geographic
+        coordinates (i.e., in cartesian coordinates). Thrown by the init of the
+        Station class.
     """
     stations = np.loadtxt(path_to_stations, dtype="str")
     if stations.size == 0:
@@ -151,8 +342,7 @@ def read_stations(path_to_stations):
     for network, stations in networks.items():
         list_of_networks.append(Network(code=network, stations=stations))
 
-    return Inventory(networks=list_of_networks, source="PYATOA")
-
+    return Inventory(networks=list_of_networks, source="PySEP")
 
 
 def read_event_file(fid):

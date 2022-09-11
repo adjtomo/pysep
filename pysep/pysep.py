@@ -13,7 +13,7 @@ import os
 import sys
 import yaml
 import warnings
-import llnl_db_client
+import llnl_db_client  # NOQA
 
 from glob import glob
 from pathlib import Path

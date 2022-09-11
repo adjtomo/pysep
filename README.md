@@ -212,9 +212,12 @@ for more options.
 
 ### Plotting SPECFEM synthetics
 
-RecSec can plot SPECFEM-generated synthetic seismograms in ASCII format. 
-These can be plotted standalone, or alongside observed seismograms to look at
-data-synthetic misfit. 
+RecSec can plot SPECFEM-generated synthetic seismograms in ASCII format. Here 
+the domain should be defined by geographic coordinates (latitude/longitude). If 
+your domain is defined in Cartesian, see below.
+
+Record sections  can be plotted standalone, or alongside observed seismograms 
+to look at data-synthetic misfit. 
 
 To access metadata, RecSec requires the CMTSOLUTION and STATIONS file that were 
 used by SPECFEM to generate the synthetics. Based on a standard 
@@ -234,6 +237,31 @@ recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTIO
 
 Preprocessing flags such as filtering and move out will be applied to both
 observed and synthetic data.
+
+### Plotting SPECFEM synthetics in Cartesian
+
+Under the hood, RecSec uses some of ObsPy's geodetic
+functions to calculate distances and azimuths. Because of this, RecSec will 
+fail if coordinates are defined in a Cartesian coordinate system (XYZ), which 
+may often be the case when working in SPECFEM2D or in a local domain of 
+SPECFEM3D_Cartesian.
+
+To circumvent this, RecSec has a flag `--cartesian`, which will swap out the 
+read functions to work with a Cartesian coordinate system. The call is very 
+similar to the above:
+
+For SPECFEM3D_Cartesian this would look like
+
+```bash
+recsec --syn_path OUTPUT_FILES --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --cartesian
+```
+
+For SPECFEM2D, the source file may not be a CMTSOLUTION. Additionally, the 
+default seismogram components may not be defined in ZNE
+
+```bash
+recsec --syn_path OUTPUT_FILES --cmtsolution DATA/SOURCE --stations DATA/STATIONS --components Y --cartesian
+```
 
 --------------------------------------------------------------------------------
 
