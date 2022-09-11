@@ -263,6 +263,26 @@ default seismogram components may not be defined in ZNE
 recsec --syn_path OUTPUT_FILES --cmtsolution DATA/SOURCE --stations DATA/STATIONS --components Y --cartesian
 ```
 
+### Plotting two sets of synthetics (synsyn)
+
+It is often useful to compare two sets of synthetic seismograms, where one set
+represents 'data', while the other represents synthetics. For example, during
+a tomographic inversion, a Target model may be used to generate data. 
+
+RecSec can plot two sets of synthetics in a similar vein as plotting 
+data and synthetics together. The User only needs to add the `--synsyn` flag 
+and provide paths to both `--pysep_path` and `--syn_path`. 
+
+>__NOTE__: RecSec makes the assumption that both sets of synthetics share the 
+> same metadata provided in the `--cmtsolution` and `--stations` flags.
+
+Let's say you've stored your 'data' in a directory called 'observed/' and your
+synthetics in a directory called 'synthetic/'
+
+```bash
+recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
+```
+
 --------------------------------------------------------------------------------
 
 ## Scripting PySEP
