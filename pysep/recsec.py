@@ -96,7 +96,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
-from pysep.utils.io import read_synthetics
+from pysep.utils.io import read_synthetics, read_synthetics_cartesian
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -150,7 +150,8 @@ class RecordSection:
                  azimuth_start_deg=0., distance_units="km", 
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None, 
                  figsize=(9, 11), show=True, save="./record_section.png", 
-                 overwrite=False, **kwargs):
+                 overwrite=False, log_level="DEBUG", cartesian=False,
+                 synsyn=False, **kwargs):
         """
         Set the default record section plotting parameters and enforce types.
         Run some internal parameter derivation functions by manipulating input
@@ -298,38 +299,57 @@ class RecordSection:
         :type overwrite: bool
         :param overwrite: if the path defined by `save` exists, will overwrite
             the existing figure
+        :type log_level: str
+        :param log_level: level of the internal logger, 'WARNING', 'INFO',
+            'DEBUG'.
+        :type cartesian: bool
+        :param cartesian: lets RecSec know that the domain is set in Cartesian
+            coordinates, such that data/metadata reading will need to adjust
+            acoordingly because the ObsPy tools used to read metadata will fail
+            for domains defined in XYZ
+        :type synsyn: bool
+        :param synsyn: flag to let RecSec know that we are plotting two sets
+            of synthetic seismograms. Such that both `pysep_path` and `syn_path`
+            will be read in as synthetics. Both sets of synthetics MUST share
+            the same SOURCE and STATIONS metadata
         :raises AssertionError: if any parameters are set incorrectly
         """
+        # Set the logger level before running anything
+        logger.setLevel(log_level)
+
         # Read files from path if provided
         if pysep_path is not None and os.path.exists(pysep_path):
-            # Expecting to find SAC files labelled as such
-            fids = glob(os.path.join(pysep_path, "*.sac"))
-            if not fids:
-                # Or if legacy naming schema, assume that the sac files have a
-                # given file format: event_tag.NN.SSS..LL.CC.c
-                fids = glob(os.path.join(pysep_path, "*.*.*.*.*.?"))
-            if fids:
-                logger.info(f"Reading {len(fids)} files from: {pysep_path}")
-                # Overwrite stream, so reading takes precedence
-                st = Stream()
-                for fid in fids:
-                    st += read(fid)
+            if not synsyn:
+                # Expecting to find SAC files labelled as such
+                fids = glob(os.path.join(pysep_path, "*.sac"))
+                if not fids:
+                    # Or if legacy naming schema, assume that the sac files have
+                    # a given file format: event_tag.NN.SSS..LL.CC.c
+                    fids = glob(os.path.join(pysep_path, "*.*.*.*.*.?"))
+                if fids:
+                    logger.info(f"Reading {len(fids)} files from: {pysep_path}")
+                    # Overwrite stream, so reading takes precedence
+                    st = Stream()
+                    for fid in fids:
+                        st += read(fid)
+            else:
+                # User has told us that we want to read 'data' as synthetics,
+                # useful for comparing e.g., a synthetic-synthetic inversion
+                logger.debug("reading `pysep_path` expecting SPECFEM-generated "
+                             "synthetic data")
+                st = self._generate_synthetic_stream(syn_path=pysep_path,
+                                                     source=cmtsolution,
+                                                     stations=stations,
+                                                     cartesian=cartesian)
+            assert(st), f"no waveforms were returned for `pysep_path`"
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
         if syn_path is not None and os.path.exists(syn_path):
-            assert(cmtsolution is not None and os.path.exists(cmtsolution)), (
-                f"If `syn_path` is given, RecSec also requires `cmtsolution`"
-            )
-            assert(stations is not None and os.path.exists(stations)), (
-                f"If `syn_path` is given, RecSec also requires `stations`"
-            )
-            fids = glob(os.path.join(syn_path, "??.*.*.sem?*"))
-            if fids:
-                logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
-                st_syn = Stream()
-                for fid in fids:
-                    st_syn += read_synthetics(fid=fid, cmtsolution=cmtsolution,
-                                              stations=stations)
+            st_syn = self._generate_synthetic_stream(syn_path=syn_path,
+                                                     source=cmtsolution,
+                                                     stations=stations,
+                                                     cartesian=cartesian)
+
         # Allow plotting ONLY synthetics and no data
         if st is None:
             st = st_syn.copy()
@@ -396,6 +416,54 @@ class RecordSection:
         self.y_axis = []
         self.xlim = []  # unit: samples
         self.sorted_idx = []
+
+    def _generate_synthetic_stream(self, syn_path, source, stations,
+                                   cartesian=False, fmt="*??.*.*.sem?*"):
+        """
+        Convenience fucntion to read in synthetic seismograms from SPECFEM2D,
+        SPECFEM3D or SPECFEM3D_GLOBE. Can be used to read in both `st` and
+        `st_syn`
+
+        :type syn_path: str
+        :param syn_path: full path to directory containing synthetic
+            seismograms
+        :type source: str
+        :param source: path to source file which defined the source that
+            generated the synthetics. Acceptable values are CMTSOLUTION (from
+            SPECFEM3D/GLOBE), and SOURCE (from SPECFEM2D)
+        :type stations: str
+        :param stations: full path to STATIONS file used to define the station
+            coordinates. Format is dictated by SPECFEM
+        :type fmt: str
+        :param fmt: the expected filename format of the sythetics. Based on
+            ASCII style files generated by SPECFEM. Defaults to '*??.*.*.sem?*'.
+            Expected filename looks something like: 'NN.SSS.BXC.semd'
+        :rtype: obspy.core.stream.Stream
+        :return: Stream object with synthetic waveforms
+        """
+        assert(source is not None and os.path.exists(source)), (
+            f"If `syn_path` is given, RecSec also requires `cmtsolution`"
+        )
+        assert(stations is not None and os.path.exists(stations)), (
+            f"If `syn_path` is given, RecSec also requires `stations`"
+        )
+        fids = glob(os.path.join(syn_path, fmt))
+        if fids:
+            logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
+            st_syn = Stream()
+            for fid in fids:
+                logger.debug(fid)
+                if not cartesian:
+                    st_syn += read_synthetics(fid=fid,
+                                              cmtsolution=source,
+                                              stations=stations)
+                else:
+                    # If we are using SPECFEM2D synthetics, trying to read
+                    # the SOURCE file will
+                    st_syn += read_synthetics_cartesian(fid=fid,
+                                                        source=source,
+                                                        stations=stations)
+        return st_syn
 
     def check_parameters(self):
         """
@@ -556,11 +624,13 @@ class RecordSection:
         :return: returns an indexing list which can be used to skip over
             traces that don't adhere to certain criteria
         """
+        logger.info(f"determining if any stations/channels should be skipped")
         skip_idx = []
         for idx in self.idx:
             tr = self.st[idx]
             # Component-wise removal
             if tr.stats.component not in self.components:
+                logger.debug(f"skip '{tr.get_id()}' for non-matching component")
                 skip_idx.append(idx)
             # !!! Add more here
         logger.info(f"criteria check will remove "
@@ -848,7 +918,7 @@ class RecordSection:
             # Overwrite `dist`, could probably skip that calc above but
             # leaving for now as I don't think this option will be used heavily.
             dist_deg = np.sqrt(
-                ((tr.stats.sac.stlo - tr.stats.sac.evlo) ** 2) /
+                ((tr.stats.sac.stlo - tr.stats.sac.evlo) ** 2) +
                 ((tr.stats.sac.stla - tr.stats.sac.evla) ** 2)
             )
             dist = kilometers2degrees(dist_deg)  # units: km
@@ -1172,6 +1242,10 @@ class RecordSection:
             nwav = stop - start
 
         logger.info(f"plotting record section for {nwav} waveforms")
+        assert(nwav > 0), (
+            f"no waveforms available for plotting. Check skip criteria if you "
+            f"think this is an issue"
+        )
 
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
@@ -1767,7 +1841,15 @@ def parse_args():
                         help="Path to save the resulting record section fig")
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing figure if path exists")
-    parser.add_argument("--log_level", default="DEBUG", type=str,
+    parser.add_argument("--cartesian", default=False, action="store_true",
+                        help="Let RecSec know that your domain is defined in"
+                             "Cartesian coordinates. Used for SPECFEM2D "
+                             "and SPECFEM3D_Cartesian domains defined in XYZ.")
+    parser.add_argument("--synsyn", default=False, action="store_true",
+                        help="Let RecSec know that both `pysep_path` and "
+                             "`syn_path` should be read in as SPECFEM-"
+                             "generated synthetics.")
+    parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         help="verbosity of logger: 'WARNING', 'INFO', 'DEBUG'")
 
     # Keyword arguments can be passed directly to the argparser in the same 
