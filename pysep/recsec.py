@@ -150,7 +150,7 @@ class RecordSection:
                  azimuth_start_deg=0., distance_units="km", 
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None, 
                  figsize=(9, 11), show=True, save="./record_section.png", 
-                 overwrite=False, **kwargs):
+                 overwrite=False, log_level="DEBUG", cartesian=False, **kwargs):
         """
         Set the default record section plotting parameters and enforce types.
         Run some internal parameter derivation functions by manipulating input
@@ -298,8 +298,19 @@ class RecordSection:
         :type overwrite: bool
         :param overwrite: if the path defined by `save` exists, will overwrite
             the existing figure
+        :type log_level: str
+        :param log_level: level of the internal logger, 'WARNING', 'INFO',
+            'DEBUG'.
+        :type cartesian: bool
+        :param cartesian: lets RecSec know that the domain is set in Cartesian
+            coordinates, such that data/metadata reading will need to adjust
+            acoordingly because the ObsPy tools used to read metadata will fail
+            for domains defined in XYZ
         :raises AssertionError: if any parameters are set incorrectly
         """
+        # Set the logger level before running anything
+        logger.setLevel(log_level)
+
         # Read files from path if provided
         if pysep_path is not None and os.path.exists(pysep_path):
             # Expecting to find SAC files labelled as such
@@ -329,8 +340,16 @@ class RecordSection:
                 st_syn = Stream()
                 for fid in fids:
                     logger.debug(fid)
-                    st_syn += read_synthetics_cartesian(fid=fid, source=cmtsolution,
-                                              stations=stations)
+                    if not cartesian:
+                        st_syn += read_synthetics(fid=fid,
+                                                  cmtsolution=cmtsolution,
+                                                  stations=stations)
+                    else:
+                        # If we are using SPECFEM2D synthetics, trying to read
+                        # the SOURCE file will
+                        st_syn += read_synthetics_cartesian(fid=fid,
+                                                            source=cmtsolution,
+                                                            stations=stations)
         # Allow plotting ONLY synthetics and no data
         if st is None:
             st = st_syn.copy()
@@ -557,11 +576,13 @@ class RecordSection:
         :return: returns an indexing list which can be used to skip over
             traces that don't adhere to certain criteria
         """
+        logger.info(f"determining if any stations/channels should be skipped")
         skip_idx = []
         for idx in self.idx:
             tr = self.st[idx]
             # Component-wise removal
             if tr.stats.component not in self.components:
+                logger.debug(f"skip '{tr.get_id()}' for non-matching component")
                 skip_idx.append(idx)
             # !!! Add more here
         logger.info(f"criteria check will remove "
@@ -1173,6 +1194,10 @@ class RecordSection:
             nwav = stop - start
 
         logger.info(f"plotting record section for {nwav} waveforms")
+        assert(nwav > 0), (
+            f"no waveforms available for plotting. Check skip criteria if you "
+            f"think this is an issue"
+        )
 
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
@@ -1768,7 +1793,11 @@ def parse_args():
                         help="Path to save the resulting record section fig")
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing figure if path exists")
-    parser.add_argument("--log_level", default="DEBUG", type=str,
+    parser.add_argument("--cartesian", default=False, action="store_true",
+                        help="Let RecSec know that your domain is defined in"
+                             "Cartesian coordinates. Used for SPECFEM2D "
+                             "and SPECFEM3D_Cartesian domains defined in XYZ.")
+    parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         help="verbosity of logger: 'WARNING', 'INFO', 'DEBUG'")
 
     # Keyword arguments can be passed directly to the argparser in the same 
