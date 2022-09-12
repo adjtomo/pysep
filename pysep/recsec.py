@@ -341,7 +341,6 @@ class RecordSection:
                                                      source=cmtsolution,
                                                      stations=stations,
                                                      cartesian=cartesian)
-            assert(st), f"no waveforms were returned for `pysep_path`"
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
         if syn_path is not None and os.path.exists(syn_path):
@@ -1702,8 +1701,8 @@ class RecordSection:
             spine.set_zorder(spine_zorder)
 
         # Set xtick label major and minor which is assumed to be a time series
-        self.ax.xaxis.set_major_locator(MultipleLocator(xtick_major))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(xtick_minor))
+        self.ax.xaxis.set_major_locator(MultipleLocator(int(xtick_major)))
+        self.ax.xaxis.set_minor_locator(MultipleLocator(int(xtick_minor)))
 
         plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
         plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)

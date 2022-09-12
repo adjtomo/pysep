@@ -244,6 +244,11 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135"):
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
         arrivals = phase_dict[tr.get_id()]
+        # If the TauP arrival calculation fails, `arrivals` will be empty
+        if not arrivals:
+            logger.warning(f"{tr.get_id()} has no TauP phase arrivals, cannot "
+                           f"append arrival time SAC headers")
+            continue
         # Find earliest arriving P-wave (P or p)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper() == "P"]
