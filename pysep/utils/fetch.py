@@ -51,6 +51,9 @@ def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
                 arrivals = taup_func(source_depth_in_km=depth_km,
                                      distance_in_degree=dist_deg,
                                      phase_list=phase_list)
+                if not arrivals:
+                    logger.debug(f"no TauP arrivals for model {model} and "
+                                 f"phases: {phase_list}")
                 phase_dict[tr.get_id()] = arrivals
                 break
             # This will through a ValueError for invalid phase names
