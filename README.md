@@ -196,7 +196,7 @@ recsec --pysep_path ./SAC
 ```
 
 To plot a record section with a 7km/s move out, high-pass filtered at 1s
-
+s
 ```bash
 recsec --pysep_path ./SAC --move_out 7 --min_period_s 1
 ```
@@ -209,6 +209,28 @@ recsec --pysep_path ./SAC --sort_by azimuth
 
 Have a look at the -h/--help message and the docstring at the top of `recsec.py`
 for more options.
+
+### Customizing RecSec figures
+
+Much of the aesthetic look of RecSec figures is hardcoded, however there are 
+some keyword arguments that you can provide as flags which may help. The 
+following parameters correspond to Matplotlib plot adjustments. 
+
+- ytick_fontsize: Fontsize of the Y-axis tick labels
+- xtick_fontsize: Fontsize of the X-axis tick labels
+- tick_linewidth: Linewidth of axes tick marks
+- tick_length: Length of axes tick marks
+- label_fontsize: Fontsize of X and Y axis labels
+- axis_linewidth: Linewidth of border around figure
+- title_fontsize: Fontsize of the title
+- xtick_minor: Frequency of minor ticks on the X axis
+- xtick_major: Frequency of major ticks on the X axis
+
+To set one of these parameters, just set as a flag, e.g.,
+
+```bash
+recsec --pysep_path ./SAC --xtick_minor 100 --xtick_major 500
+```
 
 ### Plotting SPECFEM synthetics
 
