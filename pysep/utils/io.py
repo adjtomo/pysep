@@ -74,7 +74,7 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     delta = round(times[1] - times[0], precision)
 
     # Get metadata information from CMTSOLUTION and STATIONS files
-    event = read_events(cmtsolution)[0]
+    event = read_events(cmtsolution, format="CMTSOLUTION")[0]
     inv = read_stations(stations)
 
     origintime = event.preferred_origin().time
@@ -158,8 +158,9 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
 
     # Get metadata information from CMTSOLUTION and STATIONS files
     try:
-        event = read_events(source)[0]
-    except TypeError:
+        event = read_specfem3d_cmtsolution_cartesian(source)
+    # Specfem2D and 3D source/cmtsolution files have different formats
+    except ValueError:
         event = read_specfem2d_source(source)
 
     # Generate a dictionary object to store station information
@@ -222,6 +223,65 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
         tr.stats.sac = sac_header
 
     return st
+
+
+def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
+    """
+    Create a barebones ObsPy Event object from a SPECFEM3D CMTSOLUTION file with
+    coordinates defined in cartesian. Required because ObsPy read_events() will
+    throw a ValueError when CMTSOLUTIONS do not have geographically defined
+    coordinates.
+    """
+    def _get_resource_id(name, res_type, tag=None):
+        """
+        Helper function to create consistent resource ids. From ObsPy
+        """
+        res_id = f"smi:local/source/{name:s}/{res_type:s}"
+        if tag is not None:
+            res_id += "#" + tag
+        return res_id
+
+    with open(path_to_cmtsolution, "r") as f:
+        lines = f.readlines()
+
+    # First line contains meta informatino about event
+    _, year, month, day, hour, minute, sec, lat, lon, depth, mb, ms, _ = \
+        lines[0].strip().split()
+
+    origin_time = UTCDateTime(f"{year}-{month}-{day}T{hour}:{minute}:{sec}")
+
+    # Remaining lines contain information on event, some useful some not
+    source_dict = {}
+    for line in lines[1:]:
+        # Skip comments and newlines
+        if line.startswith("#") or line == "\n":
+            continue
+        key, val = line.strip().split(":")
+        # Strip trailing comments from values
+        source_dict[key.strip()] = val.strip()
+
+    origin = Origin(
+        resource_id=_get_resource_id(source_dict["event name"],
+                                     "origin", tag="source"),
+        time=origin_time, longitude=source_dict["longorUTM"],
+        latitude=source_dict["latorUTM"],
+        depth=abs(float(source_dict["depth"]) * 1E3)  # units: m
+    )
+
+    magnitude = Magnitude(
+        resource_id=_get_resource_id(source_dict["event name"], "magnitude"),
+        mag=ms, magnitude_type="Ms", origin_id=origin.resource_id.id
+    )
+
+    event = Event(resource_id=_get_resource_id(name=source_dict["event name"],
+                                               res_type="event"))
+    event.origins.append(origin)
+    event.magnitudes.append(magnitude)
+
+    event.preferred_origin_id = origin.resource_id.id
+    event.preferred_magnitude_id = magnitude.resource_id.id
+
+    return event
 
 
 def read_specfem2d_source(path_to_source, origin_time=None):
