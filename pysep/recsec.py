@@ -1712,8 +1712,8 @@ class RecordSection:
             spine.set_zorder(spine_zorder)
 
         # Set xtick label major and minor which is assumed to be a time series
-        self.ax.xaxis.set_major_locator(MultipleLocator(int(xtick_major)))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(int(xtick_minor)))
+        self.ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
+        self.ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
 
         plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
         plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
