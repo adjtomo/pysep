@@ -144,7 +144,7 @@ class RecordSection:
                  cmtsolution=None, st=None, st_syn=None, sort_by="default",
                  scale_by=None, time_shift_s=None, zero_pad_s=None,
                  move_out=None, min_period_s=None, max_period_s=None,
-                 preprocess="st", max_traces_per_rs=None, integrate=0,
+                 preprocess=None, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", 
@@ -168,6 +168,13 @@ class RecordSection:
         :type st_syn: obspy.core.stream.Stream
         :param st_syn: Stream objects containing synthetic time series to be
             plotted on the record section. Must be same length as `st`
+        :type stations: str
+        :param stations: full path to STATIONS file used to define the station
+            coordinates. Format is dictated by SPECFEM
+        :type cmtsolution: str
+        :type cmtsolution: required for synthetics, full path to SPECFEM source
+            file, which was used to generate SPECFEM synthetics. Example
+            filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
         :type sort_by: str
         :param sort_by: How to sort the Y-axis of the record section, available:
             - 'default': Don't sort, just iterate directly through Stream
@@ -234,10 +241,10 @@ class RecordSection:
         :param max_period_s: maximum filter period in seconds
         :type preprocess: str
         :param preprocess: choose which data to preprocess, options are:
-            - 'st': process waveforms in st (default)
-            - 'st_syn': process waveforms in st_syn. st still must be given
-            - 'both': process waveforms in both st and st_syn
-            - None: do not run preprocessing step (including filter)
+            - None: do not run preprocessing step, including filter (Default)
+            - 'st': process waveforms in `st`
+            - 'st_syn': process waveforms in `st_syn`. st still must be given
+            - 'both': process waveforms in both `st` and `st_syn`
         :type max_traces_per_rs: int
         :param max_traces_per_rs: maximum number of traces to show on a single
             record section plot. Defaults to all traces in the Stream
@@ -560,6 +567,10 @@ class RecordSection:
         if self.min_period_s is not None and self.max_period_s is not None:
             if self.min_period_s >= self.max_period_s:
                 err.min_period_s = "must be less than `max_period_s`"
+
+        if self.min_period_s is not None or self.max_period_s is not None:
+            assert(self.preprocess is not None), \
+                f"Setting filter bounds requires `preprocess` flag to be set"
 
         if self.preprocess is not None:
             acceptable_preprocess = ["both", "st", "st_syn"]
