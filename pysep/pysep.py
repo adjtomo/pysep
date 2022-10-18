@@ -695,7 +695,7 @@ class Pysep:
                 bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
-        assert(bulk), (
+        assert bulk, (
             f"station curtailing has removed any stations to query data for. "
             f"please check your `distance` and `azimuth` curtailing criteria "
             f"and try again"
@@ -1262,7 +1262,7 @@ def parse_args():
         if arg.startswith(("-", "--")):
             parser.add_argument(arg.split("=")[0])
 
-    return parser.parse_args()
+    return parser
 
 
 def get_data(config_file=None, event=None, inv=None, st=None, write_files=None,
@@ -1382,7 +1382,13 @@ def main():
         $ pysep -c config.yaml
     """
     config_files, events = [], None
-    args = parse_args()
+    parser = parse_args()
+    # Print help message if no arguments are given
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+    # Grab arguments from parser and continue
+    args = parser.parse_args()
     # Write out a blank configuration file to use as a template
     if args.write:
         sep = Pysep()

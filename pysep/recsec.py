@@ -1874,7 +1874,7 @@ def parse_args():
         if arg.startswith(("-", "--")):
             parser.add_argument(arg.split("=")[0])
 
-    return parser.parse_args()
+    return parser
 
 
 def plotw_rs(*args, **kwargs):
@@ -1917,7 +1917,12 @@ def main():
     .. rubric::
         $ recsec -h
     """
-    plotw_rs(**vars(parse_args()))
+    parser = parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
+    plotw_rs(**vars(parser.parse_args()))
 
 
 if __name__ == "__main__":
