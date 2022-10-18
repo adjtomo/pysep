@@ -97,6 +97,7 @@ from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
 from pysep.utils.io import read_synthetics, read_synthetics_cartesian
+from pysep.utils.curtail import subset_streams
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -508,6 +509,7 @@ class RecordSection:
                           f"are: {_idx}")
 
         if self.st_syn is not None:
+            self.st, self.st_syn = subset_streams(self.st, self.st_syn)
             if len(self.st) != len(self.st_syn):
                 err.st_syn = f"length must match `st` (which is {len(self.st)})"
 
@@ -1176,7 +1178,7 @@ class RecordSection:
             preprocess_list = [self.st_syn]
         elif self.preprocess == "both":
             logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
-                  f"`st` and `st_syn` waveforms")
+                        f"`st` and `st_syn` waveforms")
             preprocess_list = [self.st, self.st_syn]
 
         for st in preprocess_list:
@@ -1213,9 +1215,9 @@ class RecordSection:
             elif self.min_period_s is not None and \
                     self.max_period_s is not None:
                 logger.info(f"applying bandpass filter w/ "
-                      f"[{1/self.max_period_s}, {self.min_period_s}]")
+                            f"[{1/self.max_period_s}, {self.min_period_s}]")
                 st.filter("bandpass", freqmin=1/self.max_period_s,
-                            freqmax=1/self.min_period_s, zerophase=True)
+                          freqmax=1/self.min_period_s, zerophase=True)
             else:
                 logger.info("no filtering applied")
 

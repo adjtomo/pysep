@@ -13,7 +13,8 @@ from pysep.utils.cap_sac import (append_sac_headers,
                                  format_sac_header_w_taup_traveltimes)
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
-                                 remove_stations_for_insufficient_length)
+                                 remove_stations_for_insufficient_length,
+                                 subset_streams)
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
 from pysep.utils.process import estimate_prefilter_corners
 from pysep.utils.plot import plot_source_receiver_map
@@ -171,3 +172,26 @@ def test_remove_for_clipped_amplitudes(test_st):
     """
     remove_for_clipped_amplitudes(test_st)
 
+
+def test_subset_streams(test_st):
+    """
+    Make sure subsetting streams works by removing additional trace
+
+    TODO this test will FAIL if data has multiple traces for a single component
+        present in one stream but not another. This is due to how subset streams
+        matches data (only by station ID). Users will need to merge data or take
+        care that they do not have data gaps/ multiple traces.
+    """
+    n = len(test_st) // 2
+    test_st_smaller = test_st[:n].copy()
+    # test_st.pop(0)  # <- causes subset_streams to fail
+
+    test_st_out, test_st_smaller_out = subset_streams(test_st, test_st_smaller)
+
+    # subset streams should have reduced both streams to the shorter list
+    assert(len(test_st_out) == n)
+    assert(len(test_st_smaller_out) == n)
+
+    # all station ids should be the same
+    for tr_out, tr_smaller_out in zip(test_st_out, test_st_smaller_out):
+        assert(tr_out.get_id() == tr_smaller_out.get_id())

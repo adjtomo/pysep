@@ -3,6 +3,7 @@ Utilities to curtail station lists based on source receiver parameters or to
 curtail streams due to missing data etc.
 """
 import numpy as np
+from obspy import Stream
 from obspy.geodetics import gps2dist_azimuth
 
 from pysep import logger
@@ -227,3 +228,47 @@ def remove_stations_for_insufficient_length(st):
 
     return st_out
 
+
+def subset_streams(st_a, st_b):
+    """
+    Given two streams of data, check if they have the same length. IF they do,
+    return the streams. If they don't, subset the streams so they have the same
+    lengths and the same station ids.
+
+    :type st_a: obspy.core.stream.Stream
+    :param st_a: stream A to check
+    :type st_b: obspy.core.stream.Stream
+    :param st_b: stream B to check
+    :rtype: tuple of Streams
+    :return: curtailed (or not) streams in the same order as input
+    """
+    if len(st_a) != len(st_b):
+        logger.warning(f"stream lengths don't match {len(st_a)} != {len(st_b)} "
+                       f"will subset to the shorter length")
+    else:
+        return st_a, st_b
+
+    st_a_out = Stream()
+    st_b_out = Stream()
+
+    # Collect all unique IDs so that we can use them for identification
+    sta_ids_a = set([tr.get_id() for tr in st_a])
+    sta_ids_b = set([tr.get_id() for tr in st_b])
+    common_ids = sta_ids_a.intersection(sta_ids_b)
+
+    logger.debug(f"stream subset removes "
+                 f"{len(sta_ids_a) - len(common_ids)} traces from `st_a`")
+    logger.debug(f"stream subset removes "
+                 f"{len(sta_ids_b) - len(common_ids)} traces from `st_b`")
+
+    for station_id in common_ids:
+        st_a_out += st_a.select(id=station_id)
+        st_b_out += st_b.select(id=station_id)
+
+    assert(len(st_a_out) == len(st_b_out)), (
+        f"station subsetting failed to return the same number of streams. " 
+        f"check that your data does not contain multiple traces for a single "
+        f"component as this can lead to this error message"
+    )
+
+    return st_a_out, st_b_out
