@@ -424,11 +424,16 @@ class Pysep:
         :param overwrite_event: overwrite event search parameters (origin time,
             lat, lon etc.) from the YAML config file. Defaults to True
         """
+        ignore_keys = []
         if config_file is None:
             config_file = self.config_file
         if not overwrite_event:
-            logger.info("will NOT overwrite event search parameters with "
-                        "config file")
+            logger.info("will NOT overwrite event search parameters (including "
+                        "origin and reference time) with config file")
+            # Set parameters to ignore when overwriting from config file
+            ignore_keys = ["origin_time", "reference_time", "event_latitude",
+                           "event_longitude", "event_depth_km",
+                           "event_magnitude"]
 
         if config_file is not None:
             logger.info(f"overwriting default parameters with config file: "
@@ -436,8 +441,7 @@ class Pysep:
             config = read_yaml(config_file)
             for key, val in config.items():
                 if hasattr(self, key):
-                    if not overwrite_event and \
-                            key.startswith(("event_", "origin_time")):
+                    if key in ignore_keys:
                         continue
                     old_val = getattr(self, key)
                     if val != old_val:
@@ -1409,7 +1413,10 @@ def main():
             sep = Pysep(config_file=config_file, **vars(args))
             sep.run()
     else:
-        # Event File run, use the same config by parse through events
+        # Event File run, use the same Config to parse through events
+        # NOTE: Does not allow a unique reference time, reference time is FORCED
+        #   to be the origin time; ignores reference time in par file
+        logger.info(f"looping over {len(events)} events for event file run")
         for event in events:
             sep = Pysep(config_file=config_files[0],
                         origin_time=event["origin_time"],

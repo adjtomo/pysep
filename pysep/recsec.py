@@ -508,6 +508,8 @@ class RecordSection:
                           f"expects SAC headers for sorting. Trace indexes "
                           f"are: {_idx}")
 
+        # Make sure stream and synthetic stream have the same length. If they
+        # don't, subset so that they do.
         if self.st_syn is not None:
             self.st, self.st_syn = subset_streams(self.st, self.st_syn)
             if len(self.st) != len(self.st_syn):
