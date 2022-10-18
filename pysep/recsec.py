@@ -512,6 +512,7 @@ class RecordSection:
         # don't, subset so that they do.
         if self.st_syn is not None:
             self.st, self.st_syn = subset_streams(self.st, self.st_syn)
+
             if len(self.st) != len(self.st_syn):
                 err.st_syn = f"length must match `st` (which is {len(self.st)})"
 

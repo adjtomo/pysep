@@ -242,6 +242,21 @@ def subset_streams(st_a, st_b):
     :rtype: tuple of Streams
     :return: curtailed (or not) streams in the same order as input
     """
+    def get_ids(st):
+        """
+        Grab "network.station.location.comp" from obspy stream. because 
+        synthetics may have different channels (e.g,. HXZ vs HHZ) in their name 
+        so we can't match the whole station ID using Trace.get_id()
+        """
+        list_out = []
+        for tr in st:
+            s = tr.stats
+            list_out.append(
+                    f"{s.network}.{s.station}.{s.location}.{s.component}"
+                    )
+        return set(list_out)
+
+
     if len(st_a) != len(st_b):
         logger.warning(f"stream lengths don't match {len(st_a)} != {len(st_b)} "
                        f"will subset to the shorter length")
@@ -252,8 +267,8 @@ def subset_streams(st_a, st_b):
     st_b_out = Stream()
 
     # Collect all unique IDs so that we can use them for identification
-    sta_ids_a = set([tr.get_id() for tr in st_a])
-    sta_ids_b = set([tr.get_id() for tr in st_b])
+    sta_ids_a = get_ids(st_a)
+    sta_ids_b = get_ids(st_b)
     common_ids = sta_ids_a.intersection(sta_ids_b)
 
     logger.debug(f"stream subset removes "
@@ -261,9 +276,13 @@ def subset_streams(st_a, st_b):
     logger.debug(f"stream subset removes "
                  f"{len(sta_ids_b) - len(common_ids)} traces from `st_b`")
 
+
     for station_id in common_ids:
-        st_a_out += st_a.select(id=station_id)
-        st_b_out += st_b.select(id=station_id)
+        net, sta, loc, comp = station_id.split(".")
+        st_a_out += st_a.select(network=net, station=sta, location=loc, 
+                                component=comp)
+        st_b_out += st_b.select(network=net, station=sta, location=loc,
+                                component=comp)
 
     assert(len(st_a_out) == len(st_b_out)), (
         f"station subsetting failed to return the same number of streams. " 
