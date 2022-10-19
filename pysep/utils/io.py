@@ -22,11 +22,6 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     .sem? files into Stream objects with the correct header
     information.
 
-    .. note::
-        if origintime is None, the default start time is 1970-01-01T00:00:00,
-        this is fine for quick-looking the data but it is recommended that an
-        actual starttime is given.
-
     .. note ::
         Tested up to Specfem3D Cartesian git version 6895e2f7
 
@@ -77,10 +72,10 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     event = read_events(cmtsolution, format="CMTSOLUTION")[0]
     inv = read_stations(stations)
 
-    origintime = event.preferred_origin().time
+    starttime = event.preferred_origin().time
 
     # Honor that Specfem doesn't start exactly on 0
-    origintime += times[0]
+    starttime += times[0]
 
     # Write out the header information
     try:
@@ -91,7 +86,7 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
         net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
 
     stats = {"network": net, "station": sta, "location": location,
-             "channel": cha, "starttime": origintime, "npts": len(data),
+             "channel": cha, "starttime": starttime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'},
              "time_offset": times[0], "format": fmt
              }
@@ -172,10 +167,10 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
                                           "stlo": float(sta[3])
                                           }
 
-    origintime = event.preferred_origin().time
+    starttime = event.preferred_origin().time
 
     # Honor that Specfem doesn't start exactly on 0
-    origintime += times[0]
+    starttime += times[0]
 
     # Write out the header information
     try:
@@ -186,7 +181,7 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
         net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
 
     stats = {"network": net, "station": sta, "location": location,
-             "channel": cha, "starttime": origintime, "npts": len(data),
+             "channel": cha, "starttime": starttime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'},
              "time_offset": times[0], "format": fmt
              }
