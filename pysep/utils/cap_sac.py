@@ -6,6 +6,7 @@ For SAC header names and descriptions, see:
 """
 import os
 import numpy as np
+from obspy import UTCDateTime
 from obspy.core.stream import Stream
 from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
@@ -312,3 +313,23 @@ def format_sac_headers_post_rotation(st):
 
     return st_out
 
+
+def origin_time_from_sac_header(sac_header):
+    """
+    Build a UTCDateTime origin time from values in the SAC header appended to
+    an ObsPy trace.
+
+    :type sac_header: obspy.core.util.attribdict.AttribDict
+    :param sac_header: SAC header built by `append_sac_header()`
+    :rtype: UTCDateTime
+    :return: event origin time built from SAC header
+    """
+    year = sac_header["nzyear"]
+    jday = sac_header["nzjday"]
+    hour = sac_header["nzhour"]
+    min_ = sac_header["nzmin"]
+    sec_ = sac_header["nzsec"]
+    msec = sac_header["nzmsec"]
+    time_string = f"{year}-{jday}T{hour}:{min_}:{sec_}.{msec}"
+
+    return UTCDateTime(time_string)

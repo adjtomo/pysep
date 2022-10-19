@@ -96,6 +96,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
+from pysep.utils.cap_sac import origin_time_from_sac_header
 from pysep.utils.io import read_synthetics, read_synthetics_cartesian
 from pysep.utils.curtail import subset_streams
 
@@ -693,6 +694,8 @@ class RecordSection:
 
         self.time_shift_s = self.get_time_shifts()  # !!! OVERWRITES user input
         self.xlim = self.get_xlims()
+        self.get_time_offsets()
+
 
         # Max amplitudes should be RELATIVE to what were showing (e.g., if
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
@@ -821,6 +824,28 @@ class RecordSection:
         stats.xmin, stats.xmax, stats.ymin, stats.ymax = [], [], [], []
 
         return stats
+
+    def get_time_offsets(self):
+        """
+        Find time shift to data constituting difference between trace start 
+        time and event origin time. Both synthetics and data should have the 
+        correct timing. Time offsets will be used during plotting to make 
+        sure all traces have the same T=0
+
+        .. note::
+            Appends time offset directly to the stats header, overwriting any
+            value that might have been there already
+        """
+        event_origin_time = origin_time_from_sac_header(self.st[0].stats.sac)
+
+        logger.info(f"calculating starttime offsets from event origin time "
+                    f"{event_origin_time}")
+
+        for tr in self.st:
+            tr.stats.time_offset = tr.stats.starttime - event_origin_time
+        if self.st_syn is not None:
+            for tr in self.st_syn:
+                tr.stats.time_offset = tr.stats.starttime - event_origin_time
 
     def get_time_shifts(self):
         """
@@ -1185,6 +1210,7 @@ class RecordSection:
             preprocess_list = [self.st, self.st_syn]
 
         for st in preprocess_list:
+
             # Fill any data gaps with mean of the data, do it on a trace by 
             # trace basis to get individual mean values
             for tr in st:
@@ -1265,7 +1291,7 @@ class RecordSection:
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
         logger.debug("plotting line check starting from bottom (y=0)")
-        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tYABSMAX")
+        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX")
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
         log_str = "\n"
@@ -1343,6 +1369,16 @@ class RecordSection:
         x = tr.times() + tshift
         if self.zero_pad_s is not None:
             x -= self.zero_pad_s[0]  # index 0 is start, index 1 is end
+
+        # Synthetics will already have a time offset stat from the 
+        # 'read_synthetics' function which grabs T0 value from ASCII
+        # Data will have a time offset relative to event origin time 
+        if hasattr(tr.stats, "time_offset"):
+            x += tr.stats.time_offset  
+            toffset_str = f"{tr.stats.time_offset:4.2f}"
+        else:
+            toffset_str = "  None"
+
         y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. 
@@ -1360,6 +1396,7 @@ class RecordSection:
                    f"\t{self.azimuths[idx]:6.2f}"
                    f"\t{self.backazimuths[idx]:6.2f}"
                    f"\t{self.time_shift_s[idx]:4.2f}"
+                   f"\t{toffset_str}"
                    f"\t{self.max_amplitudes[idx]:.2E}\n"
                    )
 
@@ -1787,7 +1824,7 @@ def parse_args():
                 e.g., alphabetical_r sort will go Z->A"
                 """)
                         )
-    parser.add_argument("--scale_by", default="normalize", type=str, nargs="?",
+    parser.add_argument("--scale_by", default=None, type=str, nargs="?",
                         help=textwrap.dedent("""
             How to sort the Y-axis of the record section
             - None: Not set, no amplitude scaling, waveforms shown raw

@@ -87,8 +87,7 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
 
     stats = {"network": net, "station": sta, "location": location,
              "channel": cha, "starttime": starttime, "npts": len(data),
-             "delta": delta, "mseed": {"dataquality": 'D'},
-             "time_offset": times[0], "format": fmt
+             "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
              }
     st = Stream([Trace(data=data, header=stats)])
     st = append_sac_headers(st, event, inv)
@@ -182,8 +181,7 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
 
     stats = {"network": net, "station": sta, "location": location,
              "channel": cha, "starttime": starttime, "npts": len(data),
-             "delta": delta, "mseed": {"dataquality": 'D'},
-             "time_offset": times[0], "format": fmt
+             "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
              }
     st = Stream([Trace(data=data, header=stats)])
 
