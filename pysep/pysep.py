@@ -53,7 +53,7 @@ class Pysep:
                  pre_filt="default", mindistance=0, maxdistance=20E3,
                  minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
-                 maxlongitude=None, resample_freq=50, scale_factor=1,
+                 maxlongitude=None, resample_freq=None, scale_factor=1,
                  phase_list=None, seconds_before_event=20,
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
@@ -775,7 +775,7 @@ class Pysep:
                                 taper=bool(self.taper_percentage),
                                 taper_fraction=self.taper_percentage,
                                 zero_mean=self.demean,
-                                output=self.output_unit
+                                output=self.output_unit,
                                 )
                         except ValueError as e:
                             logger.warning(f"can't remove response {code}: {e}"
@@ -792,7 +792,8 @@ class Pysep:
 
         # Apply pre-resample lowpass, resample waveforms, make contiguous
         st_out = merge_and_trim_start_end_times(st_out)
-        st_out = resample_data(st_out, resample_freq=self.resample_freq)
+        if self.resample_freq is not None:
+            st_out = resample_data(st_out, resample_freq=self.resample_freq)
 
         return st_out
 
