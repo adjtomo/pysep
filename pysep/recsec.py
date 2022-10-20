@@ -1702,7 +1702,7 @@ class RecordSection:
 
         # If preprocessing is turned OFF, no filtering was applied
         if self.preprocess is not None:
-            filter_bounds = "[{self.min_period_s}, {self.max_period_s}]s"
+            filter_bounds = f"[{self.min_period_s}, {self.max_period_s}]s"
         else:
             filter_bounds = "None"
 
