@@ -1229,16 +1229,16 @@ class RecordSection:
                             pad=True, fill_value=0)
 
             # Allow multiple filter options based on user input
-            # Min period but no max period == low-pass
+            # Max period only == high-pass
             if self.max_period_s is not None and self.min_period_s is None:
-                logger.info(f"apply lowpass filter w/ cutoff "
-                            f"{1/self.max_period_s}")
-                st.filter("lowpass", freq=1/self.max_period_s, zerophase=True)
-            # Max period but no min period == high-pass
-            elif self.min_period_s is not None and self.max_period_s is None:
                 logger.info(f"apply highpass filter w/ cutoff "
+                            f"{1/self.max_period_s}")
+                st.filter("highpass", freq=1/self.max_period_s, zerophase=True)
+            # Min period only == low-pass
+            elif self.min_period_s is not None and self.max_period_s is None:
+                logger.info(f"apply lowpass filter w/ cutoff "
                             f"{1/self.min_period_s}")
-                st.filter("highpass", freq=1/self.min_period_s, zerophase=True)
+                st.filter("lowpass", freq=1/self.min_period_s, zerophase=True)
             # Both min and max period == band-pass
             elif self.min_period_s is not None and \
                     self.max_period_s is not None:
