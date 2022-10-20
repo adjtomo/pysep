@@ -323,6 +323,7 @@ class RecordSection:
             the same SOURCE and STATIONS metadata
         :raises AssertionError: if any parameters are set incorrectly
         """
+        import pdb;pdb.set_trace()
         # Set the logger level before running anything
         logger.setLevel(log_level)
 
@@ -1196,7 +1197,7 @@ class RecordSection:
             seismograms. At the moment we just apply a blanket filter.
         """
         if self.preprocess is None:
-            logger.info("no preprocessing applied")
+            logger.info("no preprocessing (including filtering) applied")
             return
         elif self.preprocess == "st":
             logger.info(f"preprocessing {len(self.st)} `st` waveforms")
@@ -1210,7 +1211,6 @@ class RecordSection:
             preprocess_list = [self.st, self.st_syn]
 
         for st in preprocess_list:
-
             # Fill any data gaps with mean of the data, do it on a trace by 
             # trace basis to get individual mean values
             for tr in st:
@@ -1701,6 +1701,12 @@ class RecordSection:
         # changed the 'starttime'
         origintime = min([tr.stats.starttime + _start for tr in self.st])
 
+        # If preprocessing is turned OFF, no filtering was applied
+        if preprocess is not None:
+            filter_bounds = "[{self.min_period_s}, {self.max_period_s}]s"
+        else:
+            filter_bounds = "None"
+
         title = "\n".join([
             title_top,
             f"{'/' * len(title_top*2)}",
@@ -1710,7 +1716,7 @@ class RecordSection:
             f"NSTA: {self.stats.nstation}; COMP: {cmp}",
             f"SORT_BY: {self.sort_by}; "
             f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
-            f"FILT: [{self.min_period_s}, {self.max_period_s}]s; "
+            f"FILT: {filter_bounds}",
             f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s",
             f"ZERO_PAD: {_start}s, {_end}s",
         ])
