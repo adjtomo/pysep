@@ -180,6 +180,8 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_km = dist_m * 1E-3  # units: m -> km
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
+    otime = event.preferred_origin().time
+
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
         "b": tr.stats.starttime - event.preferred_origin().time,  # begin time
@@ -192,6 +194,12 @@ def _append_sac_headers_trace(tr, event, inv):
         "stlo": sta.longitude,
         "stel": sta.elevation / 1E3,  # elevation in km
         "kevnm": format_event_tag_legacy(event),  # only take date code
+        "nzyear": otime.year,
+        "nzjday": otime.julday,
+        "nzhour": otime.hour,
+        "nzmin": otime.minute,
+        "nzsec": otime.second,
+        "nzmsec": otime.microsecond,
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees
@@ -330,6 +338,6 @@ def origin_time_from_sac_header(sac_header):
     min_ = sac_header["nzmin"]
     sec_ = sac_header["nzsec"]
     msec = sac_header["nzmsec"]
-    time_string = f"{year}-{jday}T{hour}:{min_}:{sec_}.{msec}"
+    time_string = f"{year}-{jday:0>3}T{hour}:{min_}:{sec_}.{msec}"
 
     return UTCDateTime(time_string)

@@ -323,7 +323,6 @@ class RecordSection:
             the same SOURCE and STATIONS metadata
         :raises AssertionError: if any parameters are set incorrectly
         """
-        import pdb;pdb.set_trace()
         # Set the logger level before running anything
         logger.setLevel(log_level)
 
@@ -1702,7 +1701,7 @@ class RecordSection:
         origintime = min([tr.stats.starttime + _start for tr in self.st])
 
         # If preprocessing is turned OFF, no filtering was applied
-        if preprocess is not None:
+        if self.preprocess is not None:
             filter_bounds = "[{self.min_period_s}, {self.max_period_s}]s"
         else:
             filter_bounds = "None"
