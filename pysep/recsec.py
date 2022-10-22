@@ -760,10 +760,15 @@ class RecordSection:
                     zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
                     start_index += zero_pad_index
                     end_index += zero_pad_index
-                assert(start_index >= 0), (
-                    f"trying to access negative time but trace has no negative "
-                    f"time values. Please check your choice for `xlim_s`"
-                )
+
+                # !!! This used to be necessary but now that there is time 
+                #   offsets added, start_index can be <0. May want to delete
+                #   this code block at some point but leaving it in incase I
+                #   broke something and we need to re-implement 
+                # if start_index < 0:
+                #     logger.warning(f"trying to access negative time axis index "
+                #                    f"setting to 0 but but trace please check "
+                #                    f"your choice for `xlim_s`")
                 # Address time shift introduced by traces which do not start
                 # at the origin time
                 if hasattr(tr.stats, "time_offset"):
