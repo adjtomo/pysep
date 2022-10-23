@@ -761,19 +761,25 @@ class RecordSection:
                     start_index += zero_pad_index
                     end_index += zero_pad_index
 
-                # !!! This used to be necessary but now that there is time 
-                #   offsets added, start_index can be <0. May want to delete
-                #   this code block at some point but leaving it in incase I
-                #   broke something and we need to re-implement 
-                # if start_index < 0:
-                #     logger.warning(f"trying to access negative time axis index "
-                #                    f"setting to 0 but but trace please check "
-                #                    f"your choice for `xlim_s`")
                 # Address time shift introduced by traces which do not start
                 # at the origin time
                 if hasattr(tr.stats, "time_offset"):
                     start_index += abs(int(tr.stats.time_offset/tr.stats.delta))
                     end_index += abs(int(tr.stats.time_offset/tr.stats.delta))
+
+                # When setting xlimits, cannot acces out of bounds (negative 
+                # indices or greater than max). This might happen when User 
+                # asks for `xlim_s` that is outside data bounds. In this case
+                # we just plot up to the end of the data
+                if start_index < 0:
+                    logger.warning(f"trying to access negative time axis index "
+                                   f"for xlimit of {tr.get_id()}, setting to 0")
+                    start_index = 0
+                if end_index > len(tr.data):
+                    logger.warning(f"trying to access past time axis index "
+                                   f"for xlimit of {tr.get_id()}, setting to "
+                                   f"length of data trace")
+                    end_index = len(tr.data)
 
                 xlim.append((start_index, end_index))
 
