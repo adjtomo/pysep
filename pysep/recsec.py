@@ -445,6 +445,7 @@ class RecordSection:
         self.amplitude_scaling = []
         self.y_axis = []
         self.xlim = []  # unit: samples
+        self.xlim_syn = []
         self.sorted_idx = []
 
     def _generate_synthetic_stream(self, syn_path, source, stations,
@@ -715,8 +716,12 @@ class RecordSection:
         self.station_ids = np.array([tr.get_id() for tr in self.st])
 
         self.time_shift_s = self.get_time_shifts()  # !!! OVERWRITES user input
-        self.xlim = self.get_xlims()
+        # Needs to be run before getting xlims so that we know the time offset
         self.get_time_offsets()
+        self.xlim = self.get_xlims()
+        # Get xlims synthetic waveforms which may have different start/end times
+        if self.st_syn is not None:
+            self.xlim_syn = self.get_xlims(st=self.st_syn)
 
         # Max amplitudes should be RELATIVE to what were showing (e.g., if
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
@@ -736,7 +741,7 @@ class RecordSection:
         self.y_axis = self.get_y_axis_positions()
         self.amplitude_scaling = self.get_amplitude_scaling()
 
-    def get_xlims(self):
+    def get_xlims(self, st=None):
         """
         The x-limits of each trace depend on the overall time shift (either 
         static or applied through move out), as well as the sampling rate of
@@ -746,20 +751,27 @@ class RecordSection:
         .. note::
             Requires that get_time_shifts() has already been run
 
+        :type st: obspy.core.stream.Stream
+        :param st: stream object to get xlims for. By default this is the 'data'
+            stored in `st` but it can also be given `st_syn` to get synthetic
+            x limits which may differ
         :rtype: np.array
         :return: an array of tuples defining the start and stop indices for EACH
             trace to be used during plotting. Already includes time shift 
             information so xlim can be applied DIRECTLY to the time shifted data
         """
+        if st is None:
+            st = self.st
+
         xlim = []
         if self.xlim_s is None:
             # None's will index the entire trace
-            xlim = np.array([(None, None) for _ in range(len(self.st))])
+            xlim = np.array([(None, None) for _ in range(len(st))])
         else:
             # Looping to allow for delta varying among traces,
             # AND apply the time shift so that indices can be used directly in
             # the plotting function
-            for tr, tshift in zip(self.st, self.time_shift_s):
+            for tr, tshift in zip(st, self.time_shift_s):
                 start, stop = [int(_/tr.stats.delta) for _ in self.xlim_s]
                 sshift = int(tshift / tr.stats.delta)  # unit: samples
                 # These indices define the index of the user-chosen timestamp
@@ -770,10 +782,27 @@ class RecordSection:
                     zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
                     start_index += zero_pad_index
                     end_index += zero_pad_index
-                assert(start_index >= 0), (
-                    f"trying to access negative time but trace has no negative "
-                    f"time values. Please check your choice for `xlim_s`"
-                )
+
+                # Address time shift introduced by traces which do not start
+                # at the origin time
+                if hasattr(tr.stats, "time_offset"):
+                    start_index += abs(int(tr.stats.time_offset/tr.stats.delta))
+                    end_index += abs(int(tr.stats.time_offset/tr.stats.delta))
+
+                # When setting xlimits, cannot acces out of bounds (negative 
+                # indices or greater than max). This might happen when User 
+                # asks for `xlim_s` that is outside data bounds. In this case
+                # we just plot up to the end of the data
+                if start_index < 0:
+                    logger.warning(f"trying to access negative time axis index "
+                                   f"for xlimit of {tr.get_id()}, setting to 0")
+                    start_index = 0
+                if end_index > len(tr.data):
+                    logger.warning(f"trying to access past time axis index "
+                                   f"for xlimit of {tr.get_id()}, setting to "
+                                   f"length of data trace")
+                    end_index = len(tr.data)
+
                 xlim.append((start_index, end_index))
 
         xlim = np.array(xlim)
@@ -1452,11 +1481,16 @@ class RecordSection:
 
         y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
-        # Truncate waveforms to get figure scaling correct. 
-        start, stop = self.xlim[idx]
+        # Truncate waveforms to get figure scaling correct. Make the distinction
+        # between data and synthetics which may have different start and end 
+        # times natively
+        if choice == "st":
+            start, stop = self.xlim[idx]
+        elif choice == "st_syn":
+            start, stop = self.xlim_syn[idx]
+
         x = x[start:stop]
         y = y[start:stop]
-
         self.ax.plot(x, y, c=["k", "r"][c], linewidth=linewidth, zorder=10)
 
         # Sanity check print station information to check against plot

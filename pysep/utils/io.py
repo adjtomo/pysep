@@ -103,6 +103,10 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
     This function bypasses these checks with some barebones objects which
     mimic their behavior. Only used for RecSec to plot record sections.
 
+    TODO can we combine this with cap_sac.append_sac_headers()? Currently the
+        code block at the bottom (manually appending header) is redundant 
+        and should use cap_sac?
+
     .. note::
         RecSec requires SAC header values `kevnm`, `dist`, `az`, `baz`,
         `stlo`, `stla`, `evlo`, `evla`
@@ -200,7 +204,7 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
         #     how-to-calculate-distance-azimuth-and-dip-from-two-xyz-coordinates
         azimuth = np.degrees(np.arctan2((stlo - evlo), (stla - stlo))) % 360
         backazimuth = (azimuth - 180) % 360
-
+        otime = event.preferred_origin().time
         # Only values required by RecSec
         sac_header = {
             "stla": stations[net_sta]["stla"],
@@ -211,8 +215,13 @@ def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
             "az": azimuth,
             "baz": backazimuth,
             "kevnm": format_event_tag_legacy(event),  # only take date code
-        }
-
+            "nzyear": otime.year,
+            "nzjday": otime.julday,
+            "nzhour": otime.hour,
+            "nzmin": otime.minute,
+            "nzsec": otime.second,
+            "nzmsec": otime.microsecond,
+            }
         tr.stats.sac = sac_header
 
     return st
