@@ -99,6 +99,7 @@ from pysep import logger
 from pysep.utils.cap_sac import origin_time_from_sac_header
 from pysep.utils.io import read_synthetics, read_synthetics_cartesian
 from pysep.utils.curtail import subset_streams
+from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -317,8 +318,9 @@ class RecordSection:
             using the `scale_by` parameter. Defaults to 0.5 for surface waves.
             Use values of 0.5 to 1.0 for regional surface waves
         :type geometric_spreading_k_val: float
-        :param geometric_spreading_k_val: K value used to scale the geometric
-            spreading factor (TODO figure out what this actually is)
+        :param geometric_spreading_k_val: Optional constant scaling value used
+            to scale the geometric spreading factor equation. If not given,
+            calculated automatically using max amplitudes
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -1092,8 +1094,7 @@ class RecordSection:
             focal mechanism regions
 
         TODO
-            Plot geometric spreading with best-fitting curve
-            Look in Stein and Wysession and figure out vector names
+            - Look in Stein and Wysession and figure out vector names
 
         :rtype: list
         :return: scale factor per trace in the stream based on theoretical
@@ -1119,11 +1120,12 @@ class RecordSection:
         indices = self.sorted_idx  # already some stations have been removed
         for station in set(self.geometric_spreading_exclude):
             # Matching station names to get indices
+            logger.debug(f"remove '{station}' from geometric spreading eq.")
             remove_idx = [i for i, id_ in enumerate(self.station_ids)
                           if station in id_]
             indices = [i for i in indices if i not in remove_idx]
-        logger.debug(f"excluding {len(self.sorted_idx) - len(indices)} traces "
-                     f"from geometric spreading calculation")
+        logger.info(f"excluded {len(self.sorted_idx) - len(indices)} traces "
+                    f"from geometric spreading calculation")
 
         # Make sure distances are in units degrees
         if "km" in self.distance_units:
@@ -1134,7 +1136,7 @@ class RecordSection:
         # Create a sinusoidal function based on distances in degrees
         sin_delta = np.sin(np.array(distances) / (180 / np.pi))
 
-        # Use or calculate the K value
+        # Use or calculate the K value constant scaling factor
         if self.geometric_spreading_k_val is None:
             k_vector = self.max_amplitudes[indices] * \
                        (sin_delta[indices] ** self.geometric_spreading_factor)
@@ -1147,21 +1149,23 @@ class RecordSection:
         # This is the amplitude scaling that we are after, defined for ALL stas
         w_vector = k_val / (sin_delta ** self.geometric_spreading_factor)
 
+        # SCALE the w_vector by the MAXIMUM included peak amplitude to ensure
+        # that the record section plots normally on the y-axis. After this
+        # operation, the values are NO LONGER physical
+        w_vector /= self.max_amplitudes[indices].max()
+
         # Plot the geometric spreading figure
         if plot:
-            fig_id = "geometric_spreading.png"
-            logger.info("plotting geometric spreading scatterplot and saving "
-                        f"to '{fig_id}'")
-            f, ax = plt.subplots(1)
-            plt.scatter(distances, self.max_amplitudes, marker="o",
-                        edgecolors="k", c="w", s=2)
-            import pdb;pdb.set_trace()
-            for x, y, s in zip(distances, self.max_amplitudes,
-                               self.station_ids):
-                plt.text(x, y, s)
-            plt.plot(distances, w_vector, "k--")
-            plt.show()
-            a=1/0
+            # Curate station names
+            station_ids = [f"{_.split('.')[1]},{_.split('.')[-1][-1]}" for _ in
+                           self.station_ids]
+            plot_geometric_spreading(
+                distances=distances, max_amplitudes=self.max_amplitudes,
+                geometric_spreading_factor=self.geometric_spreading_factor,
+                geometric_k_value=k_val, station_ids=station_ids,
+                include=indices, ymax=0.0025
+            )
+
         return w_vector
 
     def get_sorted_idx(self):
@@ -1414,7 +1418,7 @@ class RecordSection:
         logger.debug(log_str)
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
-        self._set_plot_aesthetic()
+        self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
         # Partition the figure by user-specified azimuth bins 
         if self.sort_by and "azimuth" in self.sort_by:
@@ -1821,55 +1825,11 @@ class RecordSection:
             f"NSTA: {self.stats.nstation}; COMP: {cmp}",
             f"SORT_BY: {self.sort_by}; "
             f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
-            f"FILT: {filter_bounds}",
-            f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s",
+            f"FILT: {filter_bounds}; "
+            f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s; "
             f"ZERO_PAD: {_start}s, {_end}s",
         ])
         self.ax.set_title(title)
-
-    def _set_plot_aesthetic(self):
-        """
-        Give a nice look to the output figure by creating thick borders on the
-        axis, adjusting fontsize etc. All plot aesthetics should be placed here
-        so it's easiest to find.
-
-        .. note::
-            This was copy-pasted from Pyatoa.visuals.insp_plot.default_axes()
-        """
-        ytick_fontsize = self.kwargs.get("ytick_fontsize", 8)
-        xtick_fontsize = self.kwargs.get("xtick_fontsize", 12)
-        tick_linewidth = self.kwargs.get("tick_linewidth", 1.5)
-        tick_length = self.kwargs.get("tick_length", 5)
-        tick_direction = self.kwargs.get("tick_direction", "in")
-        label_fontsize = self.kwargs.get("label_fontsize", 10)
-        axis_linewidth = self.kwargs.get("axis_linewidth", 2.)
-        title_fontsize = self.kwargs.get("title_fontsize", 10)
-        xtick_minor = self.kwargs.get("xtick_minor", 25)
-        xtick_major = self.kwargs.get("xtick_major", 100)
-        spine_zorder = self.kwargs.get("spine_zorder", 8)
-
-        # Re-set font sizes for labels already created
-        self.ax.title.set_fontsize(title_fontsize)
-        self.ax.tick_params(axis="both", which="both", width=tick_linewidth,
-                            direction=tick_direction, length=tick_length)
-        self.ax.tick_params(axis="x", labelsize=xtick_fontsize)
-        self.ax.tick_params(axis="y", labelsize=ytick_fontsize)
-        self.ax.xaxis.label.set_size(label_fontsize)
-
-        # Thicken up the bounding axis lines
-        for axis in ["top", "bottom", "left", "right"]:
-            self.ax.spines[axis].set_linewidth(axis_linewidth)
-
-        # Set spines above azimuth bins
-        for spine in self.ax.spines.values():
-            spine.set_zorder(spine_zorder)
-
-        # Set xtick label major and minor which is assumed to be a time series
-        self.ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
-
-        plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
-        plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
 
 
 def parse_args():
@@ -1952,6 +1912,11 @@ def parse_args():
                              "and correcting for it. This defaults to 0.5. "
                              "Optional related parameter: "
                              "--geometric_spreading_k_val")
+    parser.add_argument("--geometric_spreading_exclude", default=None,
+                        nargs="+", type=str,
+                        help="Comma separated list of stations to exclude from "
+                             "the geometric spreading equation. e.g., "
+                             "'STA1,STA2,STA3'")
     parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
                         help="Set a constant time shift in unit: seconds")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
