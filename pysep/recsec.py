@@ -153,6 +153,7 @@ class RecordSection:
                  azimuth_start_deg=0., distance_units="km", 
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
                  geometric_spreading_exclude=None,
+                 geometric_spreading_ymax=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
                  overwrite=False, log_level="DEBUG", cartesian=False,
                  synsyn=False, **kwargs):
@@ -321,6 +322,10 @@ class RecordSection:
         :param geometric_spreading_k_val: Optional constant scaling value used
             to scale the geometric spreading factor equation. If not given,
             calculated automatically using max amplitudes
+        :type geometric_spreading_ymax: float
+        :param geometric_spreading_ymax: Optional value for geometric spreading
+            plot. Sets the max y-value on the plot. If not set, defaults to
+            whatever the peak y-value plotted is.
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -407,6 +412,7 @@ class RecordSection:
         self.geometric_spreading_factor = float(geometric_spreading_factor)
         self.geometric_spreading_k_val = geometric_spreading_k_val
         self.geometric_spreading_exclude = geometric_spreading_exclude or []
+        self.geometric_spreading_ymax = geometric_spreading_ymax
 
         # Time shift parameters
         self.move_out = move_out
@@ -1062,7 +1068,9 @@ class RecordSection:
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
-            amp_scaling = self._calculate_geometric_spreading()
+            amp_scaling = self.calculate_geometric_spreading(
+                ymax=self.geometric_spreading_ymax
+            )
 
         # Apply manual scale factor if provided, default value is 1 so nothing
         # Divide because the amplitude scale divides the data array, which means
@@ -1071,7 +1079,7 @@ class RecordSection:
 
         return amp_scaling
 
-    def _calculate_geometric_spreading(self, plot=True):
+    def calculate_geometric_spreading(self, plot=True, ymax=None):
         """
         Stations with larger source-receiver distances will have their amplitude
         scaled by a larger value.
@@ -1096,6 +1104,11 @@ class RecordSection:
         TODO
             - Look in Stein and Wysession and figure out vector names
 
+        :type plot: bool
+        :param plot: make the geometric spreading plot
+        :type ymax: float
+        :param ymax: max y-value for the geometric spreading plot. If None,
+            goes to default plot bounds
         :rtype: list
         :return: scale factor per trace in the stream based on theoretical
             geometrical spreading factor. This is meant to be MULTIPLIED by the
@@ -1120,9 +1133,10 @@ class RecordSection:
         indices = self.sorted_idx  # already some stations have been removed
         for station in set(self.geometric_spreading_exclude):
             # Matching station names to get indices
-            logger.debug(f"remove '{station}' from geometric spreading eq.")
             remove_idx = [i for i, id_ in enumerate(self.station_ids)
                           if station in id_]
+            if remove_idx:
+                logger.debug(f"remove '{station}' from geometric spreading eq.")
             indices = [i for i in indices if i not in remove_idx]
         logger.info(f"excluded {len(self.sorted_idx) - len(indices)} traces "
                     f"from geometric spreading calculation")
@@ -1149,21 +1163,16 @@ class RecordSection:
         # This is the amplitude scaling that we are after, defined for ALL stas
         w_vector = k_val / (sin_delta ** self.geometric_spreading_factor)
 
-        # SCALE the w_vector by the MAXIMUM included peak amplitude to ensure
-        # that the record section plots normally on the y-axis. After this
-        # operation, the values are NO LONGER physical
-        w_vector /= self.max_amplitudes[indices].max()
-
         # Plot the geometric spreading figure
         if plot:
-            # Curate station names
-            station_ids = [f"{_.split('.')[1]},{_.split('.')[-1][-1]}" for _ in
+            # Curate station names so that it is just 'STA.COMP'
+            station_ids = [f"{_.split('.')[1]}.{_.split('.')[-1][-1]}" for _ in
                            self.station_ids]
             plot_geometric_spreading(
                 distances=distances, max_amplitudes=self.max_amplitudes,
                 geometric_spreading_factor=self.geometric_spreading_factor,
                 geometric_k_value=k_val, station_ids=station_ids,
-                include=indices, ymax=0.0025
+                include=indices, ymax=ymax
             )
 
         return w_vector
@@ -1917,6 +1926,10 @@ def parse_args():
                         help="Comma separated list of stations to exclude from "
                              "the geometric spreading equation. e.g., "
                              "'STA1,STA2,STA3'")
+    parser.add_argument("--geometric_spreading_ymax", default=None,
+                        nargs="?", type=float,
+                        help="Controls the y-max value on the geometric "
+                             "spreading plot.")
     parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
                         help="Set a constant time shift in unit: seconds")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",

@@ -67,7 +67,7 @@ def plot_geometric_spreading(distances, max_amplitudes,
     if station_ids is not None:
         for x, y, s in zip(distances, max_amplitudes, station_ids):
             if ymax and y >= ymax:
-                plt.text(x, ymax, s, fontsize=8)
+                plt.text(x, ymax, f"{s}\n{y.max():.2E}", fontsize=8)
             else:
                 plt.text(x, y, s, fontsize=8)
 
@@ -92,7 +92,10 @@ def plot_geometric_spreading(distances, max_amplitudes,
     plt.xlabel("Source-Receiver Distance (deg)")
     plt.ylabel("Peak Amplitude")
     plt.xlim([0, x.max()])
-    plt.ylim([0, ymax * 1.25])
+    if ymax:
+        plt.ylim([0, ymax * 1.25])
+    else:
+        plt.ylim([0, y.max()])
     set_plot_aesthetic(ax=ax, xtick_fontsize=12, ytick_fontsize=12,
                        title_fontsize=13, label_fontsize=13,
                        xtick_minor=0.5, xtick_major=1)
