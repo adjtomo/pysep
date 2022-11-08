@@ -213,6 +213,7 @@ class RecordSection:
                 - `geometric_spreading_factor`
                 - `geometric_spreading_k_val`
                 - `geometric_spreading_exclude`
+                - `geometric_spreading_ymax`
                 Equation is A(d) = k / sin(d) ** f
                 Where A(d) is the amplitude reduction factor as a function of
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
