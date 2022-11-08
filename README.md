@@ -305,6 +305,30 @@ synthetics in a directory called 'synthetic/'
 recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
 ```
 
+### Scale by: Geometric Spreading
+
+Rather than normalizing traces, it is possible to scale peak amplitudes using
+a simple geometric spreading equation, which takes into account amplitude 
+loss due to propagation distance. See the docstring of 
+`recsec.RecordSection.calculate\_geometric\_spreading()` for more details on 
+how this is implemented. 
+
+To apply geometric spreading to data collected by PySEP for your record section:
+
+```bash
+recsec --pysep_path ./SAC --scale_by geometric_spreading 
+    --geometric_spreading_exclude STA1 STA2 STA3
+```
+
+Where `--geometric_spreading_exclude` is a list of stations that should *not* be
+included in the spreading equation (here, e.g., STA1 through STA3).
+
+Note that this option will generate a scatterplot showing the line fit to 
+the geometric spreading function. 
+
+Have a look at the RecSec init docstring for 'scale\_by' to see related 
+parameters (which start with *geometric_spreading_*) and how they should be used.
+
 --------------------------------------------------------------------------------
 
 ## Scripting PySEP

@@ -99,6 +99,7 @@ from pysep import logger
 from pysep.utils.cap_sac import origin_time_from_sac_header
 from pysep.utils.io import read_synthetics, read_synthetics_cartesian
 from pysep.utils.curtail import subset_streams
+from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -150,8 +151,10 @@ class RecordSection:
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", 
-                 geometric_spreading_factor=0.5, geometric_spreading_k_val=None, 
-                 figsize=(9, 11), show=True, save="./record_section.png", 
+                 geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
+                 geometric_spreading_exclude=None,
+                 geometric_spreading_ymax=None,
+                 figsize=(9, 11), show=True, save="./record_section.png",
                  overwrite=False, log_level="DEBUG", cartesian=False,
                  synsyn=False, **kwargs):
         """
@@ -205,11 +208,32 @@ class RecordSection:
                 the screen. Will not consider waveforms which have been 
                 excluded on other basis (e.g., wrong component)
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
-            - 'geometric_spreading': TODO this is not implemented yet.
-                scale amplitudes globally by predicting the
-                expected geometric spreading amplitude reduction and correcting
-                for this factor. Requires `geometric_spreading_factor`, and 
-                optional `geometric_spreading_k_val`
+            - 'geometric_spreading': scale amplitudes by expected reduction
+                through geometric spreading. Related parameters are:
+                - `geometric_spreading_factor`
+                - `geometric_spreading_k_val`
+                - `geometric_spreading_exclude`
+                - `geometric_spreading_ymax`
+                Equation is A(d) = k / sin(d) ** f
+                Where A(d) is the amplitude reduction factor as a function of
+                distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
+                the `geometric_spreading_factor`.
+                'k' is calculated automatically if not given.
+        :type geometric_spreading_factor: float
+        :param geometric_spreading_factor: factor to scale amplitudes by
+            predicting the expected geometric spreading amplitude reduction and
+            correcting for this factor.
+            Related optional parameter: `geometric_spreading_k_val`.
+            For Rayleigh waves, `geometric_spreading_factor` == 0.5 (default)
+            Value should be between 0.5 and 1.0 for regional surface waves.
+        :type geometric_spreading_k_val: float
+        :param geometric_spreading_k_val: constant scale factor for geometric
+            spreading equation. Should be calculated automatically but User
+            can set manually.
+        :type geometric_spreading_exclude: list
+        :param geometric_spreading_exclude: a list of station names that
+            should match the input stations. Used to exclude stations from the
+            automatic caluclation of the geometric
         :type time_shift_s: float OR list of float
         :param time_shift_s: apply static time shift to waveforms, two options:
             1. float (e.g., -10.2), will shift ALL waveforms by
@@ -296,8 +320,13 @@ class RecordSection:
             using the `scale_by` parameter. Defaults to 0.5 for surface waves.
             Use values of 0.5 to 1.0 for regional surface waves
         :type geometric_spreading_k_val: float
-        :param geometric_spreading_k_val: K value used to scale the geometric
-            spreading factor (TODO figure out what this actually is)
+        :param geometric_spreading_k_val: Optional constant scaling value used
+            to scale the geometric spreading factor equation. If not given,
+            calculated automatically using max amplitudes
+        :type geometric_spreading_ymax: float
+        :param geometric_spreading_ymax: Optional value for geometric spreading
+            plot. Sets the max y-value on the plot. If not set, defaults to
+            whatever the peak y-value plotted is.
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -383,6 +412,8 @@ class RecordSection:
         self.amplitude_scale_factor = amplitude_scale_factor
         self.geometric_spreading_factor = float(geometric_spreading_factor)
         self.geometric_spreading_k_val = geometric_spreading_k_val
+        self.geometric_spreading_exclude = geometric_spreading_exclude or []
+        self.geometric_spreading_ymax = geometric_spreading_ymax
 
         # Time shift parameters
         self.move_out = move_out
@@ -1009,7 +1040,7 @@ class RecordSection:
         :return: an array corresponding to the Stream indexes which provides
             a per-trace scaling coefficient
         """
-        logger.info(f"determining amplitude scaling with: {self.scale_by}")
+        logger.info(f"determining amplitude scaling with: '{self.scale_by}'")
 
         # Don't scale by anything
         if self.scale_by is None:
@@ -1038,7 +1069,9 @@ class RecordSection:
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
-            amp_scaling = self._calculate_geometric_spreading()
+            amp_scaling = self.calculate_geometric_spreading(
+                ymax=self.geometric_spreading_ymax
+            )
 
         # Apply manual scale factor if provided, default value is 1 so nothing
         # Divide because the amplitude scale divides the data array, which means
@@ -1047,7 +1080,7 @@ class RecordSection:
 
         return amp_scaling
 
-    def _calculate_geometric_spreading(self):
+    def calculate_geometric_spreading(self, plot=True, ymax=None):
         """
         Stations with larger source-receiver distances will have their amplitude
         scaled by a larger value.
@@ -1057,37 +1090,91 @@ class RecordSection:
         factor = 0.5). For our purposes, this will fold the attenuation factor
         into the same single factor that accounts for geometric spreading.
 
+        Equation is for amplitude reduction 'A' as a factor of distance 'd':
+
+            A(d) = k / sin(d) ** f
+
+        where 'k' is the `geometric_spreading_k_val` and 'f' is the
+        `geometric_spreading_factor`. 'k' is calculated automatically if not
+        given by the User. In the code, A(d) is represented by `w_vector`
+
         .. note::
-            This does not take into account the variation in amplitude.
+            This does not take into account the variation in amplitude from
+            focal mechanism regions
 
-        TODO Plot geometric spreading with best-fitting curve
+        TODO
+            - Look in Stein and Wysession and figure out vector names
 
-        :type max_amplitudes: list
-        :param max_amplitudes: list of maximum amplitudes for each trace in the
-            stream. IF not given, will be calculated on the fly. Optional incase
-            this has been calculated already and you want to save time
+        :type plot: bool
+        :param plot: make the geometric spreading plot
+        :type ymax: float
+        :param ymax: max y-value for the geometric spreading plot. If None,
+            goes to default plot bounds
         :rtype: list
         :return: scale factor per trace in the stream based on theoretical
             geometrical spreading factor. This is meant to be MULTIPLIED by the
             data arrays
         """
-        raise NotImplementedError("This function is currently work in progress")
+        logger.info("using geometrical spreading factor: "
+                    f"{self.geometric_spreading_factor}")
 
-        logger.info("calculating geometrical spreading for amplitude "
-                    "normalization")
+        # Ignore any stations with 0 max amplitude, which will throw off calc
+        for i, max_amp in enumerate(self.max_amplitudes):
+            if max_amp == 0:
+                station_name = self.st[i].get_id().split(".")[1]
+                if station_name not in self.geometric_spreading_exclude:
+                    self.geometric_spreading_exclude.append(station_name)
+                    logger.warning(f"{station_name} has 0 max amplitude which "
+                                   f"will negatively affect geometric "
+                                   f"spreading calculation. excluding from list"
+                                   )
+
+        # To selectively remove stations from this calculation, we will need
+        # to gather a list of indexes to skip which can be applied to lists
+        indices = self.sorted_idx  # already some stations have been removed
+        for station in set(self.geometric_spreading_exclude):
+            # Matching station names to get indices
+            remove_idx = [i for i, id_ in enumerate(self.station_ids)
+                          if station in id_]
+            if remove_idx:
+                logger.debug(f"remove '{station}' from geometric spreading eq.")
+            indices = [i for i in indices if i not in remove_idx]
+        logger.info(f"excluded {len(self.sorted_idx) - len(indices)} traces "
+                    f"from geometric spreading calculation")
+
+        # Make sure distances are in units degrees
+        if "km" in self.distance_units:
+            distances = kilometers2degrees(self.distances)
+        else:
+            distances = self.distances
 
         # Create a sinusoidal function based on distances in degrees
-        sin_del = np.sin(np.array(self.dist) / (180 / np.pi))
+        sin_delta = np.sin(np.array(distances) / (180 / np.pi))
 
-        # !!! TODO Stein and Wysession and figure out vector names
-        if self.geometric_spreading_k_val is not None:
-            k_vector = self.max_amplitudes * \
-                       (sin_del ** self.geometric_spreading_factor)
+        # Use or calculate the K value constant scaling factor
+        if self.geometric_spreading_k_val is None:
+            k_vector = self.max_amplitudes[indices] * \
+                       (sin_delta[indices] ** self.geometric_spreading_factor)
             k_val = np.median(k_vector)
+            logger.info(f"calculated geometric spreading `k` vector: {k_val}")
         else:
             k_val = self.geometric_spreading_k_val
+            logger.info(f"user-defined geometric spreading `k` vector: {k_val}")
 
-        w_vector = k_val / (sin_del ** self.geometric_spreading_factor)
+        # This is the amplitude scaling that we are after, defined for ALL stas
+        w_vector = k_val / (sin_delta ** self.geometric_spreading_factor)
+
+        # Plot the geometric spreading figure
+        if plot:
+            # Curate station names so that it is just 'STA.COMP'
+            station_ids = [f"{_.split('.')[1]}.{_.split('.')[-1][-1]}" for _ in
+                           self.station_ids]
+            plot_geometric_spreading(
+                distances=distances, max_amplitudes=self.max_amplitudes,
+                geometric_spreading_factor=self.geometric_spreading_factor,
+                geometric_k_value=k_val, station_ids=station_ids,
+                include=indices, ymax=ymax
+            )
 
         return w_vector
 
@@ -1341,7 +1428,7 @@ class RecordSection:
         logger.debug(log_str)
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
-        self._set_plot_aesthetic()
+        self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
         # Partition the figure by user-specified azimuth bins 
         if self.sort_by and "azimuth" in self.sort_by:
@@ -1748,55 +1835,11 @@ class RecordSection:
             f"NSTA: {self.stats.nstation}; COMP: {cmp}",
             f"SORT_BY: {self.sort_by}; "
             f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
-            f"FILT: {filter_bounds}",
-            f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s",
+            f"FILT: {filter_bounds}; "
+            f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s; "
             f"ZERO_PAD: {_start}s, {_end}s",
         ])
         self.ax.set_title(title)
-
-    def _set_plot_aesthetic(self):
-        """
-        Give a nice look to the output figure by creating thick borders on the
-        axis, adjusting fontsize etc. All plot aesthetics should be placed here
-        so it's easiest to find.
-
-        .. note::
-            This was copy-pasted from Pyatoa.visuals.insp_plot.default_axes()
-        """
-        ytick_fontsize = self.kwargs.get("ytick_fontsize", 8)
-        xtick_fontsize = self.kwargs.get("xtick_fontsize", 12)
-        tick_linewidth = self.kwargs.get("tick_linewidth", 1.5)
-        tick_length = self.kwargs.get("tick_length", 5)
-        tick_direction = self.kwargs.get("tick_direction", "in")
-        label_fontsize = self.kwargs.get("label_fontsize", 10)
-        axis_linewidth = self.kwargs.get("axis_linewidth", 2.)
-        title_fontsize = self.kwargs.get("title_fontsize", 10)
-        xtick_minor = self.kwargs.get("xtick_minor", 25)
-        xtick_major = self.kwargs.get("xtick_major", 100)
-        spine_zorder = self.kwargs.get("spine_zorder", 8)
-
-        # Re-set font sizes for labels already created
-        self.ax.title.set_fontsize(title_fontsize)
-        self.ax.tick_params(axis="both", which="both", width=tick_linewidth,
-                            direction=tick_direction, length=tick_length)
-        self.ax.tick_params(axis="x", labelsize=xtick_fontsize)
-        self.ax.tick_params(axis="y", labelsize=ytick_fontsize)
-        self.ax.xaxis.label.set_size(label_fontsize)
-
-        # Thicken up the bounding axis lines
-        for axis in ["top", "bottom", "left", "right"]:
-            self.ax.spines[axis].set_linewidth(axis_linewidth)
-
-        # Set spines above azimuth bins
-        for spine in self.ax.spines.values():
-            spine.set_zorder(spine_zorder)
-
-        # Set xtick label major and minor which is assumed to be a time series
-        self.ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
-
-        plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
-        plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
 
 
 def parse_args():
@@ -1871,12 +1914,23 @@ def parse_args():
             - 'global_norm': scale by the largest amplitude to be displayed on
                 the screen. Will not consider waveforms which have been 
                 excluded on other basis (e.g., wrong component)
-            - 'geometric_spreading': scale amplitudes globally by predicting the
-                expected geometric spreading amplitude reduction and correcting
-                for this factor. Requires `geometric_spreading_factor`, optional
-                `geometric_spreading_k_val`
                 """)
                         )
+    parser.add_argument("--geometric_spreading_factor", default=0.5, type=float,
+                        help="Scale amplitudes by predicting the "
+                             "expected geometric spreading amplitude reduction "
+                             "and correcting for it. This defaults to 0.5. "
+                             "Optional related parameter: "
+                             "--geometric_spreading_k_val")
+    parser.add_argument("--geometric_spreading_exclude", default=None,
+                        nargs="+", type=str,
+                        help="Comma separated list of stations to exclude from "
+                             "the geometric spreading equation. e.g., "
+                             "'STA1,STA2,STA3'")
+    parser.add_argument("--geometric_spreading_ymax", default=None,
+                        nargs="?", type=float,
+                        help="Controls the y-max value on the geometric "
+                             "spreading plot.")
     parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
                         help="Set a constant time shift in unit: seconds")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
