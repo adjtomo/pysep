@@ -54,7 +54,8 @@ def plot_geometric_spreading(distances, max_amplitudes,
 
     # Plot all stations in the list, specially mark excluded stations
     for i, (x, y) in enumerate(zip(distances, max_amplitudes)):
-        if include.any() and i not in include:
+        # list conversion so we can check list length as a boolean
+        if list(include) and i not in include:
             ec = "r"
         else:
             ec = "k"
