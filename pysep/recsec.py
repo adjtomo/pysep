@@ -1710,22 +1710,6 @@ class RecordSection:
             - x_min: Place labels on the waveforms at the minimum x value
             - x_max: Place labels on the waveforms at the maximum x value
         """
-        # # The y-label will show baz or az depending on user choice, distinguish
-        # if self.sort_by is not None and "backazimuth" in self.sort_by:
-        #     az_str = "BAZ"
-        # else:
-        #     az_str = "AZ"
-        #
-        # # Get the unique components that have been plotted, only
-        # cmp = "".join(np.unique([self.st[i].stats.component
-        #                          for i in self.sorted_idx]))
-        #
-        # # Y_FMT will include time shift IF there are time shifts
-        # y_fmt = f"Y_FMT: NET.STA.LOC.CHA|{az_str}|DIST"
-        # if self.time_shift_s.sum() != 0:
-        #     y_fmt += "|TSHIFT"
-        #
-
         c = self.kwargs.get("y_label_c", "k")
         fontsize = self.kwargs.get("y_label_fontsize", 10)
 
@@ -1754,21 +1738,48 @@ class RecordSection:
                 label += f"|{self.time_shift_s[idx]:.2f}s"
             y_tick_labels.append(label)
 
-        if "y_axis" in loc:
+        # Generate a 'template' y-axis format to help Users decipher labels
+        if self.sort_by is not None and "backazimuth" in self.sort_by:
+            az_str = "BAZ"
+        else:
+            az_str = "AZ"
+
+        # Y_FMT will include time shift IF there are time shifts
+        y_fmt = f"NET.STA.LOC.CHA|{az_str}|DIST"
+        if self.time_shift_s.sum() != 0:
+            y_fmt += "|TSHIFT"
+
+        # Set the y-axis labels to the left side of the left figure border
+        if loc == "y_axis":
             # For relative plotting (not abs_), replace y_tick labels with
             # station information
             self.ax.set_yticks(self.y_axis[start:stop])
             self.ax.set_yticklabels(y_tick_labels)
+            plt.text(-.01, .99, y_fmt, ha="right", va="top",
+                     transform=self.ax.transAxes, fontsize=fontsize)
+        # Set the y-axis labels to the right side of the right figure border
+        elif loc == "y_axis_right":
+            self.ax.set_yticks(self.y_axis[start:stop])
+            self.ax.set_yticklabels(y_tick_labels)
+            self.ax.yaxis.tick_right()
+            self.ax.yaxis.set_label_position("right")
+            plt.text(1.01, .99, y_fmt, ha="left", va="top",
+                     transform=self.ax.transAxes, fontsize=fontsize)
+        # Set the y-axis labels inside the figure border, at xmin or xmax
         else:
             # Trying to figure out where the min or max X value is on the plot
             if loc == "x_min":
                 ha = "left"
                 func = min
                 x_val = func(self.stats.xmin)
+                plt.text(.01, .99, y_fmt, ha="left", va="top",
+                         transform=self.ax.transAxes, fontsize=fontsize)
             elif loc == "x_max":
                 ha = "right"
                 func = max
                 x_val = func(self.stats.xmax)
+                plt.text(.99, .99, y_fmt, ha="right", va="top",
+                         transform=self.ax.transAxes, fontsize=fontsize)
             if self.xlim_s is not None:
                 x_val = func([func(self.xlim_s), x_val])
 
@@ -1781,10 +1792,6 @@ class RecordSection:
             elif len(self.y_axis) == len(y_tick_labels):
                 for y, s in zip(self.y_axis, y_tick_labels):
                     plt.text(x=x_val, y=y, s=s, ha=ha, c=c, fontsize=fontsize)
-
-        if loc == "y_axis_right":
-            self.ax.yaxis.tick_right()
-            self.ax.yaxis.set_label_position("right")
 
     def _plot_title(self, nwav=None):
         """

@@ -119,8 +119,9 @@ def plot_geometric_spreading(distances, max_amplitudes,
         xtick_major = 1
 
     set_plot_aesthetic(ax=ax, xtick_fontsize=12, ytick_fontsize=12,
-                       title_fontsize=13, label_fontsize=13,
-                       xtick_minor=xtick_minor, xtick_major=xtick_major)
+                       title_fontsize=13, xlabel_fontsize=13,
+                       ylabel_fontsize=13, xtick_minor=xtick_minor,
+                       xtick_major=xtick_major)
     plt.grid(visible=True, which="both", axis="y", alpha=0.5, linewidth=1)
 
     if save:
@@ -214,7 +215,8 @@ def set_plot_aesthetic(ax, **kwargs):
     tick_linewidth = kwargs.get("tick_linewidth", 1.5)
     tick_length = kwargs.get("tick_length", 5)
     tick_direction = kwargs.get("tick_direction", "in")
-    label_fontsize = kwargs.get("label_fontsize", 10)
+    xlabel_fontsize = kwargs.get("xlabel_fontsize", 10)
+    ylabel_fontsize = kwargs.get("ylabel_fontsize", 10)
     axis_linewidth = kwargs.get("axis_linewidth", 2.)
     title_fontsize = kwargs.get("title_fontsize", 10)
     xtick_minor = kwargs.get("xtick_minor", 25)
@@ -226,8 +228,8 @@ def set_plot_aesthetic(ax, **kwargs):
                         direction=tick_direction, length=tick_length)
     ax.tick_params(axis="x", labelsize=xtick_fontsize)
     ax.tick_params(axis="y", labelsize=ytick_fontsize)
-    ax.xaxis.label.set_size(label_fontsize)
-    ax.yaxis.label.set_size(label_fontsize)
+    ax.xaxis.label.set_size(xlabel_fontsize)
+    ax.yaxis.label.set_size(ylabel_fontsize)
 
     # Thicken up the bounding axis lines
     for axis in ["top", "bottom", "left", "right"]:
