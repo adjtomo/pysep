@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from obspy.core.event import Catalog
-from obspy.geodetics import gps2dist_azimuth
+from obspy.geodetics import gps2dist_azimuth, degrees2kilometers
 
 from pysep import logger
 from pysep.utils.fmt import format_event_tag
@@ -14,9 +14,9 @@ from pysep.utils.fmt import format_event_tag
 
 def plot_geometric_spreading(distances, max_amplitudes,
                              geometric_spreading_factor, geometric_k_value,
-                             station_ids=None, include=None, show=False,
-                             save="geometric_spreading.png", ymax=None,
-                             **kwargs):
+                             units="km", station_ids=None, include=None,
+                             show=False, save="geometric_spreading.png",
+                             ymax=None, **kwargs):
     """
     Plot a scatter plot of peak amplitudes vs distance and a corresponding line
     representing geometric scatter. Allow ignoring stations by index.
@@ -26,9 +26,12 @@ def plot_geometric_spreading(distances, max_amplitudes,
         information on this function
 
     :type distances: list or np.array
-    :param distances: source-receiver distance in units of degrees
+    :param distances: source-receiver distance in units `units`
     :type max_amplitudes: list or np.array
     :param max_amplitudes: peak amplitudes, units irrelevant
+    :type units: st
+    :param units: 'km' or 'deg' for kilometers or degrees, respectively. used
+        for the x-axis label only
     :type geometric_spreading_factor: float
     :param geometric_spreading_factor: exponent for spreading eq
     :type geometric_k_value: float
@@ -52,9 +55,16 @@ def plot_geometric_spreading(distances, max_amplitudes,
     logger.info(f"plotting geometric spreading: '{save}'")
     f, ax = plt.subplots(1, dpi=dpi, figsize=figsize)
 
+    # Convert from units deg -> km if desired
+    if "km" in units:
+        plot_distances = degrees2kilometers(distances)
+    else:
+        plot_distances = distances
+
     # Plot all stations in the list, specially mark excluded stations
-    for i, (x, y) in enumerate(zip(distances, max_amplitudes)):
-        if include.any() and i not in include:
+    for i, (x, y) in enumerate(zip(plot_distances, max_amplitudes)):
+        # list conversion so we can check list length as a boolean
+        if list(include) and i not in include:
             ec = "r"
         else:
             ec = "k"
@@ -65,18 +75,21 @@ def plot_geometric_spreading(distances, max_amplitudes,
 
     # Plot station ids next to markers if given
     if station_ids is not None:
-        for x, y, s in zip(distances, max_amplitudes, station_ids):
+        for x, y, s in zip(plot_distances, max_amplitudes, station_ids):
             if ymax and y >= ymax:
                 plt.text(x, ymax, f"{s}\n{y.max():.2E}", fontsize=8)
             else:
                 plt.text(x, y, s, fontsize=8)
 
-    # Need to generate the line that w-vector follows
+    # Need to generate the line that w-vector follows with distances in unit deg
     x = np.arange(1E-7, distances.max() * 1.5, 0.01)  # units: deg
     sin_d = (np.sin(np.array(x) / (180 / np.pi)))
     y = geometric_k_value / (sin_d ** geometric_spreading_factor)
-    l = f"A(d)={geometric_k_value:.2E} / (sin d)**{geometric_spreading_factor}"
-    w = plt.plot(x, y, "k--", lw=3, label=l)
+    lb = f"A(d)={geometric_k_value:.2E} / (sin d)**{geometric_spreading_factor}"
+    # Convert w-vector x units deg -> km if desired
+    if "km" in units:
+        x = degrees2kilometers(x)
+    w = plt.plot(x, y, "k--", lw=3, label=lb)
 
     # Create some legend markers
     m1 = plt.scatter(-1, -1, edgecolor="k", c="w", marker="o",
@@ -88,17 +101,27 @@ def plot_geometric_spreading(distances, max_amplitudes,
     plt.legend(handles=[w[0], m1, m2, m3])
 
     # Final touches for 'publication-ready' look
-    plt.title("Geometric Spreading Correction Factor: A(d)")
-    plt.xlabel("Source-Receiver Distance (deg)")
+    plt.xlabel(f"Source-Receiver Distance ({units})")
     plt.ylabel("Peak Amplitude")
-    plt.xlim([0, x.max()])
+    plt.xlim([0, plot_distances.max() * 1.1])
+
     if ymax:
-        plt.ylim([0, ymax * 1.25])
+        plt.ylim([0, ymax])
     else:
-        plt.ylim([0, y.max()])
+        plt.ylim([0, max_amplitudes.max() * 1.1])
+
+    # One last check for plot aesthetic, degrees vs km.
+    if "km" in units:
+        xtick_minor = 10
+        xtick_major = 100
+    else:  # degrees
+        xtick_minor = 0.5
+        xtick_major = 1
+
     set_plot_aesthetic(ax=ax, xtick_fontsize=12, ytick_fontsize=12,
-                       title_fontsize=13, label_fontsize=13,
-                       xtick_minor=0.5, xtick_major=1)
+                       title_fontsize=13, xlabel_fontsize=13,
+                       ylabel_fontsize=13, xtick_minor=xtick_minor,
+                       xtick_major=xtick_major)
     plt.grid(visible=True, which="both", axis="y", alpha=0.5, linewidth=1)
 
     if save:
@@ -192,7 +215,8 @@ def set_plot_aesthetic(ax, **kwargs):
     tick_linewidth = kwargs.get("tick_linewidth", 1.5)
     tick_length = kwargs.get("tick_length", 5)
     tick_direction = kwargs.get("tick_direction", "in")
-    label_fontsize = kwargs.get("label_fontsize", 10)
+    xlabel_fontsize = kwargs.get("xlabel_fontsize", 10)
+    ylabel_fontsize = kwargs.get("ylabel_fontsize", 10)
     axis_linewidth = kwargs.get("axis_linewidth", 2.)
     title_fontsize = kwargs.get("title_fontsize", 10)
     xtick_minor = kwargs.get("xtick_minor", 25)
@@ -204,8 +228,8 @@ def set_plot_aesthetic(ax, **kwargs):
                         direction=tick_direction, length=tick_length)
     ax.tick_params(axis="x", labelsize=xtick_fontsize)
     ax.tick_params(axis="y", labelsize=ytick_fontsize)
-    ax.xaxis.label.set_size(label_fontsize)
-    ax.yaxis.label.set_size(label_fontsize)
+    ax.xaxis.label.set_size(xlabel_fontsize)
+    ax.yaxis.label.set_size(ylabel_fontsize)
 
     # Thicken up the bounding axis lines
     for axis in ["top", "bottom", "left", "right"]:
