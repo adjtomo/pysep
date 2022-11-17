@@ -153,7 +153,7 @@ class RecordSection:
                  azimuth_start_deg=0., distance_units="km", 
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
                  geometric_spreading_exclude=None,
-                 geometric_spreading_ymax=None,
+                 geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
                  overwrite=False, log_level="DEBUG", cartesian=False,
                  synsyn=False, **kwargs):
@@ -219,21 +219,6 @@ class RecordSection:
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
                 the `geometric_spreading_factor`.
                 'k' is calculated automatically if not given.
-        :type geometric_spreading_factor: float
-        :param geometric_spreading_factor: factor to scale amplitudes by
-            predicting the expected geometric spreading amplitude reduction and
-            correcting for this factor.
-            Related optional parameter: `geometric_spreading_k_val`.
-            For Rayleigh waves, `geometric_spreading_factor` == 0.5 (default)
-            Value should be between 0.5 and 1.0 for regional surface waves.
-        :type geometric_spreading_k_val: float
-        :param geometric_spreading_k_val: constant scale factor for geometric
-            spreading equation. Should be calculated automatically but User
-            can set manually.
-        :type geometric_spreading_exclude: list
-        :param geometric_spreading_exclude: a list of station names that
-            should match the input stations. Used to exclude stations from the
-            automatic caluclation of the geometric
         :type time_shift_s: float OR list of float
         :param time_shift_s: apply static time shift to waveforms, two options:
             1. float (e.g., -10.2), will shift ALL waveforms by
@@ -316,17 +301,28 @@ class RecordSection:
             'deg': degrees on the sphere
             'km_utm': kilometers on flat plane, UTM coordinate system
         :type geometric_spreading_factor: float
-        :param geometric_spreading_factor: geometrical spreading factor when
-            using the `scale_by` parameter. Defaults to 0.5 for surface waves.
-            Use values of 0.5 to 1.0 for regional surface waves
+        :param geometric_spreading_factor: factor to scale amplitudes by
+            predicting the expected geometric spreading amplitude reduction and
+            correcting for this factor.
+            Related optional parameter: `geometric_spreading_k_val`.
+            For Rayleigh waves, `geometric_spreading_factor` == 0.5 (default)
         :type geometric_spreading_k_val: float
         :param geometric_spreading_k_val: Optional constant scaling value used
             to scale the geometric spreading factor equation. If not given,
             calculated automatically using max amplitudes
+            Value should be between 0.5 and 1.0 for regional surface waves.
+        :type geometric_spreading_exclude: list
+        :param geometric_spreading_exclude: a list of station names that
+            should match the input stations. Used to exclude stations from the
+            automatic caluclation of the geometric
         :type geometric_spreading_ymax: float
         :param geometric_spreading_ymax: Optional value for geometric spreading
             plot. Sets the max y-value on the plot. If not set, defaults to
             whatever the peak y-value plotted is.
+        :type geometric_spreading_save: str
+        :param geometric_spreading_save: file id to save separate geometric
+            spreading scatter plot iff `scale_by`=='geometric_spreading'. If 
+            NoneType, will not save. By default, turned OFF
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -1080,7 +1076,7 @@ class RecordSection:
 
         return amp_scaling
 
-    def calculate_geometric_spreading(self, plot=True, ymax=None):
+    def calculate_geometric_spreading(self, ymax=None):
         """
         Stations with larger source-receiver distances will have their amplitude
         scaled by a larger value.
@@ -1105,8 +1101,6 @@ class RecordSection:
         TODO
             - Look in Stein and Wysession and figure out vector names
 
-        :type plot: bool
-        :param plot: make the geometric spreading plot
         :type ymax: float
         :param ymax: max y-value for the geometric spreading plot. If None,
             goes to default plot bounds
@@ -1151,7 +1145,7 @@ class RecordSection:
         # Create a sinusoidal function based on distances in degrees
         sin_delta = np.sin(np.array(distances) / (180 / np.pi))
 
-        # Use or calculate the K value constant scaling factor
+        # Use or calculate the K valuse constant scaling factor
         if self.geometric_spreading_k_val is None:
             k_vector = self.max_amplitudes[indices] * \
                        (sin_delta[indices] ** self.geometric_spreading_factor)
@@ -1165,7 +1159,7 @@ class RecordSection:
         w_vector = k_val / (sin_delta ** self.geometric_spreading_factor)
 
         # Plot the geometric spreading figure
-        if plot:
+        if self.geometric_spreading_save is not None:
             # Curate station names so that it is just 'STA.COMP'
             station_ids = [f"{_.split('.')[1]}.{_.split('.')[-1][-1]}" for _ in
                            self.station_ids]
@@ -1173,7 +1167,7 @@ class RecordSection:
                 distances=distances, max_amplitudes=self.max_amplitudes,
                 geometric_spreading_factor=self.geometric_spreading_factor,
                 geometric_k_value=k_val, station_ids=station_ids,
-                include=indices, ymax=ymax
+                include=indices, ymax=ymax, save=self.geometric_spreading_save
             )
 
         return w_vector

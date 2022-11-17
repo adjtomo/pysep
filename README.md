@@ -317,14 +317,16 @@ To apply geometric spreading to data collected by PySEP for your record section:
 
 ```bash
 recsec --pysep_path ./SAC --scale_by geometric_spreading 
-    --geometric_spreading_exclude STA1 STA2 STA3
+    --geometric_spreading_exclude STA1 STA2 STA3 
+    --geometric_spreading_save ./geometric_spread.png
 ```
 
 Where `--geometric_spreading_exclude` is a list of stations that should *not* be
 included in the spreading equation (here, e.g., STA1 through STA3).
 
 Note that this option will generate a scatterplot showing the line fit to 
-the geometric spreading function. 
+the geometric spreading function saved to with figure name 
+'./geometric_spreading.png'
 
 Have a look at the RecSec init docstring for 'scale\_by' to see related 
 parameters (which start with *geometric_spreading_*) and how they should be used.
