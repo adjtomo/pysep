@@ -76,7 +76,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         >>> import os
         >>> from glob import glob
         >>> from obspy import read
-        >>> from recsec import plotw_rs
+        >>> from recsec import plotw_rs  # NOQA
         >>> st = Stream()
         >>> for fid in glob(os.path.join("20200404015318920", "*.?")):
         >>>     st += read(fid)
@@ -410,6 +410,7 @@ class RecordSection:
         self.geometric_spreading_k_val = geometric_spreading_k_val
         self.geometric_spreading_exclude = geometric_spreading_exclude or []
         self.geometric_spreading_ymax = geometric_spreading_ymax
+        self.geometric_spreading_save = geometric_spreading_save
 
         # Time shift parameters
         self.move_out = move_out
@@ -1065,9 +1066,7 @@ class RecordSection:
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
-            amp_scaling = self.calculate_geometric_spreading(
-                ymax=self.geometric_spreading_ymax
-            )
+            amp_scaling = self.calculate_geometric_spreading()
 
         # Apply manual scale factor if provided, default value is 1 so nothing
         # Divide because the amplitude scale divides the data array, which means
@@ -1076,7 +1075,7 @@ class RecordSection:
 
         return amp_scaling
 
-    def calculate_geometric_spreading(self, ymax=None):
+    def calculate_geometric_spreading(self):
         """
         Stations with larger source-receiver distances will have their amplitude
         scaled by a larger value.
@@ -1100,10 +1099,9 @@ class RecordSection:
 
         TODO
             - Look in Stein and Wysession and figure out vector names
+            - Allow ignoring specific components, currently only allowed to
+                exclude on a per-station basis
 
-        :type ymax: float
-        :param ymax: max y-value for the geometric spreading plot. If None,
-            goes to default plot bounds
         :rtype: list
         :return: scale factor per trace in the stream based on theoretical
             geometrical spreading factor. This is meant to be MULTIPLIED by the
@@ -1112,7 +1110,7 @@ class RecordSection:
         logger.info("using geometrical spreading factor: "
                     f"{self.geometric_spreading_factor}")
 
-        # Ignore any stations with 0 max amplitude, which will throw off calc
+        # Ignore any amplitudes with 0 max amplitude, which will throw off calc
         for i, max_amp in enumerate(self.max_amplitudes):
             if max_amp == 0:
                 station_name = self.st[i].get_id().split(".")[1]
@@ -1149,25 +1147,29 @@ class RecordSection:
         if self.geometric_spreading_k_val is None:
             k_vector = self.max_amplitudes[indices] * \
                        (sin_delta[indices] ** self.geometric_spreading_factor)
-            k_val = np.median(k_vector)
-            logger.info(f"calculated geometric spreading `k` vector: {k_val}")
-        else:
-            k_val = self.geometric_spreading_k_val
-            logger.info(f"user-defined geometric spreading `k` vector: {k_val}")
+            # OVERWRITING internal parameter here, which will be used elsewhere
+            self.geometric_spreading_k_val = np.median(k_vector)
+
+        logger.info(f"geometric spreading `k` vector = "
+                    f"{self.geometric_spreading_k_val}")
 
         # This is the amplitude scaling that we are after, defined for ALL stas
-        w_vector = k_val / (sin_delta ** self.geometric_spreading_factor)
+        w_vector = (self.geometric_spreading_k_val /
+                    (sin_delta ** self.geometric_spreading_factor))
 
         # Plot the geometric spreading figure
         if self.geometric_spreading_save is not None:
             # Curate station names so that it is just 'STA.COMP'
             station_ids = [f"{_.split('.')[1]}.{_.split('.')[-1][-1]}" for _ in
                            self.station_ids]
+
             plot_geometric_spreading(
                 distances=distances, max_amplitudes=self.max_amplitudes,
                 geometric_spreading_factor=self.geometric_spreading_factor,
-                geometric_k_value=k_val, station_ids=station_ids,
-                include=indices, ymax=ymax, save=self.geometric_spreading_save
+                geometric_k_value=self.geometric_spreading_k_val,
+                station_ids=station_ids, units=self.distance_units,
+                include=indices, ymax=self.geometric_spreading_ymax,
+                save=self.geometric_spreading_save
             )
 
         return w_vector
@@ -1429,7 +1431,7 @@ class RecordSection:
             self._plot_azimuth_bins()
 
         # Finalize the figure accoutrements
-        self._plot_title(nwav=nwav, page_num=page_num)
+        self._plot_title(nwav=nwav)
         self._plot_axes(start=start, stop=stop)
 
         if self.save:
@@ -1708,6 +1710,22 @@ class RecordSection:
             - x_min: Place labels on the waveforms at the minimum x value
             - x_max: Place labels on the waveforms at the maximum x value
         """
+        # # The y-label will show baz or az depending on user choice, distinguish
+        # if self.sort_by is not None and "backazimuth" in self.sort_by:
+        #     az_str = "BAZ"
+        # else:
+        #     az_str = "AZ"
+        #
+        # # Get the unique components that have been plotted, only
+        # cmp = "".join(np.unique([self.st[i].stats.component
+        #                          for i in self.sorted_idx]))
+        #
+        # # Y_FMT will include time shift IF there are time shifts
+        # y_fmt = f"Y_FMT: NET.STA.LOC.CHA|{az_str}|DIST"
+        # if self.time_shift_s.sum() != 0:
+        #     y_fmt += "|TSHIFT"
+        #
+
         c = self.kwargs.get("y_label_c", "k")
         fontsize = self.kwargs.get("y_label_fontsize", 10)
 
@@ -1768,7 +1786,7 @@ class RecordSection:
             self.ax.yaxis.tick_right()
             self.ax.yaxis.set_label_position("right")
 
-    def _plot_title(self, nwav=None, page_num=None):
+    def _plot_title(self, nwav=None):
         """
         Create the title of the plot based on event and station information
         Allow dynamic creation of title based on user input parameters
@@ -1778,61 +1796,65 @@ class RecordSection:
         :type nwav: int
         :param nwav: if using subset, the title needs to know how many waveforms
             it's showing on the page. self.plot() should tell it
-        :type page_num: int
-        :param page_num: same as nwav, we need to know what page number were on
         """
         # Defines the number of waveforms plotted on a single page, allowing
         # for subsets per page
         if nwav is None:
             nwav = len(self.sorted_idx)
 
-        # Allow appending page numbers to title
-        title_top = "RECORD SECTION"
-        if page_num:
-            title_top += f" PAGE {page_num:0>2}"
-
-        # The y-label will show baz or az depending on user choice, distinguish
-        if self.sort_by is not None and "backazimuth" in self.sort_by:
-            az_str = "BAZ"
-        else:
-            az_str = "AZ"
-
-        # Get the unique components that have been plotted, only
-        cmp = "".join(np.unique([self.st[i].stats.component
-                                 for i in self.sorted_idx]))
-
-        # Y_FMT will include time shift IF there are time shifts
-        y_fmt = f"Y_FMT: NET.STA.LOC.CHA|{az_str}|DIST"
-        if self.time_shift_s.sum() != 0:
-            y_fmt += "|TSHIFT"
-        # Zero pad is either a list of length or None
+        # T0: Zero pad is either a list of length or None
         if self.zero_pad_s:
             _start, _end = self.zero_pad_s
         else:
             _start, _end = 0, 0
-        # Origintime needs to be shifted by the zero pad offset value which has
-        # changed the 'starttime'
-        origintime = min([tr.stats.starttime + _start for tr in self.st])
+        # Origintime needs to be shifted by the zero pad offset value
+        origintime = str(min([tr.stats.starttime + _start for tr in self.st]))
+        # YYYY-MM-DDTHH:MM:SS.ssssssZ - > YYYY-MM-DD HH:MM:SS.ss
+        origintime = origintime.replace("T", " ")[:-5]
 
-        # If preprocessing is turned OFF, no filtering was applied
-        if self.preprocess is not None:
-            filter_bounds = f"[{self.min_period_s}, {self.max_period_s}]s"
+        # HYPO: If only one event, show hypocenter information
+        if self.stats.nevents == 1:
+            sac = self.st[0].stats.sac
+            # HYPO: lon, lat, depth, mag
+            hypo = (
+                f"\nHYPO: ({sac['evlo']:.2f}{DEG}, {sac['evla']:.2f}{DEG}), " 
+                f"Z={sac['evdp']:.2f}km, M{sac['mag']:.2f}"
+            )
         else:
-            filter_bounds = "None"
+            hypo = ""
 
-        title = "\n".join([
-            title_top,
-            f"{'/' * len(title_top*2)}",
-            f"ORIGINTIME: {origintime}",
-            f"{y_fmt}",
+        # CMP: Get the unique components that have been plotted only
+        cmp = "".join(np.unique([self.st[i].stats.component
+                                 for i in self.sorted_idx]))
+
+        # GEOSPREAD: if geometric spreading scaling, post equation variables
+        if self.scale_by == "geometric_spreading":
+            geospread = (f" (k={self.geometric_spreading_k_val:.2E}, "
+                         f"f={self.geometric_spreading_factor:.2f})")
+        else:
+            geospread = ""
+
+        # FILT: If preprocessing is turned OFF, no filtering was applied
+        if self.preprocess is not None:
+            filt = f"\nFILT: [{self.min_period_s}, {self.max_period_s}]s"
+        else:
+            filt = ""
+
+        # MOVE_OUT: if move out was applied, post
+        if self.move_out:
+            move_out = f"\nMOVE_OUT: {self.move_out}{self.distance_units}/s"
+        else:
+            move_out = ""
+
+        title = (
+            f"T0: {origintime}{hypo}\n"
             f"NWAV: {nwav}; NEVT: {self.stats.nevents}; "
-            f"NSTA: {self.stats.nstation}; COMP: {cmp}",
+            f"NSTA: {self.stats.nstation}; COMP: {cmp}\n"
             f"SORT_BY: {self.sort_by}; "
-            f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
-            f"FILT: {filter_bounds}; "
-            f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s; "
-            f"ZERO_PAD: {_start}s, {_end}s",
-        ])
+            f"SCALE_BY: {self.scale_by}{geospread}"
+            # The following title parts are optional depending on application
+            f"{filt}{move_out}"
+        )
         self.ax.set_title(title)
 
 
