@@ -12,14 +12,51 @@ from obspy.core.inventory.station import Station
 from obspy.geodetics import gps2dist_azimuth
 from obspy.core.event import Event, Origin, Magnitude
 
-from pysep.utils.fmt import format_event_tag_legacy
+from pysep import logger
+from pysep.utils.mt import moment_magnitude, seismic_moment, Source
+from pysep.utils.fmt import format_event_tag_legacy, channel_code
 from pysep.utils.cap_sac import append_sac_headers
 
 
-def read_sem(fid, cmtsolution, stations, location="", precision=4):
+def read_yaml(fid):
     """
-    Specfem3D outputs seismograms to ASCII (.sem?) files. Converts SPECFEM
-    .sem? files into Stream objects with the correct header
+    Read a YAML file and return a dictionary
+
+    :type fid: str
+    :param fid: YAML file to read from
+    :rtype: dict
+    :return: YAML keys and variables in a dictionary
+    """
+    # work around PyYAML bugs
+    yaml.SafeLoader.add_implicit_resolver(
+        u'tag:yaml.org,2002:float',
+        re.compile(u'''^(?:
+         [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+        list(u'-+0123456789.'))
+
+    with open(fid, 'r') as f:
+        config = yaml.safe_load(f)
+
+    # Replace 'None' and 'inf' values to match expectations
+    for key, val in config.items():
+        if val == "None":
+            config[key] = None
+        if val == "inf":
+            config[key] = np.inf
+
+    return config
+
+
+def read_sem(fid, origintime=None, source=None, stations=None, location="",
+             precision=4):
+    """
+    Specfem3D outputs seismograms to ASCII (.sem? or .sem.ascii) files.
+    Converts SPECFEM synthetics into ObsPy Stream objects with the correct header
     information.
 
     .. note ::
@@ -27,12 +64,15 @@ def read_sem(fid, cmtsolution, stations, location="", precision=4):
 
     :type fid: str
     :param fid: path of the given ascii file
-    :type cmtsolution: str
-    :param cmtsolution: CMTSOLUTION file defining the event which generated
-        the synthetics. Used to grab event information.
+    :type origintime: obspy.UTCDateTime
+    :param origintime: UTCDatetime object for the origintime of the event
+    :type source: str
+    :param source: optional SPECFEM source file (e.g., CMTSOLUTION, SOURCE)
+        defining the event which generated the synthetics. Used to grab event
+        information and append as SAC headers to the ObsPy Stream
     :type stations: str
-    :param stations: STATIONS file defining the station locations for the
-        SPECFEM generated synthetics
+    :param stations: optional STATIONS file defining the station locations for
+        the SPECFEM generated synthetics, used to generate SAC headers
     :type location: str
     :param location: location value for a given station/component
     :rtype st: obspy.Stream.stream
@@ -69,13 +109,18 @@ def read_sem(fid, cmtsolution, stations, location="", precision=4):
     delta = round(times[1] - times[0], precision)
 
     # Get metadata information from CMTSOLUTION and STATIONS files
-    event = read_events(cmtsolution, format="CMTSOLUTION")[0]
-    inv = read_stations(stations)
-
-    starttime = event.preferred_origin().time
+    if origintime is None and source is None:
+        logger.warning("no `origintime` or `event` given, setting dummy "
+                       "starttime: 1970-01-01T00:00:00")
+        origintime = UTCDateTime("1970-01-01T00:00:00")
+    elif source:
+        # !!! Add logic here to try different read options
+        event = read_events(source, format="CMTSOLUTION")[0]
+        origintime = event.preferred_origin().time
+        logger.info(f"reading origintime from event: {origintime}")
 
     # Honor that Specfem doesn't start exactly on 0
-    starttime += times[0]
+    origintime += times[0]
 
     # Write out the header information
     try:
@@ -86,11 +131,19 @@ def read_sem(fid, cmtsolution, stations, location="", precision=4):
         net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
 
     stats = {"network": net, "station": sta, "location": location,
-             "channel": cha, "starttime": starttime, "npts": len(data),
+             "channel": cha, "starttime": origintime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
              }
     st = Stream([Trace(data=data, header=stats)])
-    st = append_sac_headers(st, event, inv)
+
+    if event and stations:
+        try:
+            inv = read_stations(stations)
+            st = append_sac_headers(st, event, inv)
+        # Broad catch here as this is an optional step that might not always
+        # work or be possible
+        except Exception as e:
+            logger.warning(f"could not append SAC header to trace because {e}")
 
     return st
 
@@ -289,27 +342,33 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
 def read_specfem2d_source(path_to_source, origin_time=None):
     """
     Create a barebones ObsPy Event object from a SPECFEM2D Source file, which
-    contains information on location. The remainder are left as dummy values
-    because this will only be required by RecSec to access source location.
+    only contains information required by Pyatoa.
 
-    .. note::
-        This is modified from Pyatoa.utils.read.read_specfem2d_source
+    Only requires access to: event.preferred_origin(),
+    event.preferred_magnitude() and event.preferred_moment_tensor().
+    Moment tensor is wrapped in try-except so we only need origin and magnitude.
+
+    Modified from:
+    https://docs.obspy.org/master/_modules/obspy/io/cmtsolution/
+                                            core.html#_internal_read_cmtsolution
 
     .. note::
         Source files do not provide origin times so we just provide an
         arbitrary value but allow user to set time
     """
+
     def _get_resource_id(name, res_type, tag=None):
-        """
-        Helper function to create consistent resource ids. From ObsPy
-        """
+        """Helper function to create consistent resource ids. From ObsPy"""
         res_id = f"smi:local/source/{name:s}/{res_type:s}"
         if tag is not None:
             res_id += "#" + tag
         return res_id
 
+    # First set dummy origin time
     if origin_time is None:
-        origin_time = "2000-01-01T00:00:00"
+        origin_time = "1970-01-01T00:00:00"
+        logger.warning("no origin time set for SPECFEM2D source, setting "
+                       f"dummy value: {origin_time}")
 
     with open(path_to_source, "r") as f:
         lines = f.readlines()
@@ -332,9 +391,21 @@ def read_specfem2d_source(path_to_source, origin_time=None):
         latitude=source_dict["xs"], depth=source_dict["zs"]
     )
 
+    # Attempt to calculate the moment magnitude from the moment tensor
+    # components. This might fail because the values don't make sense or are
+    # not provided
+    try:
+        moment = seismic_moment(mt=[float(source_dict["Mxx"]),
+                                    float(source_dict["Mzz"]),
+                                    float(source_dict["Mxz"])
+                                    ])
+        moment_mag = moment_magnitude(moment=moment)
+    except Exception as e:
+        moment_mag = None
+
     magnitude = Magnitude(
         resource_id=_get_resource_id(source_name, "magnitude"),
-        mag=None, magnitude_type="Mw", origin_id=origin.resource_id.id
+        mag=moment_mag, magnitude_type="Mw", origin_id=origin.resource_id.id
     )
 
     event = Event(resource_id=_get_resource_id(name=source_name,
@@ -348,15 +419,40 @@ def read_specfem2d_source(path_to_source, origin_time=None):
     return event
 
 
+def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
+    """
+    Create a barebones Pyatoa Source object from a FORCESOLUTION Source file,
+    which mimics the behavior of the more complex ObsPy Event object
+    """
+    with open(path_to_source, "r") as f:
+        lines = f.readlines()
+
+    # Place values from file into dict
+    source_dict = {}
+    for line in lines[:]:
+        if ":" not in line:
+            continue
+        key, val = line.strip().split(":")
+        source_dict[key] = val
+
+    # First line has the source name
+    source_dict["source_id"] = lines[0].strip().split()[-1]
+
+    event = Source(
+        resource_id=f"pysep:source/{source_dict['source_id']}",
+        origin_time=default_time, latitude=source_dict["latorUTM"],
+        longitude=source_dict["longorUTM"], depth=source_dict["depth"]
+    )
+
+    return event
+
+
 def read_stations(path_to_stations):
     """
-    Convert a Specfem3D STATIONS file into an ObsPy Inventory object.
+    Convert a SPECFEM STATIONS file into an ObsPy Inventory object.
 
     Specfem3D STATION files contain no channel or location information, so
     the inventory can only go down to the station level.
-
-    .. note::
-        This is copied verbatim from Pyatoa.utils.read.read_stations()
 
     .. note::
         This assumes a row structure for the station file is
@@ -436,43 +532,34 @@ def read_event_file(fid):
     return list_out
 
 
-def read_yaml(fid):
+def write_sem(st, unit, path="./", time_offset=0):
     """
-    Read a YAML file and return a dictionary
+    Write an ObsPy Stream in the two-column ASCII format that Specfem uses
 
-    :type fid: str
-    :param fid: YAML file to read from
-    :rtype: dict
-    :return: YAML keys and variables in a dictionary
+    :type st: obspy.core.stream.Stream
+    :param st: stream containing synthetic data to be written
+    :type unit: str
+    :param unit: the units of the synthetic data, used for file extension, must
+        be 'd', 'v', 'a' for displacement, velocity, acceleration, resp.
+    :type path: str
+    :param path: path to save data to, defaults to cwd
+    :type time_offset: float
+    :param time_offset: optional argument to offset the time array. Sign matters
+        e.g. time_offset=-20 means t0=-20
     """
-    # work around PyYAML bugs
-    yaml.SafeLoader.add_implicit_resolver(
-        u'tag:yaml.org,2002:float',
-        re.compile(u'''^(?:
-         [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
-        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
-        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
-        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
-        |[-+]?\\.(?:inf|Inf|INF)
-        |\\.(?:nan|NaN|NAN))$''', re.X),
-        list(u'-+0123456789.'))
-
-    with open(fid, 'r') as f:
-        config = yaml.safe_load(f)
-
-    # Replace 'None' and 'inf' values to match expectations
-    for key, val in config.items():
-        if val == "None":
-            config[key] = None
-        if val == "inf":
-            config[key] = np.inf
-
-    return config
+    assert(unit.lower() in ["d", "v", "a"]), "'unit' must be 'd', 'v' or 'a'"
+    for tr in st:
+        s = tr.stats
+        fid = f"{s.network}.{s.station}.{channel_code(s.delta)}X{s.channel[-1]}"
+        fid = os.path.join(path, f"{fid}.sem{unit.lower()}")
+        data = np.vstack((tr.times() + time_offset, tr.data)).T
+        np.savetxt(fid, data, ["%13.7f", "%17.7f"])
 
 
-def write_stations_file(inv, event, fid="./stations_list.txt"):
+def write_pysep_stations_file(inv, event, fid="./stations_list.txt"):
     """
-    Write a list of station codes, distances, etc.
+    Write a list of station codes, distances, etc. useful for understanding
+    characterization of all collected stations
 
     :type event: obspy.core.event.Event
     :param event: optional user-provided event object which will force a
@@ -498,3 +585,40 @@ def write_stations_file(inv, event, fid="./stations_list.txt"):
                 f.write(f"{sta.code:<6} {net.code:<2} "
                         f"{sta.latitude:9.4f} {sta.longitude:9.4f} "
                         f"{dist_km:8.3f} {az:6.2f}\n")
+
+
+def write_specfem_stations_file(inv, fid="./STATIONS", elevation=False,
+                                burial=0.):
+    """
+    Write a SPECFEM3D STATIONS file given an ObsPy inventory object
+
+    .. note::
+        If topography is implemented in your mesh, elevation values should be
+        set to 0 which means 'surface' in SPECFEM.
+
+    .. note::
+        burial information is not contained in the ObsPy inventory so it is
+        always set to a constant value, which can be given as input. default 0
+
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: Inventory object with station locations to write
+    :type fid: str
+    :param fid: path and file id to save the STATIONS file to.
+    :type elevation: bool
+    :param elevation: if True, sets the actual elevation value from the
+        inventory. if False, sets elevation to 0.
+    :type burial: float
+    :param burial: the constant value to set burial values to. defaults to 0.
+    """
+    with open(fid, "w") as f:
+        for net in inv:
+            for sta in net:
+                lat = sta.latitude
+                lon = sta.longitude
+                if elevation:
+                    elv = sta.elevation
+                else:
+                    elv = 0.
+
+                f.write(f"{sta.code:>6}{net.code:>6}{lat:12.4f}{lon:12.4f}"
+                        f"{elv:7.1f}{burial:7.1f}\n")

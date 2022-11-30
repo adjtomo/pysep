@@ -506,3 +506,48 @@ def query_geonet_mt_catalog(event_id, csv_fid=None):
             return moment_tensor
     else:
         raise AttributeError(f"no geonet moment tensor found for: {event_id}")
+
+
+class Source:
+    """
+    A generic Source object to characterize FORCESOLUTION files and SPECFEM2D
+    SOURCE files without breaking the architechture of Pyatoa which was built
+    around CMTSOLUTIONs and ObsPy Event objects
+
+    Essentially this class tries to mimic the ObsPy Event object and return
+    required information that is queried throughout a Pyatoa workflow
+    """
+    def __init__(self, resource_id, origin_time, longitude, latitude, depth):
+        """
+        Only define the essential values required of a source
+
+        :type resource_id: str
+        :param resource_id: unique label for the event
+        :type time: str or UTCDateTime
+        :param: origin time for the event
+        :type longitude: float
+        :param longitude: longitude or X value of the event in the domain
+        :type latitude: float
+        :param latitude: latitude or Y value of the event in the domain
+        :type depth: float
+        :param depth: depth in km, inverted Z axis, positive values means deeper
+        """
+        self.id = resource_id
+        self.time = UTCDateTime(origin_time)
+        self.longitude = float(longitude)
+        self.latitude = float(latitude)
+        self.depth = float(depth)
+
+    def preferred_origin(self):
+        """
+        Convenience function to mimic behavior of ObsPy Event object
+        """
+        return self
+
+    @property
+    def resource_id(self):
+        """
+        Convenenience function to mimic behavior of ObsPy Event object
+        """
+        return self
+
