@@ -395,14 +395,14 @@ To append SAC headers to your own seismic data, you can directly use the
 
 ### Converting SPECFEM-generated synthetics
 
-PySEP contains a utility function `read_synthetics` to read in 
+PySEP contains a utility function `read_sem` to read in 
 SPECFEM-generated synthetics with appropriately crafted SAC headers. 
 Given a standard SPECFEM3D working directory, reading in SPECFEM synthetics 
 and saving them as SAC files might look something like:
 
 ```python
->>> from pysep.utils.io import read_synthetics
->>> st = read_synthetics(fid="OUTPUT_FILES/NZ.BFZ.BXE.semd", 
+>>> from pysep.utils.io import read_sem
+>>> st = read_sem(fid="OUTPUT_FILES/NZ.BFZ.BXE.semd", 
                          cmtsolution="DATA/CMTSOLUTION", 
                          stations="DATA/STATIONS")
 >>> for tr in st:

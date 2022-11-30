@@ -18,7 +18,7 @@ from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
 from pysep.utils.process import estimate_prefilter_corners
 from pysep.utils.plot import plot_source_receiver_map
-from pysep.utils.io import read_synthetics
+from pysep.utils.io import read_sem
 
 
 @pytest.fixture
@@ -137,7 +137,7 @@ def test_plot_map(test_event, test_inv):
                              show=False)
 
 
-def test_read_synthetics():
+def test_read_sem():
     """
     Test reading SPECFEM-generated synthetics in as SAC formatted files
     """
@@ -147,8 +147,8 @@ def test_read_synthetics():
 
     st = Stream()
     for test_synthetic in test_synthetics:
-        st += read_synthetics(fid=test_synthetic, cmtsolution=test_cmtsolution,
-                              stations=test_stations)
+        st += read_sem(fid=test_synthetic, cmtsolution=test_cmtsolution,
+                       stations=test_stations)
 
     assert(st[0].stats.sac.evla == -40.5405)
 

@@ -16,7 +16,7 @@ from pysep.utils.fmt import format_event_tag_legacy
 from pysep.utils.cap_sac import append_sac_headers
 
 
-def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
+def read_sem(fid, cmtsolution, stations, location="", precision=4):
     """
     Specfem3D outputs seismograms to ASCII (.sem?) files. Converts SPECFEM
     .sem? files into Stream objects with the correct header
@@ -95,10 +95,10 @@ def read_synthetics(fid, cmtsolution, stations, location="", precision=4):
     return st
 
 
-def read_synthetics_cartesian(fid, source, stations, location="", precision=4):
+def read_sem_cartesian(fid, source, stations, location="", precision=4):
     """
     Specfem2D and Specfem3D may have domains defined in a Cartesian coordinate
-    system. Because of this, the read_synthetics() function will fail because
+    system. Because of this, the read_sem() function will fail because
     the intermediate ObsPy objects and functions expect geographic coordinates.
     This function bypasses these checks with some barebones objects which
     mimic their behavior. Only used for RecSec to plot record sections.
