@@ -7,7 +7,7 @@ Python Seismogram Extraction and Processing
 waveform data.
 
 - Documentation can found on the GitHub Wiki Page: https://github.com/adjtomo/pysep/wiki 
-- Found a bug, would like to see a new feature, or want to know how to use `PySEP` in your own work? [Feel free to open a GitHub issue](https://github.com/adjtomo/pysep/issues).
+- Found a bug, requesting a new feature, or wanting to know how to use`PySEP`? [Feel free to open a GitHub issue](https://github.com/adjtomo/pysep/issues).
 - As part of the [SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` has been 
 [containerized](https://github.com/SeisSCOPED/pysep/pkgs/container/pysep) 
 using Docker.
