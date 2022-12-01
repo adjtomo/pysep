@@ -491,9 +491,8 @@ class RecordSection:
             for fid in fids:
                 logger.debug(fid)
                 if not cartesian:
-                    st_syn += read_sem(fid=fid,
-                                              cmtsolution=source,
-                                              stations=stations)
+                    st_syn += read_sem(fid=fid, source=source,
+                                       stations=stations)
                 else:
                     # If we are using SPECFEM2D synthetics, trying to read
                     # the SOURCE file will

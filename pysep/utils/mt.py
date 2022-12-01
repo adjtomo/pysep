@@ -435,16 +435,6 @@ def get_geonet_mt(event_id, units, csv_fid=None):
         comments=[comment]
         )
 
-    # # Append the focal mechanisms to the event object. Set the preferred
-    # # focal mechanism so that this attribute can be used in the future
-    # if event:
-    #     event.focal_mechanisms = [focal_mechanism]
-    #     event.preferred_focal_mechanism_id = focal_mechanism.resource_id
-    #     return event, focal_mechanism
-    # # If no event is given, just return the focal mechanism
-    # else:
-    #     return None, focal_mechanism
-
     return focal_mechanism
 
 
@@ -523,8 +513,8 @@ class Source:
 
         :type resource_id: str
         :param resource_id: unique label for the event
-        :type time: str or UTCDateTime
-        :param: origin time for the event
+        :type origin_time: str or UTCDateTime
+        :param origin_time: origin time for the event
         :type longitude: float
         :param longitude: longitude or X value of the event in the domain
         :type latitude: float
