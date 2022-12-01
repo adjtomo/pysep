@@ -75,6 +75,9 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
         the SPECFEM generated synthetics, used to generate SAC headers
     :type location: str
     :param location: location value for a given station/component
+    :type precision: int
+    :param precision: dt precision determined by differencing two
+        adjancent time steps in the underlying ascii text file.
     :rtype st: obspy.Stream.stream
     :return st: stream containing header and data info taken from ascii file
     """
@@ -136,7 +139,7 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
              }
     st = Stream([Trace(data=data, header=stats)])
 
-    if event and stations:
+    if source and stations:
         try:
             inv = read_stations(stations)
             st = append_sac_headers(st, event, inv)

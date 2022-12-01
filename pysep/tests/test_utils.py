@@ -195,3 +195,117 @@ def test_subset_streams(test_st):
     # all station ids should be the same
     for tr_out, tr_smaller_out in zip(test_st_out, test_st_smaller_out):
         assert(tr_out.get_id() == tr_smaller_out.get_id())
+
+# THESE ARE FROM PYATOA, need to be reformatted for PySEP
+# def test_append_focal_mechanism(event):
+#     """
+#     Try appending focal mechanism from GeoNet. GCMT doesn't have this regional
+#     event so we will need to test that separately.
+#     """
+#     del event.focal_mechanisms
+#     assert(len(event.focal_mechanisms) == 0)
+#
+#     # Gather using the GeoNet client
+#     event = append_focal_mechanism_to_event(event, client="GEONET",
+#                                             overwrite_focmec=False,
+#                                             overwrite_event=False)
+#     assert(len(event.focal_mechanisms) != 0)
+#     m_rr = event.preferred_focal_mechanism().moment_tensor.tensor.m_rr
+#     assert(pytest.approx(m_rr, 1E-16) == -2.47938E16)
+#
+#
+# def test_get_gcmt_moment_tensor():
+#     """
+#     Just ensure that getting via GCMT works as intended using an example event
+#     """
+#     # Kaikoura Earthquake
+#     origintime = "2016-11-13T11:02:00"
+#     magnitude = 7.8
+#
+#     cat = get_gcmt_moment_tensors(event=None, origintime=origintime,
+#                                     magnitude=magnitude)
+#     assert(len(cat) == 1)
+#     event = cat[0]
+#     assert hasattr(event, "focal_mechanisms")
+#     m_rr = event.preferred_focal_mechanism().moment_tensor.tensor.m_rr
+#     assert(pytest.approx(m_rr, 1E-20) == 3.56E20)
+#
+#     return event
+#
+#
+# def test_get_usgs_moment_tensor():
+#     """
+#     Just ensure that getting via USGS works as intended using an example event
+#     """
+#     event = test_get_gcmt_moment_tensor()
+#     del event.focal_mechanisms
+#
+#     cat = get_usgs_moment_tensors(event=event)
+#     assert(len(cat) == 1)
+#     event = cat[0]
+#     assert hasattr(event, "focal_mechanisms")
+#
+#     m_rr = event.preferred_focal_mechanism().moment_tensor.tensor.m_rr
+#     assert(pytest.approx(m_rr, 1E-20) == 4.81E20)
+
+# def test_read_utils(tmpdir, station_fid, sem_fid):
+#     """
+#     Test read utilities
+#     """
+#     # Need to explicitely set starttime so we can figure out time offset
+#     otime = UTCDateTime("2000-01-01T00:00:00")
+#     sem = read.read_sem(path=sem_fid, origintime=otime)
+#     time_offset = otime - sem[0].stats.starttime
+#
+#     arr = np.vstack((sem[0].times() - time_offset, sem[0].data)).T
+#     check = np.loadtxt(sem_fid, dtype=float)
+#
+#     # Round off floating point differences so we can do an array comparison
+#     arr = arr.round(decimals=3)
+#     check = check.round(decimals=3)
+#     assert((arr == check).all())
+#
+#     # Test read_stations
+#     inv = read.read_stations(station_fid)
+#     assert(inv[0][0].code == "BFZ")
+#
+#     # Test read_station_codes
+#     codes = read.read_station_codes(station_fid, loc="??", cha="*")
+#     assert(codes == ["NZ.BFZ.??.*"])
+#
+#     # Test read_specfem2d_source
+#     # !!! TO DO
+#
+#     # Test read_forcesolution
+#     # !!! TO DO
+
+# def test_write_utils(tmpdir, station_fid, sem_fid, ds):
+#     """
+#     Test write utilities
+#     """
+#     # Test write_sem by writing a stream, reading back and checking equality
+#     origintime = UTCDateTime("2000-01-01T00:00:00")
+#     st = read.read_sem(path=sem_fid, origintime=origintime)
+#     time_offset = st[0].stats.starttime - origintime
+#     write.write_sem(st, unit="d", path=tmpdir, time_offset=time_offset)
+#     fids = glob(os.path.join(tmpdir, "*semd"))
+#     assert(len(fids) == 1)
+#     st_check = read.read_sem(path=fids[0], origintime=origintime)
+#     assert(streams_almost_equal(st, st_check))
+#     # Test write stations
+#     fid_out = os.path.join(tmpdir, "STATIONS")
+#     inv = read.read_stations(station_fid)
+#     write.write_stations(inv, fid=fid_out)
+#     inv_check = read.read_stations(fid_out)
+#     assert(inv[0][0].code == inv_check[0][0].code)
+#
+#     # Test write_inv_seed with default dir structure
+#     sta_net = f"{inv[0][0].code}.{inv[0].code}"
+#     path_check = os.path.join(tmpdir, sta_net, "*")
+#     write.write_inv_seed(inv, path=tmpdir)
+#
+#     expected_responses = glob(path_check)
+#     assert(len(expected_responses) == 3)
+#     resp = read_inventory(expected_responses[0])
+#     assert(resp[0].code == "NZ")
+#     assert(resp[0][0][0].latitude == -40.6796)
