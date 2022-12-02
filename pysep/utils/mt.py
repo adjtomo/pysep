@@ -113,106 +113,8 @@ def mt_transform(mt, method):
                 "m_xz": m_xz, "m_yz": m_yz}
 
 
-def append_focal_mechanism_to_event(event, method="all", overwrite_focmec=False,
-                                    overwrite_event=False, client=None):
-    """
-    Attempt to find focal mechanism information with a given ObsPy Event object.
-
-    .. note::
-        FDSN fetched events are devoid of a few bits of information that are
-        useful for our applications, e.g. moment tensor, focal mechanisms.
-        This function will perform the conversions and append the necessary
-        information to the event located in the dataset.
-
-    :type event: obspy.core.event.Event
-    :param event: Event object to append a focal mechanism to.
-    :type method: bool
-    :param method: try to find correspondig focal mechanism
-        using various public catalogs. Currently available:
-        'all': Try all available options in order until MT is found
-        'USGS': Search the USGS moment tensor catalog
-        'GCMT': Search the GCMT moment tensor catalog
-        False: Don't attempt to search for moment tensors
-    :type client: str
-    :param client: Specific `client`s come built-in with specific MT catalogs
-        If matching client, will ignore other MT choices:
-        'GEONET': will search John Ristau catalog for moment tensors,
-    :type overwrite_focmec: bool
-    :param overwrite_focmec: If the event already has a focal mechanism,
-        overwrite the existing focal mechanism.
-    :type overwrite_event: bool
-    :param overwrite_event: A new event object is usually retrieved when
-        gathering MT from USGS or GCMT. Often the locations/timing of this event
-        are less accurate than the input event (which is usually sourced from
-        a regional catalog). This parameter controls which event object is
-        taken. If `True`, takes the USGS or GCMT catalog information, if `False`
-        only takes the focal mechanism attribute.
-    :rtype event: obspy.core.event.Event
-    :return event: Event with a new focal mechanism if one was found
-    :raises TypeError: if event is not provided as an obspy.core.event.Event
-    """
-    if not isinstance(event, Event):
-        raise TypeError(f"`event` must be an ObsPy Event object, "
-                        f"not: {type(event)}")
-    # If the event already has a focal mechanism attribute, don't gather
-    elif hasattr(event, "focal_mechanisms") and \
-            event.focal_mechanisms and not overwrite_focmec:
-        logger.debug("event already has focal mechanism, will not attempt to"
-                     "append new focal mechanism")
-        return event
-    # Only gather moment tensors if we're already trying to do FDSN stuff
-    elif client is None:
-        logger.debug("client not specified, will not attempt gathering "
-                     "moment tensor")
-        return event
-
-    method = method.upper()
-    event_id = event.resource_id.id  # assuming datacenter tags ID with event id
-    cat = Catalog()
-    focal_mechanism = None
-    if client.upper() == "GEONET":
-        logger.info("querying GeoNet moment tensor catalog")
-        focal_mechanism = get_geonet_mt(event_id=event_id, units="nm")
-    else:
-        # Try 1: Look at USGS catalog
-        if method in ["ALL", "USGS"]:
-            logger.debug("querying USGS database for moment tensor")
-            cat = get_usgs_moment_tensors(event=event)
-        # Try 2: Look at GCMT catalog if USGS catalog did not return
-        elif (method in ["ALL", "GCMT"]) and len(cat) == 0:
-            logger.debug("querying GCMT database for moment tensor")
-            cat = get_gcmt_moment_tensors(event=event)
-        # Try ?: Add options below for more catalog selection
-        # +++++++++++++++++++++++++++++++++++++++++++++++++++
-        # If multiple events found for a given set of event criteria, pick first
-        if cat is not None:
-            if len(cat) > 1:
-                logger.warning(f"multiple ({len(cat)}) events found, "
-                               f"picking zeroth index")
-            # Distinguish `event_new` from `event`, sometimes you still want the
-            # catalog location, not the one from USGS or GCMT. Or if nothing was
-            # found, then we will return the same event
-            event_new = cat[0]
-            focal_mechanism = event_new.preferred_focal_mechanism()
-    # Append or overwrite focal mechanism or event
-    if focal_mechanism is None:
-        event_out = event
-    else:
-        if overwrite_event:
-            logger.debug("overwriting input event object with newly gathered "
-                         "event containing focal mechanism")
-            event_out = event_new
-        else:
-            logger.debug("appending gathered focal mechanism to current event")
-            event_out = event.copy()
-            event_out.focal_mechanisms = [focal_mechanism]
-            event_out.preferred_focal_mechanism_id = focal_mechanism.resource_id
-
-    return event_out
-
-
-def get_gcmt_moment_tensors(event=None, origintime=None, magnitude=None,
-                            time_wiggle_sec=120, magnitude_wiggle=0.5):
+def get_gcmt_moment_tensor(event=None, origintime=None, magnitude=None,
+                           time_wiggle_sec=120, magnitude_wiggle=0.5):
     """
     Query online GCMT moment tensor catalog via URL access for moment tensor
     components of a given event. Searches based on origin time and magnitude
@@ -275,9 +177,9 @@ def get_gcmt_moment_tensors(event=None, origintime=None, magnitude=None,
     return cat_filt
 
 
-def get_usgs_moment_tensors(event, time_wiggle_sec=120., magnitude_wiggle=.5,
-                            latitude_wiggle_deg=1., longitude_wiggle_deg=1.,
-                            depth_wiggle_km=5., **kwargs):
+def get_usgs_moment_tensor(event, time_wiggle_sec=120., magnitude_wiggle=.5,
+                           latitude_wiggle_deg=1., longitude_wiggle_deg=1.,
+                           depth_wiggle_km=5., **kwargs):
     """
     Query FDSN webservices USGS client for moment tensors using the current
     event definition, which may or may not have been collected via USGS.
@@ -496,6 +398,104 @@ def query_geonet_mt_catalog(event_id, csv_fid=None):
             return moment_tensor
     else:
         raise AttributeError(f"no geonet moment tensor found for: {event_id}")
+
+
+def append_focal_mechanism_to_event(event, method="all", overwrite_focmec=False,
+                                    overwrite_event=False, client=None):
+    """
+    Attempt to find focal mechanism information with a given ObsPy Event object.
+
+    .. note::
+        FDSN fetched events are devoid of a few bits of information that are
+        useful for our applications, e.g. moment tensor, focal mechanisms.
+        This function will perform the conversions and append the necessary
+        information to the event located in the dataset.
+
+    :type event: obspy.core.event.Event
+    :param event: Event object to append a focal mechanism to.
+    :type method: bool
+    :param method: try to find correspondig focal mechanism
+        using various public catalogs. Currently available:
+        'all': Try all available options in order until MT is found
+        'USGS': Search the USGS moment tensor catalog
+        'GCMT': Search the GCMT moment tensor catalog
+        False: Don't attempt to search for moment tensors
+    :type client: str
+    :param client: Specific `client`s come built-in with specific MT catalogs
+        If matching client, will ignore other MT choices:
+        'GEONET': will search John Ristau catalog for moment tensors,
+    :type overwrite_focmec: bool
+    :param overwrite_focmec: If the event already has a focal mechanism,
+        overwrite the existing focal mechanism.
+    :type overwrite_event: bool
+    :param overwrite_event: A new event object is usually retrieved when
+        gathering MT from USGS or GCMT. Often the locations/timing of this event
+        are less accurate than the input event (which is usually sourced from
+        a regional catalog). This parameter controls which event object is
+        taken. If `True`, takes the USGS or GCMT catalog information, if `False`
+        only takes the focal mechanism attribute.
+    :rtype event: obspy.core.event.Event
+    :return event: Event with a new focal mechanism if one was found
+    :raises TypeError: if event is not provided as an obspy.core.event.Event
+    """
+    if not isinstance(event, Event):
+        raise TypeError(f"`event` must be an ObsPy Event object, "
+                        f"not: {type(event)}")
+    # If the event already has a focal mechanism attribute, don't gather
+    elif hasattr(event, "focal_mechanisms") and \
+            event.focal_mechanisms and not overwrite_focmec:
+        logger.debug("event already has focal mechanism, will not attempt to"
+                     "append new focal mechanism")
+        return event
+    # Only gather moment tensors if we're already trying to do FDSN stuff
+    elif client is None:
+        logger.debug("client not specified, will not attempt gathering "
+                     "moment tensor")
+        return event
+
+    method = method.upper()
+    event_id = event.resource_id.id  # assuming datacenter tags ID with event id
+    cat = Catalog()
+    focal_mechanism = None
+    if client.upper() == "GEONET":
+        logger.info("querying GeoNet moment tensor catalog")
+        focal_mechanism = get_geonet_mt(event_id=event_id, units="nm")
+    else:
+        # Try 1: Look at USGS catalog
+        if method in ["ALL", "USGS"]:
+            logger.debug("querying USGS database for moment tensor")
+            cat = get_usgs_moment_tensor(event=event)
+        # Try 2: Look at GCMT catalog if USGS catalog did not return
+        elif (method in ["ALL", "GCMT"]) and len(cat) == 0:
+            logger.debug("querying GCMT database for moment tensor")
+            cat = get_gcmt_moment_tensor(event=event)
+        # Try ?: Add options below for more catalog selection
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++
+        # If multiple events found for a given set of event criteria, pick first
+        if cat is not None:
+            if len(cat) > 1:
+                logger.warning(f"multiple ({len(cat)}) events found, "
+                               f"picking zeroth index")
+            # Distinguish `event_new` from `event`, sometimes you still want the
+            # catalog location, not the one from USGS or GCMT. Or if nothing was
+            # found, then we will return the same event
+            event_new = cat[0]
+            focal_mechanism = event_new.preferred_focal_mechanism()
+    # Append or overwrite focal mechanism or event
+    if focal_mechanism is None:
+        event_out = event
+    else:
+        if overwrite_event:
+            logger.debug("overwriting input event object with newly gathered "
+                         "event containing focal mechanism")
+            event_out = event_new
+        else:
+            logger.debug("appending gathered focal mechanism to current event")
+            event_out = event.copy()
+            event_out.focal_mechanisms = [focal_mechanism]
+            event_out.preferred_focal_mechanism_id = focal_mechanism.resource_id
+
+    return event_out
 
 
 class Source:
