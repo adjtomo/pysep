@@ -19,8 +19,8 @@ from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
 from pysep.utils.process import estimate_prefilter_corners
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.utils.io import read_sem
-from pysep.utils.mt import (get_gcmt_moment_tensors, get_usgs_moment_tensors,
-                            append_focal_mechanism_to_event)
+from pysep.utils.mt import get_gcmt_moment_tensor, get_usgs_moment_tensor
+
 
 
 @pytest.fixture
@@ -206,7 +206,7 @@ def test_get_usgs_moment_tensor():
     event = test_get_gcmt_moment_tensor()
     del event.focal_mechanisms
 
-    cat = get_usgs_moment_tensors(event=event)
+    cat = get_usgs_moment_tensor(event=event)
     assert(len(cat) == 1)
     event = cat[0]
     assert hasattr(event, "focal_mechanisms")
@@ -224,8 +224,8 @@ def test_get_gcmt_moment_tensor():
     origintime = "2016-11-13T11:02:00"
     magnitude = 7.8
 
-    cat = get_gcmt_moment_tensors(event=None, origintime=origintime,
-                                  magnitude=magnitude)
+    cat = get_gcmt_moment_tensor(event=None, origintime=origintime,
+                                 magnitude=magnitude)
     assert(len(cat) == 1)
     event = cat[0]
     assert hasattr(event, "focal_mechanisms")
