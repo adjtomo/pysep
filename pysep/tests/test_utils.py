@@ -18,7 +18,9 @@ from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
 from pysep.utils.process import estimate_prefilter_corners
 from pysep.utils.plot import plot_source_receiver_map
-from pysep.utils.io import read_synthetics
+from pysep.utils.io import read_sem
+from pysep.utils.mt import get_gcmt_moment_tensor, get_usgs_moment_tensor
+
 
 
 @pytest.fixture
@@ -137,7 +139,7 @@ def test_plot_map(test_event, test_inv):
                              show=False)
 
 
-def test_read_synthetics():
+def test_read_sem():
     """
     Test reading SPECFEM-generated synthetics in as SAC formatted files
     """
@@ -147,8 +149,8 @@ def test_read_synthetics():
 
     st = Stream()
     for test_synthetic in test_synthetics:
-        st += read_synthetics(fid=test_synthetic, cmtsolution=test_cmtsolution,
-                              stations=test_stations)
+        st += read_sem(fid=test_synthetic, source=test_cmtsolution,
+                       stations=test_stations)
 
     assert(st[0].stats.sac.evla == -40.5405)
 
@@ -195,3 +197,39 @@ def test_subset_streams(test_st):
     # all station ids should be the same
     for tr_out, tr_smaller_out in zip(test_st_out, test_st_smaller_out):
         assert(tr_out.get_id() == tr_smaller_out.get_id())
+
+
+def test_get_usgs_moment_tensor():
+    """
+    Just ensure that getting via USGS works as intended using an example event
+    """
+    event = test_get_gcmt_moment_tensor()
+    del event.focal_mechanisms
+
+    cat = get_usgs_moment_tensor(event=event)
+    assert(len(cat) == 1)
+    event = cat[0]
+    assert hasattr(event, "focal_mechanisms")
+
+    m_rr = event.preferred_focal_mechanism().moment_tensor.tensor.m_rr
+    assert(pytest.approx(m_rr, 1E-20) == 4.81E20)
+
+
+@pytest.mark.skip(reason="test already called by 'test_get_usgs_moment_tensor'")
+def test_get_gcmt_moment_tensor():
+    """
+    Just ensure that getting via GCMT works as intended using an example event
+    """
+    # Kaikoura Earthquake
+    origintime = "2016-11-13T11:02:00"
+    magnitude = 7.8
+
+    cat = get_gcmt_moment_tensor(event=None, origintime=origintime,
+                                 magnitude=magnitude)
+    assert(len(cat) == 1)
+    event = cat[0]
+    assert hasattr(event, "focal_mechanisms")
+    m_rr = event.preferred_focal_mechanism().moment_tensor.tensor.m_rr
+    assert(pytest.approx(m_rr, 1E-20) == 3.56E20)
+
+    return event

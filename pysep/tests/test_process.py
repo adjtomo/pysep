@@ -143,6 +143,7 @@ def test_rotate_streams_fail(test_st, test_inv, test_event):
     sep.event = test_event
     sep.st = sep.preprocess()  # make sure that streams are formatted correctly
 
+    # No back aizmuth attribute found
     with pytest.raises(TypeError):
         sep.rotate_streams()
 

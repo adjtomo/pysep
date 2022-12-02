@@ -30,7 +30,7 @@ from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing)
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
-from pysep.utils.io import read_yaml, read_event_file, write_stations_file
+from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw,
@@ -906,7 +906,8 @@ class Pysep:
             for sta in stations:
                 _st = st_rtz.select(station=sta)
                 _st.rotate(method="NE->RT")  # in place rot.
-                logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
+                if hasattr(_st[0].stats, "back_azimuth"):
+                    logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
             st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
@@ -994,7 +995,7 @@ class Pysep:
                                stations_fid or "stations_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
-            write_stations_file(self.inv, self.event, fid)
+            write_pysep_stations_file(self.inv, self.event, fid)
 
         if "inv" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")

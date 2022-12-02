@@ -97,7 +97,7 @@ from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
 from pysep.utils.cap_sac import origin_time_from_sac_header
-from pysep.utils.io import read_synthetics, read_synthetics_cartesian
+from pysep.utils.io import read_sem, read_sem_cartesian
 from pysep.utils.curtail import subset_streams
 from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 
@@ -491,15 +491,13 @@ class RecordSection:
             for fid in fids:
                 logger.debug(fid)
                 if not cartesian:
-                    st_syn += read_synthetics(fid=fid,
-                                              cmtsolution=source,
-                                              stations=stations)
+                    st_syn += read_sem(fid=fid, source=source,
+                                       stations=stations)
                 else:
                     # If we are using SPECFEM2D synthetics, trying to read
                     # the SOURCE file will
-                    st_syn += read_synthetics_cartesian(fid=fid,
-                                                        source=source,
-                                                        stations=stations)
+                    st_syn += read_sem_cartesian(fid=fid, source=source,
+                                                 stations=stations)
         return st_syn
 
     def check_parameters(self):
@@ -1481,7 +1479,7 @@ class RecordSection:
             x -= self.zero_pad_s[0]  # index 0 is start, index 1 is end
 
         # Synthetics will already have a time offset stat from the 
-        # 'read_synthetics' function which grabs T0 value from ASCII
+        # 'read_sem' function which grabs T0 value from ASCII
         # Data will have a time offset relative to event origin time 
         if hasattr(tr.stats, "time_offset"):
             x += tr.stats.time_offset  
