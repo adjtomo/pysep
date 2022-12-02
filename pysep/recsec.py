@@ -76,7 +76,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         >>> import os
         >>> from glob import glob
         >>> from obspy import read
-        >>> from recsec import plotw_rs
+        >>> from recsec import plotw_rs  # NOQA
         >>> st = Stream()
         >>> for fid in glob(os.path.join("20200404015318920", "*.?")):
         >>>     st += read(fid)
@@ -96,7 +96,10 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
-from pysep.utils.io import read_synthetics, read_synthetics_cartesian
+from pysep.utils.cap_sac import origin_time_from_sac_header
+from pysep.utils.io import read_sem, read_sem_cartesian
+from pysep.utils.curtail import subset_streams
+from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 
 # Unicode degree symbol for plot text
 DEG = u"\N{DEGREE SIGN}"
@@ -144,12 +147,14 @@ class RecordSection:
                  cmtsolution=None, st=None, st_syn=None, sort_by="default",
                  scale_by=None, time_shift_s=None, zero_pad_s=None,
                  move_out=None, min_period_s=None, max_period_s=None,
-                 preprocess="st", max_traces_per_rs=None, integrate=0,
+                 preprocess=None, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", 
-                 geometric_spreading_factor=0.5, geometric_spreading_k_val=None, 
-                 figsize=(9, 11), show=True, save="./record_section.png", 
+                 geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
+                 geometric_spreading_exclude=None,
+                 geometric_spreading_ymax=None, geometric_spreading_save=None,
+                 figsize=(9, 11), show=True, save="./record_section.png",
                  overwrite=False, log_level="DEBUG", cartesian=False,
                  synsyn=False, **kwargs):
         """
@@ -168,6 +173,13 @@ class RecordSection:
         :type st_syn: obspy.core.stream.Stream
         :param st_syn: Stream objects containing synthetic time series to be
             plotted on the record section. Must be same length as `st`
+        :type stations: str
+        :param stations: full path to STATIONS file used to define the station
+            coordinates. Format is dictated by SPECFEM
+        :type cmtsolution: str
+        :type cmtsolution: required for synthetics, full path to SPECFEM source
+            file, which was used to generate SPECFEM synthetics. Example
+            filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
         :type sort_by: str
         :param sort_by: How to sort the Y-axis of the record section, available:
             - 'default': Don't sort, just iterate directly through Stream
@@ -196,11 +208,17 @@ class RecordSection:
                 the screen. Will not consider waveforms which have been 
                 excluded on other basis (e.g., wrong component)
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
-            - 'geometric_spreading': TODO this is not implemented yet.
-                scale amplitudes globally by predicting the
-                expected geometric spreading amplitude reduction and correcting
-                for this factor. Requires `geometric_spreading_factor`, and 
-                optional `geometric_spreading_k_val`
+            - 'geometric_spreading': scale amplitudes by expected reduction
+                through geometric spreading. Related parameters are:
+                - `geometric_spreading_factor`
+                - `geometric_spreading_k_val`
+                - `geometric_spreading_exclude`
+                - `geometric_spreading_ymax`
+                Equation is A(d) = k / sin(d) ** f
+                Where A(d) is the amplitude reduction factor as a function of
+                distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
+                the `geometric_spreading_factor`.
+                'k' is calculated automatically if not given.
         :type time_shift_s: float OR list of float
         :param time_shift_s: apply static time shift to waveforms, two options:
             1. float (e.g., -10.2), will shift ALL waveforms by
@@ -234,10 +252,10 @@ class RecordSection:
         :param max_period_s: maximum filter period in seconds
         :type preprocess: str
         :param preprocess: choose which data to preprocess, options are:
-            - 'st': process waveforms in st (default)
-            - 'st_syn': process waveforms in st_syn. st still must be given
-            - 'both': process waveforms in both st and st_syn
-            - None: do not run preprocessing step (including filter)
+            - None: do not run preprocessing step, including filter (Default)
+            - 'st': process waveforms in `st`
+            - 'st_syn': process waveforms in `st_syn`. st still must be given
+            - 'both': process waveforms in both `st` and `st_syn`
         :type max_traces_per_rs: int
         :param max_traces_per_rs: maximum number of traces to show on a single
             record section plot. Defaults to all traces in the Stream
@@ -283,12 +301,28 @@ class RecordSection:
             'deg': degrees on the sphere
             'km_utm': kilometers on flat plane, UTM coordinate system
         :type geometric_spreading_factor: float
-        :param geometric_spreading_factor: geometrical spreading factor when
-            using the `scale_by` parameter. Defaults to 0.5 for surface waves.
-            Use values of 0.5 to 1.0 for regional surface waves
+        :param geometric_spreading_factor: factor to scale amplitudes by
+            predicting the expected geometric spreading amplitude reduction and
+            correcting for this factor.
+            Related optional parameter: `geometric_spreading_k_val`.
+            For Rayleigh waves, `geometric_spreading_factor` == 0.5 (default)
         :type geometric_spreading_k_val: float
-        :param geometric_spreading_k_val: K value used to scale the geometric
-            spreading factor (TODO figure out what this actually is)
+        :param geometric_spreading_k_val: Optional constant scaling value used
+            to scale the geometric spreading factor equation. If not given,
+            calculated automatically using max amplitudes
+            Value should be between 0.5 and 1.0 for regional surface waves.
+        :type geometric_spreading_exclude: list
+        :param geometric_spreading_exclude: a list of station names that
+            should match the input stations. Used to exclude stations from the
+            automatic caluclation of the geometric
+        :type geometric_spreading_ymax: float
+        :param geometric_spreading_ymax: Optional value for geometric spreading
+            plot. Sets the max y-value on the plot. If not set, defaults to
+            whatever the peak y-value plotted is.
+        :type geometric_spreading_save: str
+        :param geometric_spreading_save: file id to save separate geometric
+            spreading scatter plot iff `scale_by`=='geometric_spreading'. If 
+            NoneType, will not save. By default, turned OFF
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -374,6 +408,9 @@ class RecordSection:
         self.amplitude_scale_factor = amplitude_scale_factor
         self.geometric_spreading_factor = float(geometric_spreading_factor)
         self.geometric_spreading_k_val = geometric_spreading_k_val
+        self.geometric_spreading_exclude = geometric_spreading_exclude or []
+        self.geometric_spreading_ymax = geometric_spreading_ymax
+        self.geometric_spreading_save = geometric_spreading_save
 
         # Time shift parameters
         self.move_out = move_out
@@ -414,6 +451,7 @@ class RecordSection:
         self.amplitude_scaling = []
         self.y_axis = []
         self.xlim = []  # unit: samples
+        self.xlim_syn = []
         self.sorted_idx = []
 
     def _generate_synthetic_stream(self, syn_path, source, stations,
@@ -453,15 +491,13 @@ class RecordSection:
             for fid in fids:
                 logger.debug(fid)
                 if not cartesian:
-                    st_syn += read_synthetics(fid=fid,
-                                              cmtsolution=source,
-                                              stations=stations)
+                    st_syn += read_sem(fid=fid, source=source,
+                                       stations=stations)
                 else:
                     # If we are using SPECFEM2D synthetics, trying to read
                     # the SOURCE file will
-                    st_syn += read_synthetics_cartesian(fid=fid,
-                                                        source=source,
-                                                        stations=stations)
+                    st_syn += read_sem_cartesian(fid=fid, source=source,
+                                                 stations=stations)
         return st_syn
 
     def check_parameters(self):
@@ -500,7 +536,11 @@ class RecordSection:
                           f"expects SAC headers for sorting. Trace indexes "
                           f"are: {_idx}")
 
+        # Make sure stream and synthetic stream have the same length. If they
+        # don't, subset so that they do.
         if self.st_syn is not None:
+            self.st, self.st_syn = subset_streams(self.st, self.st_syn)
+
             if len(self.st) != len(self.st_syn):
                 err.st_syn = f"length must match `st` (which is {len(self.st)})"
 
@@ -560,6 +600,10 @@ class RecordSection:
         if self.min_period_s is not None and self.max_period_s is not None:
             if self.min_period_s >= self.max_period_s:
                 err.min_period_s = "must be less than `max_period_s`"
+
+        if self.min_period_s is not None or self.max_period_s is not None:
+            assert(self.preprocess is not None), \
+                f"Setting filter bounds requires `preprocess` flag to be set"
 
         if self.preprocess is not None:
             acceptable_preprocess = ["both", "st", "st_syn"]
@@ -676,7 +720,12 @@ class RecordSection:
         self.station_ids = np.array([tr.get_id() for tr in self.st])
 
         self.time_shift_s = self.get_time_shifts()  # !!! OVERWRITES user input
+        # Needs to be run before getting xlims so that we know the time offset
+        self.get_time_offsets()
         self.xlim = self.get_xlims()
+        # Get xlims synthetic waveforms which may have different start/end times
+        if self.st_syn is not None:
+            self.xlim_syn = self.get_xlims(st=self.st_syn)
 
         # Max amplitudes should be RELATIVE to what were showing (e.g., if
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
@@ -696,7 +745,7 @@ class RecordSection:
         self.y_axis = self.get_y_axis_positions()
         self.amplitude_scaling = self.get_amplitude_scaling()
 
-    def get_xlims(self):
+    def get_xlims(self, st=None):
         """
         The x-limits of each trace depend on the overall time shift (either 
         static or applied through move out), as well as the sampling rate of
@@ -706,20 +755,27 @@ class RecordSection:
         .. note::
             Requires that get_time_shifts() has already been run
 
+        :type st: obspy.core.stream.Stream
+        :param st: stream object to get xlims for. By default this is the 'data'
+            stored in `st` but it can also be given `st_syn` to get synthetic
+            x limits which may differ
         :rtype: np.array
         :return: an array of tuples defining the start and stop indices for EACH
             trace to be used during plotting. Already includes time shift 
             information so xlim can be applied DIRECTLY to the time shifted data
         """
+        if st is None:
+            st = self.st
+
         xlim = []
         if self.xlim_s is None:
             # None's will index the entire trace
-            xlim = np.array([(None, None) for _ in range(len(self.st))])
+            xlim = np.array([(None, None) for _ in range(len(st))])
         else:
             # Looping to allow for delta varying among traces,
             # AND apply the time shift so that indices can be used directly in
             # the plotting function
-            for tr, tshift in zip(self.st, self.time_shift_s):
+            for tr, tshift in zip(st, self.time_shift_s):
                 start, stop = [int(_/tr.stats.delta) for _ in self.xlim_s]
                 sshift = int(tshift / tr.stats.delta)  # unit: samples
                 # These indices define the index of the user-chosen timestamp
@@ -730,10 +786,27 @@ class RecordSection:
                     zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
                     start_index += zero_pad_index
                     end_index += zero_pad_index
-                assert(start_index >= 0), (
-                    f"trying to access negative time but trace has no negative "
-                    f"time values. Please check your choice for `xlim_s`"
-                )
+
+                # Address time shift introduced by traces which do not start
+                # at the origin time
+                if hasattr(tr.stats, "time_offset"):
+                    start_index += abs(int(tr.stats.time_offset/tr.stats.delta))
+                    end_index += abs(int(tr.stats.time_offset/tr.stats.delta))
+
+                # When setting xlimits, cannot acces out of bounds (negative 
+                # indices or greater than max). This might happen when User 
+                # asks for `xlim_s` that is outside data bounds. In this case
+                # we just plot up to the end of the data
+                if start_index < 0:
+                    logger.warning(f"trying to access negative time axis index "
+                                   f"for xlimit of {tr.get_id()}, setting to 0")
+                    start_index = 0
+                if end_index > len(tr.data):
+                    logger.warning(f"trying to access past time axis index "
+                                   f"for xlimit of {tr.get_id()}, setting to "
+                                   f"length of data trace")
+                    end_index = len(tr.data)
+
                 xlim.append((start_index, end_index))
 
         xlim = np.array(xlim)
@@ -805,6 +878,28 @@ class RecordSection:
         stats.xmin, stats.xmax, stats.ymin, stats.ymax = [], [], [], []
 
         return stats
+
+    def get_time_offsets(self):
+        """
+        Find time shift to data constituting difference between trace start 
+        time and event origin time. Both synthetics and data should have the 
+        correct timing. Time offsets will be used during plotting to make 
+        sure all traces have the same T=0
+
+        .. note::
+            Appends time offset directly to the stats header, overwriting any
+            value that might have been there already
+        """
+        event_origin_time = origin_time_from_sac_header(self.st[0].stats.sac)
+
+        logger.info(f"calculating starttime offsets from event origin time "
+                    f"{event_origin_time}")
+
+        for tr in self.st:
+            tr.stats.time_offset = tr.stats.starttime - event_origin_time
+        if self.st_syn is not None:
+            for tr in self.st_syn:
+                tr.stats.time_offset = tr.stats.starttime - event_origin_time
 
     def get_time_shifts(self):
         """
@@ -940,7 +1035,7 @@ class RecordSection:
         :return: an array corresponding to the Stream indexes which provides
             a per-trace scaling coefficient
         """
-        logger.info(f"determining amplitude scaling with: {self.scale_by}")
+        logger.info(f"determining amplitude scaling with: '{self.scale_by}'")
 
         # Don't scale by anything
         if self.scale_by is None:
@@ -969,7 +1064,7 @@ class RecordSection:
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
-            amp_scaling = self._calculate_geometric_spreading()
+            amp_scaling = self.calculate_geometric_spreading()
 
         # Apply manual scale factor if provided, default value is 1 so nothing
         # Divide because the amplitude scale divides the data array, which means
@@ -978,7 +1073,7 @@ class RecordSection:
 
         return amp_scaling
 
-    def _calculate_geometric_spreading(self):
+    def calculate_geometric_spreading(self):
         """
         Stations with larger source-receiver distances will have their amplitude
         scaled by a larger value.
@@ -988,37 +1083,92 @@ class RecordSection:
         factor = 0.5). For our purposes, this will fold the attenuation factor
         into the same single factor that accounts for geometric spreading.
 
+        Equation is for amplitude reduction 'A' as a factor of distance 'd':
+
+            A(d) = k / sin(d) ** f
+
+        where 'k' is the `geometric_spreading_k_val` and 'f' is the
+        `geometric_spreading_factor`. 'k' is calculated automatically if not
+        given by the User. In the code, A(d) is represented by `w_vector`
+
         .. note::
-            This does not take into account the variation in amplitude.
+            This does not take into account the variation in amplitude from
+            focal mechanism regions
 
-        TODO Plot geometric spreading with best-fitting curve
+        TODO
+            - Look in Stein and Wysession and figure out vector names
+            - Allow ignoring specific components, currently only allowed to
+                exclude on a per-station basis
 
-        :type max_amplitudes: list
-        :param max_amplitudes: list of maximum amplitudes for each trace in the
-            stream. IF not given, will be calculated on the fly. Optional incase
-            this has been calculated already and you want to save time
         :rtype: list
         :return: scale factor per trace in the stream based on theoretical
             geometrical spreading factor. This is meant to be MULTIPLIED by the
             data arrays
         """
-        raise NotImplementedError("This function is currently work in progress")
+        logger.info("using geometrical spreading factor: "
+                    f"{self.geometric_spreading_factor}")
 
-        logger.info("calculating geometrical spreading for amplitude "
-                    "normalization")
+        # Ignore any amplitudes with 0 max amplitude, which will throw off calc
+        for i, max_amp in enumerate(self.max_amplitudes):
+            if max_amp == 0:
+                station_name = self.st[i].get_id().split(".")[1]
+                if station_name not in self.geometric_spreading_exclude:
+                    self.geometric_spreading_exclude.append(station_name)
+                    logger.warning(f"{station_name} has 0 max amplitude which "
+                                   f"will negatively affect geometric "
+                                   f"spreading calculation. excluding from list"
+                                   )
+
+        # To selectively remove stations from this calculation, we will need
+        # to gather a list of indexes to skip which can be applied to lists
+        indices = self.sorted_idx  # already some stations have been removed
+        for station in set(self.geometric_spreading_exclude):
+            # Matching station names to get indices
+            remove_idx = [i for i, id_ in enumerate(self.station_ids)
+                          if station in id_]
+            if remove_idx:
+                logger.debug(f"remove '{station}' from geometric spreading eq.")
+            indices = [i for i in indices if i not in remove_idx]
+        logger.info(f"excluded {len(self.sorted_idx) - len(indices)} traces "
+                    f"from geometric spreading calculation")
+
+        # Make sure distances are in units degrees
+        if "km" in self.distance_units:
+            distances = kilometers2degrees(self.distances)
+        else:
+            distances = self.distances
 
         # Create a sinusoidal function based on distances in degrees
-        sin_del = np.sin(np.array(self.dist) / (180 / np.pi))
+        sin_delta = np.sin(np.array(distances) / (180 / np.pi))
 
-        # !!! TODO Stein and Wysession and figure out vector names
-        if self.geometric_spreading_k_val is not None:
-            k_vector = self.max_amplitudes * \
-                       (sin_del ** self.geometric_spreading_factor)
-            k_val = np.median(k_vector)
-        else:
-            k_val = self.geometric_spreading_k_val
+        # Use or calculate the K valuse constant scaling factor
+        if self.geometric_spreading_k_val is None:
+            k_vector = self.max_amplitudes[indices] * \
+                       (sin_delta[indices] ** self.geometric_spreading_factor)
+            # OVERWRITING internal parameter here, which will be used elsewhere
+            self.geometric_spreading_k_val = np.median(k_vector)
 
-        w_vector = k_val / (sin_del ** self.geometric_spreading_factor)
+        logger.info(f"geometric spreading `k` vector = "
+                    f"{self.geometric_spreading_k_val}")
+
+        # This is the amplitude scaling that we are after, defined for ALL stas
+        w_vector = (self.geometric_spreading_k_val /
+                    (sin_delta ** self.geometric_spreading_factor))
+
+        # Plot the geometric spreading figure
+        if self.geometric_spreading_save is not None:
+            # Curate station names so that it is just 'STA.COMP'
+            station_ids = [f"{_.split('.')[1]}.{_.split('.')[-1][-1]}" for _ in
+                           self.station_ids]
+
+            plot_geometric_spreading(
+                distances=distances, max_amplitudes=self.max_amplitudes,
+                geometric_spreading_factor=self.geometric_spreading_factor,
+                geometric_k_value=self.geometric_spreading_k_val,
+                station_ids=station_ids, units=self.distance_units,
+                include=indices, ymax=self.geometric_spreading_ymax,
+                save=self.geometric_spreading_save
+            )
 
         return w_vector
 
@@ -1155,7 +1305,7 @@ class RecordSection:
             seismograms. At the moment we just apply a blanket filter.
         """
         if self.preprocess is None:
-            logger.info("no preprocessing applied")
+            logger.info("no preprocessing (including filtering) applied")
             return
         elif self.preprocess == "st":
             logger.info(f"preprocessing {len(self.st)} `st` waveforms")
@@ -1165,7 +1315,7 @@ class RecordSection:
             preprocess_list = [self.st_syn]
         elif self.preprocess == "both":
             logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
-                  f"`st` and `st_syn` waveforms")
+                        f"`st` and `st_syn` waveforms")
             preprocess_list = [self.st, self.st_syn]
 
         for st in preprocess_list:
@@ -1188,23 +1338,23 @@ class RecordSection:
                             pad=True, fill_value=0)
 
             # Allow multiple filter options based on user input
-            # Min period but no max period == low-pass
+            # Max period only == high-pass
             if self.max_period_s is not None and self.min_period_s is None:
-                logger.info(f"apply lowpass filter w/ cutoff "
-                            f"{1/self.max_period_s}")
-                st.filter("lowpass", freq=1/self.max_period_s, zerophase=True)
-            # Max period but no min period == high-pass
-            elif self.min_period_s is not None and self.max_period_s is None:
                 logger.info(f"apply highpass filter w/ cutoff "
+                            f"{1/self.max_period_s}")
+                st.filter("highpass", freq=1/self.max_period_s, zerophase=True)
+            # Min period only == low-pass
+            elif self.min_period_s is not None and self.max_period_s is None:
+                logger.info(f"apply lowpass filter w/ cutoff "
                             f"{1/self.min_period_s}")
-                st.filter("highpass", freq=1/self.min_period_s, zerophase=True)
+                st.filter("lowpass", freq=1/self.min_period_s, zerophase=True)
             # Both min and max period == band-pass
             elif self.min_period_s is not None and \
                     self.max_period_s is not None:
                 logger.info(f"applying bandpass filter w/ "
-                      f"[{1/self.max_period_s}, {self.min_period_s}]")
+                            f"[{1/self.max_period_s}, {self.min_period_s}]")
                 st.filter("bandpass", freqmin=1/self.max_period_s,
-                            freqmax=1/self.min_period_s, zerophase=True)
+                          freqmax=1/self.min_period_s, zerophase=True)
             else:
                 logger.info("no filtering applied")
 
@@ -1249,7 +1399,7 @@ class RecordSection:
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
         logger.debug("plotting line check starting from bottom (y=0)")
-        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tYABSMAX")
+        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX")
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
         log_str = "\n"
@@ -1272,14 +1422,14 @@ class RecordSection:
         logger.debug(log_str)
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
-        self._set_plot_aesthetic()
+        self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
         # Partition the figure by user-specified azimuth bins 
         if self.sort_by and "azimuth" in self.sort_by:
             self._plot_azimuth_bins()
 
         # Finalize the figure accoutrements
-        self._plot_title(nwav=nwav, page_num=page_num)
+        self._plot_title(nwav=nwav)
         self._plot_axes(start=start, stop=stop)
 
         if self.save:
@@ -1327,13 +1477,28 @@ class RecordSection:
         x = tr.times() + tshift
         if self.zero_pad_s is not None:
             x -= self.zero_pad_s[0]  # index 0 is start, index 1 is end
+
+        # Synthetics will already have a time offset stat from the 
+        # 'read_sem' function which grabs T0 value from ASCII
+        # Data will have a time offset relative to event origin time 
+        if hasattr(tr.stats, "time_offset"):
+            x += tr.stats.time_offset  
+            toffset_str = f"{tr.stats.time_offset:4.2f}"
+        else:
+            toffset_str = "  None"
+
         y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
-        # Truncate waveforms to get figure scaling correct. 
-        start, stop = self.xlim[idx]
+        # Truncate waveforms to get figure scaling correct. Make the distinction
+        # between data and synthetics which may have different start and end 
+        # times natively
+        if choice == "st":
+            start, stop = self.xlim[idx]
+        elif choice == "st_syn":
+            start, stop = self.xlim_syn[idx]
+
         x = x[start:stop]
         y = y[start:stop]
-
         self.ax.plot(x, y, c=["k", "r"][c], linewidth=linewidth, zorder=10)
 
         # Sanity check print station information to check against plot
@@ -1344,6 +1509,7 @@ class RecordSection:
                    f"\t{self.azimuths[idx]:6.2f}"
                    f"\t{self.backazimuths[idx]:6.2f}"
                    f"\t{self.time_shift_s[idx]:4.2f}"
+                   f"\t{toffset_str}"
                    f"\t{self.max_amplitudes[idx]:.2E}\n"
                    )
 
@@ -1570,21 +1736,48 @@ class RecordSection:
                 label += f"|{self.time_shift_s[idx]:.2f}s"
             y_tick_labels.append(label)
 
-        if "y_axis" in loc:
+        # Generate a 'template' y-axis format to help Users decipher labels
+        if self.sort_by is not None and "backazimuth" in self.sort_by:
+            az_str = "BAZ"
+        else:
+            az_str = "AZ"
+
+        # Y_FMT will include time shift IF there are time shifts
+        y_fmt = f"NET.STA.LOC.CHA|{az_str}|DIST"
+        if self.time_shift_s.sum() != 0:
+            y_fmt += "|TSHIFT"
+
+        # Set the y-axis labels to the left side of the left figure border
+        if loc == "y_axis":
             # For relative plotting (not abs_), replace y_tick labels with
             # station information
             self.ax.set_yticks(self.y_axis[start:stop])
             self.ax.set_yticklabels(y_tick_labels)
+            plt.text(-.01, .99, y_fmt, ha="right", va="top",
+                     transform=self.ax.transAxes, fontsize=fontsize)
+        # Set the y-axis labels to the right side of the right figure border
+        elif loc == "y_axis_right":
+            self.ax.set_yticks(self.y_axis[start:stop])
+            self.ax.set_yticklabels(y_tick_labels)
+            self.ax.yaxis.tick_right()
+            self.ax.yaxis.set_label_position("right")
+            plt.text(1.01, .99, y_fmt, ha="left", va="top",
+                     transform=self.ax.transAxes, fontsize=fontsize)
+        # Set the y-axis labels inside the figure border, at xmin or xmax
         else:
             # Trying to figure out where the min or max X value is on the plot
             if loc == "x_min":
                 ha = "left"
                 func = min
                 x_val = func(self.stats.xmin)
+                plt.text(.01, .99, y_fmt, ha="left", va="top",
+                         transform=self.ax.transAxes, fontsize=fontsize)
             elif loc == "x_max":
                 ha = "right"
                 func = max
                 x_val = func(self.stats.xmax)
+                plt.text(.99, .99, y_fmt, ha="right", va="top",
+                         transform=self.ax.transAxes, fontsize=fontsize)
             if self.xlim_s is not None:
                 x_val = func([func(self.xlim_s), x_val])
 
@@ -1598,11 +1791,7 @@ class RecordSection:
                 for y, s in zip(self.y_axis, y_tick_labels):
                     plt.text(x=x_val, y=y, s=s, ha=ha, c=c, fontsize=fontsize)
 
-        if loc == "y_axis_right":
-            self.ax.yaxis.tick_right()
-            self.ax.yaxis.set_label_position("right")
-
-    def _plot_title(self, nwav=None, page_num=None):
+    def _plot_title(self, nwav=None):
         """
         Create the title of the plot based on event and station information
         Allow dynamic creation of title based on user input parameters
@@ -1612,100 +1801,66 @@ class RecordSection:
         :type nwav: int
         :param nwav: if using subset, the title needs to know how many waveforms
             it's showing on the page. self.plot() should tell it
-        :type page_num: int
-        :param page_num: same as nwav, we need to know what page number were on
         """
         # Defines the number of waveforms plotted on a single page, allowing
         # for subsets per page
         if nwav is None:
             nwav = len(self.sorted_idx)
 
-        # Allow appending page numbers to title
-        title_top = "RECORD SECTION"
-        if page_num:
-            title_top += f" PAGE {page_num:0>2}"
-
-        # The y-label will show baz or az depending on user choice, distinguish
-        if self.sort_by is not None and "backazimuth" in self.sort_by:
-            az_str = "BAZ"
-        else:
-            az_str = "AZ"
-
-        # Get the unique components that have been plotted, only
-        cmp = "".join(np.unique([self.st[i].stats.component
-                                 for i in self.sorted_idx]))
-
-        # Y_FMT will include time shift IF there are time shifts
-        y_fmt = f"Y_FMT: NET.STA.LOC.CHA|{az_str}|DIST"
-        if self.time_shift_s.sum() != 0:
-            y_fmt += "|TSHIFT"
-        # Zero pad is either a list of length or None
+        # T0: Zero pad is either a list of length or None
         if self.zero_pad_s:
             _start, _end = self.zero_pad_s
         else:
             _start, _end = 0, 0
-        # Origintime needs to be shifted by the zero pad offset value which has
-        # changed the 'starttime'
-        origintime = min([tr.stats.starttime + _start for tr in self.st])
+        # Origintime needs to be shifted by the zero pad offset value
+        origintime = str(min([tr.stats.starttime + _start for tr in self.st]))
+        # YYYY-MM-DDTHH:MM:SS.ssssssZ - > YYYY-MM-DD HH:MM:SS.ss
+        origintime = origintime.replace("T", " ")[:-5]
 
-        title = "\n".join([
-            title_top,
-            f"{'/' * len(title_top*2)}",
-            f"ORIGINTIME: {origintime}",
-            f"{y_fmt}",
+        # HYPO: If only one event, show hypocenter information
+        if self.stats.nevents == 1:
+            sac = self.st[0].stats.sac
+            # HYPO: lon, lat, depth, mag
+            hypo = (
+                f"\nHYPO: ({sac['evlo']:.2f}{DEG}, {sac['evla']:.2f}{DEG}), " 
+                f"Z={sac['evdp']:.2f}km, M{sac['mag']:.2f}"
+            )
+        else:
+            hypo = ""
+
+        # CMP: Get the unique components that have been plotted only
+        cmp = "".join(np.unique([self.st[i].stats.component
+                                 for i in self.sorted_idx]))
+
+        # GEOSPREAD: if geometric spreading scaling, post equation variables
+        if self.scale_by == "geometric_spreading":
+            geospread = (f" (k={self.geometric_spreading_k_val:.2E}, "
+                         f"f={self.geometric_spreading_factor:.2f})")
+        else:
+            geospread = ""
+
+        # FILT: If preprocessing is turned OFF, no filtering was applied
+        if self.preprocess is not None:
+            filt = f"\nFILT: [{self.min_period_s}, {self.max_period_s}]s"
+        else:
+            filt = ""
+
+        # MOVE_OUT: if move out was applied, post
+        if self.move_out:
+            move_out = f"\nMOVE_OUT: {self.move_out}{self.distance_units}/s"
+        else:
+            move_out = ""
+
+        title = (
+            f"T0: {origintime}{hypo}\n"
             f"NWAV: {nwav}; NEVT: {self.stats.nevents}; "
-            f"NSTA: {self.stats.nstation}; COMP: {cmp}",
+            f"NSTA: {self.stats.nstation}; COMP: {cmp}\n"
             f"SORT_BY: {self.sort_by}; "
-            f"SCALE_BY: {self.scale_by} * {self.amplitude_scale_factor}",
-            f"FILT: [{self.min_period_s}, {self.max_period_s}]s; "
-            f"MOVE_OUT: {self.move_out or 0}{self.distance_units}/s",
-            f"ZERO_PAD: {_start}s, {_end}s",
-        ])
+            f"SCALE_BY: {self.scale_by}{geospread}"
+            # The following title parts are optional depending on application
+            f"{filt}{move_out}"
+        )
         self.ax.set_title(title)
-
-    def _set_plot_aesthetic(self):
-        """
-        Give a nice look to the output figure by creating thick borders on the
-        axis, adjusting fontsize etc. All plot aesthetics should be placed here
-        so it's easiest to find.
-
-        .. note::
-            This was copy-pasted from Pyatoa.visuals.insp_plot.default_axes()
-        """
-        ytick_fontsize = self.kwargs.get("ytick_fontsize", 8)
-        xtick_fontsize = self.kwargs.get("xtick_fontsize", 12)
-        tick_linewidth = self.kwargs.get("tick_linewidth", 1.5)
-        tick_length = self.kwargs.get("tick_length", 5)
-        tick_direction = self.kwargs.get("tick_direction", "in")
-        label_fontsize = self.kwargs.get("label_fontsize", 10)
-        axis_linewidth = self.kwargs.get("axis_linewidth", 2.)
-        title_fontsize = self.kwargs.get("title_fontsize", 10)
-        xtick_minor = self.kwargs.get("xtick_minor", 25)
-        xtick_major = self.kwargs.get("xtick_major", 100)
-        spine_zorder = self.kwargs.get("spine_zorder", 8)
-
-        # Re-set font sizes for labels already created
-        self.ax.title.set_fontsize(title_fontsize)
-        self.ax.tick_params(axis="both", which="both", width=tick_linewidth,
-                            direction=tick_direction, length=tick_length)
-        self.ax.tick_params(axis="x", labelsize=xtick_fontsize)
-        self.ax.tick_params(axis="y", labelsize=ytick_fontsize)
-        self.ax.xaxis.label.set_size(label_fontsize)
-
-        # Thicken up the bounding axis lines
-        for axis in ["top", "bottom", "left", "right"]:
-            self.ax.spines[axis].set_linewidth(axis_linewidth)
-
-        # Set spines above azimuth bins
-        for spine in self.ax.spines.values():
-            spine.set_zorder(spine_zorder)
-
-        # Set xtick label major and minor which is assumed to be a time series
-        self.ax.xaxis.set_major_locator(MultipleLocator(int(xtick_major)))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(int(xtick_minor)))
-
-        plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
-        plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
 
 
 def parse_args():
@@ -1771,7 +1926,7 @@ def parse_args():
                 e.g., alphabetical_r sort will go Z->A"
                 """)
                         )
-    parser.add_argument("--scale_by", default="normalize", type=str, nargs="?",
+    parser.add_argument("--scale_by", default=None, type=str, nargs="?",
                         help=textwrap.dedent("""
             How to sort the Y-axis of the record section
             - None: Not set, no amplitude scaling, waveforms shown raw
@@ -1780,12 +1935,23 @@ def parse_args():
             - 'global_norm': scale by the largest amplitude to be displayed on
                 the screen. Will not consider waveforms which have been 
                 excluded on other basis (e.g., wrong component)
-            - 'geometric_spreading': scale amplitudes globally by predicting the
-                expected geometric spreading amplitude reduction and correcting
-                for this factor. Requires `geometric_spreading_factor`, optional
-                `geometric_spreading_k_val`
                 """)
                         )
+    parser.add_argument("--geometric_spreading_factor", default=0.5, type=float,
+                        help="Scale amplitudes by predicting the "
+                             "expected geometric spreading amplitude reduction "
+                             "and correcting for it. This defaults to 0.5. "
+                             "Optional related parameter: "
+                             "--geometric_spreading_k_val")
+    parser.add_argument("--geometric_spreading_exclude", default=None,
+                        nargs="+", type=str,
+                        help="Comma separated list of stations to exclude from "
+                             "the geometric spreading equation. e.g., "
+                             "'STA1,STA2,STA3'")
+    parser.add_argument("--geometric_spreading_ymax", default=None,
+                        nargs="?", type=float,
+                        help="Controls the y-max value on the geometric "
+                             "spreading plot.")
     parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
                         help="Set a constant time shift in unit: seconds")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
@@ -1859,7 +2025,7 @@ def parse_args():
         if arg.startswith(("-", "--")):
             parser.add_argument(arg.split("=")[0])
 
-    return parser.parse_args()
+    return parser
 
 
 def plotw_rs(*args, **kwargs):
@@ -1902,7 +2068,12 @@ def main():
     .. rubric::
         $ recsec -h
     """
-    plotw_rs(**vars(parse_args()))
+    parser = parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
+    plotw_rs(**vars(parser.parse_args()))
 
 
 if __name__ == "__main__":

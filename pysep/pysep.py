@@ -30,7 +30,7 @@ from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing)
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
-from pysep.utils.io import read_yaml, read_event_file, write_stations_file
+from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw,
@@ -53,7 +53,7 @@ class Pysep:
                  pre_filt="default", mindistance=0, maxdistance=20E3,
                  minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
-                 maxlongitude=None, resample_freq=50, scale_factor=1,
+                 maxlongitude=None, resample_freq=None, scale_factor=1,
                  phase_list=None, seconds_before_event=20,
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
@@ -424,11 +424,16 @@ class Pysep:
         :param overwrite_event: overwrite event search parameters (origin time,
             lat, lon etc.) from the YAML config file. Defaults to True
         """
+        ignore_keys = []
         if config_file is None:
             config_file = self.config_file
         if not overwrite_event:
-            logger.info("will NOT overwrite event search parameters with "
-                        "config file")
+            logger.info("will NOT overwrite event search parameters (including "
+                        "origin and reference time) with config file")
+            # Set parameters to ignore when overwriting from config file
+            ignore_keys = ["origin_time", "reference_time", "event_latitude",
+                           "event_longitude", "event_depth_km",
+                           "event_magnitude"]
 
         if config_file is not None:
             logger.info(f"overwriting default parameters with config file: "
@@ -436,8 +441,7 @@ class Pysep:
             config = read_yaml(config_file)
             for key, val in config.items():
                 if hasattr(self, key):
-                    if not overwrite_event and \
-                            key.startswith(("event_", "origin_time")):
+                    if key in ignore_keys:
                         continue
                     old_val = getattr(self, key)
                     if val != old_val:
@@ -691,7 +695,7 @@ class Pysep:
                 bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
-        assert(bulk), (
+        assert bulk, (
             f"station curtailing has removed any stations to query data for. "
             f"please check your `distance` and `azimuth` curtailing criteria "
             f"and try again"
@@ -771,7 +775,7 @@ class Pysep:
                                 taper=bool(self.taper_percentage),
                                 taper_fraction=self.taper_percentage,
                                 zero_mean=self.demean,
-                                output=self.output_unit
+                                output=self.output_unit,
                                 )
                         except ValueError as e:
                             logger.warning(f"can't remove response {code}: {e}"
@@ -788,7 +792,8 @@ class Pysep:
 
         # Apply pre-resample lowpass, resample waveforms, make contiguous
         st_out = merge_and_trim_start_end_times(st_out)
-        st_out = resample_data(st_out, resample_freq=self.resample_freq)
+        if self.resample_freq is not None:
+            st_out = resample_data(st_out, resample_freq=self.resample_freq)
 
         return st_out
 
@@ -901,7 +906,8 @@ class Pysep:
             for sta in stations:
                 _st = st_rtz.select(station=sta)
                 _st.rotate(method="NE->RT")  # in place rot.
-                logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
+                if hasattr(_st[0].stats, "back_azimuth"):
+                    logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
             st_out += st_rtz
 
         st_out = format_sac_headers_post_rotation(st_out)
@@ -989,7 +995,7 @@ class Pysep:
                                stations_fid or "stations_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
-            write_stations_file(self.inv, self.event, fid)
+            write_pysep_stations_file(self.inv, self.event, fid)
 
         if "inv" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
@@ -1258,7 +1264,7 @@ def parse_args():
         if arg.startswith(("-", "--")):
             parser.add_argument(arg.split("=")[0])
 
-    return parser.parse_args()
+    return parser
 
 
 def get_data(config_file=None, event=None, inv=None, st=None, write_files=None,
@@ -1378,7 +1384,13 @@ def main():
         $ pysep -c config.yaml
     """
     config_files, events = [], None
-    args = parse_args()
+    parser = parse_args()
+    # Print help message if no arguments are given
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+    # Grab arguments from parser and continue
+    args = parser.parse_args()
     # Write out a blank configuration file to use as a template
     if args.write:
         sep = Pysep()
@@ -1409,7 +1421,10 @@ def main():
             sep = Pysep(config_file=config_file, **vars(args))
             sep.run()
     else:
-        # Event File run, use the same config by parse through events
+        # Event File run, use the same Config to parse through events
+        # NOTE: Does not allow a unique reference time, reference time is FORCED
+        #   to be the origin time; ignores reference time in par file
+        logger.info(f"looping over {len(events)} events for event file run")
         for event in events:
             sep = Pysep(config_file=config_files[0],
                         origin_time=event["origin_time"],

@@ -2,16 +2,132 @@
 """
 Pysep plotting utilities
 """
-import math
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib.ticker import MultipleLocator
 from obspy.core.event import Catalog
-from obspy.geodetics import gps2dist_azimuth
-from obspy.taup import TauPyModel
+from obspy.geodetics import gps2dist_azimuth, degrees2kilometers
 
 from pysep import logger
 from pysep.utils.fmt import format_event_tag
+
+
+def plot_geometric_spreading(distances, max_amplitudes,
+                             geometric_spreading_factor, geometric_k_value,
+                             units="km", station_ids=None, include=None,
+                             show=False, save="geometric_spreading.png",
+                             ymax=None, **kwargs):
+    """
+    Plot a scatter plot of peak amplitudes vs distance and a corresponding line
+    representing geometric scatter. Allow ignoring stations by index.
+
+    .. note::
+        see recsec.RecordSection._calculate_geometric_spreading() for more
+        information on this function
+
+    :type distances: list or np.array
+    :param distances: source-receiver distance in units `units`
+    :type max_amplitudes: list or np.array
+    :param max_amplitudes: peak amplitudes, units irrelevant
+    :type units: st
+    :param units: 'km' or 'deg' for kilometers or degrees, respectively. used
+        for the x-axis label only
+    :type geometric_spreading_factor: float
+    :param geometric_spreading_factor: exponent for spreading eq
+    :type geometric_k_value: float
+    :param geometric_k_value: constant scale factor for spreading eq
+    :type station_ids: list or np.array
+    :param station_ids: station ids for optional text labels
+    :type include: list or np.array
+    :param include: indices of stations included in equation, used for colors
+    :type show: bool
+    :param show: show the figure after generation
+    :type save: str
+    :param save: file name to save figure
+    :type ymax: float
+    :param ymax: set the ceiling y limit manually (incase some stations are
+        scaled improperly which would throw off all the scaling). Also cuts
+        off any stations above this limit and plots them differently
+    """
+    dpi = kwargs.get("dpi", 100)
+    figsize = kwargs.get("figsize", (12, 8))
+
+    logger.info(f"plotting geometric spreading: '{save}'")
+    f, ax = plt.subplots(1, dpi=dpi, figsize=figsize)
+
+    # Convert from units deg -> km if desired
+    if "km" in units:
+        plot_distances = degrees2kilometers(distances)
+    else:
+        plot_distances = distances
+
+    # Plot all stations in the list, specially mark excluded stations
+    for i, (x, y) in enumerate(zip(plot_distances, max_amplitudes)):
+        # list conversion so we can check list length as a boolean
+        if list(include) and i not in include:
+            ec = "r"
+        else:
+            ec = "k"
+        if ymax and y >= ymax:
+            plt.scatter(x, ymax, marker="^", edgecolor=ec, c="w", s=50)
+        else:
+            plt.scatter(x, y, marker="o", edgecolor=ec, c="w", s=50)
+
+    # Plot station ids next to markers if given
+    if station_ids is not None:
+        for x, y, s in zip(plot_distances, max_amplitudes, station_ids):
+            if ymax and y >= ymax:
+                plt.text(x, ymax, f"{s}\n{y.max():.2E}", fontsize=8)
+            else:
+                plt.text(x, y, s, fontsize=8)
+
+    # Need to generate the line that w-vector follows with distances in unit deg
+    x = np.arange(1E-7, distances.max() * 1.5, 0.01)  # units: deg
+    sin_d = (np.sin(np.array(x) / (180 / np.pi)))
+    y = geometric_k_value / (sin_d ** geometric_spreading_factor)
+    lb = f"A(d)={geometric_k_value:.2E} / (sin d)**{geometric_spreading_factor}"
+    # Convert w-vector x units deg -> km if desired
+    if "km" in units:
+        x = degrees2kilometers(x)
+    w = plt.plot(x, y, "k--", lw=3, label=lb)
+
+    # Create some legend markers
+    m1 = plt.scatter(-1, -1, edgecolor="k", c="w", marker="o",
+                     s=50, label="Included", linestyle="None")
+    m2 = plt.scatter(-1, -1, edgecolor="r", c="w", marker="o",
+                     s=50, label="Excluded", linestyle="None")
+    m3 = plt.scatter(-1, -1, edgecolor="r", c="w", marker="^",
+                     s=50, label="Out of Bounds", linestyle="None")
+    plt.legend(handles=[w[0], m1, m2, m3])
+
+    # Final touches for 'publication-ready' look
+    plt.xlabel(f"Source-Receiver Distance ({units})")
+    plt.ylabel("Peak Amplitude")
+    plt.xlim([0, plot_distances.max() * 1.1])
+
+    if ymax:
+        plt.ylim([0, ymax])
+    else:
+        plt.ylim([0, max_amplitudes.max() * 1.1])
+
+    # One last check for plot aesthetic, degrees vs km.
+    if "km" in units:
+        xtick_minor = 10
+        xtick_major = 100
+    else:  # degrees
+        xtick_minor = 0.5
+        xtick_major = 1
+
+    set_plot_aesthetic(ax=ax, xtick_fontsize=12, ytick_fontsize=12,
+                       title_fontsize=13, xlabel_fontsize=13,
+                       ylabel_fontsize=13, xtick_minor=xtick_minor,
+                       xtick_major=xtick_major)
+    plt.grid(visible=True, which="both", axis="y", alpha=0.5, linewidth=1)
+
+    if save:
+        plt.savefig(save)
+    if show:
+        plt.show()
 
 
 def plot_source_receiver_map(inv, event, save="./station_map.png",
@@ -85,69 +201,50 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
         plt.show()
 
 
-def plot_phases():
+def set_plot_aesthetic(ax, **kwargs):
     """
-    Tool to plot phases
+    Give a nice look to the output figure by creating thick borders on the
+    axis, adjusting fontsize etc. All plot aesthetics should be placed here
+    so it's easiest to find.
 
-    TODO fix this up
-
-    Kyle Smith
-    January 29,2018
-    :return:
+    .. note::
+        This was copy-pasted from Pyatoa.visuals.insp_plot.default_axes()
     """
-    phases=["S"]
-    phases2=["s"]
-    sourcedepth = 100
-    taup_model = "ak135"
-    dists = list(np.arange(0,180,1))
-    model = TauPyModel(model=taup_model)
-    Phase1arrivals = []
-    Phase2arrivals = []
-    Phase1_IA = []
-    Phase2_IA = []
-    for dist_deg in dists[:]:
-        temparr = model.get_travel_times(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases[0]])
-        temparr2 = model.get_travel_times(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases2[0]])
+    ytick_fontsize = kwargs.get("ytick_fontsize", 8)
+    xtick_fontsize = kwargs.get("xtick_fontsize", 12)
+    tick_linewidth = kwargs.get("tick_linewidth", 1.5)
+    tick_length = kwargs.get("tick_length", 5)
+    tick_direction = kwargs.get("tick_direction", "in")
+    xlabel_fontsize = kwargs.get("xlabel_fontsize", 10)
+    ylabel_fontsize = kwargs.get("ylabel_fontsize", 10)
+    axis_linewidth = kwargs.get("axis_linewidth", 2.)
+    title_fontsize = kwargs.get("title_fontsize", 10)
+    xtick_minor = kwargs.get("xtick_minor", 25)
+    xtick_major = kwargs.get("xtick_major", 100)
+    spine_zorder = kwargs.get("spine_zorder", 8)
 
-        # there may be something wrong with obpsy and plotting since the error is that the arrivals does not have the attribute for plot_rays(), see Vipul's email for another way to plot.
-        try:
-            somearray = model.get_ray_paths(source_depth_in_km=sourcedepth,distance_in_degree=dist_deg,phase_list=[phases[0]])
+    ax.title.set_fontsize(title_fontsize)
+    ax.tick_params(axis="both", which="both", width=tick_linewidth,
+                        direction=tick_direction, length=tick_length)
+    ax.tick_params(axis="x", labelsize=xtick_fontsize)
+    ax.tick_params(axis="y", labelsize=ytick_fontsize)
+    ax.xaxis.label.set_size(xlabel_fontsize)
+    ax.yaxis.label.set_size(ylabel_fontsize)
 
-        except:
-            print('no somearray!')
+    # Thicken up the bounding axis lines
+    for axis in ["top", "bottom", "left", "right"]:
+        ax.spines[axis].set_linewidth(axis_linewidth)
 
-        if len(temparr)==0:
-            Phase1arrivals.append(math.nan)
-            Phase1_IA.append(math.nan)
-        else:
-            Phase1arrivals.append(temparr[0].time)
-            Phase1_IA.append(temparr[0].incident_angle)
-        if len(temparr2)==0:
-            Phase2arrivals.append(math.nan)
-            Phase2_IA.append(math.nan)
-        else:
-            Phase2arrivals.append(temparr2[0].time)
-            Phase2_IA.append(temparr2[0].incident_angle)
-    dkm = dists
-    #dkm = [a*111 for a in dists]
-    f1 = plt.figure(1)
-    L2, = plt.plot(dkm,Phase2arrivals,'ro',label=phases2[0])
-    L1, = plt.plot(dkm,Phase1arrivals,'b*',label=phases[0])
-    plt.xlim(0, 180)
-    plt.legend(handles=[L1,L2])
-    plt.ylabel("Time after EQ origin time (s)")
-    plt.xlabel("Source-Receiver Distance (deg)")
-    plt.title("Source depth:" + str(sourcedepth) + " km")
-    f1.show()
+    # Set spines above azimuth bins
+    for spine in ax.spines.values():
+        spine.set_zorder(spine_zorder)
 
-    f2 = plt.figure(2)
-    L2, = plt.plot(dkm,Phase2_IA,'ro',label=phases2[0])
-    L1, = plt.plot(dkm,Phase1_IA,'b*',label=phases[0])
-    plt.xlim(0, 180)
-    plt.legend(handles=[L1,L2])
-    plt.ylabel("Incident Angle(deg)")
-    plt.xlabel("Source-Receiver Distance(deg)")
-    plt.title("Source depth:" + str(sourcedepth) + " km")
-    f2.show()
+    # Set xtick label major and minor which is assumed to be a time series
+    ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
+    ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
 
-    input()
+    plt.sca(ax)
+    plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
+    plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
+
+    return ax

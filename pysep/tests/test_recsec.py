@@ -9,6 +9,7 @@ Test the general functionality of the RECord SECtion plotter.
 """
 import os
 import pytest
+import numpy as np
 from copy import copy
 from pysep import RecordSection
 
@@ -121,3 +122,18 @@ def test_plot_recsec_plot_options(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+
+def test_recsec_calc_time_offset(recsec_w_synthetics):
+    """testing that synthetics and data which do not share origin time 
+    plot together correctly by checking that the time offsets are calced"""
+    # Pad 100s zeros to data and shift starttime to match
+    for tr in recsec_w_synthetics.st:
+        tr.data = np.append(np.zeros(int(100 * tr.stats.sampling_rate)), 
+                            tr.data)
+        tr.stats.starttime -= 100
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    for tr in recsec_w_synthetics.st:
+        assert(tr.stats.time_offset == -100)

@@ -11,6 +11,3 @@ waveform data.
 - As part of the [SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` has been 
 [containerized](https://github.com/SeisSCOPED/pysep/pkgs/container/pysep) 
 using Docker.
-
-
-

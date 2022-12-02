@@ -38,7 +38,7 @@ remove_response: true
 output_unit: VEL
 water_level: 60
 pre_filt: default
-scale_factor: 100.0
+scale_factor: 1.0
 resample_freq: 5
 remove_clipped: false
 log_level: DEBUG
