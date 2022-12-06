@@ -590,10 +590,10 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt"):
                         f"{dist_km:8.3f} {az:6.2f}\n")
 
 
-def write_specfem_stations_file(inv, fid="./STATIONS", elevation=False,
-                                burial=0.):
+def write_stations_file(inv, fid="./STATIONS", order_by=None,
+                        use_elevation=False, burials=None):
     """
-    Write a SPECFEM3D STATIONS file given an ObsPy inventory object
+    Write a SPECFEM STATIONS file given an ObsPy inventory object
 
     .. note::
         If topography is implemented in your mesh, elevation values should be
@@ -607,21 +607,49 @@ def write_specfem_stations_file(inv, fid="./STATIONS", elevation=False,
     :param inv: Inventory object with station locations to write
     :type fid: str
     :param fid: path and file id to save the STATIONS file to.
-    :type elevation: bool
-    :param elevation: if True, sets the actual elevation value from the
+    :type order_by: str
+    :param order_by: how to order the stations written to file. Available
+        are: network, station, latitude, longitude, elevation, burial.
+        If not given, order is determined by the internal sorting of the
+        input Inventory
+    :type use_elevation: bool
+    :param use_elevation: if True, sets the actual elevation value from the
         inventory. if False, sets elevation to 0.
-    :type burial: float
-    :param burial: the constant value to set burial values to. defaults to 0.
+    :type burials: list of float
+    :param burials: If the User has burial information they want to be used as
+        the last column. Length of `burials` must match the number of stations
+        in the inventory when traversing by network and station
     """
+    # Simply generate lists by traversing through the inventory
+    i = 0
+    stations = []
+    keys = ["network", "station", "latitude",
+            "longitude", "elevation", "burial"]
+    if order_by:
+        assert(order_by in keys), f"`order_by` must be in {keys}"
+
     with open(fid, "w") as f:
         for net in inv:
             for sta in net:
-                lat = sta.latitude
-                lon = sta.longitude
-                if elevation:
-                    elv = sta.elevation
+                if use_elevation:
+                    elevation = sta.elevation
                 else:
-                    elv = 0.
+                    elevation = 0.
+                if burials:
+                    burial = burials[i]
+                else:
+                    burial = 0.
+                stations.append([sta.code, net.code, sta.latitude,
+                                 sta.longitude, elevation, burial])
+                i += 1
 
-                f.write(f"{sta.code:>6}{net.code:>6}{lat:12.4f}{lon:12.4f}"
-                        f"{elv:7.1f}{burial:7.1f}\n")
+    # Set the order of the station file based on the order of keys
+    if order_by:
+        idx = keys.index(order_by)
+        stations.sort(key=lambda x: x[idx])
+
+    with open(fid, "w") as f:
+        for s in stations:
+            f.write(f"{s[0]:>6}{s[1]:>6}{s[2]:12.4f}{s[3]:12.4f}"
+                    f"{s[4]:7.1f}{s[5]:7.1f}\n"
+                    )
