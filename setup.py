@@ -10,10 +10,10 @@ install_requires = [
         ]
 
 setup(name="pysep",
-      version='0.1.0',
+      version='0.2.0',
       description="Python Seismogram Extraction and Processing",
-      url="http://github.com/uafgeotools/pysep",
-      author='UAFGeotools',
+      url="http://github.com/adjtomo/pysep",
+      author='adjTomo Dev Team',
       license='GPL-3.0',
       python_requires=">=3.7",
       packages=find_packages(),
