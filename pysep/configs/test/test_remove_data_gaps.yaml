@@ -1,3 +1,5 @@
+# Testing Data gap removal
+# FIB has data gaps, should be removed from final data retrieval
 event_tag: 2009-04-07T201255_SOUTHERN_ALASKA
 config_file: null
 client: IRIS
@@ -13,7 +15,7 @@ event_longitude: -149.7428
 event_depth_km: 33.033
 event_magnitude: 4.6
 networks: AK
-stations: 'BMR,DIV,EYAK'
+stations: 'FIB,SWD'
 channels: BH?
 locations: '*'
 reference_time: '2009-04-07T20:12:55.351000Z'
@@ -42,3 +44,4 @@ scale_factor: 1.0
 resample_freq: 50
 remove_clipped: false
 log_level: DEBUG
+
