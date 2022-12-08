@@ -559,7 +559,8 @@ def write_sem(st, unit, path="./", time_offset=0):
         np.savetxt(fid, data, ["%13.7f", "%17.7f"])
 
 
-def write_pysep_stations_file(inv, event, fid="./stations_list.txt"):
+def write_pysep_stations_file(inv, event, fid="./stations_list.txt", 
+                              order_by=None):
     """
     Write a list of station codes, distances, etc. useful for understanding
     characterization of all collected stations
@@ -572,22 +573,43 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt"):
         skip over StationXML/inventory searching
     :type fid: str
     :param fid: name of the file to write to. defaults to ./stations_list.txt
+    :type order_by: str
+    :param order_by: how to order the stations written to file. Available
+        are: network, station, latitude, longitude, elevation, burial.
+        If not given, order is determined by the internal sorting of the
+        input Inventory
     """
+    # Key indices correspond to stations list
+    keys = ["station", "network", "latitude", "longitude", "distance",
+            "azimuth"]
+    if order_by:
+        assert(order_by in keys), f"`order_by` must be in {keys}"
+
     event_latitude = event.preferred_origin().latitude
     event_longitude = event.preferred_origin().longitude
+    
+    stations = [] 
+    for net in inv:
+        for sta in net:
+            dist_m, az, baz = gps2dist_azimuth(lat1=event_latitude,
+                                               lon1=event_longitude,
+                                               lat2=sta.latitude,
+                                               lon2=sta.longitude
+                                               )
+            dist_km = dist_m * 1E-3
+            stations.append([sta.code, net.code, sta.latitude, sta.longitude,
+                             dist_km, az])
+
+    # Set the order of the station file based on the order of keys
+    if order_by:
+        idx = keys.index(order_by)
+        stations.sort(key=lambda x: x[idx])
 
     with open(fid, "w") as f:
-        for net in inv:
-            for sta in net:
-                dist_m, az, baz = gps2dist_azimuth(lat1=event_latitude,
-                                                   lon1=event_longitude,
-                                                   lat2=sta.latitude,
-                                                   lon2=sta.longitude
-                                                   )
-                dist_km = dist_m * 1E-3
-                f.write(f"{sta.code:<6} {net.code:<2} "
-                        f"{sta.latitude:9.4f} {sta.longitude:9.4f} "
-                        f"{dist_km:8.3f} {az:6.2f}\n")
+        for s in stations:
+            # Order follows that listed in 'keys'
+            f.write(f"{s[0]:<6} {s[1]:<2} {s[2]:9.4f} {s[3]:9.4f} {s[4]:8.3f} "
+                    f"{s[5]:6.2f}\n")
 
 
 def write_stations_file(inv, fid="./STATIONS", order_by=None,

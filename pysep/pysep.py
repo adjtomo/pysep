@@ -65,10 +65,6 @@ class Pysep:
         """
         Define a default set of parameters
 
-        TODO
-            * removed resample_TF, was this used?
-            * load config FIRST and then set defaults, make all defaults None?
-
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
             NCEDC or any FDSN clients accepted by ObsPy
@@ -1162,6 +1158,8 @@ class Pysep:
         self.check()
         self.c = self.get_client()
 
+
+        import pdb;pdb.set_trace()
         # Get metadata (QuakeML, StationXML)
         if event is None:
             self.event = self.get_event()
