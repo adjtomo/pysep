@@ -890,8 +890,8 @@ class Pysep:
                 # important as some IRIS data will be in ZNE but not be aligned
                 # https://github.com/obspy/obspy/issues/2056
                 _st.rotate(method="->ZNE", inventory=self.inv, 
-                           components=["ZNE"])
-            st_out += st_zne
+                           components=["ZNE", "Z12", "123"])
+                st_out += _st
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
             st_uvw = rotate_to_uvw(st_out)
@@ -908,9 +908,12 @@ class Pysep:
                 _st.rotate(method="NE->RT")  # in place rot.
                 if hasattr(_st[0].stats, "back_azimuth"):
                     logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
-            st_out += st_rtz
-
-        st_out = format_sac_headers_post_rotation(st_out)
+                st_out += _st
+        
+        try:
+            st_out = format_sac_headers_post_rotation(st_out)
+        except AttributeError as e:
+            logger.warning(f"cannot format SAC headers after rotating {e}")
 
         return st_out
 
