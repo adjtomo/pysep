@@ -1,7 +1,0 @@
-name: pysep
-channels:
-  - conda-forge
-  - defaults
-dependencies:
-  - obspy
-  - cartopy
