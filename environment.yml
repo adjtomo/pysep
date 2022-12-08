@@ -1,0 +1,13 @@
+name: pysep
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - pip
+    - obspy
+    - cartopy
+    - pyyaml
+    - pip:
+      - git+https://github.com/krischer/llnl_db_client.git
+      - -e .
+       

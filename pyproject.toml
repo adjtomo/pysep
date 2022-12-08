@@ -3,19 +3,15 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PySEP"
+name = "pysep"
+version = "0.2.0"
 description = "Python Seismogram Extraction and Processing"
 readme = "README.md"
 requires-python = ">=3.7"
-license = "MIT"
-version = "0.2.0"
+license = {file = "LICENSE.txt"}
 authors = [
     {name = "adjTomo Dev Team"},
     {email = "adjtomo@gmail.com"}
-]
-maintainers = [
-    {name = "Bryant Chow",
-     email = "bhchow@alaska.edu"}
 ]
 dependencies = [
     "obspy",
@@ -25,9 +21,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest",
-]
+test = ["pytest"]
+dev = ["pytest", "ipython", "ipdb"]
 
 [project.urls]
 homepage = "https://github.com/adjtomo/"
@@ -36,4 +31,4 @@ repository = "https://github.com/adjtomo/pysep"
 
 [project.scripts]
 pysep = "pysep.pysep:main"
-recsec = "pysep.recsec.main"
+recsec = "pysep.recsec:main"
