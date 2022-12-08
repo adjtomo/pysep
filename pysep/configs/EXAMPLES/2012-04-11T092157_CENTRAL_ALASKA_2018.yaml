@@ -1,4 +1,5 @@
 # Testing IU Rotation Error - PySEP Issue #37
+# IU.COLA raw stream returns 12Z which gets rotated appropriately
 event_tag: null
 config_file: null
 client: IRIS
