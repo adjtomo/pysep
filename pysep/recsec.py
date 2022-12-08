@@ -1887,7 +1887,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(
         description="Input basic record section params",
-        formatter_class=argparse.RawTextHelpFormatter,
+        # formatter_class=argparse.RawTextHelpFormatter,
                                      )
 
     parser.add_argument("-p", "--pysep_path", default="./", type=str, nargs="?",
