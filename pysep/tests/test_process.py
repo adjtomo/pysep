@@ -224,6 +224,6 @@ def test_rotate_streams_12z():
     sep.inv = read_inventory("./test_data/test_12Z_data/inv.xml")
 
     st_rotate = sep.rotate_streams()
-
-    import pdb;pdb.set_trace()
+    components = "".join(sorted([_.stats.component for _ in st_rotate]))
+    assert(components == "ENZ")
 
