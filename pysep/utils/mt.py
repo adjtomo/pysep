@@ -159,7 +159,7 @@ def get_gcmt_moment_tensor(event=None, origintime=None, magnitude=None,
             "https://www.ldeo.columbia.edu/~gcmt/projects/CMT/"
             f"catalog/NEW_MONTHLY/{year_long}/{fid}"
         )
-    except HTTPError:
+    except requests.HTTPError:
         cat = read_events(
             "http://www.ldeo.columbia.edu/~gcmt/projects/CMT/"
             "catalog/NEW_QUICK/qcmt.ndk"
