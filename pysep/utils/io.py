@@ -582,7 +582,7 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt",
     # Key indices correspond to stations list
     keys = ["station", "network", "latitude", "longitude", "distance",
             "azimuth"]
-    if order_stations_by and order_stations_by not in keys:
+    if order_stations_list_by and order_stations_list_by not in keys:
         logger.warning(f"`order_stations_by` must be in {keys}, "
                        f"setting default")
         order_stations_by = None
@@ -603,8 +603,8 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt",
                              dist_km, az])
 
     # Set the order of the station file based on the order of keys
-    if order_stations_by:
-        idx = keys.index(order_stations_by)
+    if order_stations_list_by:
+        idx = keys.index(order_stations_list_by)
         stations.sort(key=lambda x: x[idx])
 
     with open(fid, "w") as f:
