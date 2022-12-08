@@ -448,6 +448,13 @@ class Pysep:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
 
+        # Reset log level based on the config file
+        if self.log_level is not None:
+            logger.debug(f"`log_level` set to {self.log_level}")
+            logger.setLevel(self.log_level)
+        else:
+            logger.disabled = True
+
     def get_event(self):
         """
         Exposed API for grabbing event metadata depending on the
@@ -1248,7 +1255,7 @@ def parse_args():
                              "filled in by the User")
     parser.add_argument("-l", "--list", default=False, action="store_true",
                         help="list out avaialable `preset` config options")
-    parser.add_argument("-L", "--log_level", default="INFO", type=str,
+    parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         nargs="?", help="verbosity of logging: 'WARNING', "
                                         "'INFO', 'DEBUG'")
     parser.add_argument("--legacy_naming", default=False, action="store_true",
