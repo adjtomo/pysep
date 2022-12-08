@@ -338,6 +338,6 @@ def origin_time_from_sac_header(sac_header):
     min_ = sac_header["nzmin"]
     sec_ = sac_header["nzsec"]
     msec = sac_header["nzmsec"]
-    time_string = f"{year}-{jday:0>3}T{hour}:{min_}:{sec_}.{msec}"
+    time_string = f"{year}-{jday:0>3}T{hour:0>2}:{min_:0>2}:{sec_:0>2}.{msec}"
 
     return UTCDateTime(time_string)

@@ -65,10 +65,6 @@ class Pysep:
         """
         Define a default set of parameters
 
-        TODO
-            * removed resample_TF, was this used?
-            * load config FIRST and then set defaults, make all defaults None?
-
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
             NCEDC or any FDSN clients accepted by ObsPy
@@ -269,6 +265,10 @@ class Pysep:
         else:
             logger.disabled = True
 
+        # Allow User to throw in general kwargs. This allows things to be
+        # more general, but also may obscure some parameters.
+        self.kwargs = kwargs
+
     def check(self):
         """
         Check input parameter validity against expected Pysep behavior
@@ -447,6 +447,13 @@ class Pysep:
                     if val != old_val:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
+
+        # Reset log level based on the config file
+        if self.log_level is not None:
+            logger.debug(f"`log_level` set to {self.log_level}")
+            logger.setLevel(self.log_level)
+        else:
+            logger.disabled = True
 
     def get_event(self):
         """
@@ -890,8 +897,8 @@ class Pysep:
                 # important as some IRIS data will be in ZNE but not be aligned
                 # https://github.com/obspy/obspy/issues/2056
                 _st.rotate(method="->ZNE", inventory=self.inv, 
-                           components=["ZNE"])
-            st_out += st_zne
+                           components=["ZNE", "Z12", "123"])
+                st_out += _st
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
             st_uvw = rotate_to_uvw(st_out)
@@ -908,9 +915,12 @@ class Pysep:
                 _st.rotate(method="NE->RT")  # in place rot.
                 if hasattr(_st[0].stats, "back_azimuth"):
                     logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
-            st_out += st_rtz
-
-        st_out = format_sac_headers_post_rotation(st_out)
+                st_out += _st
+        
+        try:
+            st_out = format_sac_headers_post_rotation(st_out)
+        except AttributeError as e:
+            logger.warning(f"cannot format SAC headers after rotating {e}")
 
         return st_out
 
@@ -957,6 +967,9 @@ class Pysep:
         :type stream_fid: optional name for saved ObsPy Stream miniseed object,
             defaults to 'stream.ms'
         """
+        # Collect kwargs for writing
+        order_stations_list_by = kwargs.get("order_stations_list_by", None)
+
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
@@ -995,7 +1008,10 @@ class Pysep:
                                stations_fid or "stations_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
-            write_pysep_stations_file(self.inv, self.event, fid)
+            write_pysep_stations_file(
+                    self.inv, self.event, fid, 
+                    order_stations_list_by=order_stations_list_by
+                    )
 
         if "inv" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
@@ -1199,7 +1215,7 @@ class Pysep:
         self.st = quality_check_waveforms_after_processing(self.st)
 
         # Generate outputs for user consumption
-        self.write(**kwargs)
+        self.write(**{**kwargs, **self.kwargs})
         self.plot()
 
 
@@ -1239,7 +1255,7 @@ def parse_args():
                              "filled in by the User")
     parser.add_argument("-l", "--list", default=False, action="store_true",
                         help="list out avaialable `preset` config options")
-    parser.add_argument("-L", "--log_level", default="INFO", type=str,
+    parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         nargs="?", help="verbosity of logging: 'WARNING', "
                                         "'INFO', 'DEBUG'")
     parser.add_argument("--legacy_naming", default=False, action="store_true",

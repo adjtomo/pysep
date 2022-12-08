@@ -1,0 +1,46 @@
+# Testing IU Rotation Error - PySEP Issue #37
+# IU.COLA raw stream returns 12Z which gets rotated appropriately
+event_tag: null
+config_file: null
+client: IRIS
+client_debug: false
+timeout: 600
+taup_model: ak135
+event_selection: default
+origin_time: '2012-04-11T09:21:57.444'
+seconds_before_event: 20
+seconds_after_event: 20
+event_latitude: 64.9222
+event_longitude: -148.9461
+event_depth_km: 160.00
+event_magnitude: 3.8
+networks: 'IU'
+stations: 'COLA'
+channels: 'BH?,HH?'
+locations: '*'
+reference_time: null
+seconds_before_ref: 100
+seconds_after_ref: 600
+phase_list: null
+mindistance: 0
+maxdistance: 200.0
+minazimuth: 0
+maxazimuth: 360
+minlatitude: null
+maxlatitude: null
+minlongitude: null
+maxlongitude: null
+demean: true
+detrend: true
+taper_percentage: 0
+rotate:
+- ENZ
+- RTZ
+remove_response: true
+output_unit: VEL
+water_level: 60
+pre_filt: default
+scale_factor: 1.0
+resample_freq: 50
+remove_clipped: false
+log_level: DEBUG

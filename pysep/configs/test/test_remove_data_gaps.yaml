@@ -1,0 +1,47 @@
+# Testing Data gap removal
+# FIB has data gaps, should be removed from final data retrieval
+event_tag: 2009-04-07T201255_SOUTHERN_ALASKA
+config_file: null
+client: IRIS
+client_debug: false
+timeout: 600
+taup_model: ak135
+event_selection: default
+origin_time: '2009-04-07T20:12:55.351000Z'
+seconds_before_event: 20
+seconds_after_event: 20
+event_latitude: 61.4542
+event_longitude: -149.7428
+event_depth_km: 33.033
+event_magnitude: 4.6
+networks: AK
+stations: 'FIB,SWD'
+channels: BH?
+locations: '*'
+reference_time: '2009-04-07T20:12:55.351000Z'
+seconds_before_ref: 100
+seconds_after_ref: 300
+phase_list: null
+mindistance: 0
+maxdistance: 300.0
+minazimuth: 0
+maxazimuth: 360
+minlatitude: null
+maxlatitude: null
+minlongitude: null
+maxlongitude: null
+demean: true
+detrend: true
+taper_percentage: 0
+rotate:
+- ENZ
+- RTZ
+remove_response: true
+output_unit: VEL
+water_level: 60
+pre_filt: default
+scale_factor: 1.0
+resample_freq: 50
+remove_clipped: false
+log_level: DEBUG
+
