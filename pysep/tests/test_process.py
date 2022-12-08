@@ -173,32 +173,57 @@ def test_rotate_streams_enz(test_st, test_inv):
     """
     Test that streams rotate from ENZ even if components are already ENZ
     """
-    sep = Pysep(log_level="DEBUG", rotate=["ZNE"])
+    sep = Pysep(log_level="DEBUG", rotate=["ENZ"])
     sep.st = test_st.select(station="ALPI").copy()
     st_check = test_st.select(station="ALPI").copy()
 
     sep.inv = test_inv.select(station="ALPI")
     sep.event = test_event
 
+    # This rotates ->ZNE from ZNE. We expect the data to be the same (with some
+    # error due to floating point rounding)
     st_rotated = sep.rotate_streams()
 
     for component in ["E", "N", "Z"]:
         st_rot = st_rotated.select(component=component)
-        st_check = st_check.select(component=component)
-        for tr_rot, tr_check in zip(st_rot, st_check):
-            assert(np.all(tr_rot.data == tr_check.data))
+        st_chk = st_check.select(component=component)
+        for tr_rot, tr_check in zip(st_rot, st_chk):
+            assert(pytest.approx(np.max(tr_rot.data - tr_check.data), 3) == 0)
 
-    # Randomly assign azimuths and dips
+    # Now we randomly assign azimuths and dips to stations and rotate. We 
+    # expect data streams to have been rotated and therefore to be different
+    n = 0
     for net in sep.inv:
+        s = 0
         for sta in net:
+            c = 0
             for cha in sta:
-                sta.azimuth = random.randint(1, 89)
-                sta.dip = random.randint(1, 89)
+                sep.inv[n][s][c].azimuth = random.randint(1, 89)
+                sep.inv[n][s][c].dip = random.randint(1, 89)
+                c += 1
+            s += 1
+        n += 1
     st_rotated = sep.rotate_streams()
 
     for component in ["E", "N", "Z"]:
         st_rot = st_rotated.select(component=component)
-        st_check = st_check.select(component=component)
-        for tr_rot, tr_check in zip(st_rot, st_check):
-            assert(not np.all(tr_rot.data == tr_check.data))
+        st_chk = st_check.select(component=component)
+
+        for tr_rot, tr_check in zip(st_rot, st_chk):
+            assert(not pytest.approx(
+                np.max(tr_rot.data - tr_check.data), 3) != 0
+                   )
+
+
+def test_rotate_streams_12z():
+    """
+    Test that 12Z components can be rotated to ZNE
+    """
+    sep = Pysep(rotate=["ENZ"])
+    sep.st = read("./test_data/test_12Z_data/stream.ms")
+    sep.inv = read_inventory("./test_data/test_12Z_data/inv.xml")
+
+    st_rotate = sep.rotate_streams()
+
+    import pdb;pdb.set_trace()
 
