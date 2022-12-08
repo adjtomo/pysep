@@ -12,8 +12,8 @@ event_latitude: 61.4542
 event_longitude: -149.7428
 event_depth_km: 33.033
 event_magnitude: 4.6
-networks: AK,
-stations: 'BMR,DIV'
+networks: AK
+stations: 'BMR,DIV,EYAK'
 channels: BH?
 locations: '*'
 reference_time: '2009-04-07T20:12:55.351000Z'

@@ -560,7 +560,7 @@ def write_sem(st, unit, path="./", time_offset=0):
 
 
 def write_pysep_stations_file(inv, event, fid="./stations_list.txt", 
-                              order_by=None):
+                              order_stations_list_by=None):
     """
     Write a list of station codes, distances, etc. useful for understanding
     characterization of all collected stations
@@ -582,8 +582,10 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt",
     # Key indices correspond to stations list
     keys = ["station", "network", "latitude", "longitude", "distance",
             "azimuth"]
-    if order_by:
-        assert(order_by in keys), f"`order_by` must be in {keys}"
+    if order_stations_by and order_stations_by not in keys:
+        logger.warning(f"`order_stations_by` must be in {keys}, "
+                       f"setting default")
+        order_stations_by = None
 
     event_latitude = event.preferred_origin().latitude
     event_longitude = event.preferred_origin().longitude
@@ -601,8 +603,8 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt",
                              dist_km, az])
 
     # Set the order of the station file based on the order of keys
-    if order_by:
-        idx = keys.index(order_by)
+    if order_stations_by:
+        idx = keys.index(order_stations_by)
         stations.sort(key=lambda x: x[idx])
 
     with open(fid, "w") as f:

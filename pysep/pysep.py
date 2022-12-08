@@ -265,6 +265,10 @@ class Pysep:
         else:
             logger.disabled = True
 
+        # Allow User to throw in general kwargs. This allows things to be
+        # more general, but also may obscure some parameters.
+        self.kwargs = kwargs
+
     def check(self):
         """
         Check input parameter validity against expected Pysep behavior
@@ -953,6 +957,9 @@ class Pysep:
         :type stream_fid: optional name for saved ObsPy Stream miniseed object,
             defaults to 'stream.ms'
         """
+        # Collect kwargs for writing
+        order_stations_list_by = kwargs.get("order_stations_list_by", None)
+
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
@@ -991,7 +998,10 @@ class Pysep:
                                stations_fid or "stations_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
-            write_pysep_stations_file(self.inv, self.event, fid)
+            write_pysep_stations_file(
+                    self.inv, self.event, fid, 
+                    order_stations_list_by=order_stations_list_by
+                    )
 
         if "inv" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
@@ -1158,8 +1168,6 @@ class Pysep:
         self.check()
         self.c = self.get_client()
 
-
-        import pdb;pdb.set_trace()
         # Get metadata (QuakeML, StationXML)
         if event is None:
             self.event = self.get_event()
@@ -1197,7 +1205,7 @@ class Pysep:
         self.st = quality_check_waveforms_after_processing(self.st)
 
         # Generate outputs for user consumption
-        self.write(**kwargs)
+        self.write(**{**kwargs, **self.kwargs})
         self.plot()
 
 
