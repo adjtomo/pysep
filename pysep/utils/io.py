@@ -677,3 +677,26 @@ def write_stations_file(inv, fid="./STATIONS", order_by=None,
             f.write(f"{s[0]:>6}{s[1]:>6}{s[2]:12.4f}{s[3]:12.4f}"
                     f"{s[4]:7.1f}{s[5]:7.1f}\n"
                     )
+
+def write_cat_to_event_list(cat, fid_out="event_input.txt"):
+    """
+    Writes out an event Catalog (ObsPy object) information to an ASCII file that
+    PySEP can use for collecting data. The format of the output file is
+
+    ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
+
+    :type cat: obspy.core.catalog.Catalog
+    :param cat: Catalog of events to write out
+    """
+    with open(fid_out, "w") as f:
+        for event in cat:
+            origintime = str(event.preferred_origin().time)
+            longitude = event.preferred_origin().longitude
+            latitude = event.preferred_origin().latitude
+            depth = event.preferred_origin().depth * 1E-3
+            mag = event.preferred_magnitude().mag
+
+            f.write(f"{origintime:<31}{longitude:8.2f}{latitude:8.2f}"
+                    f"{depth:8.2f}{mag:6.1f}\n")
+    
+
