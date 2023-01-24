@@ -863,6 +863,7 @@ class Pysep:
             other components
         """
         st_raw = self.st.copy()
+
         st_raw = format_streams_for_rotation(st_raw)
 
         # For writing RAW seismograms (prior to ANY rotation). Must be 
@@ -880,25 +881,34 @@ class Pysep:
             logger.info("rotating to components ZNE")
             st_zne = st_raw.copy()
             stations = set([tr.stats.station for tr in st_zne])
+            channels = set([tr.stats.channel[:-1] for tr in st_zne])
             for sta in stations:
-                _st = st_zne.select(station=sta)
-                _inv = self.inv.select(station=sta)
-                # Print out azimuth and dip angles for debugging purposes
-                for _net in _inv:
-                    for _sta in _net:
-                        for _cha in _sta:
-                            logger.debug(
-                                f"rotating -> ZNE "
-                                f"{_net.code}.{_sta.code}.{_cha.code} with "
-                                f"az={_cha.azimuth}, dip={_cha.dip}"
-                            )
-                # components=['ZNE'] FORCES rotation using azimuth and dip 
-                # values, even if components are already in 'ZNE'. This is 
-                # important as some IRIS data will be in ZNE but not be aligned
-                # https://github.com/obspy/obspy/issues/2056
-                _st.rotate(method="->ZNE", inventory=self.inv, 
-                           components=["ZNE", "Z12", "123"])
-                st_out += _st
+                for cha in channels:
+                    _st = st_zne.select(station=sta, channel=f"{cha}?")
+                    _inv = self.inv.select(station=sta, channel=f"{cha}?")
+                    # Print out azimuth and dip angles for debugging purposes
+                    for _net in _inv:
+                        for _sta in _net:
+                            for _cha in _sta:
+                                logger.debug(
+                                    f"rotating -> ZNE "
+                                    f"{_net.code}.{_sta.code}.{_cha.code} with "
+                                    f"az={_cha.azimuth}, dip={_cha.dip}"
+                                )
+                    # components=['ZNE'] FORCES rotation using azimuth and dip 
+                    # values, even if components are already in 'ZNE'. This is 
+                    # important as some IRIS data will be in ZNE but not be 
+                    # aligned (https://github.com/obspy/obspy/issues/2056)
+                    try:
+                        _st.rotate(method="->ZNE", inventory=self.inv, 
+                                   components=["ZNE", "Z12", "123"])
+                    # General error catching for rotation because any number of
+                    # things can go wrong here based on the ObsPy rotation algo
+                    except Exception as e:
+                        logger.warning(f"rotate issue for {sta}.{cha}?, "
+                                       "removing from stream")
+                        logger.debug(f"rotate error: {e}")
+                    st_out += _st
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
             st_uvw = rotate_to_uvw(st_out)
