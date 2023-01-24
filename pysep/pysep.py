@@ -908,24 +908,30 @@ class Pysep:
                         logger.warning(f"rotate issue for {sta}.{cha}?, "
                                        "removing from stream")
                         logger.debug(f"rotate error: {e}")
+                        continue
                     st_out += _st
-        if "UVW" in self.rotate:
+            # Check to see if rotation errors kicked out all stations
+            if not st_out:
+                logger.critical("rotation errors have reduced Stream to len 0")
+                sys.exit(-1)
+            # Rotate to radial transverse coordinate system
+            if "RTZ" in self.rotate:
+                logger.info("rotating to components RTZ")
+                # If we rotate the ENTIRE stream at once, ObsPy only uses the 
+                # first backazimuth value which will create incorrect outputs
+                # https://github.com/obspy/obspy/issues/2623
+                st_rtz = st_out.copy()  
+                stations = set([tr.stats.station for tr in st_rtz])
+                for sta in stations:
+                    _st = st_rtz.select(station=sta)
+                    _st.rotate(method="NE->RT")  # in place rot.
+                    if hasattr(_st[0].stats, "back_azimuth"):
+                        logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
+                    st_out += _st
+        elif "UVW" in self.rotate:
             logger.info("rotating to components UVW")
-            st_uvw = rotate_to_uvw(st_out)
+            st_uvw = rotate_to_uvw(st_raw)
             st_out += st_uvw
-        elif "RTZ" in self.rotate:
-            logger.info("rotating to components RTZ")
-            # If we rotate the ENTIRE stream at once, ObsPy will only use the 
-            # first backazimuth value which will create incorrect outputs
-            # https://github.com/obspy/obspy/issues/2623
-            st_rtz = st_zne.copy()  # `st_zne` has been rotated to ZNE 
-            stations = set([tr.stats.station for tr in st_rtz])
-            for sta in stations:
-                _st = st_rtz.select(station=sta)
-                _st.rotate(method="NE->RT")  # in place rot.
-                if hasattr(_st[0].stats, "back_azimuth"):
-                    logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
-                st_out += _st
         
         try:
             st_out = format_sac_headers_post_rotation(st_out)
