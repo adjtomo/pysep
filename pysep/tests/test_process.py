@@ -133,7 +133,7 @@ def test_rotate_streams_fail(test_st, test_inv, test_event):
     Ensure that stream rotation does not go ahead if no back azimuth values are
     specified
     """
-    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
+    sep = Pysep(log_level="DEBUG", rotate=["ZNE", "RTZ"])
     for tr in test_st:
         del tr.stats.back_azimuth
     assert("back_azimuth" not in test_st[0].stats)
@@ -143,10 +143,10 @@ def test_rotate_streams_fail(test_st, test_inv, test_event):
     sep.event = test_event
     sep.st = sep.preprocess()  # make sure that streams are formatted correctly
 
-    # No back aizmuth attribute found
-    with pytest.raises(TypeError):
-        sep.rotate_streams()
-
+    # No back aizmuth attribute found so streams will NOT be rotated
+    st = sep.rotate_streams()
+    components = set([tr.stats.component for tr in st])
+    assert(not {"R", "T"}.issubset(components))
 
 def test_rotate_streams(test_st, test_inv, test_event):
     """

@@ -6,6 +6,7 @@ TODO add function testing clipped station, need to find example data
 """
 import os
 import pytest
+import numpy as np
 from glob import glob
 from obspy import read, read_events, read_inventory, Stream
 from obspy.io.sac.sactrace import SACTrace
@@ -14,6 +15,7 @@ from pysep.utils.cap_sac import (append_sac_headers,
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
                                  remove_stations_for_insufficient_length,
+                                 remove_traces_for_bad_data_types,
                                  subset_streams)
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy
 from pysep.utils.process import estimate_prefilter_corners
@@ -126,6 +128,18 @@ def test_remove_stations_for_missing_channels(test_st):
     st = remove_stations_for_missing_channels(st_out, networks="AK,YV")
     assert(len(st) == 3)
     assert(len(test_st) == 11)
+
+
+def test_traces_for_bad_data_types(test_st):
+    """
+    Make sure data types that aren't float or integer arent' allowed through
+    Sometimes LOG streams are stored as |S1 dtype which is string of len 1
+    """
+    st_out = test_st.copy()
+    st_out[0].data = np.array(len(test_st[0].data) *["a"], dtype="|S1")
+    st_out = remove_traces_for_bad_data_types(st_out)
+    # Removed 1 trace for bad data type
+    assert(len(test_st) - len(st_out) == 1)
 
 
 def test_plot_map(test_event, test_inv):
