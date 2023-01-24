@@ -125,7 +125,7 @@ def remove_for_clipped_amplitudes(st):
     clip_factor = 0.8 * ((2 ** (24 - 1)) ** 2) ** 0.5  # For a 24-bit signal
     for tr in st_out[:]:
         # Figure out the if any amplitudes are clipped
-        if len(tr.data[np.abs(tr.data**2)**0.5 > clip_factor]):
+        if (tr.data[np.abs(tr.data**2)**0.5 > clip_factor]).any():
             logger.info(f"removing {tr.get_id()} for clipped amplitudes")
             st_out.remove(tr)
     return st_out
