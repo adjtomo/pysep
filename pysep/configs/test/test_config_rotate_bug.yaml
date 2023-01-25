@@ -1,0 +1,48 @@
+# Related to GitHub Issue #35, TypeError thrown when attempting to rotate
+# a stream with missing metadata. This issue is fixed but the Config is 
+# here to provide the station data used to test this issue
+event_tag: null
+config_file: null
+client: IRIS
+client_debug: false
+timeout: 600
+taup_model: ak135
+event_selection: default
+origin_time: "2015-06-24T22:32:21.166000Z"
+seconds_before_event: 20
+seconds_after_event: 20
+event_latitude: 61.664
+event_longitude: -151.962
+event_depth_km: 114.2
+event_magnitude: 5.8
+networks: 'TA'
+stations: 'O18K'
+channels: 'BH?,LH?,UH?,VH?'  # These have missing dip or azi values
+locations: '*'
+reference_time: null
+seconds_before_ref: 100
+seconds_after_ref: 300
+phase_list: null
+mindistance: 0
+maxdistance: 20000.0
+minazimuth: 0
+maxazimuth: 360
+minlatitude: null
+maxlatitude: null
+minlongitude: null
+maxlongitude: null
+demean: true
+detrend: true
+taper_percentage: 0
+rotate:
+- ZNE
+- RTZ
+remove_response: true
+output_unit: VEL
+water_level: 60
+pre_filt: default
+scale_factor: 1
+resample_freq: null
+remove_clipped: false
+log_level: DEBUG
+kwargs: {}

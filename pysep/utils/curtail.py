@@ -89,6 +89,7 @@ def quality_check_waveforms_before_processing(st):
 
     st_out = rename_channels(st_out)
     st_out = remove_stations_for_missing_channels(st_out)  # LL network ONLY!
+    st_out = remove_traces_for_bad_data_types(st_out)
     st_out = remove_for_clipped_amplitudes(st_out)
 
     return st_out
@@ -110,6 +111,30 @@ def quality_check_waveforms_after_processing(st):
     return st_out
 
 
+def remove_traces_for_bad_data_types(st):
+    """
+    Removed traces from a Stream that have unexpected data types. This might
+    occur if e.g., you wildcard the channel and end up grabbing LOG data, which
+    uses letters.
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to check clipping for
+    :rtype st: obspy.core.stream.Stream
+    :return st: curtailed stream with clipped traces removed
+    """
+    # NumPy data types smart enough that int32 or int64 will match to 'int'
+    acceptable_data_types = [np.integer, np.floating]
+    st_out = st.copy()
+    for tr in st_out[:]:
+        for dtype in acceptable_data_types:
+            if np.issubdtype(tr.data.dtype, dtype):
+                break
+        else:
+            logger.warning(f"{tr.get_id()} bad data type: {tr.data.dtype}")
+            st_out.remove(tr)
+    return st_out
+
+
 def remove_for_clipped_amplitudes(st):
     """
     Removed stations with clipped amplitudes
@@ -125,7 +150,7 @@ def remove_for_clipped_amplitudes(st):
     clip_factor = 0.8 * ((2 ** (24 - 1)) ** 2) ** 0.5  # For a 24-bit signal
     for tr in st_out[:]:
         # Figure out the if any amplitudes are clipped
-        if len(tr.data[np.abs(tr.data**2)**0.5 > clip_factor]):
+        if (tr.data[np.abs(tr.data**2)**0.5 > clip_factor]).any():
             logger.info(f"removing {tr.get_id()} for clipped amplitudes")
             st_out.remove(tr)
     return st_out
