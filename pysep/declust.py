@@ -454,40 +454,47 @@ class Declust:
         cat_out = self.index_cat(idxs=np.where(cat_flag == 1)[0], cat=self.cat)
 
         if plot:
-            # 1. Plot the original catalog
-            f_og, ax_og = self.plot(
-                inv=self.inv, show=False, save=None,
-                title=f"Original Event Catalog N={len(self.cat)}",
-                color_by="depth", vmin=0, vmax=self.depths.max()
+            # Plot the original catalog
+            self._plot_cartesian(
+                cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
+                title=f"Pre-Declustered Event Catalog N={len(self.cat)}",
+                save=os.path.join(plot_dir, f"pre_decluster_crtsn.png")
             )
-            lkwargs = dict(c="k", linewidth=0.5, alpha=0.5)
-            # Add gridlines to the plot
-            for xe in xedges:
-                ax_og.axvline(xe, **lkwargs)
-            for ye in yedges:
-                ax_og.axhline(ye, **lkwargs)
-
-            plt.savefig(os.path.join(plot_dir, f"original_event_catalog.png"))
-            plt.close()
-
-            # 2. Plot the declustered catalog
-            f_dc, ax_dc = self.plot(
-                cat=cat_out, inv=self.inv, show=False, save=None,
+            # Plot the declustered catalog
+            self._plot_cartesian(
+                cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
-                color_by="depth", vmin=0, vmax=self.depths.max()
+                save=os.path.join(plot_dir, f"declustered_crtsn.png"),
             )
-            # Add gridlines to the plot
-            for xe in xedges:
-                ax_dc.axvline(xe, **lkwargs)
-            for ye in yedges:
-                ax_dc.axhline(ye, **lkwargs)
-
-            plt.savefig(os.path.join(plot_dir,
-                                     f"cartesian_decluster_catalog.png"))
-            plt.close()
+            # Plot events that were removed during declustering
+            cat_rem = self.index_cat(idxs=np.where(cat_flag == 0)[0],
+                                     cat=self.cat)
+            self._plot_cartesian(
+                cat=cat_rem, inv=self.inv, xedges=xedges, yedges=yedges,
+                title=f"Removed Events N={len(cat_rem)}",
+                save=os.path.join(plot_dir, f"removed_crtsn.png")
+            )
 
         return cat_out
+
+    def _plot_cartesian(self, cat, inv, xedges, yedges, title, save):
+        """Convenience function to plot catalogs with edges"""
+        # 1. Plot the original catalog
+        f, ax = self.plot(
+            cat=cat, inv=inv, show=False, save=None, title=title,
+            color_by="depth", vmin=0, vmax=self.depths.max()
+        )
+        lkwargs = dict(c="k", linewidth=0.5, alpha=0.5)
+
+        # Add gridlines to the plot
+        for xe in xedges:
+            ax.axvline(xe, **lkwargs)
+        for ye in yedges:
+            ax.axhline(ye, **lkwargs)
+
+        plt.savefig(save)
+        plt.close()
 
     def _decluster_events_polar(self, ntheta=16, zedges=None, nkeep=1,
                                 select_by="magnitude_r", plot=False,
@@ -606,45 +613,46 @@ class Declust:
         cat_out = self.index_cat(idxs=np.where(cat_flag == 1)[0], cat=self.cat)
 
         if plot:
-            # 1. Plot the original catalog
-            f_og, ax_og = self.plot(
-                inv=self.inv, show=False, save=None,
-                title=f"Original Event Catalog N={len(self.cat)}",
-                color_by="depth", vmin=0, vmax=self.depths.max()
+            self._plot_polar(
+                self.cat, self.inv, evrad, theta_array, mid_lon, mid_lat,
+                title=f"Pre-Declustering Event Catalog N={len(self.cat)}",
+                save=os.path.join(plot_dir, f"pre_decluster_plr.png")
             )
-            ax_og.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o",
-                          s=10, linewidth=1)
-
-            # Plot each of the radial bins
-            for theta in theta_array:
-                x = 2 * evrad.max() * np.cos(theta * np.pi / 180) + mid_lon
-                y = 2 * evrad.max() * np.sin(theta * np.pi / 180) + mid_lat
-                ax_og.plot([mid_lon, x], [mid_lat, y], "k-", alpha=0.3)
-
-            plt.savefig(os.path.join(plot_dir, f"original_event_catalog.png"))
-            plt.close()
-
-            # 2. Plot the declustered catalog
-            f_dc, ax_dc = self.plot(
-                cat=cat_out, inv=self.inv, show=False, save=None,
+            self._plot_polar(
+                cat_out, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
-                color_by="depth", vmin=0, vmax=self.depths.max()
+                save=os.path.join(plot_dir, f"decluster_plr.png")
             )
-            ax_dc.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o",
-                          s=10, linewidth=1)
-
-            # Plot each of the radial bins
-            for theta in theta_array:
-                x = evrad.max() * np.cos(theta * np.pi / 180) + mid_lon
-                y = evrad.max() * np.sin(theta * np.pi / 180) + mid_lat
-                ax_dc.plot([mid_lon, x], [mid_lat, y], "k-", alpha=0.3)
-
-            plt.savefig(os.path.join(plot_dir,
-                                     f"polar_decluster_catalog.png"))
-            plt.close()
-
+            # Plot events that were removed during declustering
+            cat_rem = self.index_cat(idxs=np.where(cat_flag == 0)[0],
+                                     cat=self.cat)
+            self._plot_polar(
+                cat_rem, self.inv, evrad, theta_array, mid_lon, mid_lat,
+                title=f"Removed Events N={len(cat_rem)}\n",
+                save=os.path.join(plot_dir, f"decluster_plr.png")
+            )
         return cat_out
+
+    def _plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
+                    title, save):
+        """Convenience function to plot catalogs with radial bins"""
+        f, ax = self.plot(
+            cat=cat, inv=inv, show=False, save=None, title=title,
+            color_by="depth", vmin=0, vmax=self.depths.max()
+        )
+
+        ax.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o", s=10,
+                   linewidth=1)
+
+        # Plot each of the radial bins
+        for theta in theta_array:
+            x = evrad.max() * np.cos(theta * np.pi / 180) + mid_lon
+            y = evrad.max() * np.sin(theta * np.pi / 180) + mid_lat
+            ax.plot([mid_lon, x], [mid_lat, y], "k-", alpha=0.3)
+
+        plt.savefig(save)
+        plt.close()
 
     def plot(self, cat=None, inv=None, color_by="depth",
              connect_data_avail=False, vmin=0, vmax=None, title=None,
