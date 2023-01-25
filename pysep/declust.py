@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from obspy import Catalog
+from obspy import Catalog, UTCDateTime
 from pysep import logger
 
 
@@ -58,43 +58,171 @@ class Declust:
         """
         self.cat = cat
         self.inv = inv
-        self.data_avail = data_avail
+
+        # Allow a user-defined bounding box to define the region. Otherwise
+        # will be set based on the min/max values of the Cat and Inv
+        self._user_min_lat = min_lat
+        self._user_max_lat = max_lat
+        self._user_min_lon = min_lon
+        self._user_max_lon = max_lon
+
+        # Allow user to define data availability, otherwise it will be
+        # calculated on the fly based on the `inv` object
+        self._user_data_avail = data_avail
+
+        # Instantiate Nones and then fill up with metadata getter
+        self.evlats = None
+        self.evlons = None
+        self.stalats = None
+        self.stalons = None
+        self.depths = None
+        self.mags = None
+        self.navail = None
+        self._get_metadata()
+
+    def _get_metadata(self, cat=None, inv=None):
+        """
+        Get metadata like location and event depth and magnitude from a given
+        Cat and Inv and set as internal attributes.
+        Needs to be as separate function as `threshold_events` will cut down
+        the internal catalog representation so this will need to be re-run
+        """
+        if cat is None:
+            cat = self.cat
+        if inv is None:
+            inv = self.inv
 
         # Get longitude and latitude values from the Catalog and Inventory
         self.evlats = np.array(
-            [event.preferred_origin().latitude for event in self.cat]
+            [event.preferred_origin().latitude for event in cat]
         )
         self.evlons = np.array(
-            [event.preferred_origin().longitude for event in self.cat]
+            [event.preferred_origin().longitude for event in cat]
         )
-        self.stalats, self.stalons = [], []
-        if self.inv is not None:
-            for net in self.inv:
+        # Get additional information about events
+        self.depths = np.array(
+            [event.preferred_origin().depth * 1E-3 for event in cat]
+        )
+        self.mags = np.array(
+            [event.preferred_magnitude().mag for event in cat]
+        )
+
+        # Get information on stations
+        self.stalats, self.stalons, self.staids = [], [], []
+        if inv is not None:
+            for net in inv:
                 for sta in net:
                     self.stalats.append(sta.latitude)
                     self.stalons.append(sta.longitude)
         self.stalats = np.array(self.stalats)
         self.stalons = np.array(self.stalons)
 
-        # Get additional information about events
-        self.depths = np.array(
-            [event.preferred_origin().depth * 1E-3 for event in self.cat]
-        )
-        self.mags = np.array(
-            [event.preferred_magnitude().mag for event in self.cat]
-        )
 
         # Bound domain region based on min/max lat/lons of events and stations
-        self.min_lat = min_lat or np.append(self.evlats, self.stalats).min()
-        self.max_lat = max_lat or np.append(self.evlats, self.stalats).max()
-        self.min_lon = min_lon or np.append(self.evlons, self.stalons).min()
-        self.max_lon = max_lon or np.append(self.evlons, self.stalons).max()
+        self.min_lat = self._user_min_lat or \
+                       np.append(self.evlats, self.stalats).min()
+        self.max_lat = self._user_max_lat or \
+                       np.append(self.evlats, self.stalats).max()
+        self.min_lon = self._user_min_lon or \
+                       np.append(self.evlons, self.stalons).min()
+        self.max_lon = self._user_max_lon or \
+                       np.append(self.evlons, self.stalons).max()
+
+        self.data_avail = self._user_data_avail or self.get_data_availability()
+        self.navail = np.array([len(val) for val in self.data_avail.values()])
+
+    def threshold_events(self, zedges=None, min_mags=None, min_data=None):
+        """
+        Kick out events that fall below a given magnitude range or a given
+        data availability range. Allow this to be done for various depth
+        ranges or for the entire volume at once.
+
+        .. note::
+
+            Updates internal `cat` Catalog object and metadata in place
+
+        :type zedges: list of float
+        :param zedges: depth [km] slices to partition domain into when
+            thresholding data
+        :type min_mags: list
+        :param min_mags: a list of minimum magnitude thresholds for each depth
+            slice. If `zedges` is None, should be a list of length==1, which
+            provides minimum magnitude for entire catalog.
+            Elif `zedges` is given, should be a list of len(zedges)-1, which
+            defines minimum magnitude for each depth bin.
+            For example if zedges=[0, 35, 400], then one example is
+            min_mags=[4, 6]. Meaning between 0-34km the minimum magnitude is 4,
+            and between 35-400km the minimum magnitude is 6.
+        """
+        if zedges is None:
+            logger.warning("`zedges` not set, all depth values will be "
+                           "weighted equally")
+            zedges = [min(self.depths), max(self.depths)]
+        if min_mags is not None:
+            # Allow integer value of min mags as a blanket for all depths
+            if isinstance(min_mags, int):
+                min_mags = np.array([min_mags] * (len(zedges) - 1))
+            assert(len(min_mags) == len(zedges) - 1), (
+                f"`min_mags` must be a list of magnitudes with length of "
+                f"`zedges` - 1 ({len(zedges)-1}"
+            )
+        if min_data is not None:
+            # Allow integer value of min data as a blanket for all depths
+            if isinstance(min_data, int):
+                min_data = np.array([min_data] * (len(zedges) - 1))
+            assert (len(min_data) == len(zedges) - 1), (
+                f"`min_data` must be a list of available stations with "
+                f"length of `zedges` - 1 ({len(zedges) - 1}"
+            )
+
+        cat_flag = np.ones(len(self.cat), dtype=int)
+        for i, z_top in enumerate(zedges[:-1]):
+            z_bot = zedges[i+1]
+
+            # Deal with one depth partition at a time
+            idxs = np.where(
+                (np.abs(self.depths) < np.abs(z_bot)) &
+                (np.abs(self.depths) >= np.abs(z_top))
+            )[0]
+
+            # Kick out events with magnitudes below a certain threshold
+            if min_mags is not None:
+                # Remove events that clear the threshold magnitude criteria
+                idxs_remove = np.delete(
+                    idxs, np.where(self.mags[idxs] >= min_mags[i]),
+                    axis=0
+                )
+
+                if (idxs_remove.size) > 0:
+                    logger.info(f"{z_top:.2f}<=Z<{z_bot:.2f} min mag "
+                                f"(M{min_mags[i]}) threshold matched "
+                                f"{len(idxs_remove)} events")
+                    cat_flag[idxs_remove] *= 0
+            # Kick out events that do not have enough stations available
+            if min_data is not None:
+                # Remove events that clear the threshold data availability
+                idxs_remove = np.delete(
+                    idxs, np.where(self.navail[idxs] >= min_data[i]),
+                    axis=0
+                )
+                if (idxs_remove.size) > 0:
+                    logger.info(f"{z_top:.2f}<=Z<{z_bot:.2f} min data avail "
+                                f"(N={min_data[i]}) threshold matched "
+                                f"{len(idxs_remove)} events")
+                    cat_flag[idxs_remove] *= 0
+
+        logger.info(f"event thresholding removed "
+                    f"{len(self.cat) - cat_flag.sum()} events from cat")
+
+        # Updates the internal Catalog and metadata in place
+        self.cat = self.index_cat(idxs=np.where(cat_flag == 1)[0])
+        self._get_metadata()
 
     def index_cat(self, idxs, cat=None):
         """
         Catalog does not allow indexing by a list of values (e.g., cat[0, 1, 3])
         so this convenience function takes care of that by forming a new
-        catalog of events chosen by indices\
+        catalog of events chosen by indices
 
         :type idxs: list of int
         :param idxs: list of indices to index catalog by
@@ -109,6 +237,42 @@ class Declust:
         for idx in idxs:
             cat_out.append(cat[idx])
         return cat_out
+
+    def get_data_availability(self, cat=None, inv=None):
+        """
+        Determine data availability based on whether stations are 'on' for a
+        given event origin time. Does not check waveforms, only station
+        metadata, so not foolproof.
+
+        :rtype: dict
+        :return: keys are event resource ids and values are IDs for stations
+            that were on during the event origin time
+        """
+        if cat is None:
+            cat = self.cat
+        if inv is None:
+            inv = self.inv
+
+        # Collect install and removal (if applicaple) for all stations
+        station_times = {}
+        for net in inv:
+            for sta in net:
+                if sta.end_date is None:
+                    sta.end_date = UTCDateTime()  # set to right now
+                station_times[f"{net.code}.{sta.code}"] = (sta.start_date,
+                                                           sta.end_date)
+
+        # Check event origin time against station uptime
+        data_avail = {}
+        for event in cat:
+            data_avail[event.resource_id.id] = []
+            for sta, time in station_times.items():
+                start_date, end_date = time
+                # Check that event origin time falls between start and end date
+                if start_date <= event.preferred_origin().time <= end_date:
+                    data_avail[event.resource_id.id].append(sta)
+
+        return data_avail
 
     def decluster_events(self, choice="cartesian", zedges=None, min_mags=None,
                          nkeep=1, select_by="magnitude", **kwargs):
@@ -147,7 +311,7 @@ class Declust:
             - data: prioritize events which have the most data availability
         """
         acceptable_select_by = ["magnitude", "magnitude_r", "depth", "depth_r",
-                                "data"]
+                                "data", "data_r"]
         assert(select_by in acceptable_select_by), \
             f"`select_by` must be in {acceptable_select_by}"
 
@@ -168,11 +332,6 @@ class Declust:
                 f"`zedges` - 1 ({len(zedges)-1}"
             )
 
-        if min_mags:
-            assert(len(min_mags) == len(zedges) - 1), (
-                f"`min_mags` must be a list of magnitudes with length of "
-                f"`zedges` - 1 ({len(zedges)-1}"
-            )
 
         if choice == "cartesian":
             cat = self._decluster_events_cartesian(
@@ -187,8 +346,7 @@ class Declust:
 
         return cat
 
-    def _decluster_events_cartesian(self, nx=10, ny=10, zedges=None,
-                                    min_mags=None, nkeep=1,
+    def _decluster_events_cartesian(self, nx=10, ny=10, zedges=None, nkeep=1,
                                     select_by="magnitude_r", plot=False,
                                     plot_dir="./", **kwargs):
         """
@@ -203,15 +361,6 @@ class Declust:
         :param zedges: depth [km] slices to partition domain into. Each slice
             will be given equal weighting w.r.t to all other slices, independent
             of slice size. e.g., allows upweighting crustal events
-        :type min_mags: list
-        :param min_mags: a list of minimum magnitude thresholds for each depth
-            slice. If `zedges` is None, should be a list of length==1, which
-            provides minimum magnitude for entire catalog.
-            Elif `zedges` is given, should be a list of len(zedges)-1, which
-            defines minimum magnitude for each depth bin.
-            For example if zedges=[0, 35, 400], then one example is
-            min_mags=[4, 6]. Meaning between 0-34km the minimum magnitude is 4,
-            and between 35-400km the minimum magnitude is 6.
         :type nkeep: int or list of int
         :param nkeep: number of events to keep per cell. If `zedges` is None,
             then this must be an integer which defines a blanket value to apply.
@@ -224,10 +373,14 @@ class Declust:
             - magnitude_r: smallest magnitudes prioritized
             - depth: shallower depths prioritized
             - depth_r: deeper depths prioritized
-            - data: prioritize events which have the most data availability
+            - data: less data availability prioritized
+            - data_r: more data availability prioritized
         :type plot: bool
         :param plot: create a before and after catalog scatter plot to
             compare which events were kept/removed. Plots within the cwd
+        :type plot_dir: str
+        :param plot_dir: directory to save figures to. file names will be
+            generated automatically
         :rtype: obspy.core.catalog.Catalog
         :return: a declustered event catalog
         """
@@ -236,8 +389,8 @@ class Declust:
             arr = self.mags
         elif "depth" in select_by:
             arr = self.depths
-        elif select_by == "data":
-            raise NotImplementedError
+        elif "data" in select_by:
+            arr = self.navail
         else:
             raise NotImplementedError
 
@@ -282,20 +435,6 @@ class Declust:
                                  f"{z_top:.2f} <= depth < {z_bot:.2f}"
                                  )
 
-                    # Kick out events with magnitudes below a certain threshold
-                    if min_mags:
-                        _og_len = len(idxs)
-                        # The minimum magnitude is tied to the given depth level
-                        idxs = np.delete(
-                            idxs, np.where(self.mags[idxs] < min_mags[i]),
-                            axis=0
-                        )
-                        logger.debug(f"minimum magnitude {min_mags[i]} "
-                                     f"threshold removed {_og_len - len(idxs)} "
-                                     f"events")
-                        if idxs.size == 0:
-                            continue
-
                     # Sort the given events by characteristic, reverse if req.
                     sort_arr = arr[idxs].argsort()
                     if "_r" in select_by:
@@ -317,9 +456,9 @@ class Declust:
         if plot:
             # 1. Plot the original catalog
             f_og, ax_og = self.plot(
-                cat=self.cat, inv=self.inv, show=False, save=None,
+                inv=self.inv, show=False, save=None,
                 title=f"Original Event Catalog N={len(self.cat)}",
-                depth_min=0, depth_max=self.depths.max()
+                color_by="depth", vmin=0, vmax=self.depths.max()
             )
             lkwargs = dict(c="k", linewidth=0.5, alpha=0.5)
             # Add gridlines to the plot
@@ -335,8 +474,8 @@ class Declust:
             f_dc, ax_dc = self.plot(
                 cat=cat_out, inv=self.inv, show=False, save=None,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
-                      f"(zedges={zedges} / nkeep={nkeep} / minmags={min_mags})",
-                depth_min=0, depth_max=self.depths.max()
+                      f"(zedges={zedges} / nkeep={nkeep})",
+                color_by="depth", vmin=0, vmax=self.depths.max()
             )
             # Add gridlines to the plot
             for xe in xedges:
@@ -349,8 +488,8 @@ class Declust:
 
         return cat_out
 
-    def _decluster_events_polar(self, ntheta=17, zedges=None, min_mags=None,
-                                nkeep=1, select_by="magnitude_r", plot=False,
+    def _decluster_events_polar(self, ntheta=16, zedges=None, nkeep=1,
+                                select_by="magnitude_r", plot=False,
                                 plot_dir="./", **kwargs):
         """
         Run the declustering agorithm but partition the domain in polar. That
@@ -359,20 +498,50 @@ class Declust:
         cut each slice of pie by radius (distance from center of domain) and
         put additional constraints (e.g., more distant events require larger
         magnitude).
+
+        :type ntheta: int
+        :param ntheta: Number of theta bins to break a polar search into.
+            Used to break up 360 degrees, so e.g., `ntheta`==17 will return
+            bins of size 22.5 degrees ([0, 22.5, 45., 67.5 .... 360.])
+        :type zedges: list of float
+        :param zedges: depth [km] slices to partition domain into. Each slice
+            will be given equal weighting w.r.t to all other slices, independent
+            of slice size. e.g., allows upweighting crustal events
+        :type nkeep: int or list of int
+        :param nkeep: number of events to keep per cell. If `zedges` is None,
+            then this must be an integer which defines a blanket value to apply.
+            If `zedges` is given, then this must be a list of length
+            `zedges` - 1, defining the number of events to keep per cell, per
+            depth slice. See `min_mags` definition for example.
+        :type select_by: str
+        :param select_by: determine how to prioritize events in the cell
+            - magnitude (default): largest magnitudes prioritized
+            - magnitude_r: smallest magnitudes prioritized
+            - depth: shallower depths prioritized
+            - depth_r: deeper depths prioritized
+            - data: less data availability prioritized
+            - data_r: more data availability prioritized
+        :type plot: bool
+        :param plot: create a before and after catalog scatter plot to
+            compare which events were kept/removed. Plots within the cwd
+        :type plot_dir: str
+        :param plot_dir: directory to save figures to. file names will be
+            generated automatically
+        :rtype: obspy.core.catalog.Catalog
+        :return: a declustered event catalog
         """
         # Figure out how to prioritize the events in each cell
-        reverse = False  # for argsort when picking events
         if "magnitude" in select_by:
             arr = self.mags
         elif "depth" in select_by:
             arr = self.depths
-        elif select_by == "data":
-            raise NotImplementedError
+        elif "data" in select_by:
+            arr = self.navail
         else:
             raise NotImplementedError
 
         # Partition the domain in polar with `ntheta` bins
-        theta_array = np.linspace(0, 360, ntheta)  # units: deg
+        theta_array = np.linspace(0, 360, ntheta + 1)  # units: deg
         dtheta = theta_array[1] - theta_array[0]
 
         # Ensure depth slices are ordered
@@ -417,20 +586,6 @@ class Declust:
                 logger.debug(f"{len(idxs)} events found for "
                              f"{theta_start:.2f} <= theta < {theta_end:.2f}")
 
-                # Kick out events with magnitudes below a certain threshold
-                if min_mags:
-                    _og_len = len(idxs)
-                    # The minimum magnitude is tied to the given depth level
-                    idxs = np.delete(
-                        idxs, np.where(self.mags[idxs] < min_mags[i]),
-                        axis=0
-                    )
-                    logger.debug(f"minimum magnitude {min_mags[i]} "
-                                 f"threshold removed {_og_len - len(idxs)} "
-                                 f"events")
-                    if idxs.size == 0:
-                        continue
-
                 # Sort the given events by characteristic, reverse if req.
                 sort_arr = arr[idxs].argsort()
                 if "_r" in select_by:
@@ -452,9 +607,9 @@ class Declust:
         if plot:
             # 1. Plot the original catalog
             f_og, ax_og = self.plot(
-                cat=self.cat, inv=self.inv, show=False, save=None,
+                inv=self.inv, show=False, save=None,
                 title=f"Original Event Catalog N={len(self.cat)}",
-                depth_min=0, depth_max=self.depths.max()
+                color_by="depth", vmin=0, vmax=self.depths.max()
             )
             ax_og.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o",
                           s=10, linewidth=1)
@@ -472,8 +627,8 @@ class Declust:
             f_dc, ax_dc = self.plot(
                 cat=cat_out, inv=self.inv, show=False, save=None,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
-                      f"(zedges={zedges} / nkeep={nkeep} / minmags={min_mags})",
-                depth_min=0, depth_max=self.depths.max()
+                      f"(zedges={zedges} / nkeep={nkeep})",
+                color_by="depth", vmin=0, vmax=self.depths.max()
             )
             ax_dc.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o",
                           s=10, linewidth=1)
@@ -489,8 +644,9 @@ class Declust:
 
         return cat_out
 
-    def plot(self, cat=None, inv=None, show=True, save=None, depth_min=0,
-             depth_max=None, title=None, cmap="inferno_r"):
+    def plot(self, cat=None, inv=None, color_by="depth",
+             connect_data_avail=False, vmin=0, vmax=None, title=None,
+             cmap="inferno_r", show=True, save=None, ):
         """
         Generate a simple scatter plot of events, colored by depth and sized
         by magnitude.
@@ -500,28 +656,43 @@ class Declust:
             depths = self.depths
             evlats = self.evlats
             evlons = self.evlons
+            data_avail = self.data_avail
         else:
             evlats = np.array([e.preferred_origin().latitude for e in cat])
             evlons = np.array([e.preferred_origin().longitude for e in cat])
             mags = np.array([event.preferred_magnitude().mag for event in cat])
             depths = np.array([event.preferred_origin().depth * 1E-3 for
                                event in cat])
+            data_avail = self.get_data_availability(cat, inv)
+
+        if connect_data_avail:
+            assert(inv is not None), f"`connect_data_avail` requires `inv`"
+            assert(data_avail is not None),  \
+                f"`connect_data_avail` requires `data_avail`"
+
+        # Calculate number of stations on for each event
+        data = np.array([len(val) for val in data_avail.values()])
 
         f, ax = plt.subplots()
 
-        # Normalize exp of magnitudes between a and b to get good size diff.
+        # Normalize exp of magnitudes between `a` and `b` to get good size diff.
         legend_mags = [6, 5, 4]  # these will be used for legend purposes
         mags = np.append(mags, legend_mags)
         mags = np.e ** mags
         a = 30
         b = 200
         mags = ((b - a) * (mags - mags.min()) / (mags.max() - mags.min())) + a
-        sc = ax.scatter(x=evlons, y=evlats, s=mags[:-3], c=depths,
+
+        # Choose how to color
+        color = {"depth": (depths, "depths [km]"),
+                 "data": (data, "data availability")}[color_by]
+
+        sc = ax.scatter(x=evlons, y=evlats, s=mags[:-3], c=color[0],
                         cmap=cmap, edgecolor="k", linewidth=1,
-                        vmin=depth_min, vmax=depth_max or depths.max(),
+                        vmin=vmin, vmax=vmax or depths.max(),
                         zorder=10)
 
-        plt.colorbar(sc, label="depth [km]")
+        plt.colorbar(sc, label=color[1])
 
         # Plot inventory if provided
         if inv is not None:
@@ -538,6 +709,26 @@ class Declust:
                 stalons = np.array(stalons)
             plt.scatter(x=stalons, y=stalats, c="None", edgecolor="k",
                         linewidth=1, s=10, marker="v", zorder=5, alpha=0.5)
+
+        # Connect sources and receivers with a straight line based on
+        # data availability. Assuming that data availability order is the
+        # same as the latitude and longitude
+        # NOTE: Pretty brute force so this may take a while
+        if connect_data_avail:
+            evids = np.array([event.resource_id.id for event in cat])
+            for i, (event, stalist) in enumerate(data_avail.items()):
+                assert(evids[i] == event), f"incorrect event ID encountered"
+                for netsta in stalist:
+                    net, sta = netsta.split(".")
+                    inv_ = self.inv.select(network=net, station=sta)
+                    assert(len(inv_) == 1), f"too many stations found"
+                    stalat = inv_[0][0].latitude
+                    stalon = inv_[0][0].longitude
+                    plt.plot([evlons[i], stalon], [evlats[i], stalat], c="k",
+                             linewidth=0.5, alpha=0.05, zorder=5)
+            if title is None:
+                title = ""
+            title += f"\n({data.sum()} source-receiver pairs)"
 
         # Plot attributes
         buff = 0.01

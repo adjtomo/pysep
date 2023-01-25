@@ -20,12 +20,29 @@ def test_declust():
 
     return Declust(cat=cat, inv=inv)
 
+def test_data_availability(test_declust):
+    """
+    Make sure data availability calculation returns the same each time
+    """
+    # Just check one of the events in the catalog
+    resource_id = "smi:service.iris.edu/fdsnws/event/1/query?eventid=4599111"
+    assert(len(test_declust.data_avail[resource_id]) == 15)
+
+def test_threshold_events(test_declust):
+    """
+    Ensure that thresholding removes the proper number of events
+    """
+    cat = test_declust.threshold_events(zedges=[0, 8, 36, 100], min_data=5,
+                                        min_mags=[3, 3, 5])
+    assert(len(cat) == 215)
+
 
 def test_decluster_events_cartesian(test_declust):
     """
     Test event declustering algorithm
     """
-    for select_by in ["magnitude", "magnitude_r", "depth", "depth_r"]:
+    for select_by in ["magnitude", "magnitude_r", "depth", "depth_r",
+                      "data", "data_r"]:
         cat = test_declust.decluster_events(choice="cartesian", nx=2, ny=2,
                                             min_mags=[4.5], nkeep=4,
                                             select_by=select_by)
@@ -36,7 +53,8 @@ def test_decluster_events_polar(test_declust):
     """
     Test event declustering algorithm
     """
-    for select_by in ["magnitude", "magnitude_r", "depth", "depth_r"]:
+    for select_by in ["magnitude", "magnitude_r", "depth", "depth_r",
+                      "data", "data_r"]:
         cat = test_declust.decluster_events(choice="polar", nx=2, ny=2,
                                             min_mags=[4.5], nkeep=4,
                                             select_by=select_by)
@@ -72,6 +90,6 @@ def test_plot(tmpdir, test_declust):
     """
 
     """
-    test_declust.plot(inv=True, show=False,
+    test_declust.plot(inv=True, show=False, color_by="data", cmap="inferno",
                       save=os.path.join(tmpdir, "test_plot.png"))
     assert(os.path.exists(os.path.join(tmpdir, "test_plot.png")))
