@@ -483,7 +483,8 @@ class Declust:
             for ye in yedges:
                 ax_dc.axhline(ye, **lkwargs)
 
-            plt.savefig(os.path.join(plot_dir, f"decluster_event_catalog.png"))
+            plt.savefig(os.path.join(plot_dir,
+                                     f"cartesian_decluster_catalog.png"))
             plt.close()
 
         return cat_out
@@ -639,7 +640,8 @@ class Declust:
                 y = evrad.max() * np.sin(theta * np.pi / 180) + mid_lat
                 ax_dc.plot([mid_lon, x], [mid_lat, y], "k-", alpha=0.3)
 
-            plt.savefig(os.path.join(plot_dir, f"decluster_event_catalog.png"))
+            plt.savefig(os.path.join(plot_dir,
+                                     f"polar_decluster_catalog.png"))
             plt.close()
 
         return cat_out
