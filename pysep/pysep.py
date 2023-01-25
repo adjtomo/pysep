@@ -790,8 +790,6 @@ class Pysep:
         net_exclude = [net[1:] for net in self.networks.split(",")
                        if "-" in net]
 
-        import pdb;pdb.set_trace()
-
         # Set restrictions on the search criteria for data
         restrictions = Restrictions(
             starttime=self.reference_time - self.seconds_before_ref,
