@@ -11,6 +11,7 @@ TODO
 """
 import argparse
 import os
+import shutil
 import sys
 import yaml
 import warnings
@@ -18,10 +19,13 @@ import llnl_db_client  # NOQA
 
 from glob import glob
 from pathlib import Path
-from obspy import UTCDateTime, Stream
+from obspy import UTCDateTime, Stream, Inventory, read, read_inventory
 from obspy.clients.fdsn import Client
 from obspy.clients.fdsn.header import FDSNBadRequestException
+from obspy.clients.fdsn.mass_downloader import (RectangularDomain, Restrictions,
+                                                CircularDomain, MassDownloader)
 from obspy.core.event import Event, Origin, Magnitude
+from obspy.geodetics import kilometer2degrees
 
 from pysep import logger
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
@@ -63,6 +67,7 @@ class Pysep:
                  log_level="DEBUG", timeout=600, write_files="all",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
+                 use_mass_download=False,
                  **kwargs):
         """
         Define a default set of parameters
@@ -173,6 +178,9 @@ class Pysep:
         :type overwrite_event_tag: str
         :param overwrite_event_tag: option to allow the user to set their own
             event tag, rather than the automatically generated one
+        :type use_mass_download: bool
+        :param use_mass_download: Use ObsPy's mass download option to download
+            all available stations in the region regardless of data provider.
         """
         # Internal attribute but define first so that it sits at the top of
         # written config files
@@ -186,6 +194,7 @@ class Pysep:
         self._user = user
         self._password = password
         self.taup_model = taup_model
+        self.use_mass_download = use_mass_download
 
         # Parameters related to event selection
         self.event_selection = event_selection
@@ -385,6 +394,10 @@ class Pysep:
                 f"`plot_files` must be a list of some or all of: "
                 f"{acceptable_plot_files}"
             )
+
+        if self.use_mass_download is True:
+            logger.info("will use option `mass_download`, ignoring `client` "
+                        "and downloading data from all available data centers")
 
     def get_client(self):
         """
@@ -720,6 +733,101 @@ class Pysep:
             sys.exit(-1)
 
         return st
+
+    def mass_download(self):
+        """
+        Use ObsPy Mass downloader to grab events from a pre-determined region
+
+        Keyword Arguments
+        ::
+            str domain_type:
+                How to define the search region domain
+                - rectangular: rectangular bounding box defined by min/max
+                  latitude/longitude
+                - circular: circular bounding circle defined by the events
+                  latitude and longitude, with radii defined by `mindistance`
+                  and `maxdistance`
+            bool delete_tmpdir:
+                Remove the temporary directories that store the MSEED and
+                StationXML files which were downloaded by the mass downloader.
+                Saves space but also if anything fails prior to saving data,
+                the downloaded data will not be saved. Defaults to True.
+        """
+        domain_type = self.kwargs.get("domain_type", "rectangular")
+        delete_tmpdir = self.kwargs.get("delete_tmpdir", True)
+        # Get around the fact that command line arguments are input as strings
+        if isinstance(delete_tmpdir, str):
+            assert(delete_tmpdir.capitalize() in ["True", "False"])
+            delete_tmpdir = bool(delete_tmpdir.capitalize() == "True")
+
+        logger.info("using ObsPy mass downloader to download waveform and "
+                    "station metadata")
+
+        # Define the bounding box/circle that specifies our region of interest
+        if domain_type == "rectangular":
+            logger.info("using a rectangular domain for mass downloader")
+            domain = RectangularDomain(minlatitude=self.minlatitude,
+                                       maxlatitude=self.maxlatitude,
+                                       minlongitude=self.minlongitude,
+                                       maxlongitude=self.maxlongitude)
+        elif domain_type == "circular":
+            logger.info("using a circular domain for mass downloader")
+            domain = CircularDomain(
+                latitude=self.event_latitude, longitude=self.event_longitude,
+                minradius=kilometer2degrees(self.mindistance),
+                maxradius=kilometer2degrees(self.maxdistance)
+            )
+        else:
+            raise NotImplementedError(f"`domain_type` must be 'rectangular' or"
+                                      f"'circular'")
+
+        # Drop any excluded stations
+        stations = ",".join([sta for sta in self.stations.split(",")
+                             if "-" not in sta])
+        sta_exclude = [sta[1:] for sta in self.stations.split(",")
+                       if "-" in sta]
+        networks = ",".join([sta for sta in self.networks.split(",")
+                             if "-" not in sta])
+        net_exclude = [net[1:] for net in self.networks.split(",")
+                       if "-" in net]
+
+        # Set restrictions on the search criteria for data
+        restrictions = Restrictions(
+            starttime=self.reference_time - self.seconds_before_ref,
+            endtime=self.reference_time + self.seconds_after_ref,
+            reject_channels_with_gaps=False, minimum_length=0.,
+            network=networks, station=stations, location=self.locations,
+            channel=self.channels, exclude_networks=net_exclude,
+            exclude_stations=sta_exclude,
+        )
+
+        # Mass downloader will download files to a temp directory which we
+        # will read back from to continue the workflow
+        tmp_dir = os.path.join(self.output_dir, "tmpdir_md")
+        tmp_wav = os.path.join(tmp_dir, "waveforms")
+        tmp_inv = os.path.join(tmp_dir, "inventory")
+
+        mdl = MassDownloader()
+        mdl.download(domain, restrictions, mseed_storage=tmp_wav,
+                     stationxml_storage=tmp_inv, download_chunk_size_in_mb=20,
+                     threads_per_client=3, print_report=True)
+
+        # Read back in waveforms and stationxml data
+        st = Stream()
+        for fid in glob(os.path.join(tmp_wav, "*.mseed")):
+            st += read(fid)
+        logger.info(f"mass downloader downloaded {len(st)} traces")
+
+        inv = Inventory()
+        for fid in glob(os.path.join(tmp_inv, "*.xml")):
+            inv += read_inventory(fid)
+
+        # Delete the tmpdir
+        if delete_tmpdir:
+            logger.info("deleting temporary mass downloader directories")
+            shutil.rmtree(tmp_dir)
+
+        return st, inv
 
     def curtail_stations(self):
         """
@@ -1225,17 +1333,23 @@ class Pysep:
 
         self.event_tag, self.output_dir = self._event_tag_and_output_dir()
 
-        if inv is None:
-            self.inv = self.get_stations()
-        else:
-            self.inv = inv
-        self.inv = self.curtail_stations()
+        # Standard method of retrieving waveforms from data center
+        if self.use_mass_download is False:
+            if inv is None:
+                self.inv = self.get_stations()
+            else:
+                self.inv = inv
+            self.inv = self.curtail_stations()
 
-        # Get waveforms, format and assess waveform quality
-        if st is None:
-            self.st = self.get_waveforms()
+            # Get waveforms, format and assess waveform quality
+            if st is None:
+                self.st = self.get_waveforms()
+            else:
+                self.st = st
+        # Use ObsPy's mass download option to gather all available data
         else:
-            self.st = st
+            self.st, self.inv = self.mass_download()
+
         self.st = quality_check_waveforms_before_processing(self.st)
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
