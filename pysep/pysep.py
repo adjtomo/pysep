@@ -29,7 +29,8 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
                                  format_sac_headers_post_rotation)
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
-                                 quality_check_waveforms_after_processing)
+                                 quality_check_waveforms_after_processing,
+                                 )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
@@ -864,6 +865,7 @@ class Pysep:
             other components
         """
         st_raw = self.st.copy()
+
         st_raw = format_streams_for_rotation(st_raw)
 
         # For writing RAW seismograms (prior to ANY rotation). Must be 
@@ -872,7 +874,7 @@ class Pysep:
         if "sac_raw" in self.write_files:
             self.st_raw = st_raw.copy()
 
-        # Empty stream so we can take advantage of class __add__ method
+        # Empty stream, so we can take advantage of class __add__ method
         st_out = Stream()
 
         # RTZ requires rotating to ZNE first. Make sure this happens even if the
@@ -881,42 +883,78 @@ class Pysep:
             logger.info("rotating to components ZNE")
             st_zne = st_raw.copy()
             stations = set([tr.stats.station for tr in st_zne])
+            # Assuming each channel has its own azimuth and dip value
+            channels = set([f"{tr.stats.channel[:-1]}?" for tr in st_zne])
+            metadata_getter = self.inv.get_channel_metadata
             for sta in stations:
-                _st = st_zne.select(station=sta)
-                _inv = self.inv.select(station=sta)
-                # Print out azimuth and dip angles for debugging purposes
-                for _net in _inv:
-                    for _sta in _net:
-                        for _cha in _sta:
-                            logger.debug(
-                                f"rotating -> ZNE "
-                                f"{_net.code}.{_sta.code}.{_cha.code} with "
-                                f"az={_cha.azimuth}, dip={_cha.dip}"
-                            )
-                # components=['ZNE'] FORCES rotation using azimuth and dip 
-                # values, even if components are already in 'ZNE'. This is 
-                # important as some IRIS data will be in ZNE but not be aligned
-                # https://github.com/obspy/obspy/issues/2056
-                _st.rotate(method="->ZNE", inventory=self.inv, 
-                           components=["ZNE", "Z12", "123"])
-                st_out += _st
+                for cha in channels:
+                    _st = st_zne.select(station=sta, channel=cha)
+
+                    # Check if 'dip' or 'azimuth' is None, because that causes
+                    # ObsPy rotate to throw a TypeError. See PySEP Issue #35
+                    channel_okay = bool(_st)
+                    for _tr in _st:
+                        try:
+                            meta = metadata_getter(_tr.id, _tr.stats.starttime)
+                            az = meta["azimuth"]
+                            dip = meta["dip"]
+                        except Exception:
+                            logger.warning(f"no matching metadata for {_tr.id}")
+                            channel_okay = False
+                            break
+
+                        logger.debug(f"{_tr.id} azimuth=={az}; dip=={dip}")
+                        if az is None or dip is None:
+                            channel_okay = False
+                            break
+
+                    if not channel_okay:
+                        logger.warning(f"{sta}.{cha} bad rotation metadata, "
+                                       f"removing")
+                        continue
+
+                    # components=['ZNE'] FORCES rotation using azimuth and dip
+                    # values, even if components are already in 'ZNE'. This is
+                    # important as some IRIS data will be in ZNE but not be
+                    # aligned (https://github.com/obspy/obspy/issues/2056)
+                    try:
+                        _st.rotate(method="->ZNE", inventory=self.inv,
+                                   components=["ZNE", "Z12", "123"])
+                    # General error catching for rotation because any number of
+                    # things can go wrong here based on the ObsPy rotation algo
+                    except Exception as e:
+                        logger.warning(f"rotate issue for {sta}.{cha}, "
+                                       "removing from stream")
+                        logger.debug(f"rotate error: {e}")
+                        continue
+                    st_out += _st
+            # Check to see if rotation errors kicked out all stations
+            if not st_out:
+                logger.critical("rotation errors have reduced Stream to len 0, "
+                                "cannot continue")
+                sys.exit(-1)
+            # Rotate to radial transverse coordinate system
+            if "RTZ" in self.rotate:
+                logger.info("rotating to components RTZ")
+                # If we rotate the ENTIRE stream at once, ObsPy only uses the 
+                # first backazimuth value which will create incorrect outputs
+                # https://github.com/obspy/obspy/issues/2623
+                st_rtz = st_out.copy()  # contains ZNE rotated components
+                stations = set([tr.stats.station for tr in st_rtz])
+                for sta in stations:
+                    _st = st_rtz.select(station=sta, channel=cha)
+                    if _st and hasattr(_st[0].stats, "back_azimuth"):
+                        _st.rotate(method="NE->RT")  # in place rot.
+                        st_out += _st
+                    else:
+                        logger.warning(f"no back azimuth for '{sta}', cannot "
+                                       f"rotate NE->RT")
+                        continue
+        # Allow UVW rotation independent on ENZ or RTZ rotation
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
-            st_uvw = rotate_to_uvw(st_out)
+            st_uvw = rotate_to_uvw(st_raw)
             st_out += st_uvw
-        elif "RTZ" in self.rotate:
-            logger.info("rotating to components RTZ")
-            # If we rotate the ENTIRE stream at once, ObsPy will only use the 
-            # first backazimuth value which will create incorrect outputs
-            # https://github.com/obspy/obspy/issues/2623
-            st_rtz = st_zne.copy()  # `st_zne` has been rotated to ZNE 
-            stations = set([tr.stats.station for tr in st_rtz])
-            for sta in stations:
-                _st = st_rtz.select(station=sta)
-                _st.rotate(method="NE->RT")  # in place rot.
-                if hasattr(_st[0].stats, "back_azimuth"):
-                    logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
-                st_out += _st
         
         try:
             st_out = format_sac_headers_post_rotation(st_out)
