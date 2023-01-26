@@ -117,7 +117,6 @@ class Declust:
         self.stalats = np.array(self.stalats)
         self.stalons = np.array(self.stalons)
 
-
         # Bound domain region based on min/max lat/lons of events and stations
         self.min_lat = self._user_min_lat or \
                        np.append(self.evlats, self.stalats).min()
@@ -144,7 +143,7 @@ class Declust:
         :type zedges: list of float
         :param zedges: depth [km] slices to partition domain into when
             thresholding data
-        :type min_mags: list
+        :type min_mags: int or list
         :param min_mags: a list of minimum magnitude thresholds for each depth
             slice. If `zedges` is None, should be a list of length==1, which
             provides minimum magnitude for entire catalog.
@@ -153,6 +152,10 @@ class Declust:
             For example if zedges=[0, 35, 400], then one example is
             min_mags=[4, 6]. Meaning between 0-34km the minimum magnitude is 4,
             and between 35-400km the minimum magnitude is 6.
+        :type min_data: int or list
+        :param min_data: an integer or list of length len(zedges)-1 that defines
+            the minimum number of stations on for a given event origin time,
+            which allows user to prioritize stations with available data
         """
         if zedges is None:
             logger.warning("`zedges` not set, all depth values will be "
@@ -193,7 +196,7 @@ class Declust:
                     axis=0
                 )
 
-                if (idxs_remove.size) > 0:
+                if idxs_remove.size > 0:
                     logger.info(f"{z_top:.2f}<=Z<{z_bot:.2f} min mag "
                                 f"(M{min_mags[i]}) threshold matched "
                                 f"{len(idxs_remove)} events")
@@ -205,7 +208,7 @@ class Declust:
                     idxs, np.where(self.navail[idxs] >= min_data[i]),
                     axis=0
                 )
-                if (idxs_remove.size) > 0:
+                if idxs_remove.size > 0:
                     logger.info(f"{z_top:.2f}<=Z<{z_bot:.2f} min data avail "
                                 f"(N={min_data[i]}) threshold matched "
                                 f"{len(idxs_remove)} events")
@@ -331,7 +334,6 @@ class Declust:
                 f"`nkeep` must be a list of integers with length of "
                 f"`zedges` - 1 ({len(zedges)-1}"
             )
-
 
         if choice == "cartesian":
             cat = self._decluster_events_cartesian(
@@ -462,7 +464,7 @@ class Declust:
             )
             # Plot the declustered catalog
             self._plot_cartesian(
-                cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
+                cat=cat_out, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
                 save=os.path.join(plot_dir, f"declustered_crtsn.png"),
@@ -480,7 +482,7 @@ class Declust:
 
     def _plot_cartesian(self, cat, inv, xedges, yedges, title, save):
         """Convenience function to plot catalogs with edges"""
-        # 1. Plot the original catalog
+
         f, ax = self.plot(
             cat=cat, inv=inv, show=False, save=None, title=title,
             color_by="depth", vmin=0, vmax=self.depths.max()
@@ -771,3 +773,20 @@ class Declust:
             plt.show()
 
         return f, ax
+
+    def plot_density_map(self, cat=None, inv=None, nx=25, ny=25):
+        """
+        Plot a density map which better helps highlight foreshocks/aftershocks
+        which may be buried under main events in the normal `plot` function.
+        """
+        if cat is None:
+            evlats = self.evlats
+            evlons = self.evlons
+        else:
+            evlats = np.array([e.preferred_origin().latitude for e in cat])
+            evlons = np.array([e.preferred_origin().longitude for e in cat])
+
+        plt.hist2d(evlats, evlons, cmap="viridis", cmin=0, bins=[nx, ny])
+        plt.show()
+
+
