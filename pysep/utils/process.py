@@ -10,6 +10,7 @@ from pysep import logger
 from pysep.utils.fmt import get_codes
 
 
+
 def format_streams_for_rotation(st):
     """
     ObsPy requires specific channel naming to get stream rotation working.

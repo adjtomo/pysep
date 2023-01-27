@@ -14,9 +14,9 @@ promote unique source receiver pairs.
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-
-from obspy import Catalog, UTCDateTime
+from obspy.geodetics import gps2dist_azimuth
 from pysep import logger
+from pysep.utils.fmt import index_cat, get_data_availability
 
 
 class Declust:
@@ -78,9 +78,9 @@ class Declust:
         self.depths = None
         self.mags = None
         self.navail = None
-        self._get_metadata()
+        self.update_metadata()
 
-    def _get_metadata(self, cat=None, inv=None):
+    def update_metadata(self, cat=None, inv=None):
         """
         Get metadata like location and event depth and magnitude from a given
         Cat and Inv and set as internal attributes.
@@ -127,10 +127,11 @@ class Declust:
         self.max_lon = self._user_max_lon or \
                        np.append(self.evlons, self.stalons).max()
 
-        self.data_avail = self._user_data_avail or self.get_data_availability()
+        self.data_avail = self._user_data_avail or \
+                          get_data_availability(cat, inv)
         self.navail = np.array([len(val) for val in self.data_avail.values()])
 
-    def threshold_events(self, zedges=None, min_mags=None, min_data=None):
+    def threshold_catalog(self, zedges=None, min_mags=None, min_data=None):
         """
         Kick out events that fall below a given magnitude range or a given
         data availability range. Allow this to be done for various depth
@@ -218,64 +219,9 @@ class Declust:
                     f"{len(self.cat) - cat_flag.sum()} events from cat")
 
         # Updates the internal Catalog and metadata in place
-        self.cat = self.index_cat(idxs=np.where(cat_flag == 1)[0])
-        self._get_metadata()
+        self.cat = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
+        self.update_metadata()
 
-    def index_cat(self, idxs, cat=None):
-        """
-        Catalog does not allow indexing by a list of values (e.g., cat[0, 1, 3])
-        so this convenience function takes care of that by forming a new
-        catalog of events chosen by indices
-
-        :type idxs: list of int
-        :param idxs: list of indices to index catalog by
-        :type cat: obspy.core.catalog.Catalog
-        :param cat: Catalog to index. If not given defaults to internal Cat
-        """
-        if cat is None:
-            cat = self.cat
-
-        # Workaround as we can't selectively index a Catalog object
-        cat_out = Catalog()
-        for idx in idxs:
-            cat_out.append(cat[idx])
-        return cat_out
-
-    def get_data_availability(self, cat=None, inv=None):
-        """
-        Determine data availability based on whether stations are 'on' for a
-        given event origin time. Does not check waveforms, only station
-        metadata, so not foolproof.
-
-        :rtype: dict
-        :return: keys are event resource ids and values are IDs for stations
-            that were on during the event origin time
-        """
-        if cat is None:
-            cat = self.cat
-        if inv is None:
-            inv = self.inv
-
-        # Collect install and removal (if applicaple) for all stations
-        station_times = {}
-        for net in inv:
-            for sta in net:
-                if sta.end_date is None:
-                    sta.end_date = UTCDateTime()  # set to right now
-                station_times[f"{net.code}.{sta.code}"] = (sta.start_date,
-                                                           sta.end_date)
-
-        # Check event origin time against station uptime
-        data_avail = {}
-        for event in cat:
-            data_avail[event.resource_id.id] = []
-            for sta, time in station_times.items():
-                start_date, end_date = time
-                # Check that event origin time falls between start and end date
-                if start_date <= event.preferred_origin().time <= end_date:
-                    data_avail[event.resource_id.id].append(sta)
-
-        return data_avail
 
     def decluster_events(self, choice="cartesian", zedges=None, min_mags=None,
                          nkeep=1, select_by="magnitude", **kwargs):
@@ -453,7 +399,7 @@ class Declust:
         logger.info(f"returning {len(np.where(cat_flag == 1)[0])} events in "
                     f"declustered catalog (og={len(self.cat)})")
 
-        cat_out = self.index_cat(idxs=np.where(cat_flag == 1)[0], cat=self.cat)
+        cat_out = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
 
         if plot:
             # Plot the original catalog
@@ -470,8 +416,8 @@ class Declust:
                 save=os.path.join(plot_dir, f"declustered_crtsn.png"),
             )
             # Plot events that were removed during declustering
-            cat_rem = self.index_cat(idxs=np.where(cat_flag == 0)[0],
-                                     cat=self.cat)
+            cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
+
             self._plot_cartesian(
                 cat=cat_rem, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Removed Events N={len(cat_rem)}",
@@ -479,24 +425,6 @@ class Declust:
             )
 
         return cat_out
-
-    def _plot_cartesian(self, cat, inv, xedges, yedges, title, save):
-        """Convenience function to plot catalogs with edges"""
-
-        f, ax = self.plot(
-            cat=cat, inv=inv, show=False, save=None, title=title,
-            color_by="depth", vmin=0, vmax=self.depths.max()
-        )
-        lkwargs = dict(c="k", linewidth=0.5, alpha=0.5)
-
-        # Add gridlines to the plot
-        for xe in xedges:
-            ax.axvline(xe, **lkwargs)
-        for ye in yedges:
-            ax.axhline(ye, **lkwargs)
-
-        plt.savefig(save)
-        plt.close()
 
     def _decluster_events_polar(self, ntheta=16, zedges=None, nkeep=1,
                                 select_by="magnitude_r", plot=False,
@@ -612,7 +540,7 @@ class Declust:
         logger.info(f"returning {len(np.where(cat_flag == 1)[0])} events in "
                     f"declustered catalog (og={len(self.cat)})")
 
-        cat_out = self.index_cat(idxs=np.where(cat_flag == 1)[0], cat=self.cat)
+        cat_out = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
 
         if plot:
             self._plot_polar(
@@ -627,34 +555,13 @@ class Declust:
                 save=os.path.join(plot_dir, f"decluster_plr.png")
             )
             # Plot events that were removed during declustering
-            cat_rem = self.index_cat(idxs=np.where(cat_flag == 0)[0],
-                                     cat=self.cat)
+            cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
             self._plot_polar(
                 cat_rem, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Removed Events N={len(cat_rem)}\n",
                 save=os.path.join(plot_dir, f"decluster_plr.png")
             )
         return cat_out
-
-    def _plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
-                    title, save):
-        """Convenience function to plot catalogs with radial bins"""
-        f, ax = self.plot(
-            cat=cat, inv=inv, show=False, save=None, title=title,
-            color_by="depth", vmin=0, vmax=self.depths.max()
-        )
-
-        ax.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o", s=10,
-                   linewidth=1)
-
-        # Plot each of the radial bins
-        for theta in theta_array:
-            x = evrad.max() * np.cos(theta * np.pi / 180) + mid_lon
-            y = evrad.max() * np.sin(theta * np.pi / 180) + mid_lat
-            ax.plot([mid_lon, x], [mid_lat, y], "k-", alpha=0.3)
-
-        plt.savefig(save)
-        plt.close()
 
     def plot(self, cat=None, inv=None, color_by="depth",
              connect_data_avail=False, vmin=0, vmax=None, title=None,
@@ -675,7 +582,7 @@ class Declust:
             mags = np.array([event.preferred_magnitude().mag for event in cat])
             depths = np.array([event.preferred_origin().depth * 1E-3 for
                                event in cat])
-            data_avail = self.get_data_availability(cat, inv)
+            data_avail = get_data_availability(cat, inv)
 
         if connect_data_avail:
             assert(inv is not None), f"`connect_data_avail` requires `inv`"
@@ -774,19 +681,42 @@ class Declust:
 
         return f, ax
 
-    def plot_density_map(self, cat=None, inv=None, nx=25, ny=25):
-        """
-        Plot a density map which better helps highlight foreshocks/aftershocks
-        which may be buried under main events in the normal `plot` function.
-        """
-        if cat is None:
-            evlats = self.evlats
-            evlons = self.evlons
-        else:
-            evlats = np.array([e.preferred_origin().latitude for e in cat])
-            evlons = np.array([e.preferred_origin().longitude for e in cat])
+    def _plot_cartesian(self, cat, inv, xedges, yedges, title, save):
+        """Convenience function to plot catalogs with edges"""
+        f, ax = self.plot(
+            cat=cat, inv=inv, show=False, save=None, title=title,
+            color_by="depth", vmin=0, vmax=self.depths.max()
+        )
+        lkwargs = dict(c="k", linewidth=0.5, alpha=0.5)
 
-        plt.hist2d(evlats, evlons, cmap="viridis", cmin=0, bins=[nx, ny])
-        plt.show()
+        # Add gridlines to the plot
+        for xe in xedges:
+            ax.axvline(xe, **lkwargs)
+        for ye in yedges:
+            ax.axhline(ye, **lkwargs)
+
+        plt.savefig(save)
+        plt.close()
+
+    def _plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
+                    title, save):
+        """Convenience function to plot catalogs with radial bins"""
+        f, ax = self.plot(
+            cat=cat, inv=inv, show=False, save=None, title=title,
+            color_by="depth", vmin=0, vmax=self.depths.max()
+        )
+
+        ax.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o", s=10,
+                   linewidth=1)
+
+        # Plot each of the radial bins
+        for theta in theta_array:
+            x = evrad.max() * np.cos(theta * np.pi / 180) + mid_lon
+            y = evrad.max() * np.sin(theta * np.pi / 180) + mid_lat
+            ax.plot([mid_lon, x], [mid_lat, y], "k-", alpha=0.3)
+
+        plt.savefig(save)
+        plt.close()
+
 
 
