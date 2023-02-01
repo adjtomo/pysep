@@ -78,6 +78,8 @@ class Declust:
         self.depths = None
         self.mags = None
         self.navail = None
+        self.evweights = None
+        self.staweights = None
         self.update_metadata()
 
     def update_metadata(self, cat=None, inv=None):
@@ -130,6 +132,59 @@ class Declust:
         self.data_avail = self._user_data_avail or \
                           get_data_availability(cat, inv)
         self.navail = np.array([len(val) for val in self.data_avail.values()])
+
+        # Calculate source receievr weights
+        # self.evweights, self.staweights = self.calculate_weights(cat, inv)
+
+    def calculate_weights(self, cat=None, inv=None):
+        """
+        Calculate source receiver weights according to Ruan et al. (2019)
+        weighting algorithm.
+
+        :type cat: obspy.core.catalog.Catalog
+        :param cat: Catalog of events to consider. Events must include origin
+            information `latitude` and `longitude`
+        :type inv: obspy.core.inventory.Inventory
+        :param inv: Inventory of stations to consider
+        """
+        # Calculate receiver-receiver distances for each receiver to all others
+        dists = []
+        for i, (lat_i, lon_i) in enumerate(zip(self.stalats, self.stalons)):
+            dists_ij = []
+            for j, (lat_j, lon_j) in enumerate(zip(self.stalats, self.stalons)):
+                if i == j:
+                    continue
+                dist_m, *_ = gps2dist_azimuth(lat1=lat_i, lon1=lon_i,
+                                              lat2=lat_j, lon2=lon_j)
+                dists_ij.append(dist_m * 1E-3)  # units: m -> km
+            dists.append(dists_ij)
+        dists = np.array(dists)
+
+        # Calculate a range of reference distances
+        min_ref_dist = np.floor(dists.min()) or 1  # km
+        max_ref_dist = dists.max()
+        ref_dists = np.arange(min_ref_dist, max_ref_dist, 1)
+
+        # Loop through reference distances and calculate weights
+        ratios = []
+        for ref_dist in ref_dists:
+            weights = []
+            for dists_ij in dists:
+                # Calculate the weight for station i as the summation of
+                # weighted distance to all other stations j (i != j)
+                weight_i = 0
+                for dist_ij in dists_ij:
+                    weight_i += np.e ** (-1 * (dist_ij / ref_dist)**2)
+                weights.append(1 / weight_i)
+            ratios.append(max(weights) / min(weights))
+
+        ratios = np.array(ratios)
+
+        plt.scatter(ref_dists, ratios)
+        plt.ylim([0, 100])
+        plt.show()
+
+        return ratios
 
     def threshold_catalog(self, zedges=None, min_mags=None, min_data=None):
         """
@@ -221,7 +276,6 @@ class Declust:
         # Updates the internal Catalog and metadata in place
         self.cat = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
         self.update_metadata()
-
 
     def decluster_events(self, choice="cartesian", zedges=None, min_mags=None,
                          nkeep=1, select_by="magnitude", **kwargs):
