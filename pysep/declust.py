@@ -14,7 +14,7 @@ promote unique source receiver pairs.
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from obspy.geodetics import gps2dist_azimuth
+from obspy.geodetics import locations2degrees
 from pysep import logger
 from pysep.utils.fmt import index_cat, get_data_availability
 
@@ -108,6 +108,9 @@ class Declust:
         self.mags = np.array(
             [event.preferred_magnitude().mag for event in cat]
         )
+        self.evids = np.array(
+            [event.resource_id.id for event in cat]
+        )
 
         # Get information on stations
         self.stalats, self.stalons, self.staids = [], [], []
@@ -116,8 +119,10 @@ class Declust:
                 for sta in net:
                     self.stalats.append(sta.latitude)
                     self.stalons.append(sta.longitude)
+                    self.staids.append(f"{net.code}.{sta.code}")
         self.stalats = np.array(self.stalats)
         self.stalons = np.array(self.stalons)
+        self.staids = np.array(self.staids)
 
         # Bound domain region based on min/max lat/lons of events and stations
         self.min_lat = self._user_min_lat or \
@@ -136,55 +141,145 @@ class Declust:
         # Calculate source receievr weights
         # self.evweights, self.staweights = self.calculate_weights(cat, inv)
 
-    def calculate_weights(self, cat=None, inv=None):
+    def calculate_srcrcv_weights(self):
         """
-        Calculate source receiver weights according to Ruan et al. (2019)
-        weighting algorithm.
+        Calculate event and station specific weights based on the summation of
+        event weights, and data availability of stations for each given event.
 
-        :type cat: obspy.core.catalog.Catalog
-        :param cat: Catalog of events to consider. Events must include origin
-            information `latitude` and `longitude`
-        :type inv: obspy.core.inventory.Inventory
-        :param inv: Inventory of stations to consider
+        The idea here is to build a matrix of station weights for EVERY event
+        and then sum them and normalize based on the number of stations that
+        went in? and then multiple by the source weights, to finally get a
+        single weight value for EACH station
         """
-        # Calculate receiver-receiver distances for each receiver to all others
+        # First we get the weights for each source/earthquake, normalized by
+        # the number of earthquakes
+        source_weights = self.get_weights(lons=self.evlons, lats=self.evlats,
+                                          norm="len")
+
+        # Now for each source we only get weights for available stations
+        for eid in self.evids:
+            data_avail = np.array(self.data_avail[eid])
+
+            # Determine the indices of all stations available based on ID
+            idx_avail = np.where(np.in1d(data_avail, self.staids))[0]
+            sta_weights = self.get_weights(lons=self.stalons[idx_avail],
+                                           lats=self.stalats[idx_avail],
+                                           norm="len"
+                                           )
+            import pdb;pdb.set_trace()
+
+    def get_weights(self, lons, lats, norm=None, plot=True):
+        """
+        Given a set of coordinates (either stations or earthquakes), calculate
+        a reference distance and a set of weights for each coordinate.
+        Reference distance is chosen as one-third the largest possible value for
+        all possible reference distances
+
+        :type lons: np.array
+        :param lons: array of longitude values
+        :type lats: np.array
+        :param lats: array of latitude values
+        :type plot: bool
+        :param plot: plot a simple scatterplot showing the weights for each
+            station
+        :type norm: str
+        :param norm: how to normalize the weights
+            - None: don't normalize, provide raw weights
+            - 'max': normalize by the maximum weight
+            - 'len': normalize by the length of the array
+            - 'avg': normalize by the mean weight value
+        :rtype: np.array
+        :return: relative, normalized weights for each lon/lat pair
+        """
+        # Calculate the matrix of inter-point distances (source or receiver)
         dists = []
-        for i, (lat_i, lon_i) in enumerate(zip(self.stalats, self.stalons)):
+        for i, (lat_i, lon_i) in enumerate(zip(lats, lons)):
             dists_ij = []
-            for j, (lat_j, lon_j) in enumerate(zip(self.stalats, self.stalons)):
+            for j, (lat_j, lon_j) in enumerate(zip(lats, lons)):
                 if i == j:
-                    continue
-                dist_m, *_ = gps2dist_azimuth(lat1=lat_i, lon1=lon_i,
-                                              lat2=lat_j, lon2=lon_j)
-                dists_ij.append(dist_m * 1E-3)  # units: m -> km
+                    dist_m = 0
+                else:
+                    dist_m = locations2degrees(lat1=lat_i, long1=lon_i,
+                                               lat2=lat_j, long2=lon_j)
+                dists_ij.append(dist_m)
             dists.append(dists_ij)
         dists = np.array(dists)
 
         # Calculate a range of reference distances
-        min_ref_dist = np.floor(dists.min()) or 1  # km
-        max_ref_dist = dists.max()
-        ref_dists = np.arange(min_ref_dist, max_ref_dist, 1)
+        min_ref_dist = 1  # km
+        max_ref_dist = np.ceil(dists.max())
+        ref_dists = np.arange(min_ref_dist, max_ref_dist, 0.25)
 
         # Loop through reference distances and calculate weights
         ratios = []
         for ref_dist in ref_dists:
-            weights = []
-            for dists_ij in dists:
-                # Calculate the weight for station i as the summation of
-                # weighted distance to all other stations j (i != j)
-                weight_i = 0
-                for dist_ij in dists_ij:
-                    weight_i += np.e ** (-1 * (dist_ij / ref_dist)**2)
-                weights.append(1 / weight_i)
-            ratios.append(max(weights) / min(weights))
-
+            weights_try = self.covert_dist_to_weight(dists, ref_dist)
+            ratios.append(max(weights_try) / min(weights_try))
         ratios = np.array(ratios)
 
-        plt.scatter(ref_dists, ratios)
-        plt.ylim([0, 100])
-        plt.show()
+        # Select the reference distance that provides 1/3 the max amplitude
+        idx = (np.abs(ratios - ratios.max()//3)).argmin()
+        optimal_ref_dist = ref_dists[idx]
 
-        return ratios
+        # Normalize all weights by dividing by the average
+        weights = self.covert_dist_to_weight(dists, optimal_ref_dist)
+        if norm is None:
+            normalize = 1
+        elif norm == "avg":
+            normalize = sum(weights) / len(weights)
+        elif norm == "len":
+            normalize = len(weights)
+        elif norm == "max":
+            normalize = max(weights)
+        else:
+            raise NotImplementedError(f"`norm` cannot be {norm}")
+
+        weights /= normalize
+
+        if plot:
+            # Plot the reference distance search scatter
+            plt.plot(ref_dists, ratios, "ko-", linewidth=2)
+            plt.axhline(ratios[idx], c="r", linewidth=2, label="optimal value")
+            plt.xlabel("Reference Distance (deg)")
+            plt.ylabel("Condition Number")
+            plt.title("Scan for reference distance")
+            plt.legend()
+            plt.savefig(f"ref_dist.png")
+            plt.close()
+
+            # Plot the weights geographically
+            plt.scatter(lons, lats, c=weights, marker="v")
+            plt.colorbar()
+            plt.xlabel("Longitude")
+            plt.ylabel("Latitude")
+            plt.title(f"geographic weighting")
+            plt.savefig(f"weights.png")
+
+        return weights
+
+    @staticmethod
+    def covert_dist_to_weight(dists, ref_dist):
+        """
+        Calculate distance weights from a matrix of distances and a
+        reference distance
+
+        :type dists: np.array
+        :param dists: array of inter-source distances
+        :type ref_dist: float
+        :param ref_dist: user-defined reference distance in units km.
+            larger values for reference distances increase the sensitivity to
+            inter-station distances. lower values tend to reduce scatter.
+        """
+        weights = []
+        for dists_ij in dists:
+            # Calculate the weight for station i as the summation of
+            # weighted distance to all other stations j (i != j)
+            weight_i = 0
+            for dist_ij in dists_ij:
+                weight_i += np.exp(-1 * (dist_ij / ref_dist) ** 2)
+            weights.append(1 / weight_i)
+
+        return np.array(weights)
 
     def threshold_catalog(self, zedges=None, min_mags=None, min_data=None):
         """

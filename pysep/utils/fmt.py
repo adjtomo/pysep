@@ -86,6 +86,7 @@ def get_codes(st=None, choice=None, suffix=None, up_to=True):
 
     return sorted(list(set(codes)))
 
+
 def get_data_availability(cat, inv):
     """
     Determine data availability based on whether stations are 'on' for a
