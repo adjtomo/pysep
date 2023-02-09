@@ -151,22 +151,35 @@ class Declust:
         went in? and then multiple by the source weights, to finally get a
         single weight value for EACH station
         """
+        n = len(self.staids)  # number of stations
+
         # First we get the weights for each source/earthquake, normalized by
         # the number of earthquakes
         source_weights = self.get_weights(lons=self.evlons, lats=self.evlats,
                                           norm="len")
 
         # Now for each source we only get weights for available stations
+        sta_weights = []
         for eid in self.evids:
+            print(eid)
             data_avail = np.array(self.data_avail[eid])
 
-            # Determine the indices of all stations available based on ID
+            # Determine the indices of all stations available based on sta ID
             idx_avail = np.where(np.in1d(data_avail, self.staids))[0]
-            sta_weights = self.get_weights(lons=self.stalons[idx_avail],
-                                           lats=self.stalats[idx_avail],
-                                           norm="len"
-                                           )
-            import pdb;pdb.set_trace()
+
+            sta_avail_weights = self.get_weights(lons=self.stalons[idx_avail],
+                                                 lats=self.stalats[idx_avail],
+                                                 norm="len"
+                                                 )
+            # Place these weights within a full size array, fill blanks w/ 0
+            sta_full_weights = np.zeros(n)
+
+            # This isnt' working, concentrating all values at the top
+            sta_full_weights[idx_avail] = sta_avail_weights
+
+            sta_weights.append(sta_full_weights)
+
+        import pdb;pdb.set_trace()
 
     def get_weights(self, lons, lats, norm=None, plot=True):
         """
@@ -191,6 +204,11 @@ class Declust:
         :rtype: np.array
         :return: relative, normalized weights for each lon/lat pair
         """
+        # Weights will be 1 if any station amount less than 2
+        if len(lons) <= 2:
+            weights = np.ones(len(lons))
+            return weights
+
         # Calculate the matrix of inter-point distances (source or receiver)
         dists = []
         for i, (lat_i, lon_i) in enumerate(zip(lats, lons)):
