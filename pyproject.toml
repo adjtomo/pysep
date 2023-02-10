@@ -17,10 +17,10 @@ dependencies = [
     "obspy",
     "cartopy",
     "pyyaml",
-    "llnl_db_client @ git+https://github.com/krischer/llnl_db_client.git"
 ]
 
 [project.optional-dependencies]
+llnl = ["llnl_db_client @ git+https://github.com/krischer/llnl_db_client.git"]
 test = ["pytest"]
 dev = ["pytest", "ipython", "ipdb"]
 
