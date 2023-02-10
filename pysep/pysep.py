@@ -1,12 +1,9 @@
 """
-Python Seismogram Extraction and Processing
+Python Seismogram Extraction and Processing (PySEP)
 
 Download, pre-process, and organize seismic waveforms, event and station
-metadata
-
-TODO
-    * flesh out the template config file
-    * save intermediate files? or some form of checkpointing
+metadata. Save waveforms as SAC files for use in moment tensor inversion and 
+adjoint tomography codes.
 """
 import argparse
 import os
@@ -14,7 +11,12 @@ import shutil
 import sys
 import yaml
 import warnings
-import llnl_db_client  # NOQA
+try:
+    import llnl_db_client  # NOQA
+except ImportError:
+    _has_llnl = False
+else:
+    _has_llnl = True
 
 from glob import glob
 from pathlib import Path
@@ -151,6 +153,14 @@ class Pysep:
         :type phase_list: list of str
         :param phase_list: phase names to get ray information from TauP with.
             Defaults to direct arrivals 'P' and 'S'
+        :type seconds_before_event: float
+        :param seconds_before_event: only used if using the 'search' option for
+            `event_selection`. Time [s] before the given `origin_time` to search
+            for a matching catalog event from the given `client`
+        :type seconds_after_event: float
+        :param seconds_after_event: only used if using the 'search' option for
+            `event_selection`. Time [s] after the given `origin_time` to search
+            for a matching catalog event from the given `client`
         :type reference_time: str
         :param reference_time: Waveform origin time. Allows for a static time
             shift from the event origin time, e.g., if there are timing errors
@@ -195,6 +205,13 @@ class Pysep:
         self.taup_model = taup_model
         self.use_mass_download = use_mass_download
 
+        # Check for LLNL requirement
+        if self.client == "LLNL" and not _has_llnl:
+            raise ImportError(f"`client`=='LLNL' requires optional "
+                              f"dependency 'llnl_db_client' which was not "
+                              f"found. Please reinstall PySEP with the command "
+                              f"'pip install -e .[llnl]")
+
         # Parameters related to event selection
         self.event_selection = event_selection
         try:
@@ -223,7 +240,8 @@ class Pysep:
         self.seconds_after_ref = seconds_after_ref
         self.phase_list = phase_list
 
-        # NOTE: This default is a UAF LUNGS system-specific database path
+        # NOTE: This default is a UAF LUNGS system-specific database path.
+        # If you are not on LUNGS, you will need to set this path manually
         self.llnl_db_path = (
                 llnl_db_path or
                 "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
