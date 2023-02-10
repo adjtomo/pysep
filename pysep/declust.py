@@ -17,6 +17,7 @@ import os
 from obspy.geodetics import locations2degrees
 from pysep import logger
 from pysep.utils.fmt import index_cat, get_data_availability
+from pysep.utils.plot import set_plot_aesthetic
 
 
 class Declust:
@@ -70,16 +71,21 @@ class Declust:
         # calculated on the fly based on the `inv` object
         self._user_data_avail = data_avail
 
-        # Instantiate Nones and then fill up with metadata getter
+        # Instantiate Nones and then fill up internal lists with metadata getter
         self.evlats = None
         self.evlons = None
+        self.evids = None
         self.stalats = None
         self.stalons = None
+        self.staids = None
+        self.min_lat = None
+        self.max_lat = None
+        self.min_lon = None
+        self.max_lon = None
         self.depths = None
         self.mags = None
+        self.data_avail = None
         self.navail = None
-        self.evweights = None
-        self.staweights = None
         self.update_metadata()
 
     def update_metadata(self, cat=None, inv=None):
@@ -130,225 +136,21 @@ class Declust:
         self.staids = np.array(self.staids)
 
         # Bound domain region based on min/max lat/lons of events and stations
-        self.min_lat = self._user_min_lat or \
-                       np.append(self.evlats, self.stalats).min()
-        self.max_lat = self._user_max_lat or \
-                       np.append(self.evlats, self.stalats).max()
-        self.min_lon = self._user_min_lon or \
-                       np.append(self.evlons, self.stalons).min()
-        self.max_lon = self._user_max_lon or \
-                       np.append(self.evlons, self.stalons).max()
+        self.min_lat = \
+            self._user_min_lat or np.append(self.evlats, self.stalats).min()
+        self.max_lat = \
+            self._user_max_lat or np.append(self.evlats, self.stalats).max()
+        self.min_lon = \
+            self._user_min_lon or np.append(self.evlons, self.stalons).min()
+        self.max_lon = \
+            self._user_max_lon or np.append(self.evlons, self.stalons).max()
 
-        self.data_avail = self._user_data_avail or \
-                          get_data_availability(cat, inv)
+        # Determine data availability based on station "on" time
+        self.data_avail = \
+            self._user_data_avail or get_data_availability(cat, inv)
+
+        # Count the number of availabler stations for the entire catalog
         self.navail = np.array([len(val) for val in self.data_avail.values()])
-
-
-    def calculate_srcrcv_weights(self, plot=False):
-        """
-        Calculate event and station specific weights based on event geographic
-        weights, and event-dependent station geographic weights which take into
-        account data availability for each event.
-        """
-        n = len(self.staids)  # number of stations
-        sorted_idx = np.argsort(self.staids)  # used for index lookups
-
-        # The summation of source weights should equal the number of sources
-        source_weights = self._get_weights(lons=self.evlons, lats=self.evlats,
-                                          norm="avg")
-
-        # Now for each source we only get weights for available stations. Other
-        # weights are given value NAN
-        station_weights = []
-        for i, eid in enumerate(self.evids):
-            print(eid)
-            data_avail = np.array(self.data_avail[eid])
-
-            # Determine the indices of all stations available based on sta ID
-            idx_avail = np.searchsorted(self.staids[sorted_idx], data_avail)
-
-            sta_avail_weights = self._get_weights(lons=self.stalons[idx_avail],
-                                                 lats=self.stalats[idx_avail],
-                                                 norm="avg"
-                                                 )
-
-            # Multiply weights by the weight of the given source
-            sta_avail_weights *= source_weights[i]
-
-            # Place these weights within a full size array, fill blanks w/ 0
-            # Assuming that the `get_weights` algorithm will not return 0 weight
-            sta_full_weights = np.zeros(n)  # zeros
-            sta_full_weights[idx_avail] = sta_avail_weights
-
-            station_weights.append(sta_full_weights)
-
-        # Each row in this array represents a station, each column is an event
-        station_weights = np.array(station_weights).T
-        self._write_weight_file(station_weights)
-
-        # Normalize by the average for each station only taking into account
-        # available data (i.e. ignoring zero weight values). For plotting only
-        if plot:
-            avg_sta_weight = (station_weights.sum(axis=1) /
-                              np.count_nonzero(station_weights, axis=1))
-
-            # Plot events
-            plt.scatter(self.evlons, self.evlats, c=source_weights, marker="o",
-                        edgecolors="k", zorder=6, cmap="RdBu", s=45)
-            plt.colorbar(label="event weights")
-
-            # Plot stations
-            plt.scatter(self.stalons, self.stalats, c=avg_sta_weight, marker="v",
-                        edgecolors="k", zorder=7, cmap="PRGn", s=45)
-            plt.colorbar(label="average station weights")
-
-            # Connect events and stations by data availability
-            for i, (event, stalist) in enumerate(self.data_avail.items()):
-                assert (self.evids[i] == event), f"incorrect event ID encountered"
-                for netsta in stalist:
-                    net, sta = netsta.split(".")
-                    inv_ = self.inv.select(network=net, station=sta)
-                    assert (len(inv_) == 1), f"too many stations found"
-                    stalat = inv_[0][0].latitude
-                    stalon = inv_[0][0].longitude
-                    plt.plot([self.evlons[i], stalon], [self.evlats[i], stalat],
-                             c="k", linewidth=0.5, alpha=0.05, zorder=5)
-            plt.xlabel("Longitude")
-            plt.ylabel("Latitude")
-            plt.title(f"Geographic Weighting (NSTA={len(self.stalons)}, "
-                      f"NEVNT={len(self.evlons)})")
-
-            plt.show()
-
-        return station_weights
-
-    def _get_weights(self, lons, lats, norm=None, plot=False,
-                    save="reference_distance_scan.png"):
-        """
-        Given a set of coordinates (either stations or earthquakes), calculate
-        a reference distance and a set of weights for each coordinate.
-        Reference distance is chosen as one-third the largest possible value for
-        all possible reference distances
-
-        :type lons: np.array
-        :param lons: array of longitude values
-        :type lats: np.array
-        :param lats: array of latitude values
-        :type plot: bool
-        :param plot: plot a simple scatterplot showing the weights for each
-            station
-        :type norm: str
-        :param norm: how to normalize the weights
-            - None: don't normalize, provide raw weights
-            - 'max': normalize by the maximum weight
-            - 'len': normalize by the length of the array
-            - 'avg': normalize by the mean weight value
-        :rtype: np.array
-        :return: relative, normalized weights for each lon/lat pair
-        """
-        # Weights will be 1 if any station amount less than 2
-        if len(lons) <= 2:
-            weights = np.ones(len(lons))
-            return weights
-
-        # Calculate the matrix of inter-point distances (source or receiver)
-        dists = []
-        for i, (lat_i, lon_i) in enumerate(zip(lats, lons)):
-            dists_ij = []
-            for j, (lat_j, lon_j) in enumerate(zip(lats, lons)):
-                if i == j:
-                    dist_m = 0
-                else:
-                    dist_m = locations2degrees(lat1=lat_i, long1=lon_i,
-                                               lat2=lat_j, long2=lon_j)
-                dists_ij.append(dist_m)
-            dists.append(dists_ij)
-        dists = np.array(dists)
-
-        # Calculate a range of reference distances
-        min_ref_dist = 1  # km
-        max_ref_dist = np.ceil(dists.max())
-        ref_dists = np.arange(min_ref_dist, max_ref_dist, 0.25)
-
-        # Loop through reference distances and calculate weights
-        ratios = []
-        for ref_dist in ref_dists:
-            weights_try = self._covert_dist_to_weight(dists, ref_dist)
-            ratios.append(max(weights_try) / min(weights_try))
-        ratios = np.array(ratios)
-
-        # Select the reference distance that provides 1/3 the max amplitude
-        idx = (np.abs(ratios - ratios.max()//3)).argmin()
-        optimal_ref_dist = ref_dists[idx]
-
-        # Normalize all weights by dividing by the average
-        weights = self._covert_dist_to_weight(dists, optimal_ref_dist)
-
-        if norm is None:
-            normalize = 1
-        elif norm == "avg":
-            normalize = sum(weights) / len(weights)
-        elif norm == "len":
-            normalize = len(weights)
-        elif norm == "max":
-            normalize = max(weights)
-        else:
-            raise NotImplementedError(f"`norm` cannot be {norm}")
-
-        weights /= normalize
-
-        if plot:
-            plt.plot(dists, ratios, "ko-", linewidth=2)
-            plt.axhline(dists[idx], c="r", linewidth=2, label="optimal value")
-            plt.xlabel("Reference Distance (deg)")
-            plt.ylabel("Condition Number")
-            plt.title("Scan for Reference Distance")
-            plt.legend()
-            if save:
-                plt.savefig(save)
-            plt.show()
-
-        return weights
-
-    @staticmethod
-    def _covert_dist_to_weight(dists, ref_dist):
-        """
-        Calculate distance weights from a matrix of distances and a
-        reference distance
-
-        :type dists: np.array
-        :param dists: array of inter-source distances
-        :type ref_dist: float
-        :param ref_dist: user-defined reference distance in units km.
-            larger values for reference distances increase the sensitivity to
-            inter-station distances. lower values tend to reduce scatter.
-        """
-        weights = []
-        for dists_ij in dists:
-            # Calculate the weight for station i as the summation of
-            # weighted distance to all other stations j (i != j)
-            weight_i = 0
-            for dist_ij in dists_ij:
-                weight_i += np.exp(-1 * (dist_ij / ref_dist) ** 2)
-            weights.append(1 / weight_i)
-
-        return np.array(weights)
-
-    def _write_weight_file(self, station_weights, weight_fid="weights.txt"):
-        """
-        Writes a two dimensional weight file where the rows are events and
-        the columns are stations and weights are provided as the product of
-        the event weight with the station weight
-
-        Probably a better way to do this.
-        """
-        sta_string = ",".join([sta for sta in self.staids])
-        event_weights = station_weights.T
-        with open(weight_fid, "w") as f:
-            f.write(f"event_name,{sta_string}\n")
-            for i, stations in enumerate(event_weights):
-                weights = ",".join([f"{wght:.3f}" for wght in stations])
-                f.write(f"{self.evids[i]},{weights}\n")
 
     def threshold_catalog(self, zedges=None, min_mags=None, min_data=None):
         """
@@ -441,11 +243,237 @@ class Declust:
         self.cat = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
         self.update_metadata()
 
-    def decluster_events(self, choice="cartesian", zedges=None, min_mags=None,
-                         nkeep=1, select_by="magnitude", **kwargs):
+    def calculate_srcrcv_weights(self, cat=None, inv=None, write="weights.txt",
+                                 plot=False, show=False, save="srcrcvwght.png"):
         """
-        Main logic function for choosing how to decluster events
+        Calculate event and station specific weights based on event geographic
+        weights, and event-dependent station geographic weights which take into
+        account data availability for each event.
 
+        Uses the internal `cat` and `inv` attributes of the class. If
+        declustering was run to thin out the catalog, run `update_metadata`
+        first to update internal attributes which are used for defining weights.
+
+        :type cat: obspy.core.catalog.Catalog
+        :param cat: Optional, catalog of events to consider. If none given,
+            will use whatever internal catalog is available
+        :type inv: obspy.core.inventory.Inventory
+        :param inv: Inventory of stations to consider
+        :type plot: bool
+        :param plot: plot source weights and an average of station weights on
+            a single figure.
+        :type write: str
+        :param write: filename used to write station weights to text file.
+            if None, will not write
+        :type show: bool
+        :param show: show figure in GUI
+        :type save: str
+        :param save: if given, file id for the name of the output figure to save
+            if not given, will not save figure
+        :rtype: np.array
+        :return: a 2D array where each row corresponds to a station and each
+            column corresponds to an event. The value for a given row and
+            column is the weight of that station w.r.t all other available
+            stations. Stations that were not available (not on) are given a
+            weight of 0
+        """
+        if cat is not None or inv is not None:
+            self.update_metadata(cat, inv)
+
+        logger.info("calculating source receiver weights")
+        # Used for index lookups
+        sorted_idx = np.argsort(self.staids)
+
+        # The summation of source weights should equal the number of sources
+        source_weights = self._get_weights(lons=self.evlons, lats=self.evlats,
+                                           norm="avg")
+
+        # For each source we get weights based only on available stations
+        station_weights = []
+        for i, eid in enumerate(self.evids):
+            data_avail = np.array(self.data_avail[eid])
+            logger.info(f"'{eid}' has {len(data_avail)} stations available")
+
+            # Determine the indices of all stations available based on sta ID
+            idx_avail = np.searchsorted(self.staids[sorted_idx], data_avail)
+
+            sta_avail_weights = self._get_weights(lons=self.stalons[idx_avail],
+                                                  lats=self.stalats[idx_avail],
+                                                  norm="avg"
+                                                  )
+
+            # Multiply weights by the weight of the given source
+            sta_avail_weights *= source_weights[i]
+
+            # Place these weights within a full size array, fill blanks w/ 0
+            # Assuming that the `get_weights` algorithm will not return 0 weight
+            sta_full_weights = np.zeros(len(self.staids))  # zeros
+            sta_full_weights[idx_avail] = sta_avail_weights
+
+            station_weights.append(sta_full_weights)
+
+        # Rows: events; Cols: stations
+        station_weights = np.array(station_weights)
+
+        # Write out a text file with weights
+        if write is not None:
+            header = (f"ROWS:{' '.join([_ for _ in self.evids])}\n" 
+                      f"COLS:{' '.join([_ for _ in self.staids])}"
+                      )
+            np.savetxt(write, station_weights, header=header, fmt="%.3f")
+
+        # Normalize by the average for each station only taking into account
+        # available data (i.e. ignoring zero weight values). For plotting only
+        if plot:
+            avg_sta_weight = (station_weights.T.sum(axis=1) /
+                              np.count_nonzero(station_weights.T, axis=1)
+                              )
+            title = (f"Geographic Weighting (NSTA={len(self.stalons)}, " 
+                     f"NEVNT={len(self.evlons)})")
+            self.plot(inv=self.inv, show=show, save=save, title=title,
+                      color_by="custom", event_colors=source_weights,
+                      station_colors=avg_sta_weight,
+                      event_cbar_label="event weights",
+                      station_cbar_label="average station weights",
+                      cmap="RdBu", station_cmap="PRGn",
+                      station_markersize=75, connect_data_avail=True,
+                      event_size_scale=(60, 300)
+                      )
+
+        return station_weights
+
+    def _get_weights(self, lons, lats, norm=None, plot=False,
+                     save="reference_distance_scan.png"):
+        """
+        Given a set of coordinates (either stations or earthquakes), calculate
+        a reference distance and a set of weights for each coordinate.
+        Reference distance is chosen as one-third the largest possible value for
+        all possible reference distances
+
+        :type lons: np.array
+        :param lons: array of longitude values
+        :type lats: np.array
+        :param lats: array of latitude values
+        :type plot: bool
+        :param plot: plot a simple scatterplot showing the weights for each
+            station
+        :type norm: str
+        :param norm: how to normalize the weights
+            - None: don't normalize, provide raw weights
+            - 'max': normalize by the maximum weight
+            - 'len': normalize by the length of the array
+            - 'avg': normalize by the mean weight value
+        :rtype: np.array
+        :return: relative, normalized weights for each lon/lat pair
+        """
+        # Weights will be 1 if any station amount less than 2
+        if len(lons) <= 2:
+            weights = np.ones(len(lons))
+            return weights
+
+        # Calculate the matrix of inter-point distances (source or receiver)
+        dists = []
+        for i, (lat_i, lon_i) in enumerate(zip(lats, lons)):
+            dists_ij = []
+            for j, (lat_j, lon_j) in enumerate(zip(lats, lons)):
+                if i == j:
+                    dist_m = 0
+                else:
+                    dist_m = locations2degrees(lat1=lat_i, long1=lon_i,
+                                               lat2=lat_j, long2=lon_j)
+                dists_ij.append(dist_m)
+            dists.append(dists_ij)
+        dists = np.array(dists)
+
+        # Calculate a range of reference distances
+        min_ref_dist = 1  # km
+        max_ref_dist = np.ceil(dists.max())
+        ref_dists = np.arange(min_ref_dist, max_ref_dist, 0.25)
+
+        # Loop through reference distances and calculate weights
+        ratios = []
+        for ref_dist in ref_dists:
+            weights_try = self._covert_dist_to_weight(dists, ref_dist)
+            ratios.append(max(weights_try) / min(weights_try))
+        ratios = np.array(ratios)
+
+        # Select the reference distance that provides 1/3 the max amplitude
+        idx = (np.abs(ratios - ratios.max()//3)).argmin()
+        optimal_ref_dist = ref_dists[idx]
+
+        logger.debug(f"ref. dist. = {optimal_ref_dist} chosen from "
+                     f"{min_ref_dist} <= d <= {max_ref_dist}")
+
+        # Convert relative inter-source distances to a given weight
+        weights = self._covert_dist_to_weight(dists, optimal_ref_dist)
+
+        # Allow normalization for a variety of types
+        if norm is None:
+            normalize = 1
+        elif norm == "avg":
+            normalize = sum(weights) / len(weights)
+        elif norm == "len":
+            normalize = len(weights)
+        elif norm == "max":
+            normalize = max(weights)
+        else:
+            raise NotImplementedError(f"`norm` cannot be {norm}")
+        weights /= normalize
+
+        # Plot the reference distance scan to allow user to double-check
+        if plot:
+            plt.plot(dists, ratios, "ko-", linewidth=2)
+            plt.axhline(dists[idx], c="r", linewidth=2, label="optimal value")
+            plt.xlabel("Reference Distance (deg)")
+            plt.ylabel("Condition Number")
+            plt.title("Scan for Reference Distance")
+            plt.legend()
+            if save:
+                plt.savefig(save)
+            plt.show()
+
+        return weights
+
+    @staticmethod
+    def _covert_dist_to_weight(dists, ref_dist):
+        """
+        Calculate distance weights from a matrix of distances and a
+        reference distance
+
+        :type dists: np.array
+        :param dists: array of inter-source distances
+        :type ref_dist: float
+        :param ref_dist: user-defined reference distance in units km.
+            larger values for reference distances increase the sensitivity to
+            inter-station distances. lower values tend to reduce scatter.
+        """
+        weights = []
+        for dists_ij in dists:
+            # Calculate the weight for station i as the summation of
+            # weighted distance to all other stations j (i != j)
+            weight_i = 0
+            for dist_ij in dists_ij:
+                weight_i += np.exp(-1 * (dist_ij / ref_dist) ** 2)
+            weights.append(1 / weight_i)
+
+        return np.array(weights)
+
+    def decluster_events(self, cat=None, inv=None, choice="cartesian",
+                         zedges=None, min_mags=None, nkeep=1,
+                         select_by="magnitude", **kwargs):
+        """
+        Main logic function for choosing how to decluster events. Allow for
+        both cartesian and polar binning of the domain.
+
+        See `_decluster_events_cartesian` and `_decluster_events_polar` for
+        specific input parameters to control declustering.
+
+
+        :type cat: obspy.core.catalog.Catalog
+        :param cat: Optional, catalog of events to consider. If none given,
+            will use whatever internal catalog is available
+        :type inv: obspy.core.inventory.Inventory
+        :param inv: Inventory of stations to consider
         :type choice: str
         :param choice: choice of domain partitioning, can be one of:
             - cartesian: grid the domain as a cube with `nx` by `ny` cells
@@ -477,6 +505,9 @@ class Declust:
             - depth_r: deeper depths prioritized
             - data: prioritize events which have the most data availability
         """
+        if cat is not None or inv is not None:
+            self.update_metadata(cat, inv)
+
         acceptable_select_by = ["magnitude", "magnitude_r", "depth", "depth_r",
                                 "data", "data_r"]
         assert(select_by in acceptable_select_by), \
@@ -782,13 +813,65 @@ class Declust:
         return cat_out
 
     def plot(self, cat=None, inv=None, color_by="depth",
-             connect_data_avail=False, vmin=0, vmax=None, title=None,
-             cmap="inferno_r", show=True, save=None, ):
+             connect_data_avail=False, vmin=None, vmax=None, title=None,
+             cmap="inferno_r", show=True, save=None, equal_scale=False,
+             **kwargs):
         """
-        Generate a simple scatter plot of events, colored by depth and sized
-        by magnitude.
+        Geranalized plot function used to plot an event catalog and station
+        inventory.
+
+        :type cat: obspy.core.catalog.Catalog
+        :param cat: Catalog of events to consider. Events must include origin
+            information `latitude` and `longitude`
+        :type inv: obspy.core.inventory.Inventory
+        :param inv: Inventory of stations to consider
+        :type color_by: str
+        :param color_by: how to color the event markers, available are
+            - 'depth': color by the event depth
+            - 'data': color by data availability for given event
+            - 'custom': used by internal plotting routines to provide custom
+                color array to the plot
+        :type connect_data_avail: bool
+        :param connect_data_avail: connect sources and receivers with a thin
+            line based on data availability
+        :type vmin: float
+        :param vmin: min value for the colorbar, defaults to smallest value in
+            array defined by `color_by`
+        :type vmax: float:
+        :param vmax: maximum value for colorbar, defaults to largest value in
+            the array defined by `color_by`
+        :type title: str
+        :param title: custom user-input title for the figure, otherwise defaults
+            to useful information about the catalog and inventory
+        :type cmap: str
+        :param cmap: matplotlib colormap to use for array defined by `color_by`
+        :type show: bool
+        :param show: show figure in GUI
+        :type save: str
+        :param save: if given, file id for the name of the output figure to save
+            if not given, will not save figure
+        :type equal_scale: bool
+        :param equal_scale: set the scale of lat and lon equal, False by default
         """
+        # Fine-tuning look of the plot with reasonable defaults
+        event_marker = kwargs.get("event_marker", "o")
+        event_legend_mags = kwargs.get("event_legend_mags", [4, 5, 6])
+        event_size_scale = kwargs.get("event_size_scale", (30, 200))
+        station_marker = kwargs.get("station_marker", "v")
+        station_alpha = kwargs.get("station_alpha", 1)
+        station_markersize = kwargs.get("station_markersize", 10)
+        append_title = kwargs.get("append_title", True)
+
+        # Kwargs for fine tuning some internal plotting routines. Not necessary
+        # for general users
+        event_colors = kwargs.get("event_colors", None)
+        event_cbar_label = kwargs.get("event_cbar_label", None)
+        station_colors = kwargs.get("station_colors", "None")
+        station_cbar_label = kwargs.get("station_cbar_label", None)
+        station_cmap = kwargs.get("station_cmap", "viridis")
+
         if cat is None:
+            cat = self.cat
             mags = self.mags
             depths = self.depths
             evlats = self.evlats
@@ -813,23 +896,31 @@ class Declust:
         f, ax = plt.subplots()
 
         # Normalize exp of magnitudes between `a` and `b` to get good size diff.
-        legend_mags = [6, 5, 4]  # these will be used for legend purposes
+        legend_mags = sorted(event_legend_mags, reverse=True)
         mags = np.append(mags, legend_mags)
         mags = np.e ** mags
-        a = 30
-        b = 200
+        a, b = event_size_scale
         mags = ((b - a) * (mags - mags.min()) / (mags.max() - mags.min())) + a
 
         # Choose how to color
-        color = {"depth": (depths, "depths [km]"),
-                 "data": (data, "data availability")}[color_by]
+        if color_by == "depth":
+            color_arr = depths
+            cbar_label = "depths [km]"
+        elif color_by == "data":
+            color_arr = data
+            cbar_label = "data availability"
+        elif color_by == "custom":
+            color_arr = event_colors
+            cbar_label = event_cbar_label
+        else:
+            raise NotImplementedError
 
-        sc = ax.scatter(x=evlons, y=evlats, s=mags[:-3], c=color[0],
-                        cmap=cmap, edgecolor="k", linewidth=1,
-                        vmin=vmin, vmax=vmax or depths.max(),
-                        zorder=10)
-
-        plt.colorbar(sc, label=color[1])
+        # Plot events as a scatter of markers, sized  by mag, colored by smthng
+        sc = ax.scatter(x=evlons, y=evlats, s=mags[:-3], c=color_arr,
+                        marker=event_marker, cmap=cmap, edgecolor="k",
+                        linewidth=1, vmin=vmin or color_arr.min(),
+                        vmax=vmax or color_arr.max(), zorder=10)
+        plt.colorbar(sc, label=cbar_label)
 
         # Plot inventory if provided
         if inv is not None:
@@ -844,8 +935,14 @@ class Declust:
                         stalons.append(sta.longitude)
                 stalats = np.array(stalats)
                 stalons = np.array(stalons)
-            plt.scatter(x=stalons, y=stalats, c="None", edgecolor="k",
-                        linewidth=1, s=10, marker="v", zorder=5, alpha=0.5)
+            sc2 = plt.scatter(x=stalons, y=stalats, c=station_colors,
+                              edgecolor="k", linewidth=1, s=station_markersize,
+                              marker=station_marker, zorder=9,
+                              alpha=station_alpha, cmap=station_cmap
+                              )
+            # Only used by internal plottign routines
+            if station_cbar_label:
+                plt.colorbar(sc2, label=station_cbar_label)
 
         # Connect sources and receivers with a straight line based on
         # data availability. Assuming that data availability order is the
@@ -862,10 +959,11 @@ class Declust:
                     stalat = inv_[0][0].latitude
                     stalon = inv_[0][0].longitude
                     plt.plot([evlons[i], stalon], [evlats[i], stalat], c="k",
-                             linewidth=0.5, alpha=0.05, zorder=5)
+                             linewidth=0.5, alpha=0.05, zorder=8)
             if title is None:
                 title = ""
-            title += f"\n({data.sum()} source-receiver pairs)"
+            if append_title:
+                title += f"\n({data.sum()} source-receiver pairs)"
 
         # Plot attributes
         buff = 0.01
@@ -875,12 +973,12 @@ class Declust:
                      self.max_lat + np.abs(buff * self.max_lat)])
         ax.set_xlabel("Longitude")
         ax.set_ylabel("Latitude")
+
         if title is not None:
             ax.set_title(title)
         # May be useful but decided things look better without
-        # ax.set_aspect("equal")
-        # ax.grid(True)
-        plt.tight_layout()
+        if equal_scale:
+            ax.set_aspect("equal")
 
         # Generate a scale bar for magnitude sizes. Must do this after setting
         # the x limit because we will plot based on axis display coordinates
@@ -891,6 +989,15 @@ class Declust:
                        linewidth=1, transform=ax.transAxes, zorder=15)
             ax.text(x, 0.9, s=f"{int(legend_mags[index]):d}", c="k",
                     fontsize=7, transform=ax.transAxes, ha="center", zorder=15)
+
+        # Adjust linewidths and fontsizes to make the figure look nicer
+        set_plot_aesthetic(ax, xtick_major=5, xtick_minor=1, ytick_major=5,
+                           ytick_minor=1, ytick_fontsize=12,
+                           xtick_fontsize=12, xlabel_fontsize=15,
+                           ylabel_fontsize=15, title_fontsize=15,
+                           xgrid_major=True, xgrid_minor=False,
+                           ygrid_major=True, ygrid_minor=False
+                           )
 
         if save:
             plt.savefig(save)
@@ -918,7 +1025,7 @@ class Declust:
 
     def _plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
                     title, save):
-        """Convenience function to plot catalogs with radial bins"""
+        """Convenience function to plot catalogs with radial bin lines"""
         f, ax = self.plot(
             cat=cat, inv=inv, show=False, save=None, title=title,
             color_by="depth", vmin=0, vmax=self.depths.max()
@@ -935,6 +1042,3 @@ class Declust:
 
         plt.savefig(save)
         plt.close()
-
-
-
