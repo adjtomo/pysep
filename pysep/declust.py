@@ -91,8 +91,13 @@ class Declust:
         """
         if cat is None:
             cat = self.cat
+        else:
+            self.cat = cat
+
         if inv is None:
             inv = self.inv
+        else:
+            self.inv = inv
 
         # Get longitude and latitude values from the Catalog and Inventory
         self.evlats = np.array(
@@ -138,50 +143,87 @@ class Declust:
                           get_data_availability(cat, inv)
         self.navail = np.array([len(val) for val in self.data_avail.values()])
 
-        # Calculate source receievr weights
-        # self.evweights, self.staweights = self.calculate_weights(cat, inv)
 
-    def calculate_srcrcv_weights(self):
+    def calculate_srcrcv_weights(self, plot=False):
         """
-        Calculate event and station specific weights based on the summation of
-        event weights, and data availability of stations for each given event.
-
-        The idea here is to build a matrix of station weights for EVERY event
-        and then sum them and normalize based on the number of stations that
-        went in? and then multiple by the source weights, to finally get a
-        single weight value for EACH station
+        Calculate event and station specific weights based on event geographic
+        weights, and event-dependent station geographic weights which take into
+        account data availability for each event.
         """
         n = len(self.staids)  # number of stations
+        sorted_idx = np.argsort(self.staids)  # used for index lookups
 
-        # First we get the weights for each source/earthquake, normalized by
-        # the number of earthquakes
-        source_weights = self.get_weights(lons=self.evlons, lats=self.evlats,
-                                          norm="len")
+        # The summation of source weights should equal the number of sources
+        source_weights = self._get_weights(lons=self.evlons, lats=self.evlats,
+                                          norm="avg")
 
-        # Now for each source we only get weights for available stations
-        sta_weights = []
-        for eid in self.evids:
+        # Now for each source we only get weights for available stations. Other
+        # weights are given value NAN
+        station_weights = []
+        for i, eid in enumerate(self.evids):
             print(eid)
             data_avail = np.array(self.data_avail[eid])
 
             # Determine the indices of all stations available based on sta ID
-            idx_avail = np.where(np.in1d(data_avail, self.staids))[0]
+            idx_avail = np.searchsorted(self.staids[sorted_idx], data_avail)
 
-            sta_avail_weights = self.get_weights(lons=self.stalons[idx_avail],
+            sta_avail_weights = self._get_weights(lons=self.stalons[idx_avail],
                                                  lats=self.stalats[idx_avail],
-                                                 norm="len"
+                                                 norm="avg"
                                                  )
-            # Place these weights within a full size array, fill blanks w/ 0
-            sta_full_weights = np.zeros(n)
 
-            # This isnt' working, concentrating all values at the top
+            # Multiply weights by the weight of the given source
+            sta_avail_weights *= source_weights[i]
+
+            # Place these weights within a full size array, fill blanks w/ 0
+            # Assuming that the `get_weights` algorithm will not return 0 weight
+            sta_full_weights = np.zeros(n)  # zeros
             sta_full_weights[idx_avail] = sta_avail_weights
 
-            sta_weights.append(sta_full_weights)
+            station_weights.append(sta_full_weights)
 
-        import pdb;pdb.set_trace()
+        # Each row in this array represents a station, each column is an event
+        station_weights = np.array(station_weights).T
+        self._write_weight_file(station_weights)
 
-    def get_weights(self, lons, lats, norm=None, plot=True):
+        # Normalize by the average for each station only taking into account
+        # available data (i.e. ignoring zero weight values). For plotting only
+        if plot:
+            avg_sta_weight = (station_weights.sum(axis=1) /
+                              np.count_nonzero(station_weights, axis=1))
+
+            # Plot events
+            plt.scatter(self.evlons, self.evlats, c=source_weights, marker="o",
+                        edgecolors="k", zorder=6, cmap="RdBu", s=45)
+            plt.colorbar(label="event weights")
+
+            # Plot stations
+            plt.scatter(self.stalons, self.stalats, c=avg_sta_weight, marker="v",
+                        edgecolors="k", zorder=7, cmap="PRGn", s=45)
+            plt.colorbar(label="average station weights")
+
+            # Connect events and stations by data availability
+            for i, (event, stalist) in enumerate(self.data_avail.items()):
+                assert (self.evids[i] == event), f"incorrect event ID encountered"
+                for netsta in stalist:
+                    net, sta = netsta.split(".")
+                    inv_ = self.inv.select(network=net, station=sta)
+                    assert (len(inv_) == 1), f"too many stations found"
+                    stalat = inv_[0][0].latitude
+                    stalon = inv_[0][0].longitude
+                    plt.plot([self.evlons[i], stalon], [self.evlats[i], stalat],
+                             c="k", linewidth=0.5, alpha=0.05, zorder=5)
+            plt.xlabel("Longitude")
+            plt.ylabel("Latitude")
+            plt.title(f"Geographic Weighting (NSTA={len(self.stalons)}, "
+                      f"NEVNT={len(self.evlons)})")
+
+            plt.show()
+
+        return station_weights
+
+    def _get_weights(self, lons, lats, norm=None, plot=False,
+                    save="reference_distance_scan.png"):
         """
         Given a set of coordinates (either stations or earthquakes), calculate
         a reference distance and a set of weights for each coordinate.
@@ -231,7 +273,7 @@ class Declust:
         # Loop through reference distances and calculate weights
         ratios = []
         for ref_dist in ref_dists:
-            weights_try = self.covert_dist_to_weight(dists, ref_dist)
+            weights_try = self._covert_dist_to_weight(dists, ref_dist)
             ratios.append(max(weights_try) / min(weights_try))
         ratios = np.array(ratios)
 
@@ -240,7 +282,8 @@ class Declust:
         optimal_ref_dist = ref_dists[idx]
 
         # Normalize all weights by dividing by the average
-        weights = self.covert_dist_to_weight(dists, optimal_ref_dist)
+        weights = self._covert_dist_to_weight(dists, optimal_ref_dist)
+
         if norm is None:
             normalize = 1
         elif norm == "avg":
@@ -255,28 +298,20 @@ class Declust:
         weights /= normalize
 
         if plot:
-            # Plot the reference distance search scatter
-            plt.plot(ref_dists, ratios, "ko-", linewidth=2)
-            plt.axhline(ratios[idx], c="r", linewidth=2, label="optimal value")
+            plt.plot(dists, ratios, "ko-", linewidth=2)
+            plt.axhline(dists[idx], c="r", linewidth=2, label="optimal value")
             plt.xlabel("Reference Distance (deg)")
             plt.ylabel("Condition Number")
-            plt.title("Scan for reference distance")
+            plt.title("Scan for Reference Distance")
             plt.legend()
-            plt.savefig(f"ref_dist.png")
-            plt.close()
-
-            # Plot the weights geographically
-            plt.scatter(lons, lats, c=weights, marker="v")
-            plt.colorbar()
-            plt.xlabel("Longitude")
-            plt.ylabel("Latitude")
-            plt.title(f"geographic weighting")
-            plt.savefig(f"weights.png")
+            if save:
+                plt.savefig(save)
+            plt.show()
 
         return weights
 
     @staticmethod
-    def covert_dist_to_weight(dists, ref_dist):
+    def _covert_dist_to_weight(dists, ref_dist):
         """
         Calculate distance weights from a matrix of distances and a
         reference distance
@@ -298,6 +333,22 @@ class Declust:
             weights.append(1 / weight_i)
 
         return np.array(weights)
+
+    def _write_weight_file(self, station_weights, weight_fid="weights.txt"):
+        """
+        Writes a two dimensional weight file where the rows are events and
+        the columns are stations and weights are provided as the product of
+        the event weight with the station weight
+
+        Probably a better way to do this.
+        """
+        sta_string = ",".join([sta for sta in self.staids])
+        event_weights = station_weights.T
+        with open(weight_fid, "w") as f:
+            f.write(f"event_name,{sta_string}\n")
+            for i, stations in enumerate(event_weights):
+                weights = ",".join([f"{wght:.3f}" for wght in stations])
+                f.write(f"{self.evids[i]},{weights}\n")
 
     def threshold_catalog(self, zedges=None, min_mags=None, min_data=None):
         """
