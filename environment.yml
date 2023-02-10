@@ -8,6 +8,5 @@ dependencies:
     - cartopy
     - pyyaml
     - pip:
-      - git+https://github.com/krischer/llnl_db_client.git
       - -e .
        
