@@ -197,11 +197,11 @@ class Pysep:
         self.taup_model = taup_model
 
         # Check for LLNL requirement
-        if self.client == "LLNL":
-            assert(_has_llnl), (f"`client`=='LLNL' requires optional "
-                                f"dependency 'llnl_db_client' which was not "
-                                f"found. Please install PySEP with the command "
-                                f"'pip install -e .[llnl]")
+        if self.client == "LLNL" and not _has_llnl:
+            raise ImportError(f"`client`=='LLNL' requires optional "
+                              f"dependency 'llnl_db_client' which was not "
+                              f"found. Please reinstall PySEP with the command "
+                              f"'pip install -e .[llnl]")
 
         # Parameters related to event selection
         self.event_selection = event_selection
