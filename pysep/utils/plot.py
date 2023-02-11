@@ -206,9 +206,6 @@ def set_plot_aesthetic(ax, **kwargs):
     Give a nice look to the output figure by creating thick borders on the
     axis, adjusting fontsize etc. All plot aesthetics should be placed here
     so it's easiest to find.
-
-    .. note::
-        This was copy-pasted from Pyatoa.visuals.insp_plot.default_axes()
     """
     ytick_fontsize = kwargs.get("ytick_fontsize", 8)
     xtick_fontsize = kwargs.get("xtick_fontsize", 12)
@@ -221,6 +218,12 @@ def set_plot_aesthetic(ax, **kwargs):
     title_fontsize = kwargs.get("title_fontsize", 10)
     xtick_minor = kwargs.get("xtick_minor", 25)
     xtick_major = kwargs.get("xtick_major", 100)
+    ytick_minor = kwargs.get("ytick_minor", None)
+    ytick_major = kwargs.get("ytick_major", None)
+    xgrid_major = kwargs.get("xgrid_major", True)
+    xgrid_minor = kwargs.get("xgrid_minor", True)
+    ygrid_major = kwargs.get("ygrid_major", True)
+    ygrid_minor = kwargs.get("ygrid_minor", True)
     spine_zorder = kwargs.get("spine_zorder", 8)
 
     ax.title.set_fontsize(title_fontsize)
@@ -242,9 +245,19 @@ def set_plot_aesthetic(ax, **kwargs):
     # Set xtick label major and minor which is assumed to be a time series
     ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
     ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
+    if ytick_minor:
+        ax.yaxis.set_major_locator(MultipleLocator(float(ytick_major)))
+    if ytick_major:
+        ax.yaxis.set_minor_locator(MultipleLocator(float(ytick_minor)))
 
     plt.sca(ax)
-    plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
-    plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
+    if xgrid_major:
+        plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
+    if xgrid_minor:
+        plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
+    if ygrid_major:
+        plt.grid(visible=True, which="major", axis="y", alpha=0.5, linewidth=1)
+    if ygrid_minor:
+        plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
     return ax

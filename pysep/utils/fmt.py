@@ -1,6 +1,7 @@
 """
 Pysep-specific formatting functions
 """
+from obspy import Catalog, UTCDateTime
 from obspy.clients.iris import Client
 
 
@@ -86,6 +87,43 @@ def get_codes(st=None, choice=None, suffix=None, up_to=True):
     return sorted(list(set(codes)))
 
 
+def get_data_availability(cat, inv):
+    """
+    Determine data availability based on whether stations are 'on' for a
+    given event origin time. Does not check waveforms, only station
+    metadata, so not foolproof.
+
+    :type cat: obspy.core.catalog.Catalog
+    :param cat: Catalog of events to consider. Events must include origin
+        information `latitude` and `longitude`
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: Inventory of stations to consider
+    :rtype: dict
+    :return: keys are event resource ids and values are IDs for stations
+        that were on during the event origin time
+    """
+    # Collect install and removal (if applicaple) for all stations
+    station_times = {}
+    for net in inv:
+        for sta in net:
+            if sta.end_date is None:
+                sta.end_date = UTCDateTime()  # set to right now
+            station_times[f"{net.code}.{sta.code}"] = (sta.start_date,
+                                                       sta.end_date)
+
+    # Check event origin time against station uptime
+    data_avail = {}
+    for event in cat:
+        data_avail[event.resource_id.id] = []
+        for sta, time in station_times.items():
+            start_date, end_date = time
+            # Check that event origin time falls between start and end date
+            if start_date <= event.preferred_origin().time <= end_date:
+                data_avail[event.resource_id.id].append(sta)
+
+    return data_avail
+
+
 def format_event_tag(event):
     """
     Generate a unique event tag based on event origin time and location using
@@ -122,3 +160,20 @@ def format_event_tag_legacy(event):
     :return: event_name specified by event time
     """
     return event.preferred_origin().time.strftime("%Y%m%d%H%M%S%f")[:-3]
+
+
+def index_cat(cat, idxs):
+    """
+    ObsPy Catalog does not allow indexing by a list of values
+    (e.g., cat[0, 1, 3]) so this convenience function takes care of that by
+    forming a new catalog of events chosen by indices
+
+    :type idxs: list of int
+    :param idxs: list of indices to index catalog by
+    :type cat: obspy.core.catalog.Catalog
+    :param cat: Catalog to index. If not given defaults to internal Cat
+    """
+    cat_out = Catalog()
+    for idx in idxs:
+        cat_out.append(cat[idx])
+    return cat_out

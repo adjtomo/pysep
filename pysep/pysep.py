@@ -1,3 +1,4 @@
+#!/usr/bin/evn python3
 """
 Python Seismogram Extraction and Processing (PySEP)
 
