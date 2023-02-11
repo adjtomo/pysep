@@ -808,7 +808,7 @@ class Declust:
             self._plot_polar(
                 cat_rem, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Removed Events N={len(cat_rem)}\n",
-                save=os.path.join(plot_dir, f"decluster_plr.png")
+                save=os.path.join(plot_dir, f"removed_plr.png")
             )
         return cat_out
 

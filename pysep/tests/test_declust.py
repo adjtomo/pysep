@@ -28,13 +28,14 @@ def test_data_availability(test_declust):
     resource_id = "smi:service.iris.edu/fdsnws/event/1/query?eventid=4599111"
     assert(len(test_declust.data_avail[resource_id]) == 15)
 
-def test_threshold_events(test_declust):
+
+def test_threshold_catalog(test_declust):
     """
     Ensure that thresholding removes the proper number of events
     """
-    cat = test_declust.threshold_events(zedges=[0, 8, 36, 100], min_data=5,
-                                        min_mags=[3, 3, 5])
-    assert(len(cat) == 215)
+    test_declust.threshold_catalog(zedges=[0, 8, 36, 100], min_data=5,
+                                   min_mags=[3, 3, 5])
+    assert(len(test_declust.cat) == 215)
 
 
 def test_decluster_events_cartesian(test_declust):
@@ -46,7 +47,7 @@ def test_decluster_events_cartesian(test_declust):
         cat = test_declust.decluster_events(choice="cartesian", nx=2, ny=2,
                                             min_mags=[4.5], nkeep=4,
                                             select_by=select_by)
-        assert(len(cat) == 14)
+        assert(len(cat) == 16)
 
 
 def test_decluster_events_polar(test_declust):
@@ -58,7 +59,7 @@ def test_decluster_events_polar(test_declust):
         cat = test_declust.decluster_events(choice="polar", nx=2, ny=2,
                                             min_mags=[4.5], nkeep=4,
                                             select_by=select_by)
-        assert(len(cat) == 20)
+        assert(len(cat) == 24)
 
 
 def test_decluster_plot_cartesian(tmpdir, test_declust):
@@ -70,8 +71,9 @@ def test_decluster_plot_cartesian(tmpdir, test_declust):
         min_mags=[4., 5.], nkeep=[4, 4], select_by="magnitude", plot=True,
         plot_dir=tmpdir
     )
-    assert(os.path.exists(os.path.join(tmpdir, "decluster_event_catalog.png")))
-    assert(os.path.exists(os.path.join(tmpdir, "original_event_catalog.png")))
+    assert(os.path.exists(os.path.join(tmpdir, "pre_decluster_crtsn.png")))
+    assert(os.path.exists(os.path.join(tmpdir, "declustered_crtsn.png")))
+    assert(os.path.exists(os.path.join(tmpdir, "removed_crtsn.png")))
 
 
 def test_decluster_plot_polar(tmpdir, test_declust):
@@ -82,14 +84,24 @@ def test_decluster_plot_polar(tmpdir, test_declust):
         choice="polar", zedges=[0, 35], min_mags=None, nkeep=5,
         select_by="magnitude_r", plot=True, plot_dir=tmpdir
     )
-    assert(os.path.exists(os.path.join(tmpdir, "decluster_event_catalog.png")))
-    assert(os.path.exists(os.path.join(tmpdir, "original_event_catalog.png")))
+    assert(os.path.exists(os.path.join(tmpdir, "pre_decluster_plr.png")))
+    assert(os.path.exists(os.path.join(tmpdir, "decluster_plr.png")))
+    assert(os.path.exists(os.path.join(tmpdir, "removed_plr.png")))
 
 
 def test_plot(tmpdir, test_declust):
     """
-
+    Test the plot function on its own
     """
     test_declust.plot(inv=True, show=False, color_by="data", cmap="inferno",
                       save=os.path.join(tmpdir, "test_plot.png"))
     assert(os.path.exists(os.path.join(tmpdir, "test_plot.png")))
+
+
+def test_srcrcv_weight(tmpdir, test_declust):
+    """test srcrv weight calculation"""
+    test_declust.calculate_srcrcv_weights(
+        write=os.path.join(tmpdir, "weights.txt"), plot=True, show=False,
+        save=os.path.join(tmpdir, "srcrcvwght.png")
+    )
+
