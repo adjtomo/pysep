@@ -222,7 +222,7 @@ def _append_sac_headers_trace(tr, event, inv):
     return tr
 
 
-def format_sac_header_w_taup_traveltimes(st, model="ak135"):
+def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
     """
     Add TauP travel times to the SAC headers using information in the SAC header
     Also get some information from TauP regarding incident angle, takeoff angle
@@ -243,13 +243,19 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135"):
     :type model: str
     :param model: name of the TauP model to use for arrival times etc.
         defaults to 'ak135'
+    :type phase_list: list of str
+    :param phase_list: phase names to get ray information from TauP with.
+        Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
+        by TauP (see ObsPy TauP documentation for acceptable phases).
     """
     st_out = st.copy()
 
     # Call TauP with a specific model to retrieve travel times etc.
-    phases = ["p", "P", "s", "S"]
+    if not phase_list:
+        phase_list = ["p", "P", "s", "S"]
+
     phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
-                                                    phase_list=phases)
+                                                    phase_list=phase_list)
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
         arrivals = phase_dict[tr.get_id()]
