@@ -48,7 +48,271 @@ from pysep.recsec import plotw_rs
 
 
 class Pysep:
-    """Download, preprocess, and save waveform data using ObsPy"""
+    """
+    Download, preprocess, and save waveform data using ObsPy
+
+    GENERAL DATA GATHERING PARAMETERS
+    =================================
+    :type client: str
+    :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
+        NCEDC or any FDSN clients accepted by ObsPy. Defaults to 'IRIS'
+    :type minlatitude: float
+    :param minlatitude: for event, station and waveform retrieval. Defines
+        the minimum latitude for a rectangular bounding box that is used to
+        search for data. Only used for events if `event_selection`=='search'
+    :type maxlatitude: float
+    :param maxlatitude: for event, station and waveform retrieval. Defines
+        the maximum latitude for a rectangular bounding box that is used to
+        search for data. Only used for events if `event_selection`=='search'
+    :type minlongitude: float
+    :param minlongitude: for event, station and waveform retrieval. Defines
+        the minimum longitude for a rectangular bounding box that is used to
+        search for data. Only used for events if `event_selection`=='search'
+    :type maxlongitude: float
+    :param maxlongitude: for event, station and waveform retrieval. Defines
+        the maximum longitude for a rectangular bounding box that is used to
+        search for data. Only used for events if `event_selection`=='search'
+    :type user: str
+    :param user: User ID if IRIS embargoes data behind passwords. This is
+        passed into the instantiation of `client`.
+    :type password: str
+    :param password: Password if IRIS embargoes data behind passwords. This
+        is passed into the instantiation of 'client'
+    :type use_mass_download: bool
+    :param use_mass_download: Use ObsPy's mass download option to download
+        all available stations in the region regardless of data provider.
+    :type client_debug: bool
+    :param client_debug: turn on DEBUG mode for the ObsPy FDSN client, which
+        outputs information-rich log messages to std out. Use for debugging
+        when FDSN fails mysteriously.
+    :type timeout: float
+    :param timeout: time out time in units of seconds, passed to the
+        `client` to determine how long to wait for return data before
+        exiting. Defaults to 600s.
+    :type llnl_db_path: str
+    :param llnl_db_path: If `client`=='LLNL', PySEP assumes we are accesing
+        data from the LLNL waveeform database (which must be stored local).
+        Points to the path where this is saved.
+
+    EVENT SELECTION PARAMETERS
+    ==========================
+    :type event_selection: str
+    :param event_selection: How to define the Event which is used to define
+        the event origin time and hypocentral location.
+        - 'default': User defines Event `origin_time`, and location witih
+            `event_latitude` and `event_longitude`
+        - 'search': PySEP will use `client` to search for a Catalog event
+            defined by `event_origintime`, `event_magnitude` and
+            `event_depth_km`. Buffer time around the `origin_time` can
+            be defined by `seconds_before_event` and `seconds_after_event`.
+    :type origin_time: str
+    :param origin_time: the event origin time used as a central reference
+        point for data gathering. Must be in a string format that is
+        recognized by ObsPy UTCDateTime. For example '2000-01-01T00:00:00'.
+    :type event_latitude: float
+    :param event_latitude: latitude of the event in units of degrees.
+        used for defining the event hypocenter and for removing stations
+        based on distance from the event.
+    :type event_longitude: float
+    :param event_longitude: longitude of the event in units of degrees.
+        used for defining the event hypocenter and for removing stations
+        based on distance from the event.
+    :type seconds_before_event: float
+    :param seconds_before_event: For event selection only, only used if
+        `event_selection`=='search'. Time [s] before given `origin_time` to
+        search for a matching catalog event from the given `client`
+    :type seconds_after_event: float
+    :param seconds_after_event: For event selection only, only used if
+        `event_selection`=='search'. Time [s] after given `origin_time` to
+        search for a matching catalog event from the given `client`
+
+    WAVEFORM + STATION METADATA GATHERING PARAMETERS
+    ================================================
+    :type reference_time: str
+    :param reference_time: Waveform origin time. If not given, defaults to
+        the event origin time. This allows for a static time shift from the
+        event origin time, e.g., if there are timing errors with relation
+        to the `origin_time`. Defaults to NoneType (`origin_time`).
+    :type seconds_before_ref: float
+    :param seconds_before_ref: For waveform fetching. Defines the time
+        before `reference_time` to fetch waveform data. Units [s]
+    :type seconds_after_ref: float
+    :param seconds_after_ref: For waveform fetching. Defines the time
+        after `reference_time` to fetch waveform data. Units [s]
+    :type networks: str
+    :param networks: name or names of networks to query for, if names plural,
+        must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards okay,
+        defaults to '*'.
+    :type stations: str
+    :param stations: station name or names to query for. If multiple
+        stations, input as a list of comma-separated values, e.g.,
+        'STA01,STA02,STA03'. Wildcards acceptable, if using wildcards, use
+        a '-' to exclude stations (e.g., '*,-STA01' will gather all stations
+        available, except STA01. Defaults to '*'
+    :type locations: str
+    :param locations: locations name or names to query for, wildcard okay.
+        See `stations` for inputting multiple location values. Default '*'.
+    :type channels: str
+    :param channels: channel name or names to query for, wildcard okay. If
+        multiple stations, input as a list of comma-separated values, e.g.,
+        'HH?,BH?'. Wildcards acceptable. Defaults to '*'.
+
+    STATION REMOVAL PARAMETERS
+    ==========================
+    :type mindistance: float
+    :param mindistance: Used for removing stations and mass download option
+        - Removing stations: Remove any stations who are closer than the
+        given minimum distance away from event (units: km). Always applied
+        - Mass Download: If `use_mass_download` is True and
+        `domain_type`=='circular', defines the minimum radius around the
+        event hypocenter to gather waveform data and station metadata
+    :type maxdistance: float
+    :param maxdistance: Used for removing stations and mass download option
+        - Removing stations: Remove any stations who are farther than the
+        given maximum distance away from event (units: km). Always applied
+        - Mass Download: If `use_mass_download` is True and
+        `domain_type`=='circular', defines the maximum radius around the
+        event hypocenter to gather waveform data and station metadata
+    :type minazimuth: float
+    :param minazimuth: for station removal. stations whose azimuth relative
+        to the event hypocenter that do not fall within the bounds
+        [`minazimuth`, `maxazimuth`] are removed from the final list.
+        Defaults to 0 degrees.
+    :param minazimuth: for station removal. stations whose azimuth relative
+        to the event hypocenter that do not fall within the bounds
+        [`minazimuth`, `maxazimuth`] are removed from the final list.
+        Defaults to 360 degrees.
+    :type remove_clipped: bool
+    :param remove_clipped: remove any clipped stations from gathered
+        stations. Checks the max amplitude of against a maximum value
+        expected for a 24 bit signal. Defaults False
+    :type remove_insufficient_length: bool
+    :param remove_insufficient_length: remove waveforms whose trace length
+        does not match the average (mode) trace length in the stream.
+        Defaults to True
+
+    DATA PROCESSING PARAMETERS
+    ==========================
+    :type detrend: bool
+    :param detrend: apply simple linear detrend to data during prior to
+        removing instrument response (if `remove_response`==True)
+    :type demean: bool
+    :param demean: apply demeaning to data during instrument reseponse
+        removal. Only applied if `remove_response` == True.
+    :type taper: float
+    :param taper: apply a taper to the waveform with ObsPy taper, fraction
+        between 0 and 1 as the percentage of the waveform to be tapered
+        Applied generally used when data is noisy, e.g., HutchisonGhosh2016
+        Note: To get the same results as the default taper in SAC,
+        use max_percentage=0.05 and leave type as hann.
+        Tapering also happens while resampling (see util_write_cap.py).
+         Only applied if `remove_response` == True.
+    :type rotate: list of str or NoneType
+    :param rotate: choose how to rotate the waveform data. Can include
+        the following options (order insensitive):
+        * ZNE: Rotate from arbitrary components to North, East, Up
+        * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
+        * UVW: Rotate from ZNE to orthogonal UVW orientation
+        If set to None, no rotation processing will take place.
+    :type resample_freq: float
+    :param resample_freq: frequency to resample data in units Hz. If not
+        given, no data resampling will take place. Defaults to NoneType
+    :type scale_factor: float
+    :param scale_factor: scale all data by a constant factor
+        Note: for CAP use 10**2 (to convert m/s to cm/s).
+        Defaults to NoneType (no scaling applied)
+
+    RESPONSE REMOVAL PARAMETERS
+    ===========================
+    :type remove_response: bool
+    :param remove_response: remove instrument response using station
+        response information gathered from `client`. Defaults to True.
+    :type output_unit: str
+    :param output_unit: the output format of the waveforms if instrument
+        response removal is applied. Only relevant if \
+        `remove_response`==True. See ObsPy.core.trace.Trace.remove_response
+         for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
+         (displacement [m], velocity [m/s], acceleration [m/s^2]).
+    :type water_level: float
+    :param water_level: a water level threshold to apply during filtering
+        for small values. Passed to Obspy.core.trace.Trace.remove_response
+    :type prefilt: str, tuple or NoneType
+    :param prefilt: apply a pre-filter to the waveforms before deconvolving
+        instrument response. Options are:
+        * 'default': automatically calculate (f0, f1, f2, f3) based on the
+            length of the waveform (dictating longest allowable period) and
+            the sampling rate (dictating shortest allowable period). This is
+            the default behavior.
+        * NoneType: do not apply any pre-filtering
+        * tuple of float: (f0, f1, f2, f3) define the corners of your pre
+            filter in units of frequency (Hz)
+
+    SAC HEADERS
+    ===========
+    :type phase_list: list of str
+    :param phase_list: phase names to get ray information from TauP with.
+        Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
+        by TauP (see ObsPy TauP documentation for acceptable phases). Phase
+        information will be added to SAC headers.
+    :type taup_model: str
+    :param taup_model: name of TauP model to use to calculate phase arrivals
+        See also `phase_list` which defines phases to grab arrival data
+        for. Defaults to 'AK135'. See ObsPy TauP documentation for avilable
+        models.
+
+    PYSEP CONFIG PARAMETERS
+    =======================
+    :type config_file: str
+    :param config_file: path to YAML configuration file which will be used
+        to overwrite internal default parameters. Used for command-line
+        version of PySEP
+    :log_level: str
+    :param log_level: Level of verbosity for the internal PySEP logger.
+        In decreasing order of verbosity: 'DEBUG', 'INFO', 'WARNING',
+        'CRITICAL'
+    :type legacy_naming: bool
+    :param legacy_naming: if True, revert to old PySEP naming schema for
+        event tags, which is responsible for naming the output directory and
+        SAC files. Legacy filenames look something like
+        '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
+        station, location, channel, component). Default to False
+    :type overwrite_event_tag: str
+    :param overwrite_event_tag: option to allow the user to set their own
+        event tag, rather than the automatically generated one
+
+    OUTPUT PARAMETERS
+    =================
+    :type write_files: str or NoneType
+    :param write_files: Which files to write out after data gathering.
+        Should be a comma-separated list of the following
+        - weights_az: write out CAP weight file sorted by azimuth
+        - weights_dist: write out CAP weight file sorted by distance
+        - weights_code: write out CAP weight file sorted by station code
+        - station_list: write out a text file with station informatino
+        - inv: save a StationXML (.xml) file (ObsPy inventory)
+        - event: save a QuakeML (.xml) file (ObsPy Catalog)
+        - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
+        - config_file: save YAML config file containing all input parameters
+        - sac: save all waveforms as SAC (.sac) files separated by component
+        - sac_raw: save the raw (pre-rotation) SAC files
+        - all: write all of the above (default value)
+        Example input: `write_files`=='inv,event,stream,sac'
+        If None, no files will be written. This is generally not advised.
+    :type plot_files: str or NoneType
+    :param write_files: What to plot after data gathering.
+        Should be a comma-separated list of the following
+        - map: plot a source-receiver map with event and all stations
+        - record_section: plot a record section with default parameters
+        - all: plot all of the above (default value)
+        If None, no files will be plotted.
+    :type output_dir: str
+    :param output_dir: path to output directory where all the files and
+        figures defined by `write_files` and `plot_files` will be stored.
+        Defaults to the current working directory.
+    :type overwrite: bool
+    :param overwrite: If True, overwrite an existing PySEP event directory.
+        This prevents Users from re-downloading data. Defaults to False.
+    """
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
                  networks="*", stations="*", locations="*", channels="*",
@@ -69,269 +333,7 @@ class Pysep:
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
                  use_mass_download=False,
                  **kwargs):
-        """
-        GENERAL DATA GATHERING PARAMETERS
-        =================================
-        :type client: str
-        :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
-            NCEDC or any FDSN clients accepted by ObsPy. Defaults to 'IRIS'
-        :type minlatitude: float
-        :param minlatitude: for event, station and waveform retrieval. Defines
-            the minimum latitude for a rectangular bounding box that is used to
-            search for data. Only used for events if `event_selection`=='search'
-        :type maxlatitude: float
-        :param maxlatitude: for event, station and waveform retrieval. Defines
-            the maximum latitude for a rectangular bounding box that is used to
-            search for data. Only used for events if `event_selection`=='search'
-        :type minlongitude: float
-        :param minlongitude: for event, station and waveform retrieval. Defines
-            the minimum longitude for a rectangular bounding box that is used to
-            search for data. Only used for events if `event_selection`=='search'
-        :type maxlongitude: float
-        :param maxlongitude: for event, station and waveform retrieval. Defines
-            the maximum longitude for a rectangular bounding box that is used to
-            search for data. Only used for events if `event_selection`=='search'
-        :type user: str
-        :param user: User ID if IRIS embargoes data behind passwords. This is
-            passed into the instantiation of `client`.
-        :type password: str
-        :param password: Password if IRIS embargoes data behind passwords. This
-            is passed into the instantiation of 'client'
-        :type use_mass_download: bool
-        :param use_mass_download: Use ObsPy's mass download option to download
-            all available stations in the region regardless of data provider.
-        :type client_debug: bool
-        :param client_debug: turn on DEBUG mode for the ObsPy FDSN client, which
-            outputs information-rich log messages to std out. Use for debugging
-            when FDSN fails mysteriously.
-        :type timeout: float
-        :param timeout: time out time in units of seconds, passed to the
-            `client` to determine how long to wait for return data before
-            exiting. Defaults to 600s.
-        :type llnl_db_path: str
-        :param llnl_db_path: If `client`=='LLNL', PySEP assumes we are accesing
-            data from the LLNL waveeform database (which must be stored local).
-            Points to the path where this is saved.
-
-        EVENT SELECTION PARAMETERS
-        ==========================
-        :type event_selection: str
-        :param event_selection: How to define the Event which is used to define
-            the event origin time and hypocentral location.
-            - 'default': User defines Event `origin_time`, and location witih
-                `event_latitude` and `event_longitude`
-            - 'search': PySEP will use `client` to search for a Catalog event
-                defined by `event_origintime`, `event_magnitude` and
-                `event_depth_km`. Buffer time around the `origin_time` can
-                be defined by `seconds_before_event` and `seconds_after_event`.
-        :type origin_time: str
-        :param origin_time: the event origin time used as a central reference
-            point for data gathering. Must be in a string format that is
-            recognized by ObsPy UTCDateTime. For example '2000-01-01T00:00:00'.
-        :type event_latitude: float
-        :param event_latitude: latitude of the event in units of degrees.
-            used for defining the event hypocenter and for removing stations
-            based on distance from the event.
-        :type event_longitude: float
-        :param event_longitude: longitude of the event in units of degrees.
-            used for defining the event hypocenter and for removing stations
-            based on distance from the event.
-        :type seconds_before_event: float
-        :param seconds_before_event: For event selection only, only used if
-            `event_selection`=='search'. Time [s] before given `origin_time` to
-            search for a matching catalog event from the given `client`
-        :type seconds_after_event: float
-        :param seconds_after_event: For event selection only, only used if
-            `event_selection`=='search'. Time [s] after given `origin_time` to
-            search for a matching catalog event from the given `client`
-
-        WAVEFORM + STATION METADATA GATHERING PARAMETERS
-        ================================================
-        :type reference_time: str
-        :param reference_time: Waveform origin time. If not given, defaults to
-            the event origin time. This allows for a static time shift from the
-            event origin time, e.g., if there are timing errors with relation
-            to the `origin_time`. Defaults to NoneType (`origin_time`).
-        :type seconds_before_ref: float
-        :param seconds_before_ref: For waveform fetching. Defines the time
-            before `reference_time` to fetch waveform data. Units [s]
-        :type seconds_after_ref: float
-        :param seconds_after_ref: For waveform fetching. Defines the time
-            after `reference_time` to fetch waveform data. Units [s]
-        :type networks: str
-        :param networks: name or names of networks to query for, if names plural,
-            must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards okay,
-            defaults to '*'.
-        :type stations: str
-        :param stations: station name or names to query for. If multiple
-            stations, input as a list of comma-separated values, e.g.,
-            'STA01,STA02,STA03'. Wildcards acceptable, if using wildcards, use
-            a '-' to exclude stations (e.g., '*,-STA01' will gather all stations
-            available, except STA01. Defaults to '*'
-        :type locations: str
-        :param locations: locations name or names to query for, wildcard okay.
-            See `stations` for inputting multiple location values. Default '*'.
-        :type channels: str
-        :param channels: channel name or names to query for, wildcard okay. If
-            multiple stations, input as a list of comma-separated values, e.g.,
-            'HH?,BH?'. Wildcards acceptable. Defaults to '*'.
-
-        STATION REMOVAL PARAMETERS
-        ==========================
-        :type mindistance: float
-        :param mindistance: Used for removing stations and mass download option
-            - Removing stations: Remove any stations who are closer than the
-            given minimum distance away from event (units: km). Always applied
-            - Mass Download: If `use_mass_download` is True and
-            `domain_type`=='circular', defines the minimum radius around the
-            event hypocenter to gather waveform data and station metadata
-        :type maxdistance: float
-        :param maxdistance: Used for removing stations and mass download option
-            - Removing stations: Remove any stations who are farther than the
-            given maximum distance away from event (units: km). Always applied
-            - Mass Download: If `use_mass_download` is True and
-            `domain_type`=='circular', defines the maximum radius around the
-            event hypocenter to gather waveform data and station metadata
-        :type minazimuth: float
-        :param minazimuth: for station removal. stations whose azimuth relative
-            to the event hypocenter that do not fall within the bounds
-            [`minazimuth`, `maxazimuth`] are removed from the final list.
-            Defaults to 0 degrees.
-        :param minazimuth: for station removal. stations whose azimuth relative
-            to the event hypocenter that do not fall within the bounds
-            [`minazimuth`, `maxazimuth`] are removed from the final list.
-            Defaults to 360 degrees.
-        :type remove_clipped: bool
-        :param remove_clipped: remove any clipped stations from gathered
-            stations. Checks the max amplitude of against a maximum value
-            expected for a 24 bit signal. Defaults False
-        :type remove_insufficient_length: bool
-        :param remove_insufficient_length: remove waveforms whose trace length
-            does not match the average (mode) trace length in the stream.
-            Defaults to True
-
-        DATA PROCESSING PARAMETERS
-        ==========================
-        :type detrend: bool
-        :param detrend: apply simple linear detrend to data during prior to
-            removing instrument response (if `remove_response`==True)
-        :type demean: bool
-        :param demean: apply demeaning to data during instrument reseponse
-            removal. Only applied if `remove_response` == True.
-        :type taper: float
-        :param taper: apply a taper to the waveform with ObsPy taper, fraction
-            between 0 and 1 as the percentage of the waveform to be tapered
-            Applied generally used when data is noisy, e.g., HutchisonGhosh2016
-            Note: To get the same results as the default taper in SAC,
-            use max_percentage=0.05 and leave type as hann.
-            Tapering also happens while resampling (see util_write_cap.py).
-             Only applied if `remove_response` == True.
-        :type rotate: list of str or NoneType
-        :param rotate: choose how to rotate the waveform data. Can include
-            the following options (order insensitive):
-            * ZNE: Rotate from arbitrary components to North, East, Up
-            * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
-            * UVW: Rotate from ZNE to orthogonal UVW orientation
-            If set to None, no rotation processing will take place.
-        :type resample_freq: float
-        :param resample_freq: frequency to resample data in units Hz. If not
-            given, no data resampling will take place. Defaults to NoneType
-        :type scale_factor: float
-        :param scale_factor: scale all data by a constant factor
-            Note: for CAP use 10**2 (to convert m/s to cm/s).
-            Defaults to NoneType (no scaling applied)
-
-        RESPONSE REMOVAL PARAMETERS
-        ===========================
-        :type remove_response: bool
-        :param remove_response: remove instrument response using station
-            response information gathered from `client`. Defaults to True.
-        :type output_unit: str
-        :param output_unit: the output format of the waveforms if instrument
-            response removal is applied. Only relevant if \
-            `remove_response`==True. See ObsPy.core.trace.Trace.remove_response
-             for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
-             (displacement [m], velocity [m/s], acceleration [m/s^2]).
-        :type water_level: float
-        :param water_level: a water level threshold to apply during filtering
-            for small values. Passed to Obspy.core.trace.Trace.remove_response
-        :type prefilt: str, tuple or NoneType
-        :param prefilt: apply a pre-filter to the waveforms before deconvolving
-            instrument response. Options are:
-            * 'default': automatically calculate (f0, f1, f2, f3) based on the
-                length of the waveform (dictating longest allowable period) and
-                the sampling rate (dictating shortest allowable period). This is
-                the default behavior.
-            * NoneType: do not apply any pre-filtering
-            * tuple of float: (f0, f1, f2, f3) define the corners of your pre
-                filter in units of frequency (Hz)
-
-        SAC HEADERS
-        ===========
-        :type phase_list: list of str
-        :param phase_list: phase names to get ray information from TauP with.
-            Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
-            by TauP (see ObsPy TauP documentation for acceptable phases). Phase
-            information will be added to SAC headers.
-        :type taup_model: str
-        :param taup_model: name of TauP model to use to calculate phase arrivals
-            See also `phase_list` which defines phases to grab arrival data
-            for. Defaults to 'AK135'. See ObsPy TauP documentation for avilable
-            models.
-
-        PYSEP CONFIG PARAMETERS
-        =======================
-        :type config_file: str
-        :param config_file: path to YAML configuration file which will be used
-            to overwrite internal default parameters. Used for command-line
-            version of PySEP
-        :log_level: str
-        :param log_level: Level of verbosity for the internal PySEP logger.
-            In decreasing order of verbosity: 'DEBUG', 'INFO', 'WARNING',
-            'CRITICAL'
-        :type legacy_naming: bool
-        :param legacy_naming: if True, revert to old PySEP naming schema for
-            event tags, which is responsible for naming the output directory and
-            SAC files. Legacy filenames look something like
-            '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
-            station, location, channel, component). Default to False
-        :type overwrite_event_tag: str
-        :param overwrite_event_tag: option to allow the user to set their own
-            event tag, rather than the automatically generated one
-
-        OUTPUT PARAMETERS
-        =================
-        :type write_files: str or NoneType
-        :param write_files: Which files to write out after data gathering.
-            Should be a comma-separated list of the following
-            - weights_az: write out CAP weight file sorted by azimuth
-            - weights_dist: write out CAP weight file sorted by distance
-            - weights_code: write out CAP weight file sorted by station code
-            - station_list: write out a text file with station informatino
-            - inv: save a StationXML (.xml) file (ObsPy inventory)
-            - event: save a QuakeML (.xml) file (ObsPy Catalog)
-            - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
-            - config_file: save YAML config file containing all input parameters
-            - sac: save all waveforms as SAC (.sac) files separated by component
-            - sac_raw: save the raw (pre-rotation) SAC files
-            - all: write all of the above (default value)
-            Example input: `write_files`=='inv,event,stream,sac'
-            If None, no files will be written. This is generally not advised.
-        :type plot_files: str or NoneType
-        :param write_files: What to plot after data gathering.
-            Should be a comma-separated list of the following
-            - map: plot a source-receiver map with event and all stations
-            - record_section: plot a record section with default parameters
-            - all: plot all of the above (default value)
-            If None, no files will be plotted.
-        :type output_dir: str
-        :param output_dir: path to output directory where all the files and
-            figures defined by `write_files` and `plot_files` will be stored.
-            Defaults to the current working directory.
-        :type overwrite: bool
-        :param overwrite: If True, overwrite an existing PySEP event directory.
-            This prevents Users from re-downloading data. Defaults to False.
-        """
+        """Instantiate control parameters for PySEP"""
         # Internal attribute but define first so that it sits at the top of
         # written config files
         self.event_tag = None
