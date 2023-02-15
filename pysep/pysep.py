@@ -445,8 +445,7 @@ class Pysep:
                     "Event selection requires the following parameters: "
                     "`seconds_before_event` and `seconds_after_event`")
         elif self.event_selection == "default":
-            for par in [self.event_latitude, self.event_longitude,
-                        self.event_depth_km, self.event_magnitude]:
+            for par in [self.event_latitude, self.event_longitude]:
                 assert(par is not None), (
                     "`event_selection`=='default' requires "
                     "`event_latitude`, `event_longitude`, `event_depth_km` "
@@ -728,16 +727,27 @@ class Pysep:
         """
         logger.info("creating event metadata with user parameters")
 
+        if self.event_depth_km is not None:
+            depth = self.event_depth_km * 1E3
+        else:
+            depth = None
+
         origin = Origin(latitude=self.event_latitude,
                         longitude=self.event_longitude,
-                        depth=self.event_depth_km * 1E3,  # units: m
+                        depth=depth,  # units: m
                         time=self.origin_time
                         )
-        magnitude = Magnitude(mag=self.event_magnitude, magnitude_type="Mw")
+        if self.event_magnitude:
+            magnitude = Magnitude(mag=self.event_magnitude, magnitude_type="Mw")
+            magnitudes = [magnitude]
+        else:
+            magnitudes = []
 
-        event = Event(origins=[origin], magnitudes=[magnitude])
+        event = Event(origins=[origin], magnitudes=magnitudes)
         event.preferred_origin_id = origin.resource_id.id
-        event.preferred_magnitude_id = magnitude.resource_id.id
+
+        if magnitudes:
+            event.preferred_magnitude_id = magnitude.resource_id.id
 
         return event
 
