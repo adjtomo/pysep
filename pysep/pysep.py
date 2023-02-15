@@ -48,9 +48,7 @@ from pysep.recsec import plotw_rs
 
 
 class Pysep:
-    """
-    Download, preprocess, and save waveform data using ObsPy
-    """
+    """Download, preprocess, and save waveform data using ObsPy"""
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
                  networks="*", stations="*", locations="*", channels="*",
@@ -72,8 +70,8 @@ class Pysep:
                  use_mass_download=False,
                  **kwargs):
         """
-        GENERAL DATA GATHERING
-        ======================
+        GENERAL DATA GATHERING PARAMETERS
+        =================================
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
             NCEDC or any FDSN clients accepted by ObsPy. Defaults to 'IRIS'
@@ -235,6 +233,16 @@ class Pysep:
             * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
             * UVW: Rotate from ZNE to orthogonal UVW orientation
             If set to None, no rotation processing will take place.
+        :type resample_freq: float
+        :param resample_freq: frequency to resample data in units Hz. If not
+            given, no data resampling will take place. Defaults to NoneType
+        :type scale_factor: float
+        :param scale_factor: scale all data by a constant factor
+            Note: for CAP use 10**2 (to convert m/s to cm/s).
+            Defaults to NoneType (no scaling applied)
+
+        RESPONSE REMOVAL PARAMETERS
+        ===========================
         :type remove_response: bool
         :param remove_response: remove instrument response using station
             response information gathered from `client`. Defaults to True.
@@ -257,13 +265,6 @@ class Pysep:
             * NoneType: do not apply any pre-filtering
             * tuple of float: (f0, f1, f2, f3) define the corners of your pre
                 filter in units of frequency (Hz)
-        :type resample_freq: float
-        :param resample_freq: frequency to resample data in units Hz. If not
-            given, no data resampling will take place. Defaults to NoneType
-        :type scale_factor: float
-        :param scale_factor: scale all data by a constant factor
-            Note: for CAP use 10**2 (to convert m/s to cm/s).
-            Defaults to NoneType (no scaling applied)
 
         SAC HEADERS
         ===========
@@ -278,8 +279,8 @@ class Pysep:
             for. Defaults to 'AK135'. See ObsPy TauP documentation for avilable
             models.
 
-        PYSEP-SPECIFIC PARAMETERS
-        =========================
+        PYSEP CONFIG PARAMETERS
+        =======================
         :type config_file: str
         :param config_file: path to YAML configuration file which will be used
             to overwrite internal default parameters. Used for command-line
@@ -288,6 +289,18 @@ class Pysep:
         :param log_level: Level of verbosity for the internal PySEP logger.
             In decreasing order of verbosity: 'DEBUG', 'INFO', 'WARNING',
             'CRITICAL'
+        :type legacy_naming: bool
+        :param legacy_naming: if True, revert to old PySEP naming schema for
+            event tags, which is responsible for naming the output directory and
+            SAC files. Legacy filenames look something like
+            '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
+            station, location, channel, component). Default to False
+        :type overwrite_event_tag: str
+        :param overwrite_event_tag: option to allow the user to set their own
+            event tag, rather than the automatically generated one
+
+        OUTPUT PARAMETERS
+        =================
         :type write_files: str or NoneType
         :param write_files: Which files to write out after data gathering.
             Should be a comma-separated list of the following
@@ -318,15 +331,6 @@ class Pysep:
         :type overwrite: bool
         :param overwrite: If True, overwrite an existing PySEP event directory.
             This prevents Users from re-downloading data. Defaults to False.
-        :type legacy_naming: bool
-        :param legacy_naming: if True, revert to old PySEP naming schema for
-            event tags, which is responsible for naming the output directory and
-            SAC files. Legacy filenames look something like
-            '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
-            station, location, channel, component). Default to False
-        :type overwrite_event_tag: str
-        :param overwrite_event_tag: option to allow the user to set their own
-            event tag, rather than the automatically generated one
         """
         # Internal attribute but define first so that it sits at the top of
         # written config files
@@ -651,9 +655,18 @@ class Pysep:
         # This is how we will access the event info so print out and check
         lat = event.preferred_origin().latitude
         lon = event.preferred_origin().longitude
-        depth_km = event.preferred_origin().depth * 1E-3
         otime = event.preferred_origin().time
-        mag = event.preferred_magnitude().mag
+
+        # These values may not be present. General exception because its only
+        # used for log statement so not that important.
+        try:
+            depth_km = event.preferred_origin().depth * 1E-3
+        except Exception:  # NOQA
+            depth_km = None
+        try:
+            mag = event.preferred_magnitude().mag
+        except Exception:  # NOQA
+            mag = None
         logger.info(f"event info summary - origin time: {otime}; "
                     f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km:.2f}; "
                     f"magnitude={mag:.2f}")
