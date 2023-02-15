@@ -509,8 +509,6 @@ class Pysep:
                 assert("UVW" not in self.rotate), (
                     f"rotate can only have one of the following: 'UVW', 'RTZ'"
                 )
-        else:
-            self.rotate = []
 
         acceptable_units = ["DISP", "VEL", "ACC", "DEF"]
         self.output_unit = self.output_unit.upper()
