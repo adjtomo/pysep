@@ -1520,7 +1520,8 @@ class Pysep:
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
             self.st = format_sac_header_w_taup_traveltimes(self.st, 
-                                                           self.taup_model)
+                                                           self.taup_model,
+                                                           self.phase_list)
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
