@@ -105,28 +105,6 @@ from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 DEG = u"\N{DEGREE SIGN}"
 
 
-def myround(x, base=5, choice="near"):
-    """
-    Round value x to nearest base, round 'up','down' or to 'near'est base
-
-    :type x: float
-    :param x: value to be rounded
-    :type base: int
-    :param base: nearest integer to be rounded to
-    :type choice: str
-    :param choice: method of rounding, 'up', 'down' or 'near'
-    :rtype roundout: int
-    :return: rounded value
-    """
-    if choice == "near":
-        roundout = int(base * round(float(x)/base))
-    elif choice == "down":
-        roundout = int(base * np.floor(float(x)/base))
-    elif choice == "up":
-        roundout = int(base * np.ceil(float(x)/base))
-    return roundout
-
-
 class Dict(dict):
     """Simple dictionary overload for nicer get/set attribute characteristics"""
     def __setattr__(self, key, value):
@@ -1862,6 +1840,16 @@ class RecordSection:
         )
         self.ax.set_title(title)
 
+    def run(self):
+        """
+        Convenience run function to run the RecordSection workflow in order.
+        No internal logic for breaking the figure up into multiple record
+        sections. For that see main function `plotw_rs`.
+        """
+        self.process_st()
+        self.get_parameters()
+        self.plot()
+
 
 def parse_args():
     """
@@ -2030,9 +2018,9 @@ def parse_args():
 
 def plotw_rs(*args, **kwargs):
     """
-    Main call function, replacing `plotw_rs`. Run the record section plotting
-    functions in order. Contains the logic for breaking up figure into multiple
-    pages.
+    Main call function for command line use of RecordSection.
+    Runs the record section plotting functions in order. Contains the logic for
+    breaking up figure into multiple pages.
 
     .. note::
         All arguments should be parsed into the argparser, *args and **kwargs
