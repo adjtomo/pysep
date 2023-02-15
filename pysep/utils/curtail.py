@@ -77,25 +77,29 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
     return inv
 
 
-def quality_check_waveforms_before_processing(st):
+def quality_check_waveforms_before_processing(st, remove_clipped=True):
     """
     Quality assurance to deal with bad data before running the
     preprocessing steps. Replaces: `do_waveform_QA`
 
     :type st: obspy.core.stream.Stream
     :param st: Stream object to pass through QA procedures
+    :type remove_clipped: bool
+    :param remove_clipped: boolean flag to turn on/off amplitude clipping check
     """
     st_out = st.copy()
 
     st_out = rename_channels(st_out)
     st_out = remove_stations_for_missing_channels(st_out)  # LL network ONLY!
     st_out = remove_traces_for_bad_data_types(st_out)
-    st_out = remove_for_clipped_amplitudes(st_out)
+    if remove_clipped:
+        st_out = remove_for_clipped_amplitudes(st_out)
 
     return st_out
 
 
-def quality_check_waveforms_after_processing(st):
+def quality_check_waveforms_after_processing(st,
+                                             remove_insufficient_length=True):
     """
     Quality assurance to deal with bad data after preprocessing, because
     preprocesing step will merge, filter and rotate data.
@@ -103,10 +107,14 @@ def quality_check_waveforms_after_processing(st):
 
     :type st: obspy.core.stream.Stream
     :param st: Stream object to pass through QA procedures
+    :type remove_insufficient_length: bool
+    :param remove_insufficient_length: boolean flag to turn on/off insufficient
+        length checker
     """
     st_out = st.copy()
 
-    st_out = remove_stations_for_insufficient_length(st_out)
+    if remove_insufficient_length:
+        st_out = remove_stations_for_insufficient_length(st_out)
 
     return st_out
 

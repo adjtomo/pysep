@@ -56,10 +56,10 @@ class Pysep:
                  networks="*", stations="*", locations="*", channels="*",
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
-                 remove_clipped=False, water_level=60, detrend=True,
-                 demean=True, taper_percentage=0, rotate=None,
-                 pre_filt="default", mindistance=0, maxdistance=20E3,
-                 minazimuth=0, maxazimuth=360,
+                 remove_clipped=False, remove_insufficient_length=True,
+                 water_level=60, detrend=True, demean=True, taper_percentage=0,
+                 rotate=None, pre_filt="default",
+                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
                  phase_list=None, seconds_before_event=20,
@@ -203,10 +203,14 @@ class Pysep:
             to the event hypocenter that do not fall within the bounds
             [`minazimuth`, `maxazimuth`] are removed from the final list.
             Defaults to 360 degrees.
-        :type remove_clipped: float
+        :type remove_clipped: bool
         :param remove_clipped: remove any clipped stations from gathered
             stations. Checks the max amplitude of against a maximum value
-            expected for a 24 bit signal.
+            expected for a 24 bit signal. Defaults False
+        :type remove_insufficient_length: bool
+        :param remove_insufficient_length: remove waveforms whose trace length
+            does not match the average (mode) trace length in the stream.
+            Defaults to True
 
         DATA PROCESSING PARAMETERS
         ==========================
@@ -402,6 +406,7 @@ class Pysep:
         self.scale_factor = scale_factor
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
+        self.remove_insufficient_length = remove_insufficient_length
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
@@ -1509,7 +1514,9 @@ class Pysep:
         else:
             self.st, self.inv = self.mass_download()
 
-        self.st = quality_check_waveforms_before_processing(self.st)
+        self.st = quality_check_waveforms_before_processing(
+            self.st, remove_clipped=self.remove_clipped
+        )
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
             self.st = format_sac_header_w_taup_traveltimes(self.st, 
@@ -1524,7 +1531,9 @@ class Pysep:
             self.st = self.rotate_streams()
 
         # Final quality checks on ALL waveforms before we write them out
-        self.st = quality_check_waveforms_after_processing(self.st)
+        self.st = quality_check_waveforms_after_processing(
+            self.st, remove_insufficient_length=self.remove_insufficient_length
+        )
 
         # Generate outputs for user consumption
         self.write(**{**kwargs, **self.kwargs})
