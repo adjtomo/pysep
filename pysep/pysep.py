@@ -666,8 +666,8 @@ class Pysep:
         except Exception:  # NOQA
             mag = None
         logger.info(f"event info summary - origin time: {otime}; "
-                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km:.2f}; "
-                    f"magnitude={mag:.2f}")
+                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km}; "
+                    f"magnitude={mag}")
 
         return event
 
