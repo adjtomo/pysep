@@ -418,7 +418,7 @@ class Pysep:
         self.demean = bool(demean)
         self.detrend = bool(detrend)
         self.taper_percentage = taper_percentage
-        self.rotate = rotate or ["ZNE", "RTZ"]
+        self.rotate = rotate 
         self.remove_response = bool(remove_response)
         self.output_unit = output_unit
         self.water_level = water_level
@@ -478,6 +478,10 @@ class Pysep:
         else:
             raise ValueError("`event_selection` must be one of the following: "
                              "'search' or 'default'")
+
+        if self.event_depth_km is None:
+            logger.warning("TauP arrival times will be incorrect as no depth "
+                           "information is provided")
 
         if self.client.upper() == "LLNL":
             assert(os.path.exists(self.llnl_db_path)), (
@@ -682,8 +686,8 @@ class Pysep:
         except Exception:  # NOQA
             mag = None
         logger.info(f"event info summary - origin time: {otime}; "
-                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km:.2f}; "
-                    f"magnitude={mag:.2f}")
+                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km}; "
+                    f"magnitude={mag}")
 
         return event
 
@@ -1556,6 +1560,7 @@ class Pysep:
         # Rotation to various orientations. The output stream will have ALL
         # components, both rotated and non-rotated
         if self.rotate is not None:
+            import pdb;pdb.set_trace()
             self.st = self.rotate_streams()
 
         # Final quality checks on ALL waveforms before we write them out
