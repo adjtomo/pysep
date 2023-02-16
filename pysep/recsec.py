@@ -117,9 +117,10 @@ class Dict(dict):
 class RecordSection:
     """
     Record section plotting tool which takes ObsPy streams and:
-        1) preprocesses and filters waveforms,
-        2) sorts source-receiver pairs based on User input,
-        3) produces record section waveform figures.
+
+    1) preprocesses and filters waveforms,
+    2) sorts source-receiver pairs based on User input,
+    3) produces record section waveform figures.
     """
     def __init__(self, pysep_path=None, syn_path=None, stations=None,
                  cmtsolution=None, st=None, st_syn=None, sort_by="default",
@@ -136,17 +137,16 @@ class RecordSection:
                  overwrite=False, log_level="DEBUG", cartesian=False,
                  synsyn=False, **kwargs):
         """
-        READING INPUT DATA PARAMETERS
-        =============================
+         .. note::
+            Used for reading in Pysep-generated waveforms
 
-        PYSEP-GENERATED WAVEFORMS
-        -------------------------
         :type pysep_path: str
         :param pysep_path: path to Pysep output, which is expected to contain
             trace-wise SAC waveform files which will be read in.
 
-        SPECFEM-GENERATED SYNTHETICS
-        ----------------------------
+        .. note::
+            Used for reading in SPECFEM-generated synthetic waveforms
+
         :type syn_path: str
         :param syn_path: full path to directory containing synthetic
             seismograms that have been outputted by SPECFEM. The synthetics
@@ -171,8 +171,9 @@ class RecordSection:
             will be both attempt to read in synthetic data. Both sets of
             synthetics MUST share the same `cmtsolution` and `stations` metadata
 
-        USER-DEFINED DATA
-        -----------------
+        .. note::
+            Used for defining user-input waveforms data
+
         :type st: obspy.core.stream.Stream
         :param st: Stream objects containing observed time series to be plotted
             on the record section. Can contain any number of traces
@@ -180,10 +181,12 @@ class RecordSection:
         :param st_syn: Stream objects containing synthetic time series to be
             plotted on the record section. Must be same length as `st`
 
-        WAVEFORM PLOTTING ORGANIZATION PARAMETERS
-        =========================================
+        .. note::
+            Waveform plotting organization parameters
+
         :type sort_by: str
         :param sort_by: How to sort the Y-axis of the record section, available:
+
             - 'default': Don't sort, just iterate directly through Stream
             - 'alphabetical': sort alphabetically A->Z. Components sorted
                 separately with parameter `components`
@@ -203,6 +206,7 @@ class RecordSection:
                 e.g., 'alphabetical_r' sort will go Z->A
         :type scale_by: list
         :param scale_by: scale amplitude of waveforms by available:
+
             - None: Not set, no amplitude scaling, waveforms shown raw
             - 'normalize': scale each trace by the maximum amplitude,
                 i.e., > a /= max(abs(a))  # where 'a' is time series amplitudes
@@ -223,6 +227,7 @@ class RecordSection:
                 'k' is calculated automatically if not given.
         :type time_shift_s: float OR list of float
         :param time_shift_s: apply static time shift to waveforms, two options:
+
             1. float (e.g., -10.2), will shift ALL waveforms by
                 that number (i.e., -10.2 second time shift applied)
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
@@ -231,6 +236,7 @@ class RecordSection:
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
+
             * (start, end): a list of floats will zero-pad the START and END
                 of the trace. Either can be 0 to ignore zero-padding at either
                 end
@@ -238,6 +244,7 @@ class RecordSection:
         :param amplitude_scale_factor: apply scale factor to all amplitudes.
             Used as a dial to adjust amplitudes manually. Defaults to 1.
             Two options:
+
             1. float (e.g., 1.2), will multiply ALL waveforms by that number
             2. list (e.g., [5., -2., ... 11.2]), will apply individual amplitude
                 scale to EACH trace in the stream. The length of this list MUST
@@ -258,10 +265,12 @@ class RecordSection:
             'deg': degrees on the sphere
             'km_utm': kilometers on flat plane, UTM coordinate system
 
-        DATA PROCESSING PARAMETERS
-        ==========================
+        .. note::
+            Data processing parameters
+
         :type preprocess: str
         :param preprocess: choose which data to preprocess, options are:
+
             - None: do not run preprocessing step, including filter (Default)
             - 'st': process waveforms in `st`
             - 'st_syn': process waveforms in `st_syn`. st still must be given
@@ -280,12 +289,14 @@ class RecordSection:
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
             and negative values are differentiation
+
             e.g., if integrate == 2,  will integrate each trace twice.
             or    if integrate == -1, will differentiate once
             or    if integrate == 0,  do nothing (default)
 
-        GEOMETRIC SPREADING PARAMETERS
-        ==============================
+        .. note::
+            Geometric spreading parameters, used for amplitude scaling
+
         :type geometric_spreading_factor: float
         :param geometric_spreading_factor: factor to scale amplitudes by
             predicting the expected geometric spreading amplitude reduction and
@@ -310,8 +321,9 @@ class RecordSection:
             spreading scatter plot iff `scale_by`=='geometric_spreading'. If
             NoneType, will not save. By default, turned OFF
 
-        FIGURE GENERATION PARAMETERS
-        ============================
+        .. note::
+            Figure generation control parameters
+
         :type max_traces_per_rs: int
         :param max_traces_per_rs: maximum number of traces to show on a single
             record section plot. Defaults to all traces in the Stream
@@ -323,6 +335,7 @@ class RecordSection:
             Y-axis on relative (not absolute) scales. Defaults to 1.
         :type y_label_loc: str
         :param y_label_loc: Location to place waveform labels on the y-axis
+
             - 'default': auto choose the best location based on `sort_by`
             - 'y_axis': Replace tick labels on the y-axis (left side of figure),
                 This won't work if using absolute sorting and will be over-
@@ -342,8 +355,9 @@ class RecordSection:
         :param save: path to save output figure, will create the parent
             directory if it doesn't exist. If None, will not save.
 
-        RECORD SECTION PARAMETERS
-        =========================
+        .. note::
+            Internal RecSec parameters
+
         :type overwrite: bool
         :param overwrite: if the path defined by `save` exists, will overwrite
             the existing figure

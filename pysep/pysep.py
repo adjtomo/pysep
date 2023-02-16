@@ -70,8 +70,9 @@ class Pysep:
                  use_mass_download=False,
                  **kwargs):
         """
-        GENERAL DATA GATHERING PARAMETERS
-        =================================
+        .. note::
+            Parameters for general data gathering control
+
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
             NCEDC or any FDSN clients accepted by ObsPy. Defaults to 'IRIS'
@@ -113,17 +114,18 @@ class Pysep:
             data from the LLNL waveeform database (which must be stored local).
             Points to the path where this is saved.
 
-        EVENT SELECTION PARAMETERS
-        ==========================
+        .. note::
+            Event selection parameters
+
         :type event_selection: str
         :param event_selection: How to define the Event which is used to define
             the event origin time and hypocentral location.
-            - 'default': User defines Event `origin_time`, and location witih
-                `event_latitude` and `event_longitude`
+            - 'default': User defines Event `origin_time`, and location with
+            `event_latitude` and `event_longitude`
             - 'search': PySEP will use `client` to search for a Catalog event
-                defined by `event_origintime`, `event_magnitude` and
-                `event_depth_km`. Buffer time around the `origin_time` can
-                be defined by `seconds_before_event` and `seconds_after_event`.
+            defined by `event_origintime`, `event_magnitude` and
+            `event_depth_km`. Buffer time around the `origin_time` can
+            be defined by `seconds_before_event` and `seconds_after_event`.
         :type origin_time: str
         :param origin_time: the event origin time used as a central reference
             point for data gathering. Must be in a string format that is
@@ -145,8 +147,9 @@ class Pysep:
             `event_selection`=='search'. Time [s] after given `origin_time` to
             search for a matching catalog event from the given `client`
 
-        WAVEFORM + STATION METADATA GATHERING PARAMETERS
-        ================================================
+        .. note::
+            Waveform and station metadata gathering parameters
+
         :type reference_time: str
         :param reference_time: Waveform origin time. If not given, defaults to
             the event origin time. This allows for a static time shift from the
@@ -176,10 +179,12 @@ class Pysep:
             multiple stations, input as a list of comma-separated values, e.g.,
             'HH?,BH?'. Wildcards acceptable. Defaults to '*'.
 
-        STATION REMOVAL PARAMETERS
-        ==========================
+        .. note::
+            Station removal and curtailing parameters
+
         :type mindistance: float
         :param mindistance: Used for removing stations and mass download option
+
             - Removing stations: Remove any stations who are closer than the
             given minimum distance away from event (units: km). Always applied
             - Mass Download: If `use_mass_download` is True and
@@ -187,6 +192,7 @@ class Pysep:
             event hypocenter to gather waveform data and station metadata
         :type maxdistance: float
         :param maxdistance: Used for removing stations and mass download option
+
             - Removing stations: Remove any stations who are farther than the
             given maximum distance away from event (units: km). Always applied
             - Mass Download: If `use_mass_download` is True and
@@ -210,8 +216,9 @@ class Pysep:
             does not match the average (mode) trace length in the stream.
             Defaults to True
 
-        DATA PROCESSING PARAMETERS
-        ==========================
+        .. note::
+            Data processing parameters
+
         :type detrend: bool
         :param detrend: apply simple linear detrend to data during prior to
             removing instrument response (if `remove_response`==True)
@@ -225,10 +232,12 @@ class Pysep:
             Note: To get the same results as the default taper in SAC,
             use max_percentage=0.05 and leave type as hann.
             Tapering also happens while resampling (see util_write_cap.py).
-             Only applied if `remove_response` == True.
+            Only applied if `remove_response` == True.
         :type rotate: list of str or NoneType
-        :param rotate: choose how to rotate the waveform data. Can include
-            the following options (order insensitive):
+        :param rotate: choose how to rotate the waveform data. pre-rotation
+            processing will be applied. Can include the following options
+            (order insensitive):
+
             * ZNE: Rotate from arbitrary components to North, East, Up
             * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
             * UVW: Rotate from ZNE to orthogonal UVW orientation
@@ -241,33 +250,36 @@ class Pysep:
             Note: for CAP use 10**2 (to convert m/s to cm/s).
             Defaults to NoneType (no scaling applied)
 
-        RESPONSE REMOVAL PARAMETERS
-        ===========================
+        .. note::
+            Instrument response removal parameters
+
         :type remove_response: bool
         :param remove_response: remove instrument response using station
             response information gathered from `client`. Defaults to True.
         :type output_unit: str
         :param output_unit: the output format of the waveforms if instrument
-            response removal is applied. Only relevant if \
+            response removal is applied. Only relevant if
             `remove_response`==True. See ObsPy.core.trace.Trace.remove_response
-             for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
-             (displacement [m], velocity [m/s], acceleration [m/s^2]).
+            for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
+            (displacement [m], velocity [m/s], acceleration [m/s^2]).
         :type water_level: float
         :param water_level: a water level threshold to apply during filtering
             for small values. Passed to Obspy.core.trace.Trace.remove_response
         :type prefilt: str, tuple or NoneType
         :param prefilt: apply a pre-filter to the waveforms before deconvolving
             instrument response. Options are:
+
             * 'default': automatically calculate (f0, f1, f2, f3) based on the
-                length of the waveform (dictating longest allowable period) and
-                the sampling rate (dictating shortest allowable period). This is
-                the default behavior.
+            length of the waveform (dictating longest allowable period) and
+            the sampling rate (dictating shortest allowable period). This is
+            the default behavior.
             * NoneType: do not apply any pre-filtering
             * tuple of float: (f0, f1, f2, f3) define the corners of your pre
-                filter in units of frequency (Hz)
+            filter in units of frequency (Hz)
 
-        SAC HEADERS
-        ===========
+        .. note::
+            SAC header control parameters
+
         :type phase_list: list of str
         :param phase_list: phase names to get ray information from TauP with.
             Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
@@ -279,13 +291,14 @@ class Pysep:
             for. Defaults to 'AK135'. See ObsPy TauP documentation for avilable
             models.
 
-        PYSEP CONFIG PARAMETERS
-        =======================
+        .. note::
+            PySEP Configuration parameters
+
         :type config_file: str
         :param config_file: path to YAML configuration file which will be used
             to overwrite internal default parameters. Used for command-line
             version of PySEP
-        :log_level: str
+        :type log_level: str
         :param log_level: Level of verbosity for the internal PySEP logger.
             In decreasing order of verbosity: 'DEBUG', 'INFO', 'WARNING',
             'CRITICAL'
@@ -299,11 +312,13 @@ class Pysep:
         :param overwrite_event_tag: option to allow the user to set their own
             event tag, rather than the automatically generated one
 
-        OUTPUT PARAMETERS
-        =================
+        .. note::
+            Output file and figure control
+
         :type write_files: str or NoneType
         :param write_files: Which files to write out after data gathering.
             Should be a comma-separated list of the following
+
             - weights_az: write out CAP weight file sorted by azimuth
             - weights_dist: write out CAP weight file sorted by distance
             - weights_code: write out CAP weight file sorted by station code
@@ -319,7 +334,8 @@ class Pysep:
             If None, no files will be written. This is generally not advised.
         :type plot_files: str or NoneType
         :param write_files: What to plot after data gathering.
-            Should be a comma-separated list of the following
+            Should be a comma-separated list of the following:
+
             - map: plot a source-receiver map with event and all stations
             - record_section: plot a record section with default parameters
             - all: plot all of the above (default value)
