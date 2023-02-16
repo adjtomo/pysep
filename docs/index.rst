@@ -6,14 +6,21 @@
 Python Seismogram Extraction and Processing
 ===========================================
 
-`PySEP` is a waveform and metadata download tool. 
-The package also contains `RecSec`, a record section plotting tool, and
-`Declust` an event and station declustering and weighting tool.
+`PySEP` is a package revolving around the collection, visualization and curation
+of seismic data and metadata. It is built around ObsPy and uses a number of 
+core classes to achieve its goals:
+
+- ``PySep``: data download and processing tool
+- ``RecSec``: record section plotter for data visualization
+- ``Declust``: event and station declustering and weighting
 
 As part of the `SCOPED toolkit <https://github.com/SeisSCOPED>`_, `PySEP` 
 has been
 `containerized <https://github.com/SeisSCOPED/pysep/pkgs/container/pysep>`_
 using Docker.
+
+`PySEP` is hosted on `GitHub <https://github.com/adjtomo/pysep>`_ as part of the  
+`adjTomo organization <https://github.com/adjtomo>`_.
 
 ---------------------------------
 
@@ -71,20 +78,16 @@ changes to see if your changes have altered the expected code behavior.
     cd pysep/tests
     pytest
 
+---------------------------------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :hidden:
 
-   overview
+   pysep
+   recsec
+   declust
+   cookbook
+   usage
 
 
-   
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
