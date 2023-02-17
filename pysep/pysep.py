@@ -44,7 +44,7 @@ from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw,
                                  estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
-from pysep.recsec import plotw_rs
+from pysep.recsec import RecordSection
 
 
 class Pysep:
@@ -1449,8 +1449,6 @@ class Pysep:
     def plot(self):
         """
         Plot map and record section if requested
-
-        TODO improve source receiver map plotting
         """
         if "map" in self.plot_files or "all" in self.plot_files:
             logger.info("plotting source receiver map")
@@ -1460,8 +1458,10 @@ class Pysep:
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
             # Default settings to create a general record section
-            plotw_rs(st=self.st, sort_by="distance_r", scale_by="normalize",
-                     overwrite=True, show=False, save=fid)
+            rs = RecordSection(st=self.st, sort_by="distance",
+                               scale_by="normalize", overwrite=True, show=False,
+                               save=fid)
+            rs.run()
 
     def _event_tag_and_output_dir(self):
         """
