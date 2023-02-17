@@ -6,6 +6,9 @@ by various attributes, such as epicentral distance or azimuth. Data can be
 further modified, for example amplitudes can be scaled by expected geometrical
 spreading factor to visualize site amplification effects.
 
+> __Note__: See [RecordSection class API documentation]( 
+  https://adjtomo.github.io/pysep/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection ) for a list of available input parameters
+
 ### What it does:
 * Plot waveform data and synthetic seismograms (by themselves or together)
 * Sort source-receiver pairs by absolute or relative distance or (back)azimuth
@@ -49,9 +52,9 @@ recsec --pysep_path ./SAC --sort_by azimuth
 Have a look at the -h/--help message and the docstring at the top of `recsec.py`
 for more options.
 
-> __NOTE__: See the docstring of the 
-  [RecSec init() function](https://github.com/adjtomo/pysep/blob/master/pysep/recsec.py) 
-  for types and descriptions of all input variables 
+
+> __Note__: See [RecordSection class API documentation]( 
+  https://adjtomo.github.io/pysep/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection ) for a list of available input parameters
 
 ### Customizing RecSec figures
 

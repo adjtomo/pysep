@@ -31,9 +31,8 @@ We recommend installing PySEP into a Conda environment. Most dependencies are
 installed via Conda while PySEP itself is installed in editable mode via Pip.
 
 This installation also creates two command line entry points for 
-`pysep` and `recsec` 
-(see `here <https://github.com/adjtomo/pysep/wiki/3.-PySEP-via-the-Command-Line>`_ 
-for more information):
+`pysep` and `recsec`. See the `pysep <pysep.html>`_ and `recsec <recsec.html>`_
+documentation pages for how to use these command line tools.
 
 Installing to a new Conda environment (recommended)
 ```````````````````````````````````````````````````

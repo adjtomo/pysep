@@ -6,16 +6,19 @@ This is a refactor of Pysep's Python utility `plotw_rs`, a record section
 plotting script. The intent of this script is to plot multiple time series'
 based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
 
-.. note:: Code History
-    Written by Carl Tape (11/21/2011) and Yun Wang (11/2011) in Matlab
-    Translated to Python by Nealy Sims (1/2021)
-    Upgraded by Aakash Gupta (9/2021)
-    Refactored by Bryant Chow (3/2022)
+.. note:: 
+    Code History:  
+    - Written by Carl Tape (11/21/2011) and Yun Wang (11/2011) in Matlab  
+    - Translated to Python by Nealy Sims (1/2021)  
+    - Upgraded by Aakash Gupta (9/2021)  
+    - Refactored by Bryant Chow (3/2022)  
+    - Currently maintained by adjTomo Dev Team
 
 .. requires::
     obspy >= 1.2 (expected to bring in numpy and matplotlib)
 
-.. rubric:: Examples
+.. rubric:: 
+
     1) Print the help message to see available options and flags
     $ python recsec.py -h
 
@@ -204,7 +207,7 @@ class RecordSection:
                 source-receiver backazimuth (deg).
             - '*_r': Add a '_r' to any of the values about to REVERSE the sort,
                 e.g., 'alphabetical_r' sort will go Z->A
-        :type scale_by: list
+        :type scale_by: str
         :param scale_by: scale amplitude of waveforms by available:
 
             - None: Not set, no amplitude scaling, waveforms shown raw

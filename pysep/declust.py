@@ -7,9 +7,9 @@ algorithm to remove nearby stations, and also implements a weighting scheme to
 promote unique source receiver pairs.
 
 :authors:
-    adjTomo Dev Team (2023)
-    Amanda McPherson (2021)
-    Carl Tape (2018)
+    adjTomo Dev Team (2023)  
+    Amanda McPherson (2021)  
+    Carl Tape (2018)  
 """
 import matplotlib.pyplot as plt
 import numpy as np

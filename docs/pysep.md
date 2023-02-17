@@ -5,6 +5,10 @@ en-masse. It applies some preprocessing, instrument response removal and
 rotation to all data for use in moment tensor and tomographic inversions. 
 PySEP can be used via the command line, or through scripting.
 
+> __Note__: See [PySEP class API documentation](
+  https://adjtomo.github.io/pysep/autoapi/pysep/pysep/index.html#pysep.pysep.Pysep)
+  for a list of available input parameters
+
 ### What it does
 1. Create or gather event metadata (QuakeML) with user-defined event parameters 
 2. Gather station metdata (StationXML) in a bounding box surrounding an event, 
@@ -67,11 +71,13 @@ pysep -c pysep_config.yaml
 
 ### Input Parameters and YAML Parameter File
 
+> __Note__: See [PySEP class API documentation](
+  https://adjtomo.github.io/pysep/autoapi/pysep/pysep/index.html#pysep.pysep.Pysep)
+  for a list of available input parameters
+
 When using PySEP from the command line, all input variables are controlled by a 
 [YAML](https://yaml.org/) parameter file, which is a text file containing 
 a set of parameter names and corresponding values, for example:
-
-See all available input parameters [in the PySEP API]()
 
 ```yaml
 # key: value

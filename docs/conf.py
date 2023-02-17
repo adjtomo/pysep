@@ -17,7 +17,8 @@ def setup(app):
 project = 'PySEP'
 copyright = '2023, adjTomo Dev Team'
 author = 'adjTomo Dev Team'
-release = '0.2.0'
+release = ''
+version = '0.2.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
