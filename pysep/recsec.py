@@ -132,7 +132,7 @@ class RecordSection:
                  preprocess=None, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
-                 azimuth_start_deg=0., distance_units="km", 
+                 azimuth_start_deg=0., distance_units="km", tmarks=None,
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
                  geometric_spreading_exclude=None,
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
@@ -353,6 +353,12 @@ class RecordSection:
             - 'x_min': Place labels on top of the waveforms at the global max
                 x-value on the figure
             - None: Don't plot any text labels
+        :type tmarks: list of float
+        :param tmarks: place vertical lines at given reference times. Used for 
+            marking reference times such as the event origin, or phase arrival.
+            Input as a list of times in units of seconds (where T=0 is the 
+            event origin time). For example `tmarks`=[0, 100, 200] would set 
+            vertical lines at 0s, 100s and 200s
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -453,6 +459,7 @@ class RecordSection:
         self.xlim_s = xlim_s
         self.distance_units = distance_units.lower()
         self.y_label_loc = y_label_loc
+        self.tmarks = tmarks
         self.figsize = figsize
         self.show = bool(show)
         self.save = save
@@ -1445,6 +1452,11 @@ class RecordSection:
                                             choice=choice, **kwargs)
 
         logger.debug(log_str)
+
+        # Plot vertical bars at given reference times
+        if self.tmarks:
+            self._plot_tmarks()
+
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
@@ -1545,6 +1557,20 @@ class RecordSection:
         self.stats.ymax.append(y.max())
 
         return log_str
+
+    def _plot_tmarks(self):
+        """
+        Plot vertical lines at given reference times based on user input values
+        """
+        c = self.kwargs.get("tmark_c", "r")
+        lw = self.kwargs.get("tmark_lw", 1.5)
+        ls = self.kwargs.get("tmark_ls", "-")
+        alpha = self.kwargs.get("tmark_alpha", 1.)
+        z = self.kwargs.get("tmark_zorder", 5)
+
+        for tmark in self.tmarks:
+            plt.axvline(x=tmark, c=c, linewidth=lw, linestyle=ls, zorder=z,
+                        alpha=alpha)
 
     def _plot_azimuth_bins(self):
         """
@@ -1821,8 +1847,6 @@ class RecordSection:
         Create the title of the plot based on event and station information
         Allow dynamic creation of title based on user input parameters
 
-        TODO Can we make this two-column to save space?
-
         :type nwav: int
         :param nwav: if using subset, the title needs to know how many waveforms
             it's showing on the page. self.plot() should tell it
@@ -2036,6 +2060,10 @@ def parse_args():
                              "starting value, with azimuth 0 <= az <= 360")
     parser.add_argument("--distance_units", default="km", type=str,
                         nargs="?", help="Set units when sorting by distance")
+    parser.add_argument("--tmarks", default=None, type=float,
+                        nargs="+", help="Plot vertical lines at given reference"
+                                        "times [s]. Input as a list of values, "
+                                        "e.g., --tmarks 0 100 200")
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
@@ -2066,6 +2094,7 @@ def parse_args():
 def plotw_rs(*args, **kwargs):
     """
     Main call function for command line use of RecordSection.
+
     Runs the record section plotting functions in order. Contains the logic for
     breaking up figure into multiple pages.
 
@@ -2084,10 +2113,20 @@ def plotw_rs(*args, **kwargs):
         rs.plot()
     # More complicated case where we need to split onto multiple pages
     else:
-        for i, start in enumerate(np.arange(0, len(rs.st),
-                                            rs.max_traces_per_rs)):
+        if "_r" in rs.sort_by:
+            # !!! This doesn't work, start comes before stop or something
+            rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
+            if (rnge[0] - rnge[1]) < rs.max_traces_per_rs:
+                rnge = np.insert(rnge, 0, len(rs.st))
+        else:
+            rnge = np.arange(0, len(rs.st), rs.max_traces_per_rs)
+            # Case where the num waveforms is less than max_traces_per_rs,
+            # ensure that the last page contains the remainder
+            if (rnge[-1] - rnge[-2]) < rs.max_traces_per_rs:
+                rnge = np.append(rnge, len(rs.st))
+
+        for i, start in enumerate(rnge):
             stop = start + rs.max_traces_per_rs
-            # Case where the num waveforms is less than max_traces_per_rs
             if stop < rs.max_traces_per_rs:
                 stop = len(rs.st)
             rs.plot(subset=[start, stop], page_num=i+1)
