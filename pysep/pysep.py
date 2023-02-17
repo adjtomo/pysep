@@ -1560,7 +1560,6 @@ class Pysep:
         # Rotation to various orientations. The output stream will have ALL
         # components, both rotated and non-rotated
         if self.rotate is not None:
-            import pdb;pdb.set_trace()
             self.st = self.rotate_streams()
 
         # Final quality checks on ALL waveforms before we write them out
