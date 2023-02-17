@@ -219,11 +219,14 @@ class RecordSection:
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
             - 'geometric_spreading': scale amplitudes by expected reduction
                 through geometric spreading. Related parameters are:
-                - `geometric_spreading_factor`
-                - `geometric_spreading_k_val`
-                - `geometric_spreading_exclude`
-                - `geometric_spreading_ymax`
+
+                - `geometric_spreading_factor`  
+                - `geometric_spreading_k_val`  
+                - `geometric_spreading_exclude`  
+                - `geometric_spreading_ymax`  A
+
                 Equation is A(d) = k / sin(d) ** f
+
                 Where A(d) is the amplitude reduction factor as a function of
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
                 the `geometric_spreading_factor`.

@@ -214,4 +214,7 @@ sep = Pysep(origin_time="2000-01-01T00:00:00", event_latitude=64.8596,
             )
 ```
 
-Check out the Pysep.run() function for other API options for using PySEP.
+> __Note__: See [PySEP class API documentation](
+  https://adjtomo.github.io/pysep/autoapi/pysep/pysep/index.html#pysep.pysep.Pysep)
+  for a list of available input parameters
+

@@ -3,24 +3,25 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Python Seismogram Extraction and Processing
+PySEP
 ===========================================
 
-`PySEP` is a package revolving around the collection, visualization and curation
+``PySEP`` (`Python Seismogram Extraction and Processing`) is a package revolving 
+around the collection, visualization and curation
 of seismic data and metadata. It is built around ObsPy and uses a number of 
 core classes to achieve its goals:
 
-- ``PySep``: data download and processing tool
-- ``RecSec``: record section plotter for data visualization
-- ``Declust``: event and station declustering and weighting
+- `PySep <pysep.html>`__: data download and processing tool
+- `RecSec <recsec.html>`__: record section plotter for data visualization
+- `Declust <declust.html>`__: event and station declustering and weighting
+
+`PySEP` is hosted on `GitHub <https://github.com/adjtomo/pysep>`_ as part of the  
+`adjTomo organization <https://github.com/adjtomo>`_.
 
 As part of the `SCOPED toolkit <https://github.com/SeisSCOPED>`_, `PySEP` 
 has been
 `containerized <https://github.com/SeisSCOPED/pysep/pkgs/container/pysep>`_
 using Docker.
-
-`PySEP` is hosted on `GitHub <https://github.com/adjtomo/pysep>`_ as part of the  
-`adjTomo organization <https://github.com/adjtomo>`_.
 
 ---------------------------------
 

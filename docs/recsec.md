@@ -160,7 +160,10 @@ recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTI
 ## Scripting RecSec
 
 The RECord SECtion tool can also be scripted. It simply requires an ObsPy Stream
-object as input. Tunable parameters can be fed in as input variables.
+object as input. Tuning parameters can be fed in as input variables.
+
+> __Note__: See [RecordSection class API documentation]( 
+  https://adjtomo.github.io/pysep/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection ) for a list of available input parameters
 
 ```python
 from obspy import read, read_inventory, read_events
@@ -170,6 +173,8 @@ st = read()
 inv = read_inventory()
 event = read_events()[0]
 st = append_sac_headers(st, event, inv)  # RecordSection requires SAC headers
-rs = RecordSection(st=st, sort_by="distance")
+rs = RecordSection(st=st, sort_by="distance", scale_by="normalize")
 rs.run()
 ```
+
+
