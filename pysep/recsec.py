@@ -2123,12 +2123,20 @@ def plotw_rs(*args, **kwargs):
         rs.plot()
     # More complicated case where we need to split onto multiple pages
     else:
-        for i, start in enumerate(
-                np.arange(0, len(rs.st), rs.max_traces_per_rs)
-        ):
-            stop = start + rs.max_traces_per_rs
-            if stop < rs.max_traces_per_rs:
-                stop = len(rs.st)
+        # if "_r" in rs.sort_by:
+        #     # !!! This doesn't work, start comes before stop or something
+        #     rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
+        #     if (rnge[0] - rnge[1]) < rs.max_traces_per_rs:
+        #         rnge = np.insert(rnge, 0, len(rs.st))
+        # else:
+        rnge = np.arange(0, len(rs.st), rs.max_traces_per_rs)
+        # Case where the num waveforms is less than max_traces_per_rs,
+        # ensure that the last page contains the remainder
+        if rnge[-1] < len(rs.st):
+            rnge = np.append(rnge, len(rs.st))
+
+        for i, stop in enumerate(rnge[1:]):
+            start = rnge[i]
             rs.plot(subset=[start, stop], page_num=i+1)
 
     _end = datetime.now()
