@@ -46,8 +46,7 @@ def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
     for tr in st:
         sac_header = tr.stats.sac
         if "evdp" not in sac_header or "gcarc" not in sac_header:
-            logger.debug(f"'evdp' or 'gcarc' not in sac header of {tr.get_id(), "
-                         "skipping")
+            logger.debug(f"skip {tr.get_id()} phase arr., no 'evdp' or 'gcarc")
             continue
         depth_km = sac_header["evdp"]  # units: km
         dist_deg = sac_header["gcarc"]

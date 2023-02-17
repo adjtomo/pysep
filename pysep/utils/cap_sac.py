@@ -269,6 +269,10 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
                                                     phase_list=phase_list)
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
+        # Missing SAC header values may cause certain or all stations to not 
+        # be present in the `phase_dict`
+        if tr.get_id() not in phase_dict:
+            continue
         arrivals = phase_dict[tr.get_id()]
         # If the TauP arrival calculation fails, `arrivals` will be empty
         if not arrivals:
