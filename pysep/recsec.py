@@ -1565,7 +1565,7 @@ class RecordSection:
         c = self.kwargs.get("tmark_c", "r")
         lw = self.kwargs.get("tmark_lw", 1.5)
         ls = self.kwargs.get("tmark_ls", "-")
-        alpha = self.kwargs.get("tmark_alpha", 1.)
+        alpha = self.kwargs.get("tmark_alpha", 0.75)
         z = self.kwargs.get("tmark_zorder", 5)
 
         for tmark in self.tmarks:
@@ -2113,19 +2113,9 @@ def plotw_rs(*args, **kwargs):
         rs.plot()
     # More complicated case where we need to split onto multiple pages
     else:
-        if "_r" in rs.sort_by:
-            # !!! This doesn't work, start comes before stop or something
-            rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
-            if (rnge[0] - rnge[1]) < rs.max_traces_per_rs:
-                rnge = np.insert(rnge, 0, len(rs.st))
-        else:
-            rnge = np.arange(0, len(rs.st), rs.max_traces_per_rs)
-            # Case where the num waveforms is less than max_traces_per_rs,
-            # ensure that the last page contains the remainder
-            if (rnge[-1] - rnge[-2]) < rs.max_traces_per_rs:
-                rnge = np.append(rnge, len(rs.st))
-
-        for i, start in enumerate(rnge):
+        for i, start in enumerate(
+                np.arange(0, len(rs.st), rs.max_traces_per_rs)
+        ):
             stop = start + rs.max_traces_per_rs
             if stop < rs.max_traces_per_rs:
                 stop = len(rs.st)
