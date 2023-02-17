@@ -1845,10 +1845,20 @@ class RecordSection:
         # HYPO: If only one event, show hypocenter information
         if self.stats.nevents == 1:
             sac = self.st[0].stats.sac
+            # Accomodate unknown depth and magnitude
+            if "evdp" in sac:
+                evdp = f"{sac['evdp']:.2f}km"
+            else:
+                evdp = "None"
+            if "mag" in sac:
+                mag = f"M{sac['mag']:.2f}"
+            else:
+                mag = "None"
+
             # HYPO: lon, lat, depth, mag
             hypo = (
                 f"\nHYPO: ({sac['evlo']:.2f}{DEG}, {sac['evla']:.2f}{DEG}), " 
-                f"Z={sac['evdp']:.2f}km, M{sac['mag']:.2f}"
+                f"Z={evdp}, Mag={mag}"
             )
         else:
             hypo = ""

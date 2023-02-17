@@ -5,9 +5,6 @@ Python Seismogram Extraction and Processing (PySEP)
 Download, pre-process, and organize seismic waveforms, event and station
 metadata. Save waveforms as SAC files for use in moment tensor inversion and 
 adjoint tomography codes.
-
-:authors:
-
 """
 import argparse
 import os

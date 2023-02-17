@@ -182,25 +182,12 @@ def _append_sac_headers_trace(tr, event, inv):
 
     otime = event.preferred_origin().time
 
-    # Allow for no magnitude and no depth information
-    try:
-        evdp = event.preferred_origin().depth / 1E3  # units: km
-    except Exception:  # NOQA
-        evdp = 999.9  # dummy value
-
-    try:
-        mag = event.preferred_magnitude().mag
-    except Exception: # NOQA
-        mag = 9999  # dummy value
-
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
         "b": tr.stats.starttime - event.preferred_origin().time,  # begin time
         "e": tr.stats.npts * tr.stats.delta,  # end time
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
-        "evdp": evdp,
-        "mag": mag,
         "stla": sta.latitude,
         "stlo": sta.longitude,
         "stel": sta.elevation / 1E3,  # elevation in km
@@ -224,6 +211,19 @@ def _append_sac_headers_trace(tr, event, inv):
         sac_header["cmpinc"] = cha.dip  # channel dip/inclination in degrees
         sac_header["cmpaz"] = cha.azimuth  # channel azimuth in degrees
     except IndexError:
+        pass
+
+    # Allow for no magnitude and no depth information
+    try:
+        evdp = event.preferred_origin().depth / 1E3  # units: km
+        sac_header["evdp"] = evdp
+    except Exception:  # NOQA
+        pass
+
+    try:
+        mag = event.preferred_magnitude().mag
+        sac_header["mag"] = mag
+    except Exception:  # NOQA
         pass
 
     # Append SAC header and include back azimuth for rotation
