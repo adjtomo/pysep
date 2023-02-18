@@ -15,4 +15,5 @@
 - Bugfix: rotation was not able to be set as null 
 - Bugfix: some flag check parameters were not being used during processing
 - Removed hard restriction on requiring event depth and magnitude for default event selection
-
+- Add feature 'tmarks' to record section to plot vertical lines at reference times
+- Fix ordering of multi-page record sections when using plotw_rs 
