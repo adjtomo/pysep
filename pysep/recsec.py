@@ -2123,21 +2123,20 @@ def plotw_rs(*args, **kwargs):
         rs.plot()
     # More complicated case where we need to split onto multiple pages
     else:
-        # if "_r" in rs.sort_by:
-        #     # !!! This doesn't work, start comes before stop or something
-        #     rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
-        #     if (rnge[0] - rnge[1]) < rs.max_traces_per_rs:
-        #         rnge = np.insert(rnge, 0, len(rs.st))
-        # else:
-        rnge = np.arange(0, len(rs.st), rs.max_traces_per_rs)
-        # Case where the num waveforms is less than max_traces_per_rs,
-        # ensure that the last page contains the remainder
-        if rnge[-1] < len(rs.st):
-            rnge = np.append(rnge, len(rs.st))
+        # Iterate backwards through the range so that the order of pages is
+        # more natural, i.e., plotting the record section from the top down,
+        # rather than the bottom up
+        rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
 
-        for i, stop in enumerate(rnge[1:]):
-            start = rnge[i]
-            rs.plot(subset=[start, stop], page_num=i+1)
+        # When `max_traces_per_rs` is not an integer divisor of the number of
+        # streams, the range will not hit zero, so we need to ensure it does
+        if rnge[-1] != 0:
+            rnge = np.append(rnge, 0)
+
+        for i, stop in enumerate(rnge[:-1]):
+            j = i + 1
+            start = rnge[j]
+            rs.plot(subset=[start, stop], page_num=j)
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
