@@ -2123,13 +2123,20 @@ def plotw_rs(*args, **kwargs):
         rs.plot()
     # More complicated case where we need to split onto multiple pages
     else:
-        for i, start in enumerate(
-                np.arange(0, len(rs.st), rs.max_traces_per_rs)
-        ):
-            stop = start + rs.max_traces_per_rs
-            if stop < rs.max_traces_per_rs:
-                stop = len(rs.st)
-            rs.plot(subset=[start, stop], page_num=i+1)
+        # Iterate backwards through the range so that the order of pages is
+        # more natural, i.e., plotting the record section from the top down,
+        # rather than the bottom up
+        rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
+
+        # When `max_traces_per_rs` is not an integer divisor of the number of
+        # streams, the range will not hit zero, so we need to ensure it does
+        if rnge[-1] != 0:
+            rnge = np.append(rnge, 0)
+
+        for i, stop in enumerate(rnge[:-1]):
+            j = i + 1
+            start = rnge[j]
+            rs.plot(subset=[start, stop], page_num=j)
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
