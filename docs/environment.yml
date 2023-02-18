@@ -1,0 +1,14 @@
+name: pysep-docs
+channels:
+    - conda-forge
+dependencies:
+    - sphinx
+    - sphinx_rtd_theme
+    - ipykernel
+    - nbsphinx
+    - jupyter
+    - myst-parser
+    - pip
+    - pip:
+      - sphinx-autoapi
+      - sphinx_rtd_theme

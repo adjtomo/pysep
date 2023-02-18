@@ -1,26 +1,33 @@
+#!/usr/bin/evn python3
 """
-Python Seismogram Extraction and Processing
+Python Seismogram Extraction and Processing (PySEP)
 
 Download, pre-process, and organize seismic waveforms, event and station
-metadata
-
-TODO
-    * flesh out the template config file
-    * save intermediate files? or some form of checkpointing
+metadata. Save waveforms as SAC files for use in moment tensor inversion and 
+adjoint tomography codes.
 """
 import argparse
 import os
+import shutil
 import sys
 import yaml
 import warnings
-import llnl_db_client  # NOQA
+try:
+    import llnl_db_client  # NOQA
+except ImportError:
+    _has_llnl = False
+else:
+    _has_llnl = True
 
 from glob import glob
 from pathlib import Path
-from obspy import UTCDateTime, Stream
+from obspy import UTCDateTime, Stream, Inventory, read, read_inventory
 from obspy.clients.fdsn import Client
 from obspy.clients.fdsn.header import FDSNBadRequestException
+from obspy.clients.fdsn.mass_downloader import (RectangularDomain, Restrictions,
+                                                CircularDomain, MassDownloader)
 from obspy.core.event import Event, Origin, Magnitude
+from obspy.geodetics import kilometer2degrees
 
 from pysep import logger
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
@@ -28,7 +35,8 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
                                  format_sac_headers_post_rotation)
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
-                                 quality_check_waveforms_after_processing)
+                                 quality_check_waveforms_after_processing,
+                                 )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
@@ -36,22 +44,20 @@ from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
                                  format_streams_for_rotation, rotate_to_uvw,
                                  estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
-from pysep.recsec import plotw_rs
+from pysep.recsec import RecordSection
 
 
 class Pysep:
-    """
-    Download, preprocess, and save waveform data using ObsPy
-    """
+    """Download, preprocess, and save waveform data using ObsPy"""
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
                  networks="*", stations="*", locations="*", channels="*",
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
-                 remove_clipped=False, water_level=60, detrend=True,
-                 demean=True, taper_percentage=0, rotate=None,
-                 pre_filt="default", mindistance=0, maxdistance=20E3,
-                 minazimuth=0, maxazimuth=360,
+                 remove_clipped=False, remove_insufficient_length=True,
+                 water_level=60, detrend=True, demean=True, taper_percentage=0,
+                 rotate=None, pre_filt="default",
+                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
                  phase_list=None, seconds_before_event=20,
@@ -61,120 +67,286 @@ class Pysep:
                  log_level="DEBUG", timeout=600, write_files="all",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
+                 use_mass_download=False,
                  **kwargs):
         """
-        Define a default set of parameters
-
-        TODO
-            * removed resample_TF, was this used?
-            * load config FIRST and then set defaults, make all defaults None?
+        .. note::
+            Parameters for general data gathering control
 
         :type client: str
         :param client: ObsPy FDSN client to query data from, e.g., IRIS, LLNL,
-            NCEDC or any FDSN clients accepted by ObsPy
-        :type network: str
-        :param network: name or names of networks to query for, if names plural,
-            must be a comma-separated list, i.e., "AK,AT,AV", else "AK".
-            Wildcard okay
-        :type station: str
-        :param station: station name or names to query for, wildcard okay
-        :type location: str
-        :param location: locations name or names to query for, wildcard okay
-        :type channel: str
-        :param channel: channel name or names to query for, wildcard okay
-        :type remove_response: bool
-        :param remove_response: Remove instrument response or not
-        :type remove_clipped: remove any clipped stations from final output
-        :param remove_clipped: Check if waveforms are clipped, remove if so
-        :type water_level: float
-        :param water_level: water_level to apply during filtering for small vals
+            NCEDC or any FDSN clients accepted by ObsPy. Defaults to 'IRIS'
+        :type minlatitude: float
+        :param minlatitude: for event, station and waveform retrieval. Defines
+            the minimum latitude for a rectangular bounding box that is used to
+            search for data. Only used for events if `event_selection`=='search'
+        :type maxlatitude: float
+        :param maxlatitude: for event, station and waveform retrieval. Defines
+            the maximum latitude for a rectangular bounding box that is used to
+            search for data. Only used for events if `event_selection`=='search'
+        :type minlongitude: float
+        :param minlongitude: for event, station and waveform retrieval. Defines
+            the minimum longitude for a rectangular bounding box that is used to
+            search for data. Only used for events if `event_selection`=='search'
+        :type maxlongitude: float
+        :param maxlongitude: for event, station and waveform retrieval. Defines
+            the maximum longitude for a rectangular bounding box that is used to
+            search for data. Only used for events if `event_selection`=='search'
+        :type user: str
+        :param user: User ID if IRIS embargoes data behind passwords. This is
+            passed into the instantiation of `client`.
+        :type password: str
+        :param password: Password if IRIS embargoes data behind passwords. This
+            is passed into the instantiation of 'client'
+        :type use_mass_download: bool
+        :param use_mass_download: Use ObsPy's mass download option to download
+            all available stations in the region regardless of data provider.
+        :type client_debug: bool
+        :param client_debug: turn on DEBUG mode for the ObsPy FDSN client, which
+            outputs information-rich log messages to std out. Use for debugging
+            when FDSN fails mysteriously.
+        :type timeout: float
+        :param timeout: time out time in units of seconds, passed to the
+            `client` to determine how long to wait for return data before
+            exiting. Defaults to 600s.
+        :type llnl_db_path: str
+        :param llnl_db_path: If `client`=='LLNL', PySEP assumes we are accesing
+            data from the LLNL waveeform database (which must be stored local).
+            Points to the path where this is saved.
+
+        .. note::
+            Event selection parameters
+
+        :type event_selection: str
+        :param event_selection: How to define the Event which is used to define
+            the event origin time and hypocentral location.
+            - 'default': User defines Event `origin_time`, and location with
+            `event_latitude` and `event_longitude`
+            - 'search': PySEP will use `client` to search for a Catalog event
+            defined by `event_origintime`, `event_magnitude` and
+            `event_depth_km`. Buffer time around the `origin_time` can
+            be defined by `seconds_before_event` and `seconds_after_event`.
+        :type origin_time: str
+        :param origin_time: the event origin time used as a central reference
+            point for data gathering. Must be in a string format that is
+            recognized by ObsPy UTCDateTime. For example '2000-01-01T00:00:00'.
+        :type event_latitude: float
+        :param event_latitude: latitude of the event in units of degrees.
+            used for defining the event hypocenter and for removing stations
+            based on distance from the event.
+        :type event_longitude: float
+        :param event_longitude: longitude of the event in units of degrees.
+            used for defining the event hypocenter and for removing stations
+            based on distance from the event.
+        :type seconds_before_event: float
+        :param seconds_before_event: For event selection only, only used if
+            `event_selection`=='search'. Time [s] before given `origin_time` to
+            search for a matching catalog event from the given `client`
+        :type seconds_after_event: float
+        :param seconds_after_event: For event selection only, only used if
+            `event_selection`=='search'. Time [s] after given `origin_time` to
+            search for a matching catalog event from the given `client`
+
+        .. note::
+            Waveform and station metadata gathering parameters
+
+        :type reference_time: str
+        :param reference_time: Waveform origin time. If not given, defaults to
+            the event origin time. This allows for a static time shift from the
+            event origin time, e.g., if there are timing errors with relation
+            to the `origin_time`. Defaults to NoneType (`origin_time`).
+        :type seconds_before_ref: float
+        :param seconds_before_ref: For waveform fetching. Defines the time
+            before `reference_time` to fetch waveform data. Units [s]
+        :type seconds_after_ref: float
+        :param seconds_after_ref: For waveform fetching. Defines the time
+            after `reference_time` to fetch waveform data. Units [s]
+        :type networks: str
+        :param networks: name or names of networks to query for, if names plural,
+            must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards okay,
+            defaults to '*'.
+        :type stations: str
+        :param stations: station name or names to query for. If multiple
+            stations, input as a list of comma-separated values, e.g.,
+            'STA01,STA02,STA03'. Wildcards acceptable, if using wildcards, use
+            a '-' to exclude stations (e.g., '*,-STA01' will gather all stations
+            available, except STA01. Defaults to '*'
+        :type locations: str
+        :param locations: locations name or names to query for, wildcard okay.
+            See `stations` for inputting multiple location values. Default '*'.
+        :type channels: str
+        :param channels: channel name or names to query for, wildcard okay. If
+            multiple stations, input as a list of comma-separated values, e.g.,
+            'HH?,BH?'. Wildcards acceptable. Defaults to '*'.
+
+        .. note::
+            Station removal and curtailing parameters
+
+        :type mindistance: float
+        :param mindistance: Used for removing stations and mass download option
+
+            - Removing stations: Remove any stations who are closer than the
+            given minimum distance away from event (units: km). Always applied
+            - Mass Download: If `use_mass_download` is True and
+            `domain_type`=='circular', defines the minimum radius around the
+            event hypocenter to gather waveform data and station metadata
+        :type maxdistance: float
+        :param maxdistance: Used for removing stations and mass download option
+
+            - Removing stations: Remove any stations who are farther than the
+            given maximum distance away from event (units: km). Always applied
+            - Mass Download: If `use_mass_download` is True and
+            `domain_type`=='circular', defines the maximum radius around the
+            event hypocenter to gather waveform data and station metadata
+        :type minazimuth: float
+        :param minazimuth: for station removal. stations whose azimuth relative
+            to the event hypocenter that do not fall within the bounds
+            [`minazimuth`, `maxazimuth`] are removed from the final list.
+            Defaults to 0 degrees.
+        :param minazimuth: for station removal. stations whose azimuth relative
+            to the event hypocenter that do not fall within the bounds
+            [`minazimuth`, `maxazimuth`] are removed from the final list.
+            Defaults to 360 degrees.
+        :type remove_clipped: bool
+        :param remove_clipped: remove any clipped stations from gathered
+            stations. Checks the max amplitude of against a maximum value
+            expected for a 24 bit signal. Defaults False
+        :type remove_insufficient_length: bool
+        :param remove_insufficient_length: remove waveforms whose trace length
+            does not match the average (mode) trace length in the stream.
+            Defaults to True
+
+        .. note::
+            Data processing parameters
+
         :type detrend: bool
-        :param detrend: apply simple detrend to data during preprocessing
+        :param detrend: apply simple linear detrend to data during prior to
+            removing instrument response (if `remove_response`==True)
         :type demean: bool
-        :param demean: apply demeaning to data during preprocessing
+        :param demean: apply demeaning to data during instrument reseponse
+            removal. Only applied if `remove_response` == True.
         :type taper: float
         :param taper: apply a taper to the waveform with ObsPy taper, fraction
             between 0 and 1 as the percentage of the waveform to be tapered
             Applied generally used when data is noisy, e.g., HutchisonGhosh2016
-            To get the same results as the default taper in SAC,
+            Note: To get the same results as the default taper in SAC,
             use max_percentage=0.05 and leave type as hann.
-            Tapering also happens while resampling (see util_write_cap.py)
-        :type rotate: list of str
-        :param rotate: choose how to rotate the waveform data. Can include
-            the following options (order insensitive):
+            Tapering also happens while resampling (see util_write_cap.py).
+            Only applied if `remove_response` == True.
+        :type rotate: list of str or NoneType
+        :param rotate: choose how to rotate the waveform data. pre-rotation
+            processing will be applied. Can include the following options
+            (order insensitive):
+
             * ZNE: Rotate from arbitrary components to North, East, Up
             * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
             * UVW: Rotate from ZNE to orthogonal UVW orientation
+            If set to None, no rotation processing will take place.
+        :type resample_freq: float
+        :param resample_freq: frequency to resample data in units Hz. If not
+            given, no data resampling will take place. Defaults to NoneType
+        :type scale_factor: float
+        :param scale_factor: scale all data by a constant factor
+            Note: for CAP use 10**2 (to convert m/s to cm/s).
+            Defaults to NoneType (no scaling applied)
+
+        .. note::
+            Instrument response removal parameters
+
+        :type remove_response: bool
+        :param remove_response: remove instrument response using station
+            response information gathered from `client`. Defaults to True.
+        :type output_unit: str
+        :param output_unit: the output format of the waveforms if instrument
+            response removal is applied. Only relevant if
+            `remove_response`==True. See ObsPy.core.trace.Trace.remove_response
+            for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
+            (displacement [m], velocity [m/s], acceleration [m/s^2]).
+        :type water_level: float
+        :param water_level: a water level threshold to apply during filtering
+            for small values. Passed to Obspy.core.trace.Trace.remove_response
         :type prefilt: str, tuple or NoneType
         :param prefilt: apply a pre-filter to the waveforms before deconvolving
             instrument response. Options are:
+
             * 'default': automatically calculate (f0, f1, f2, f3) based on the
-                length of the waveform (dictating longest allowable period) and
-                the sampling rate (dictating shortest allowable period). This is
-                the default behavior.
+            length of the waveform (dictating longest allowable period) and
+            the sampling rate (dictating shortest allowable period). This is
+            the default behavior.
             * NoneType: do not apply any pre-filtering
             * tuple of float: (f0, f1, f2, f3) define the corners of your pre
-                filter in units of frequency (Hz)
-        :type mindistance: float
-        :param mindistance: get waveforms from stations starting from a minimum
-            distance away  from event (km)
-        :type maxdistance: float
-        :param maxdistance: get waveforms from stations up to a maximum distance
-            from event (km)
-        :type minazimuth: float
-        :param minazimuth: get waveforms from a station starting at a given
-            minimum azimuth (deg) out to a final maximum azimuth (deg) where
-            0 degrees points North from the event
-        :type maxazimuth: float
-        :param maxazimuth: get waveforms from a station starting at a given
-            minimum azimuth (deg) out to a final maximum azimuth (deg) where
-            0 degrees points North from the event
-        :type minlatitude: float
-        :param minlatitude: minimum latitude for bounding box to search for
-            stations and events
-        :type maxlatitude: float
-        :param maxlatitude: maximum latitude for bounding box to search for
-            stations and events
-        :type minlongitude: float
-        :param minlongitude: minimum longitude for bounding box to search for
-            stations and events
-        :type maxlongitude: float
-        :param maxlongitude: maximum longitude for bounding box to search for
-            stations and events
-        :type resample_freq: float
-        :param resample_freq: frequency to resample data at
-        :type scale_factor: float
-        :param scale_factor: scale data by a constant, for CAP use 10**2
-            (to convert m/s to cm/s)
+            filter in units of frequency (Hz)
+
+        .. note::
+            SAC header control parameters
+
         :type phase_list: list of str
         :param phase_list: phase names to get ray information from TauP with.
-            Defaults to direct arrivals 'P' and 'S'
-        :type reference_time: str
-        :param reference_time: Waveform origin time. Allows for a static time
-            shift from the event origin time, e.g., if there are timing errors
-            with relation to o time. If not given, defaults to event origin time
-        :type seconds_before_ref: float
-        :param seconds_before_ref: time before origintime to fetch waveform data
-        :type seconds_after_ref: float
-        :param seconds_after_ref: time after origintime to fetch waveform data
+            Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
+            by TauP (see ObsPy TauP documentation for acceptable phases). Phase
+            information will be added to SAC headers.
         :type taup_model: str
         :param taup_model: name of TauP model to use to calculate phase arrivals
-        :type output_unit: str
-        :param output_unit: the output format of the waveforms, something like
-            'DISP', 'VEL', 'ACC'
-        :type user: str
-        :param user: User ID if IRIS embargoes data behind passwords
-        :type password: str
-        :param password: Password if IRIS embargoes data behind passwords
-        :type overwrite: bool
-        :param overwrite: overwrite an existing PySEP event directory if
-            the current process is trying to write to it
+            See also `phase_list` which defines phases to grab arrival data
+            for. Defaults to 'AK135'. See ObsPy TauP documentation for avilable
+            models.
+
+        .. note::
+            PySEP Configuration parameters
+
+        :type config_file: str
+        :param config_file: path to YAML configuration file which will be used
+            to overwrite internal default parameters. Used for command-line
+            version of PySEP
+        :type log_level: str
+        :param log_level: Level of verbosity for the internal PySEP logger.
+            In decreasing order of verbosity: 'DEBUG', 'INFO', 'WARNING',
+            'CRITICAL'
         :type legacy_naming: bool
-        :param legacy_naming: revert to old PySEP naming schema for event tag,
-            which names the directory and output SAC files
+        :param legacy_naming: if True, revert to old PySEP naming schema for
+            event tags, which is responsible for naming the output directory and
+            SAC files. Legacy filenames look something like
+            '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
+            station, location, channel, component). Default to False
         :type overwrite_event_tag: str
         :param overwrite_event_tag: option to allow the user to set their own
             event tag, rather than the automatically generated one
+
+        .. note::
+            Output file and figure control
+
+        :type write_files: str or NoneType
+        :param write_files: Which files to write out after data gathering.
+            Should be a comma-separated list of the following
+
+            - weights_az: write out CAP weight file sorted by azimuth
+            - weights_dist: write out CAP weight file sorted by distance
+            - weights_code: write out CAP weight file sorted by station code
+            - station_list: write out a text file with station informatino
+            - inv: save a StationXML (.xml) file (ObsPy inventory)
+            - event: save a QuakeML (.xml) file (ObsPy Catalog)
+            - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
+            - config_file: save YAML config file containing all input parameters
+            - sac: save all waveforms as SAC (.sac) files separated by component
+            - sac_raw: save the raw (pre-rotation) SAC files
+            - all: write all of the above (default value)
+            Example input: `write_files`=='inv,event,stream,sac'
+            If None, no files will be written. This is generally not advised.
+        :type plot_files: str or NoneType
+        :param write_files: What to plot after data gathering.
+            Should be a comma-separated list of the following:
+
+            - map: plot a source-receiver map with event and all stations
+            - record_section: plot a record section with default parameters
+            - all: plot all of the above (default value)
+            If None, no files will be plotted.
+        :type output_dir: str
+        :param output_dir: path to output directory where all the files and
+            figures defined by `write_files` and `plot_files` will be stored.
+            Defaults to the current working directory.
+        :type overwrite: bool
+        :param overwrite: If True, overwrite an existing PySEP event directory.
+            This prevents Users from re-downloading data. Defaults to False.
         """
         # Internal attribute but define first so that it sits at the top of
         # written config files
@@ -188,6 +360,14 @@ class Pysep:
         self._user = user
         self._password = password
         self.taup_model = taup_model
+        self.use_mass_download = use_mass_download
+
+        # Check for LLNL requirement
+        if self.client == "LLNL" and not _has_llnl:
+            raise ImportError(f"`client`=='LLNL' requires optional "
+                              f"dependency 'llnl_db_client' which was not "
+                              f"found. Please reinstall PySEP with the command "
+                              f"'pip install -e .[llnl]")
 
         # Parameters related to event selection
         self.event_selection = event_selection
@@ -217,7 +397,8 @@ class Pysep:
         self.seconds_after_ref = seconds_after_ref
         self.phase_list = phase_list
 
-        # NOTE: This default is a UAF LUNGS system-specific database path
+        # NOTE: This default is a UAF LUNGS system-specific database path.
+        # If you are not on LUNGS, you will need to set this path manually
         self.llnl_db_path = (
                 llnl_db_path or
                 "/store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc"
@@ -237,7 +418,7 @@ class Pysep:
         self.demean = bool(demean)
         self.detrend = bool(detrend)
         self.taper_percentage = taper_percentage
-        self.rotate = rotate or ["ZNE", "RTZ"]
+        self.rotate = rotate 
         self.remove_response = bool(remove_response)
         self.output_unit = output_unit
         self.water_level = water_level
@@ -245,6 +426,7 @@ class Pysep:
         self.scale_factor = scale_factor
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
+        self.remove_insufficient_length = remove_insufficient_length
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
@@ -269,6 +451,10 @@ class Pysep:
         else:
             logger.disabled = True
 
+        # Allow User to throw in general kwargs. This allows things to be
+        # more general, but also may obscure some parameters.
+        self.kwargs = kwargs
+
     def check(self):
         """
         Check input parameter validity against expected Pysep behavior
@@ -284,8 +470,7 @@ class Pysep:
                     "Event selection requires the following parameters: "
                     "`seconds_before_event` and `seconds_after_event`")
         elif self.event_selection == "default":
-            for par in [self.event_latitude, self.event_longitude,
-                        self.event_depth_km, self.event_magnitude]:
+            for par in [self.event_latitude, self.event_longitude]:
                 assert(par is not None), (
                     "`event_selection`=='default' requires "
                     "`event_latitude`, `event_longitude`, `event_depth_km` "
@@ -293,6 +478,10 @@ class Pysep:
         else:
             raise ValueError("`event_selection` must be one of the following: "
                              "'search' or 'default'")
+
+        if self.event_depth_km is None:
+            logger.warning("TauP arrival times will be incorrect as no depth "
+                           "information is provided")
 
         if self.client.upper() == "LLNL":
             assert(os.path.exists(self.llnl_db_path)), (
@@ -340,8 +529,6 @@ class Pysep:
                 assert("UVW" not in self.rotate), (
                     f"rotate can only have one of the following: 'UVW', 'RTZ'"
                 )
-        else:
-            self.rotate = []
 
         acceptable_units = ["DISP", "VEL", "ACC", "DEF"]
         self.output_unit = self.output_unit.upper()
@@ -383,6 +570,10 @@ class Pysep:
                 f"`plot_files` must be a list of some or all of: "
                 f"{acceptable_plot_files}"
             )
+
+        if self.use_mass_download is True:
+            logger.info("will use option `mass_download`, ignoring `client` "
+                        "and downloading data from all available data centers")
 
     def get_client(self):
         """
@@ -448,6 +639,13 @@ class Pysep:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
 
+        # Reset log level based on the config file
+        if self.log_level is not None:
+            logger.debug(f"`log_level` set to {self.log_level}")
+            logger.setLevel(self.log_level)
+        else:
+            logger.disabled = True
+
     def get_event(self):
         """
         Exposed API for grabbing event metadata depending on the
@@ -475,12 +673,21 @@ class Pysep:
         # This is how we will access the event info so print out and check
         lat = event.preferred_origin().latitude
         lon = event.preferred_origin().longitude
-        depth_km = event.preferred_origin().depth * 1E-3
         otime = event.preferred_origin().time
-        mag = event.preferred_magnitude().mag
+
+        # These values may not be present. General exception because its only
+        # used for log statement so not that important.
+        try:
+            depth_km = event.preferred_origin().depth * 1E-3
+        except Exception:  # NOQA
+            depth_km = None
+        try:
+            mag = event.preferred_magnitude().mag
+        except Exception:  # NOQA
+            mag = None
         logger.info(f"event info summary - origin time: {otime}; "
-                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km:.2f}; "
-                    f"magnitude={mag:.2f}")
+                    f"lat={lat:.2f}; lon={lon:.2f}; depth[km]={depth_km}; "
+                    f"magnitude={mag}")
 
         return event
 
@@ -556,16 +763,27 @@ class Pysep:
         """
         logger.info("creating event metadata with user parameters")
 
+        if self.event_depth_km is not None:
+            depth = self.event_depth_km * 1E3
+        else:
+            depth = None
+
         origin = Origin(latitude=self.event_latitude,
                         longitude=self.event_longitude,
-                        depth=self.event_depth_km * 1E3,  # units: m
+                        depth=depth,  # units: m
                         time=self.origin_time
                         )
-        magnitude = Magnitude(mag=self.event_magnitude, magnitude_type="Mw")
+        if self.event_magnitude:
+            magnitude = Magnitude(mag=self.event_magnitude, magnitude_type="Mw")
+            magnitudes = [magnitude]
+        else:
+            magnitudes = []
 
-        event = Event(origins=[origin], magnitudes=[magnitude])
+        event = Event(origins=[origin], magnitudes=magnitudes)
         event.preferred_origin_id = origin.resource_id.id
-        event.preferred_magnitude_id = magnitude.resource_id.id
+
+        if magnitudes:
+            event.preferred_magnitude_id = magnitude.resource_id.id
 
         return event
 
@@ -712,6 +930,101 @@ class Pysep:
 
         return st
 
+    def mass_download(self):
+        """
+        Use ObsPy Mass downloader to grab events from a pre-determined region
+
+        Keyword Arguments
+        ::
+            str domain_type:
+                How to define the search region domain
+                - rectangular: rectangular bounding box defined by min/max
+                  latitude/longitude
+                - circular: circular bounding circle defined by the events
+                  latitude and longitude, with radii defined by `mindistance`
+                  and `maxdistance`
+            bool delete_tmpdir:
+                Remove the temporary directories that store the MSEED and
+                StationXML files which were downloaded by the mass downloader.
+                Saves space but also if anything fails prior to saving data,
+                the downloaded data will not be saved. Defaults to True.
+        """
+        domain_type = self.kwargs.get("domain_type", "rectangular")
+        delete_tmpdir = self.kwargs.get("delete_tmpdir", True)
+        # Get around the fact that command line arguments are input as strings
+        if isinstance(delete_tmpdir, str):
+            assert(delete_tmpdir.capitalize() in ["True", "False"])
+            delete_tmpdir = bool(delete_tmpdir.capitalize() == "True")
+
+        logger.info("using ObsPy mass downloader to download waveform and "
+                    "station metadata")
+
+        # Define the bounding box/circle that specifies our region of interest
+        if domain_type == "rectangular":
+            logger.info("using a rectangular domain for mass downloader")
+            domain = RectangularDomain(minlatitude=self.minlatitude,
+                                       maxlatitude=self.maxlatitude,
+                                       minlongitude=self.minlongitude,
+                                       maxlongitude=self.maxlongitude)
+        elif domain_type == "circular":
+            logger.info("using a circular domain for mass downloader")
+            domain = CircularDomain(
+                latitude=self.event_latitude, longitude=self.event_longitude,
+                minradius=kilometer2degrees(self.mindistance),
+                maxradius=kilometer2degrees(self.maxdistance)
+            )
+        else:
+            raise NotImplementedError(f"`domain_type` must be 'rectangular' or"
+                                      f"'circular'")
+
+        # Drop any excluded stations
+        stations = ",".join([sta for sta in self.stations.split(",")
+                             if "-" not in sta])
+        sta_exclude = [sta[1:] for sta in self.stations.split(",")
+                       if "-" in sta]
+        networks = ",".join([sta for sta in self.networks.split(",")
+                             if "-" not in sta])
+        net_exclude = [net[1:] for net in self.networks.split(",")
+                       if "-" in net]
+
+        # Set restrictions on the search criteria for data
+        restrictions = Restrictions(
+            starttime=self.reference_time - self.seconds_before_ref,
+            endtime=self.reference_time + self.seconds_after_ref,
+            reject_channels_with_gaps=False, minimum_length=0.,
+            network=networks, station=stations, location=self.locations,
+            channel=self.channels, exclude_networks=net_exclude,
+            exclude_stations=sta_exclude,
+        )
+
+        # Mass downloader will download files to a temp directory which we
+        # will read back from to continue the workflow
+        tmp_dir = os.path.join(self.output_dir, "tmpdir_md")
+        tmp_wav = os.path.join(tmp_dir, "waveforms")
+        tmp_inv = os.path.join(tmp_dir, "inventory")
+
+        mdl = MassDownloader()
+        mdl.download(domain, restrictions, mseed_storage=tmp_wav,
+                     stationxml_storage=tmp_inv, download_chunk_size_in_mb=20,
+                     threads_per_client=3, print_report=True)
+
+        # Read back in waveforms and stationxml data
+        st = Stream()
+        for fid in glob(os.path.join(tmp_wav, "*.mseed")):
+            st += read(fid)
+        logger.info(f"mass downloader downloaded {len(st)} traces")
+
+        inv = Inventory()
+        for fid in glob(os.path.join(tmp_inv, "*.xml")):
+            inv += read_inventory(fid)
+
+        # Delete the tmpdir
+        if delete_tmpdir:
+            logger.info("deleting temporary mass downloader directories")
+            shutil.rmtree(tmp_dir)
+
+        return st, inv
+
     def curtail_stations(self):
         """
         Remove stations from `inv` based on station distance, azimuth, etc.
@@ -856,6 +1169,7 @@ class Pysep:
             other components
         """
         st_raw = self.st.copy()
+
         st_raw = format_streams_for_rotation(st_raw)
 
         # For writing RAW seismograms (prior to ANY rotation). Must be 
@@ -864,7 +1178,7 @@ class Pysep:
         if "sac_raw" in self.write_files:
             self.st_raw = st_raw.copy()
 
-        # Empty stream so we can take advantage of class __add__ method
+        # Empty stream, so we can take advantage of class __add__ method
         st_out = Stream()
 
         # RTZ requires rotating to ZNE first. Make sure this happens even if the
@@ -873,44 +1187,83 @@ class Pysep:
             logger.info("rotating to components ZNE")
             st_zne = st_raw.copy()
             stations = set([tr.stats.station for tr in st_zne])
+            # Assuming each channel has its own azimuth and dip value
+            channels = set([f"{tr.stats.channel[:-1]}?" for tr in st_zne])
+            metadata_getter = self.inv.get_channel_metadata
             for sta in stations:
-                _st = st_zne.select(station=sta)
-                _inv = self.inv.select(station=sta)
-                # Print out azimuth and dip angles for debugging purposes
-                for _net in _inv:
-                    for _sta in _net:
-                        for _cha in _sta:
-                            logger.debug(
-                                f"rotating -> ZNE "
-                                f"{_net.code}.{_sta.code}.{_cha.code} with "
-                                f"az={_cha.azimuth}, dip={_cha.dip}"
-                            )
-                # components=['ZNE'] FORCES rotation using azimuth and dip 
-                # values, even if components are already in 'ZNE'. This is 
-                # important as some IRIS data will be in ZNE but not be aligned
-                # https://github.com/obspy/obspy/issues/2056
-                _st.rotate(method="->ZNE", inventory=self.inv, 
-                           components=["ZNE"])
-            st_out += st_zne
+                for cha in channels:
+                    _st = st_zne.select(station=sta, channel=cha)
+
+                    # Check if 'dip' or 'azimuth' is None, because that causes
+                    # ObsPy rotate to throw a TypeError. See PySEP Issue #35
+                    channel_okay = bool(_st)
+                    for _tr in _st:
+                        try:
+                            meta = metadata_getter(_tr.id, _tr.stats.starttime)
+                            az = meta["azimuth"]
+                            dip = meta["dip"]
+                        except Exception:
+                            logger.warning(f"no matching metadata for {_tr.id}")
+                            channel_okay = False
+                            break
+
+                        logger.debug(f"{_tr.id} azimuth=={az}; dip=={dip}")
+                        if az is None or dip is None:
+                            channel_okay = False
+                            break
+
+                    if not channel_okay:
+                        logger.warning(f"{sta}.{cha} bad rotation metadata, "
+                                       f"removing")
+                        continue
+
+                    # components=['ZNE'] FORCES rotation using azimuth and dip
+                    # values, even if components are already in 'ZNE'. This is
+                    # important as some IRIS data will be in ZNE but not be
+                    # aligned (https://github.com/obspy/obspy/issues/2056)
+                    try:
+                        _st.rotate(method="->ZNE", inventory=self.inv,
+                                   components=["ZNE", "Z12", "123"])
+                    # General error catching for rotation because any number of
+                    # things can go wrong here based on the ObsPy rotation algo
+                    except Exception as e:
+                        logger.warning(f"rotate issue for {sta}.{cha}, "
+                                       "removing from stream")
+                        logger.debug(f"rotate error: {e}")
+                        continue
+                    st_out += _st
+            # Check to see if rotation errors kicked out all stations
+            if not st_out:
+                logger.critical("rotation errors have reduced Stream to len 0, "
+                                "cannot continue")
+                sys.exit(-1)
+            # Rotate to radial transverse coordinate system
+            if "RTZ" in self.rotate:
+                logger.info("rotating to components RTZ")
+                # If we rotate the ENTIRE stream at once, ObsPy only uses the 
+                # first backazimuth value which will create incorrect outputs
+                # https://github.com/obspy/obspy/issues/2623
+                st_rtz = st_out.copy()  # contains ZNE rotated components
+                stations = set([tr.stats.station for tr in st_rtz])
+                for sta in stations:
+                    _st = st_rtz.select(station=sta, channel=cha)
+                    if _st and hasattr(_st[0].stats, "back_azimuth"):
+                        _st.rotate(method="NE->RT")  # in place rot.
+                        st_out += _st
+                    else:
+                        logger.warning(f"no back azimuth for '{sta}', cannot "
+                                       f"rotate NE->RT")
+                        continue
+        # Allow UVW rotation independent on ENZ or RTZ rotation
         if "UVW" in self.rotate:
             logger.info("rotating to components UVW")
-            st_uvw = rotate_to_uvw(st_out)
+            st_uvw = rotate_to_uvw(st_raw)
             st_out += st_uvw
-        elif "RTZ" in self.rotate:
-            logger.info("rotating to components RTZ")
-            # If we rotate the ENTIRE stream at once, ObsPy will only use the 
-            # first backazimuth value which will create incorrect outputs
-            # https://github.com/obspy/obspy/issues/2623
-            st_rtz = st_zne.copy()  # `st_zne` has been rotated to ZNE 
-            stations = set([tr.stats.station for tr in st_rtz])
-            for sta in stations:
-                _st = st_rtz.select(station=sta)
-                _st.rotate(method="NE->RT")  # in place rot.
-                if hasattr(_st[0].stats, "back_azimuth"):
-                    logger.debug(f"{sta}: BAz={_st[0].stats.back_azimuth}")
-            st_out += st_rtz
-
-        st_out = format_sac_headers_post_rotation(st_out)
+        
+        try:
+            st_out = format_sac_headers_post_rotation(st_out)
+        except AttributeError as e:
+            logger.warning(f"cannot format SAC headers after rotating {e}")
 
         return st_out
 
@@ -957,12 +1310,14 @@ class Pysep:
         :type stream_fid: optional name for saved ObsPy Stream miniseed object,
             defaults to 'stream.ms'
         """
+        # Collect kwargs for writing
+        order_stations_list_by = kwargs.get("order_stations_list_by", None)
+
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "sac_raw", "sac_rotated", 
-                             "all"}
+                             "config_file", "sac", "sac_raw", "all"}
         if _return_filenames:
             return _acceptable_files
 
@@ -995,7 +1350,10 @@ class Pysep:
                                stations_fid or "stations_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
-            write_pysep_stations_file(self.inv, self.event, fid)
+            write_pysep_stations_file(
+                    self.inv, self.event, fid, 
+                    order_stations_list_by=order_stations_list_by
+                    )
 
         if "inv" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
@@ -1091,8 +1449,6 @@ class Pysep:
     def plot(self):
         """
         Plot map and record section if requested
-
-        TODO improve source receiver map plotting
         """
         if "map" in self.plot_files or "all" in self.plot_files:
             logger.info("plotting source receiver map")
@@ -1102,8 +1458,10 @@ class Pysep:
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
             # Default settings to create a general record section
-            plotw_rs(st=self.st, sort_by="distance_r", scale_by="normalize",
-                     overwrite=True, show=False, save=fid)
+            rs = RecordSection(st=self.st, sort_by="distance",
+                               scale_by="normalize", overwrite=True, show=False,
+                               save=fid)
+            rs.run()
 
     def _event_tag_and_output_dir(self):
         """
@@ -1170,22 +1528,31 @@ class Pysep:
 
         self.event_tag, self.output_dir = self._event_tag_and_output_dir()
 
-        if inv is None:
-            self.inv = self.get_stations()
-        else:
-            self.inv = inv
-        self.inv = self.curtail_stations()
+        # Standard method of retrieving waveforms from data center
+        if self.use_mass_download is False:
+            if inv is None:
+                self.inv = self.get_stations()
+            else:
+                self.inv = inv
+            self.inv = self.curtail_stations()
 
-        # Get waveforms, format and assess waveform quality
-        if st is None:
-            self.st = self.get_waveforms()
+            # Get waveforms, format and assess waveform quality
+            if st is None:
+                self.st = self.get_waveforms()
+            else:
+                self.st = st
+        # Use ObsPy's mass download option to gather all available data
         else:
-            self.st = st
-        self.st = quality_check_waveforms_before_processing(self.st)
+            self.st, self.inv = self.mass_download()
+
+        self.st = quality_check_waveforms_before_processing(
+            self.st, remove_clipped=self.remove_clipped
+        )
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
             self.st = format_sac_header_w_taup_traveltimes(self.st, 
-                                                           self.taup_model)
+                                                           self.taup_model,
+                                                           self.phase_list)
 
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
@@ -1196,10 +1563,12 @@ class Pysep:
             self.st = self.rotate_streams()
 
         # Final quality checks on ALL waveforms before we write them out
-        self.st = quality_check_waveforms_after_processing(self.st)
+        self.st = quality_check_waveforms_after_processing(
+            self.st, remove_insufficient_length=self.remove_insufficient_length
+        )
 
         # Generate outputs for user consumption
-        self.write(**kwargs)
+        self.write(**{**kwargs, **self.kwargs})
         self.plot()
 
 
@@ -1239,7 +1608,7 @@ def parse_args():
                              "filled in by the User")
     parser.add_argument("-l", "--list", default=False, action="store_true",
                         help="list out avaialable `preset` config options")
-    parser.add_argument("-L", "--log_level", default="INFO", type=str,
+    parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         nargs="?", help="verbosity of logging: 'WARNING', "
                                         "'INFO', 'DEBUG'")
     parser.add_argument("--legacy_naming", default=False, action="store_true",

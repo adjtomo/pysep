@@ -559,7 +559,8 @@ def write_sem(st, unit, path="./", time_offset=0):
         np.savetxt(fid, data, ["%13.7f", "%17.7f"])
 
 
-def write_pysep_stations_file(inv, event, fid="./stations_list.txt"):
+def write_pysep_stations_file(inv, event, fid="./stations_list.txt", 
+                              order_stations_list_by=None):
     """
     Write a list of station codes, distances, etc. useful for understanding
     characterization of all collected stations
@@ -572,28 +573,51 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt"):
         skip over StationXML/inventory searching
     :type fid: str
     :param fid: name of the file to write to. defaults to ./stations_list.txt
+    :type order_by: str
+    :param order_by: how to order the stations written to file. Available
+        are: network, station, latitude, longitude, elevation, burial.
+        If not given, order is determined by the internal sorting of the
+        input Inventory
     """
+    # Key indices correspond to stations list
+    keys = ["station", "network", "latitude", "longitude", "distance",
+            "azimuth"]
+    if order_stations_list_by and order_stations_list_by not in keys:
+        logger.warning(f"`order_stations_by` must be in {keys}, "
+                       f"setting default")
+        order_stations_by = None
+
     event_latitude = event.preferred_origin().latitude
     event_longitude = event.preferred_origin().longitude
+    
+    stations = [] 
+    for net in inv:
+        for sta in net:
+            dist_m, az, baz = gps2dist_azimuth(lat1=event_latitude,
+                                               lon1=event_longitude,
+                                               lat2=sta.latitude,
+                                               lon2=sta.longitude
+                                               )
+            dist_km = dist_m * 1E-3
+            stations.append([sta.code, net.code, sta.latitude, sta.longitude,
+                             dist_km, az])
+
+    # Set the order of the station file based on the order of keys
+    if order_stations_list_by:
+        idx = keys.index(order_stations_list_by)
+        stations.sort(key=lambda x: x[idx])
 
     with open(fid, "w") as f:
-        for net in inv:
-            for sta in net:
-                dist_m, az, baz = gps2dist_azimuth(lat1=event_latitude,
-                                                   lon1=event_longitude,
-                                                   lat2=sta.latitude,
-                                                   lon2=sta.longitude
-                                                   )
-                dist_km = dist_m * 1E-3
-                f.write(f"{sta.code:<6} {net.code:<2} "
-                        f"{sta.latitude:9.4f} {sta.longitude:9.4f} "
-                        f"{dist_km:8.3f} {az:6.2f}\n")
+        for s in stations:
+            # Order follows that listed in 'keys'
+            f.write(f"{s[0]:<6} {s[1]:<2} {s[2]:9.4f} {s[3]:9.4f} {s[4]:8.3f} "
+                    f"{s[5]:6.2f}\n")
 
 
-def write_specfem_stations_file(inv, fid="./STATIONS", elevation=False,
-                                burial=0.):
+def write_stations_file(inv, fid="./STATIONS", order_by=None,
+                        use_elevation=False, burials=None):
     """
-    Write a SPECFEM3D STATIONS file given an ObsPy inventory object
+    Write a SPECFEM STATIONS file given an ObsPy inventory object
 
     .. note::
         If topography is implemented in your mesh, elevation values should be
@@ -607,21 +631,72 @@ def write_specfem_stations_file(inv, fid="./STATIONS", elevation=False,
     :param inv: Inventory object with station locations to write
     :type fid: str
     :param fid: path and file id to save the STATIONS file to.
-    :type elevation: bool
-    :param elevation: if True, sets the actual elevation value from the
+    :type order_by: str
+    :param order_by: how to order the stations written to file. Available
+        are: network, station, latitude, longitude, elevation, burial.
+        If not given, order is determined by the internal sorting of the
+        input Inventory
+    :type use_elevation: bool
+    :param use_elevation: if True, sets the actual elevation value from the
         inventory. if False, sets elevation to 0.
-    :type burial: float
-    :param burial: the constant value to set burial values to. defaults to 0.
+    :type burials: list of float
+    :param burials: If the User has burial information they want to be used as
+        the last column. Length of `burials` must match the number of stations
+        in the inventory when traversing by network and station
     """
+    # Simply generate lists by traversing through the inventory
+    i = 0
+    stations = []
+    keys = ["network", "station", "latitude",
+            "longitude", "elevation", "burial"]
+    if order_by:
+        assert(order_by in keys), f"`order_by` must be in {keys}"
+
     with open(fid, "w") as f:
         for net in inv:
             for sta in net:
-                lat = sta.latitude
-                lon = sta.longitude
-                if elevation:
-                    elv = sta.elevation
+                if use_elevation:
+                    elevation = sta.elevation
                 else:
-                    elv = 0.
+                    elevation = 0.
+                if burials:
+                    burial = burials[i]
+                else:
+                    burial = 0.
+                stations.append([sta.code, net.code, sta.latitude,
+                                 sta.longitude, elevation, burial])
+                i += 1
 
-                f.write(f"{sta.code:>6}{net.code:>6}{lat:12.4f}{lon:12.4f}"
-                        f"{elv:7.1f}{burial:7.1f}\n")
+    # Set the order of the station file based on the order of keys
+    if order_by:
+        idx = keys.index(order_by)
+        stations.sort(key=lambda x: x[idx])
+
+    with open(fid, "w") as f:
+        for s in stations:
+            f.write(f"{s[0]:>6}{s[1]:>6}{s[2]:12.4f}{s[3]:12.4f}"
+                    f"{s[4]:7.1f}{s[5]:7.1f}\n"
+                    )
+
+def write_cat_to_event_list(cat, fid_out="event_input.txt"):
+    """
+    Writes out an event Catalog (ObsPy object) information to an ASCII file that
+    PySEP can use for collecting data. The format of the output file is
+
+    ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
+
+    :type cat: obspy.core.catalog.Catalog
+    :param cat: Catalog of events to write out
+    """
+    with open(fid_out, "w") as f:
+        for event in cat:
+            origintime = str(event.preferred_origin().time)
+            longitude = event.preferred_origin().longitude
+            latitude = event.preferred_origin().latitude
+            depth = event.preferred_origin().depth * 1E-3
+            mag = event.preferred_magnitude().mag
+
+            f.write(f"{origintime:<31}{longitude:8.2f}{latitude:8.2f}"
+                    f"{depth:8.2f}{mag:6.1f}\n")
+    
+

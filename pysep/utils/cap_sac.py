@@ -188,8 +188,6 @@ def _append_sac_headers_trace(tr, event, inv):
         "e": tr.stats.npts * tr.stats.delta,  # end time
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
-        "evdp": event.preferred_origin().depth / 1E3,  # depth in km
-        "mag": event.preferred_magnitude().mag,
         "stla": sta.latitude,
         "stlo": sta.longitude,
         "stel": sta.elevation / 1E3,  # elevation in km
@@ -215,6 +213,19 @@ def _append_sac_headers_trace(tr, event, inv):
     except IndexError:
         pass
 
+    # Allow for no magnitude and no depth information
+    try:
+        evdp = event.preferred_origin().depth / 1E3  # units: km
+        sac_header["evdp"] = evdp
+    except Exception:  # NOQA
+        pass
+
+    try:
+        mag = event.preferred_magnitude().mag
+        sac_header["mag"] = mag
+    except Exception:  # NOQA
+        pass
+
     # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
@@ -222,7 +233,7 @@ def _append_sac_headers_trace(tr, event, inv):
     return tr
 
 
-def format_sac_header_w_taup_traveltimes(st, model="ak135"):
+def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
     """
     Add TauP travel times to the SAC headers using information in the SAC header
     Also get some information from TauP regarding incident angle, takeoff angle
@@ -243,15 +254,25 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135"):
     :type model: str
     :param model: name of the TauP model to use for arrival times etc.
         defaults to 'ak135'
+    :type phase_list: list of str
+    :param phase_list: phase names to get ray information from TauP with.
+        Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
+        by TauP (see ObsPy TauP documentation for acceptable phases).
     """
     st_out = st.copy()
 
     # Call TauP with a specific model to retrieve travel times etc.
-    phases = ["p", "P", "s", "S"]
+    if not phase_list:
+        phase_list = ["p", "P", "s", "S"]
+
     phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
-                                                    phase_list=phases)
+                                                    phase_list=phase_list)
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
+        # Missing SAC header values may cause certain or all stations to not 
+        # be present in the `phase_dict`
+        if tr.get_id() not in phase_dict:
+            continue
         arrivals = phase_dict[tr.get_id()]
         # If the TauP arrival calculation fails, `arrivals` will be empty
         if not arrivals:
@@ -338,6 +359,6 @@ def origin_time_from_sac_header(sac_header):
     min_ = sac_header["nzmin"]
     sec_ = sac_header["nzsec"]
     msec = sac_header["nzmsec"]
-    time_string = f"{year}-{jday:0>3}T{hour}:{min_}:{sec_}.{msec}"
+    time_string = f"{year}-{jday:0>3}T{hour:0>2}:{min_:0>2}:{sec_:0>2}.{msec}"
 
     return UTCDateTime(time_string)

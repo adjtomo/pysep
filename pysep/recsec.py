@@ -6,16 +6,19 @@ This is a refactor of Pysep's Python utility `plotw_rs`, a record section
 plotting script. The intent of this script is to plot multiple time series'
 based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
 
-.. note:: Code History
-    Written by Carl Tape (11/21/2011) and Yun Wang (11/2011) in Matlab
-    Translated to Python by Nealy Sims (1/2021)
-    Upgraded by Aakash Gupta (9/2021)
-    Refactored by Bryant Chow (3/2022)
+.. note:: 
+    Code History:  
+    - Written by Carl Tape (11/21/2011) and Yun Wang (11/2011) in Matlab  
+    - Translated to Python by Nealy Sims (1/2021)  
+    - Upgraded by Aakash Gupta (9/2021)  
+    - Refactored by Bryant Chow (3/2022)  
+    - Currently maintained by adjTomo Dev Team
 
 .. requires::
     obspy >= 1.2 (expected to bring in numpy and matplotlib)
 
-.. rubric:: Examples
+.. rubric:: 
+
     1) Print the help message to see available options and flags
     $ python recsec.py -h
 
@@ -105,28 +108,6 @@ from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 DEG = u"\N{DEGREE SIGN}"
 
 
-def myround(x, base=5, choice="near"):
-    """
-    Round value x to nearest base, round 'up','down' or to 'near'est base
-
-    :type x: float
-    :param x: value to be rounded
-    :type base: int
-    :param base: nearest integer to be rounded to
-    :type choice: str
-    :param choice: method of rounding, 'up', 'down' or 'near'
-    :rtype roundout: int
-    :return: rounded value
-    """
-    if choice == "near":
-        roundout = int(base * round(float(x)/base))
-    elif choice == "down":
-        roundout = int(base * np.floor(float(x)/base))
-    elif choice == "up":
-        roundout = int(base * np.ceil(float(x)/base))
-    return roundout
-
-
 class Dict(dict):
     """Simple dictionary overload for nicer get/set attribute characteristics"""
     def __setattr__(self, key, value):
@@ -138,9 +119,10 @@ class Dict(dict):
 
 class RecordSection:
     """
-    Record section plotting tool which takes ObsPy streams and 
+    Record section plotting tool which takes ObsPy streams and:
+
     1) preprocesses and filters waveforms,
-    2) sorts source-receiver pairs based on User input, 
+    2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
     def __init__(self, pysep_path=None, syn_path=None, stations=None,
@@ -150,7 +132,7 @@ class RecordSection:
                  preprocess=None, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
-                 azimuth_start_deg=0., distance_units="km", 
+                 azimuth_start_deg=0., distance_units="km", tmarks=None,
                  geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
                  geometric_spreading_exclude=None,
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
@@ -158,21 +140,21 @@ class RecordSection:
                  overwrite=False, log_level="DEBUG", cartesian=False,
                  synsyn=False, **kwargs):
         """
-        Set the default record section plotting parameters and enforce types.
-        Run some internal parameter derivation functions by manipulating input
-        data and parameters.
+         .. note::
+            Used for reading in Pysep-generated waveforms
 
         :type pysep_path: str
         :param pysep_path: path to Pysep output, which is expected to contain
-            trace-wise SAC waveform files which will be read
+            trace-wise SAC waveform files which will be read in.
+
+        .. note::
+            Used for reading in SPECFEM-generated synthetic waveforms
+
         :type syn_path: str
-        :param syn_path: path to SPECFEM generated ASCII synthetics.
-        :type st: obspy.core.stream.Stream
-        :param st: Stream objects containing observed time series to be plotted
-            on the record section. Can contain any number of traces
-        :type st_syn: obspy.core.stream.Stream
-        :param st_syn: Stream objects containing synthetic time series to be
-            plotted on the record section. Must be same length as `st`
+        :param syn_path: full path to directory containing synthetic
+            seismograms that have been outputted by SPECFEM. The synthetics
+            are expected in the format: '*??.*.*.sem?*', which generally matches
+            SPECFEM files like 'NZ.BFZ.BXE.semd'
         :type stations: str
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
@@ -180,10 +162,36 @@ class RecordSection:
         :type cmtsolution: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
+        :type cartesian: bool
+        :param cartesian: lets RecSec know that the domain is set in Cartesian
+            coordinates (SPECFEM2D or SPECFEM3D_CARTESIAN in UTM), such that
+            data/metadata reading will need to adjust acoordingly because the
+            ObsPy tools used to read metadata will fail for domains defined in
+            XYZ
+        :type synsyn: bool
+        :param synsyn: flag to let RecSec know that we are plotting two sets
+            of synthetic seismograms. Such that both `pysep_path` and `syn_path`
+            will be both attempt to read in synthetic data. Both sets of
+            synthetics MUST share the same `cmtsolution` and `stations` metadata
+
+        .. note::
+            Used for defining user-input waveforms data
+
+        :type st: obspy.core.stream.Stream
+        :param st: Stream objects containing observed time series to be plotted
+            on the record section. Can contain any number of traces
+        :type st_syn: obspy.core.stream.Stream
+        :param st_syn: Stream objects containing synthetic time series to be
+            plotted on the record section. Must be same length as `st`
+
+        .. note::
+            Waveform plotting organization parameters
+
         :type sort_by: str
         :param sort_by: How to sort the Y-axis of the record section, available:
+
             - 'default': Don't sort, just iterate directly through Stream
-            - 'alphabetical': sort alphabetically A->Z. Components sorted 
+            - 'alphabetical': sort alphabetically A->Z. Components sorted
                 separately with parameter `components`
             - 'azimuth': sort by source-receiver azimuth (deg) with constant
                 vertical spacing on the y-axis. Requires `azimuth_start_deg`
@@ -199,28 +207,33 @@ class RecordSection:
                 source-receiver backazimuth (deg).
             - '*_r': Add a '_r' to any of the values about to REVERSE the sort,
                 e.g., 'alphabetical_r' sort will go Z->A
-        :type scale_by: list
+        :type scale_by: str
         :param scale_by: scale amplitude of waveforms by available:
+
             - None: Not set, no amplitude scaling, waveforms shown raw
             - 'normalize': scale each trace by the maximum amplitude,
                 i.e., > a /= max(abs(a))  # where 'a' is time series amplitudes
             - 'global_norm': scale by the largest amplitude to be displayed on
-                the screen. Will not consider waveforms which have been 
+                the screen. Will not consider waveforms which have been
                 excluded on other basis (e.g., wrong component)
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
             - 'geometric_spreading': scale amplitudes by expected reduction
                 through geometric spreading. Related parameters are:
-                - `geometric_spreading_factor`
-                - `geometric_spreading_k_val`
-                - `geometric_spreading_exclude`
-                - `geometric_spreading_ymax`
+
+                - `geometric_spreading_factor`  
+                - `geometric_spreading_k_val`  
+                - `geometric_spreading_exclude`  
+                - `geometric_spreading_ymax`  A
+
                 Equation is A(d) = k / sin(d) ** f
+
                 Where A(d) is the amplitude reduction factor as a function of
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
                 the `geometric_spreading_factor`.
                 'k' is calculated automatically if not given.
         :type time_shift_s: float OR list of float
         :param time_shift_s: apply static time shift to waveforms, two options:
+
             1. float (e.g., -10.2), will shift ALL waveforms by
                 that number (i.e., -10.2 second time shift applied)
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
@@ -229,6 +242,7 @@ class RecordSection:
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
+
             * (start, end): a list of floats will zero-pad the START and END
                 of the trace. Either can be 0 to ignore zero-padding at either
                 end
@@ -236,6 +250,7 @@ class RecordSection:
         :param amplitude_scale_factor: apply scale factor to all amplitudes.
             Used as a dial to adjust amplitudes manually. Defaults to 1.
             Two options:
+
             1. float (e.g., 1.2), will multiply ALL waveforms by that number
             2. list (e.g., [5., -2., ... 11.2]), will apply individual amplitude
                 scale to EACH trace in the stream. The length of this list MUST
@@ -246,22 +261,30 @@ class RecordSection:
             their source receiver distance. This parameter will be ADDED
             to time_shift_s (both float and list), if it is provided.
             Should be in units of `distance_units`/s
-        :type min_period_s: float
-        :param min_period_s: minimum filter period in seconds
-        :type max_period_s: float
-        :param max_period_s: maximum filter period in seconds
+        :type azimuth_start_deg: float
+        :param azimuth_start_deg: If sorting by azimuth, this defines the
+            azimuthal angle for the waveform at the top of the figure.
+            Set to 0 for default behavior
+        :type distance_units: str
+        :param distance_units: Y-axis units when sorting by epicentral distance
+            'km': kilometers on the sphere
+            'deg': degrees on the sphere
+            'km_utm': kilometers on flat plane, UTM coordinate system
+
+        .. note::
+            Data processing parameters
+
         :type preprocess: str
         :param preprocess: choose which data to preprocess, options are:
+
             - None: do not run preprocessing step, including filter (Default)
             - 'st': process waveforms in `st`
             - 'st_syn': process waveforms in `st_syn`. st still must be given
             - 'both': process waveforms in both `st` and `st_syn`
-        :type max_traces_per_rs: int
-        :param max_traces_per_rs: maximum number of traces to show on a single
-            record section plot. Defaults to all traces in the Stream
-        :type xlim_s: list of float
-        :param xlim_s: [start, stop] in units of time, seconds, to set the
-            xlimits of the figure
+        :type min_period_s: float
+        :param min_period_s: minimum filter period in seconds
+        :type max_period_s: float
+        :param max_period_s: maximum filter period in seconds
         :type components: str
         :param components: a sequence of strings representing acceptable
             components from the data. Also determines the order these are shown
@@ -272,34 +295,14 @@ class RecordSection:
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
             and negative values are differentiation
+
             e.g., if integrate == 2,  will integrate each trace twice.
             or    if integrate == -1, will differentiate once
             or    if integrate == 0,  do nothing (default)
-        :type y_axis_spacing: float
-        :param y_axis_spacing: spacing between adjacent seismograms applied to
-            Y-axis on relative (not absolute) scales. Defaults to 1.
-        :type y_label_loc: str
-        :param y_label_loc: Location to place waveform labels on the y-axis
-            - 'default': auto choose the best location based on `sort_by`
-            - 'y_axis': Replace tick labels on the y-axis (left side of figure),
-                This won't work if using absolute sorting and will be over-
-                written by 'default'
-            - 'y_axis_right': Replace tick labels on the right side of the 
-                y-axis. This option won't work with absolute sorting
-            - 'x_min': Place labels on top of the waveforms at the global min
-                x-value on the figure
-            - 'x_min': Place labels on top of the waveforms at the global max
-                x-value on the figure
-            - None: Don't plot any text labels
-        :type azimuth_start_deg: float
-        :param azimuth_start_deg: If sorting by azimuth, this defines the 
-            azimuthal angle for the waveform at the top of the figure.
-            Set to 0 for default behavior
-        :type distance_units: str
-        :param distance_units: Y-axis units when sorting by epicentral distance
-            'km': kilometers on the sphere
-            'deg': degrees on the sphere
-            'km_utm': kilometers on flat plane, UTM coordinate system
+
+        .. note::
+            Geometric spreading parameters, used for amplitude scaling
+
         :type geometric_spreading_factor: float
         :param geometric_spreading_factor: factor to scale amplitudes by
             predicting the expected geometric spreading amplitude reduction and
@@ -321,8 +324,41 @@ class RecordSection:
             whatever the peak y-value plotted is.
         :type geometric_spreading_save: str
         :param geometric_spreading_save: file id to save separate geometric
-            spreading scatter plot iff `scale_by`=='geometric_spreading'. If 
+            spreading scatter plot iff `scale_by`=='geometric_spreading'. If
             NoneType, will not save. By default, turned OFF
+
+        .. note::
+            Figure generation control parameters
+
+        :type max_traces_per_rs: int
+        :param max_traces_per_rs: maximum number of traces to show on a single
+            record section plot. Defaults to all traces in the Stream
+        :type xlim_s: list of float
+        :param xlim_s: [start, stop] in units of time, seconds, to set the
+            xlimits of the figure
+        :type y_axis_spacing: float
+        :param y_axis_spacing: spacing between adjacent seismograms applied to
+            Y-axis on relative (not absolute) scales. Defaults to 1.
+        :type y_label_loc: str
+        :param y_label_loc: Location to place waveform labels on the y-axis
+
+            - 'default': auto choose the best location based on `sort_by`
+            - 'y_axis': Replace tick labels on the y-axis (left side of figure),
+                This won't work if using absolute sorting and will be over-
+                written by 'default'
+            - 'y_axis_right': Replace tick labels on the right side of the
+                y-axis. This option won't work with absolute sorting
+            - 'x_min': Place labels on top of the waveforms at the global min
+                x-value on the figure
+            - 'x_min': Place labels on top of the waveforms at the global max
+                x-value on the figure
+            - None: Don't plot any text labels
+        :type tmarks: list of float
+        :param tmarks: place vertical lines at given reference times. Used for 
+            marking reference times such as the event origin, or phase arrival.
+            Input as a list of times in units of seconds (where T=0 is the 
+            event origin time). For example `tmarks`=[0, 100, 200] would set 
+            vertical lines at 0s, 100s and 200s
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
         :type show: bool
@@ -330,22 +366,17 @@ class RecordSection:
         :type save: str
         :param save: path to save output figure, will create the parent
             directory if it doesn't exist. If None, will not save.
+
+        .. note::
+            Internal RecSec parameters
+
         :type overwrite: bool
         :param overwrite: if the path defined by `save` exists, will overwrite
             the existing figure
         :type log_level: str
-        :param log_level: level of the internal logger, 'WARNING', 'INFO',
-            'DEBUG'.
-        :type cartesian: bool
-        :param cartesian: lets RecSec know that the domain is set in Cartesian
-            coordinates, such that data/metadata reading will need to adjust
-            acoordingly because the ObsPy tools used to read metadata will fail
-            for domains defined in XYZ
-        :type synsyn: bool
-        :param synsyn: flag to let RecSec know that we are plotting two sets
-            of synthetic seismograms. Such that both `pysep_path` and `syn_path`
-            will be read in as synthetics. Both sets of synthetics MUST share
-            the same SOURCE and STATIONS metadata
+        :param log_level: level of the internal logger. In order of ascending
+            verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'.
+
         :raises AssertionError: if any parameters are set incorrectly
         """
         # Set the logger level before running anything
@@ -428,6 +459,7 @@ class RecordSection:
         self.xlim_s = xlim_s
         self.distance_units = distance_units.lower()
         self.y_label_loc = y_label_loc
+        self.tmarks = tmarks
         self.figsize = figsize
         self.show = bool(show)
         self.save = save
@@ -455,7 +487,7 @@ class RecordSection:
         self.sorted_idx = []
 
     def _generate_synthetic_stream(self, syn_path, source, stations,
-                                   cartesian=False, fmt="*??.*.*.sem?*"):
+                                   cartesian=False, fmt="*.*.*.sem?*"):
         """
         Convenience fucntion to read in synthetic seismograms from SPECFEM2D,
         SPECFEM3D or SPECFEM3D_GLOBE. Can be used to read in both `st` and
@@ -1420,6 +1452,11 @@ class RecordSection:
                                             choice=choice, **kwargs)
 
         logger.debug(log_str)
+
+        # Plot vertical bars at given reference times
+        if self.tmarks:
+            self._plot_tmarks()
+
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
@@ -1520,6 +1557,20 @@ class RecordSection:
         self.stats.ymax.append(y.max())
 
         return log_str
+
+    def _plot_tmarks(self):
+        """
+        Plot vertical lines at given reference times based on user input values
+        """
+        c = self.kwargs.get("tmark_c", "r")
+        lw = self.kwargs.get("tmark_lw", 1.5)
+        ls = self.kwargs.get("tmark_ls", "-")
+        alpha = self.kwargs.get("tmark_alpha", 0.75)
+        z = self.kwargs.get("tmark_zorder", 5)
+
+        for tmark in self.tmarks:
+            plt.axvline(x=tmark, c=c, linewidth=lw, linestyle=ls, zorder=z,
+                        alpha=alpha)
 
     def _plot_azimuth_bins(self):
         """
@@ -1796,8 +1847,6 @@ class RecordSection:
         Create the title of the plot based on event and station information
         Allow dynamic creation of title based on user input parameters
 
-        TODO Can we make this two-column to save space?
-
         :type nwav: int
         :param nwav: if using subset, the title needs to know how many waveforms
             it's showing on the page. self.plot() should tell it
@@ -1820,10 +1869,20 @@ class RecordSection:
         # HYPO: If only one event, show hypocenter information
         if self.stats.nevents == 1:
             sac = self.st[0].stats.sac
+            # Accomodate unknown depth and magnitude
+            if "evdp" in sac:
+                evdp = f"{sac['evdp']:.2f}km"
+            else:
+                evdp = "None"
+            if "mag" in sac:
+                mag = f"M{sac['mag']:.2f}"
+            else:
+                mag = "None"
+
             # HYPO: lon, lat, depth, mag
             hypo = (
                 f"\nHYPO: ({sac['evlo']:.2f}{DEG}, {sac['evla']:.2f}{DEG}), " 
-                f"Z={sac['evdp']:.2f}km, M{sac['mag']:.2f}"
+                f"Z={evdp}, Mag={mag}"
             )
         else:
             hypo = ""
@@ -1861,6 +1920,16 @@ class RecordSection:
             f"{filt}{move_out}"
         )
         self.ax.set_title(title)
+
+    def run(self):
+        """
+        Convenience run function to run the RecordSection workflow in order.
+        No internal logic for breaking the figure up into multiple record
+        sections. For that see main function `plotw_rs`.
+        """
+        self.process_st()
+        self.get_parameters()
+        self.plot()
 
 
 def parse_args():
@@ -2001,6 +2070,10 @@ def parse_args():
                              "starting value, with azimuth 0 <= az <= 360")
     parser.add_argument("--distance_units", default="km", type=str,
                         nargs="?", help="Set units when sorting by distance")
+    parser.add_argument("--tmarks", default=None, type=float,
+                        nargs="+", help="Plot vertical lines at given reference"
+                                        "times [s]. Input as a list of values, "
+                                        "e.g., --tmarks 0 100 200")
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
@@ -2030,9 +2103,10 @@ def parse_args():
 
 def plotw_rs(*args, **kwargs):
     """
-    Main call function, replacing `plotw_rs`. Run the record section plotting
-    functions in order. Contains the logic for breaking up figure into multiple
-    pages.
+    Main call function for command line use of RecordSection.
+
+    Runs the record section plotting functions in order. Contains the logic for
+    breaking up figure into multiple pages.
 
     .. note::
         All arguments should be parsed into the argparser, *args and **kwargs
@@ -2049,13 +2123,20 @@ def plotw_rs(*args, **kwargs):
         rs.plot()
     # More complicated case where we need to split onto multiple pages
     else:
-        for i, start in enumerate(np.arange(0, len(rs.st),
-                                            rs.max_traces_per_rs)):
-            stop = start + rs.max_traces_per_rs
-            # Case where the num waveforms is less than max_traces_per_rs
-            if stop < rs.max_traces_per_rs:
-                stop = len(rs.st)
-            rs.plot(subset=[start, stop], page_num=i+1)
+        # Iterate backwards through the range so that the order of pages is
+        # more natural, i.e., plotting the record section from the top down,
+        # rather than the bottom up
+        rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
+
+        # When `max_traces_per_rs` is not an integer divisor of the number of
+        # streams, the range will not hit zero, so we need to ensure it does
+        if rnge[-1] != 0:
+            rnge = np.append(rnge, 0)
+
+        for i, stop in enumerate(rnge[:-1]):
+            j = i + 1
+            start = rnge[j]
+            rs.plot(subset=[start, stop], page_num=j)
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
