@@ -21,7 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 llnl = ["llnl_db_client @ git+https://github.com/krischer/llnl_db_client.git"]
-test = ["pytest"]
 dev = ["pytest", "ipython", "ipdb"]
 
 [project.urls]
