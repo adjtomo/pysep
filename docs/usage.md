@@ -55,9 +55,28 @@ singularity exec -c --bind $(pwd):/home1 ../pysep_centos7.sif \
 
   Download link: https://ds.iris.edu/mda/18-001
 
-To use the LLNL database, set the input parameter `client` as:
+To use the LLNL database, you will require an additional dependency that is 
+not listed in the package setup files. To install this dependency run the 
+following in your ``pysep`` Conda environment.
+
+
+```bash
+conda install -c conda-forge pandas basemap pytest
+git clone https://github.com/krischer/llnl_db_client.git
+cd llnl_db_client
+pip install .
+```
+
+Documentation for the ``llnl_db_client`` dependency can be be found 
+[here](https://krischer.github.io/llnl_db_client/).
+
+When running PySEP, to use the LLNL waveform database, set the input parameter 
+`client` as:
 
 ```yaml
 client: 'LLNL'
 ```
+
+PySEP will automatically use the ``llnl_db_client`` dependency to acquire event,
+station and waveform data from the local files donwloaded from IRIS.
 
