@@ -198,9 +198,11 @@ class RecordSection:
             - 'backazimuth': sort by source-receiver backazimuth (deg) with
                 constant vertical spacing. Requires `azimuth_start_deg`
             - 'distance': sort by source-receiver distance (km) with constant
-                vertical spacing. Requires `distance_units`
+                vertical spacing. Smallest distances at the top of the figure.
+                 Requires `distance_units`
             - 'abs_distance': absolute vertical spacing of waveforms defined by
-                source-receiver distance. Requires `distance_units`
+                source-receiver distance. Smallest distance at the top of the
+                figure. Requires `distance_units`
             - 'abs_azimuth': absolute vertical spacing of waveforms defined
                 by source-receiver azimuth (deg).
             - 'abs_backazimuth': absolute vertical spacing of waveforms by
@@ -1730,6 +1732,10 @@ class RecordSection:
             ytick_major = self.kwargs.get("ytick_major", 90)
             ylabel = f"Azimuth [{DEG}]"
 
+        # Reverse the y-axis to get small values on top when sorting by
+        # distance or azimuth, which is counter to how a y-axis plotted
+        self.ax.invert_yaxis()
+
         # Set ytick label major and minor which is either dist or az
         self.ax.yaxis.set_major_locator(MultipleLocator(ytick_major))
         self.ax.yaxis.set_minor_locator(MultipleLocator(ytick_minor))
@@ -1982,10 +1988,11 @@ def parse_args():
             - 'backazimuth': sort by source-receiver backazimuth (deg) with
                 constant vertical spacing. Requires `azimuth_start_deg`
             - 'distance': sort by source-receiver distance (km) with constant
-                vertical spacing. Requires `azimuth_start_deg` AND
-                `distance_units`
+                vertical spacing. Smallest distances at top of figure. 
+                Requires `distance_units`
             - 'abs_distance': absolute vertical spacing of waveforms defined by
-                source-receiver distance (km). Requires `distance_units`
+                source-receiver distance (km). Smallest distances at top of 
+                figure. Requires `distance_units`
             - 'abs_azimuth': absolute vertical spacing of waveforms defined
                 by source-receiver azimuth (deg). Requires
                 `azimuth_start_deg`
