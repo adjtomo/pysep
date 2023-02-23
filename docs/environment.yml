@@ -12,3 +12,4 @@ dependencies:
     - pip:
       - sphinx-autoapi
       - sphinx_rtd_theme
+      - furo

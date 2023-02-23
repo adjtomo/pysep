@@ -1,0 +1,4 @@
+# MANIFEST.in
+
+include pysep/configs/*/*.yaml
+include pysep/configs/*/*.txt

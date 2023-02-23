@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pysep"
-version = "0.3.0"
+name = "pysep-adjtomo"
+version = "0.3.1"
 description = "Python Seismogram Extraction and Processing"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -20,13 +20,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-llnl = ["llnl_db_client @ git+https://github.com/krischer/llnl_db_client.git"]
-test = ["pytest"]
 dev = ["pytest", "ipython", "ipdb"]
 
 [project.urls]
 homepage = "https://github.com/adjtomo/"
-documentation = "https://github.com/adjtomo/pysep/wiki"
+documentation = "https://adjtomo.github.io"
 repository = "https://github.com/adjtomo/pysep"
 
 [project.scripts]
