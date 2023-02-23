@@ -1104,9 +1104,9 @@ class Pysep:
             st_out = scale_llnl_waveform_amplitudes(st_out)
 
         # Apply pre-resample lowpass, resample waveforms, make contiguous
-        st_out = merge_and_trim_start_end_times(st_out)
         if self.resample_freq is not None:
             st_out = resample_data(st_out, resample_freq=self.resample_freq)
+        st_out = merge_and_trim_start_end_times(st_out)
 
         return st_out
 
