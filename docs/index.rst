@@ -28,53 +28,69 @@ using Docker.
 Installation
 ------------
 
-We recommend installing PySEP into a Conda environment. Most dependencies are 
-installed via Conda while PySEP itself is installed in editable mode via Pip.
+We recommend installing PySEP into a `Conda <https://conda.io>`__ environment 
+to avoid package or dependency conflicts with other Python packages.
 
-This installation also creates two command line entry points for 
-`pysep` and `recsec`. See the `pysep <pysep.html>`_ and `recsec <recsec.html>`_
-documentation pages for how to use these command line tools.
+Installation via Pip is recommended for the latest, stable version of 
+PySEP. Note that the package name `PySEP` was already take on PyPi, so our 
+package must be installed via the name: ``pysep-adjtomo``.
 
-Installing to a new Conda environment (recommended)
-```````````````````````````````````````````````````
-To create a new Conda environment for PySEP and its dependencies:
+.. note::
+
+    Cartopy must be installed separately via Conda otherwise you 
+    will encounter Pip dependency errors
+
 
 .. code:: bash
 
-    git clone --branch devel https://github.com/uafgeotools/pysep.git
-    cd pysep
+    conda create -n pysep 
+    conda activate pysep
+    conda install cartopy
+    pip install pysep-adjtomo
+
+------------------------------------
+
+Installing Development Version
+``````````````````````````````
+
+PySEP is under an active state of development, so for the latest version of the
+codebase, installation must take place directly from the ``devel`` branch of the 
+code.
+
+.. warning::
+
+    API and code stability is subject to change without warning when using the
+    ``devel`` branch
+
+.. code:: bash
+
+    git clone --branch devel https://github.com/adjtomo/pysep.git
+    cd pysep/
     conda env create -f environment.yml
     conda activate pysep
 
-Updating an existing Conda environment
-``````````````````````````````````````
+The above code installs PySEP in *editable* mode via Pip. This means that any 
+source code changes that occur in the *pysep/* directory are directly 
+accesible in your development version. 
 
-If you have an existing Conda environment that you want to install PySEP and its
-dependencies into, you can do so with the following commands:
+To update the development branch with the most up-to-date changes, run:
 
 .. code:: bash
 
-    git clone -- branch devel https://github.com/uafgeotools/pysep.git
-    cd pysep
-    conda activate <your environment>
-    conda env update -f environment.yml
+    git pull origin devel
 
-.. note:: 
-   
-   We are currently working to get `PySEP hosted on PyPi and Conda 
-   <https://github.com/adjtomo/pysep/issues/55>`_
-
-
----------------------------------
 
 Running Tests
--------------
+`````````````
 
 PySEP comes with unit testing which should be run before and after making any
-changes to see if your changes have altered the expected code behavior.
+changes to see if your changes have altered the expected code behavior. 
+
+If you have installed the Development version of PySEP, you can run tests with:
 
 .. code:: bash
 
+    conda install pytest
     cd pysep/tests
     pytest
 
