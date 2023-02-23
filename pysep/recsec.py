@@ -1763,6 +1763,9 @@ class RecordSection:
             - y_axis: Place labels along the y-axis (left side of the figure)
                 Will replace the actual y-tick labels so not applicable for
                 absolute sorting which requries the y-axis labels
+            - y_axis_abs: for absolute plotting, place waveform labels to the
+                left side of the figure (outside border), co-existing with
+                y-axis labels
             - y_axis_right: same as `y_axis` but set on the right side of figure
             - x_min: Place labels on the waveforms at the minimum x value
             - x_max: Place labels on the waveforms at the maximum x value
@@ -1848,7 +1851,7 @@ class RecordSection:
                 va = "center"
                 func = min
                 x_val = func(self.stats.xmin)
-                plt.text(.01, .99, y_fmt, ha=ha, va=va,
+                plt.text(0, .99, y_fmt, ha=ha, va=va,
                          transform=self.ax.transAxes, fontsize=fontsize)
 
             if self.xlim_s is not None:
