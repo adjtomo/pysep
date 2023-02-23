@@ -1,6 +1,7 @@
 Python Seismogram Extraction and Processing
 ===========================================
 
+[![PyPI Version](https://img.shields.io/pypi/v/pysep-adjtomo.svg)](https://pypi.python.org/pypi/pysep-adjtomo)
 [![SCOPED](https://img.shields.io/endpoint?url=https://runkit.io/wangyinz/scoped/branches/master/pysep)](https://github.com/SeisSCOPED/container/pkgs/container/pysep)
 
 `PySEP` uses ObsPy routines to request and standardize seismic data and metadata, outputting formatted SAC files that are ready for moment tensor and waveform inversion techniques. The package also contains `RecSec` a **rec**ord **sec**tion plotter for rapid visualization of
