@@ -237,7 +237,14 @@ def merge_and_trim_start_end_times(st):
         st_edit_select = st_edit.select(network=net, station=sta,
                                         location=loc, channel=cha)
 
-        st_edit_select.merge()  # combining like trace IDs
+        # Catch any general ObsPy merge errors which may arise due to 
+        # different sampling rates
+        try:
+            st_edit_select.merge()  # combining like trace IDs
+        except Exception as e:  # NOQA
+            logger.warning(f"{tr.get_id()} merge error: {e}")
+            continue
+
         for tr in st_edit_select:
             if np.ma.is_masked(tr.data):
                 logger.warning(f"{tr.get_id()} has data gaps, removing")
