@@ -1106,6 +1106,8 @@ class Pysep:
         # Apply pre-resample lowpass, resample waveforms, make contiguous
         if self.resample_freq is not None:
             st_out = resample_data(st_out, resample_freq=self.resample_freq)
+
+        # Remove data gaps, ensure that all traces have the same start and end
         st_out = merge_and_trim_start_end_times(st_out)
 
         return st_out
