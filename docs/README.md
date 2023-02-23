@@ -41,6 +41,8 @@ changes to the live website.
 	git checkout gh-pages
 	rm -rf *  # remove any existing files
 	mv /tmp/pysep-docs/* .
+	git add -A
+	git commit -m # your commit message here
 	git push --force origin gh-pages  # overwrite any existing fiels
 
 3. Trigger the build action from https://github.com/adjtomo/pysep/actions. Look 
