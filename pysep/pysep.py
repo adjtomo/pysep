@@ -233,6 +233,10 @@ class Pysep:
             - 'latest': fill with the last value of pre-gap data
             - NoneType: do not fill data gaps, which will lead to stations w/
             data gaps being removed.
+
+            NOTE: Be careful about data types, as there are no checks that the
+            fill value matches the internal data types. This may cause
+            unexpected errors.
         :type gap_fraction: float
         :param gap_fraction: if `fill_data_gaps` is not None, determines the
             maximum allowable fraction (percentage) of data that gaps can

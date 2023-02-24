@@ -219,8 +219,37 @@ def merge_and_trim_start_end_times(st, fill_value=None, gap_fraction=1.):
         are NOT intended functionalities, so we replace the old 'interpolate'
         function with a trim.
 
+    .. note::
+        Be careful about `fill_value` data types, as there are no checks that
+        the fill value matches the internal data types. This may cause
+        unexpected errors.
+
     :type st: obspy.core.stream.Stream
     :param st: stream to merge and trim start and end times for
+    :type fill_value: str or int or float
+    :param fill_value: How to deal with data gaps (missing sections of
+        waveform over a continuous time span). NoneType by default, which
+        means data with gaps are removed completely. Users who want access
+        to data with gaps must choose how gaps are filled. See API for
+        ObsPy.core.stream.Stream.merge() for how merge is handled:
+
+        Options include:
+
+        - 'mean': fill with the mean of all data values in the gappy data
+        - <int or float>: fill with a constant, user-defined value, e.g.,
+        0 or 1.23 or 9.999
+        - 'interpolate': linearly interpolate from the last value pre-gap
+        to the first value post-gap
+        - 'latest': fill with the last value of pre-gap data
+        - NoneType: do not fill data gaps, which will lead to stations w/
+        data gaps being removed.
+    :type gap_fraction: float
+    :param gap_fraction: if `fill_data_gaps` is not None, determines the
+        maximum allowable fraction (percentage) of data that gaps can
+        comprise. For example, a value of 0.3 means that 30% of the data
+        (in samples) can be gaps that will be filled by `fill_data_gaps`.
+        Traces with gap fractions that exceed this value will be removed.
+        Defaults to 1. (100%) of data can be gaps.
     :rtype: obspy.core.stream.Stream
     :return: Stream that has been trimmed
     """
