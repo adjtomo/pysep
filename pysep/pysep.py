@@ -1167,10 +1167,11 @@ class Pysep:
                                    gap_fraction=self.gap_fraction)
 
         # Ensure that all traces have the same start and end
-        st_out = trim_start_end_times(
-            st_out,  starttime=self.origin_time - self.seconds_before_ref,
-            endtime=self.origin_time + self.seconds_after_ref
-        )
+        if self.origin_time:
+            st_out = trim_start_end_times(
+                st_out,  starttime=self.origin_time - self.seconds_before_ref,
+                endtime=self.origin_time + self.seconds_after_ref
+            )
 
         if not st_out:
             logger.critical("preprocessing removed all traces from Stream, "

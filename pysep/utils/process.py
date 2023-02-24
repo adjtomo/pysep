@@ -208,7 +208,9 @@ def rotate_to_uvw(st):
 
 def trim_start_end_times(st, starttime=None, endtime=None):
     """
-    Trim all traces in a Stream to a unfirom start and end times
+    Trim all traces in a Stream to a uniform start and end times. If no 
+    `starttime` or `endtime` are provided, they are selected as the outer 
+    bounds of the Streams time bounds.
 
     :type st: obspy.core.stream.Stream
     :param st: stream to merge and trim start and end times for
@@ -222,9 +224,9 @@ def trim_start_end_times(st, starttime=None, endtime=None):
     st_edit = st.copy()
 
     if starttime is None:
-        starttime = max([tr.stats.starttime for tr in st_edit])
+        starttime = min([tr.stats.starttime for tr in st_edit])
     if endtime is None:
-        endtime = min([tr.stats.endtime for tr in st_edit])
+        endtime = max([tr.stats.endtime for tr in st_edit])
 
     # Go through all stations and warn and remove about traces that are shorter
     # than given start and end times
