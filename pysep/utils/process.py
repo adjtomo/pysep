@@ -206,7 +206,7 @@ def rotate_to_uvw(st):
     return st_out
 
 
-def merge_and_trim_start_end_times(st):
+def merge_and_trim_start_end_times(st, fill_value=None, gap_percent=1.):
     """
     Trim the maximum start and minumum end times for each station to get
     all waveforms to start and end at the same time. Also merges traces with
@@ -215,7 +215,7 @@ def merge_and_trim_start_end_times(st):
     Replaces old `trim_maxstart_minend`
 
     .. note::
-        A note from the old code said we that interpolation and resampling
+        A note from the old code said that interpolation and resampling
         are NOT intended functionalities, so we replace the old 'interpolate'
         function with a trim.
 
@@ -228,8 +228,8 @@ def merge_and_trim_start_end_times(st):
 
     logger.info("trimming start and end times on a per-station basis")
     st_out = Stream()
-    # e.g., NN.SSS.LL.CC?  i.e., only getting per-station codes
-    codes = get_codes(st=st_edit, choice="channel", suffix="?")
+    # e.g., NN.SSS.LL.CC?  i.e., only getting per-component codes
+    codes = get_codes(st=st_edit, choice="component")
 
     for code in codes:
         # Subset the stream based on the N number of components
@@ -237,12 +237,29 @@ def merge_and_trim_start_end_times(st):
         st_edit_select = st_edit.select(network=net, station=sta,
                                         location=loc, channel=cha)
 
-        # Catch any general ObsPy merge errors which may arise due to 
+        # Catch any general ObsPy merge errors which may arise due to
         # different sampling rates
         try:
-            st_edit_select.merge()  # combining like trace IDs
-        except Exception as e:  # NOQA
-            logger.warning(f"{tr.get_id()} merge error: {e}")
+            # Check if there are data gaps that we need to address
+            if st_edit_select.get_gaps() and fill_value is not None:
+                # Determine the percentage of data that comprises gaps
+                gaps = st_edit_select.get_gaps()[0]  # assuming only one
+                gap_duration_samp = gaps[-1]
+                total_samps = np.sum([tr.stats.npts for tr in st_edit_select])
+
+                # Decide how we're going to fill the gaps
+                if fill_value == "mean":
+                    # Collect mean value over all data surrounding the gap(s)
+                    fill_value = np.nanmean(
+                        [np.nanmean(tr.data) for tr in st_edit_select]
+                    )
+                logger.info(f"{code} has data gaps, filling with: {fill_value}")
+            else:
+                fill_value = None
+
+            st_edit_select.merge(fill_value=fill_value)  # combine like trace ID
+        except Exception as e:  # NOQAc
+            logger.warning(f"{code} merge error: {e}")
             continue
 
         for tr in st_edit_select:

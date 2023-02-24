@@ -56,7 +56,7 @@ class Pysep:
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, remove_insufficient_length=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
-                 rotate=None, pre_filt="default",
+                 rotate=None, pre_filt="default", fill_data_gaps=None,
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
@@ -215,6 +215,23 @@ class Pysep:
         :param remove_insufficient_length: remove waveforms whose trace length
             does not match the average (mode) trace length in the stream.
             Defaults to True
+        :type fill_data_gaps: str or int or float
+        :param fill_data_gaps: How to deal with data gaps (missing sections of
+            waveform over a continuous time span). NoneType by default, which
+            means data with gaps are removed completely. Users who want access
+            to data with gaps must choose how gaps are filled. See API for
+            ObsPy.core.stream.Stream.merge() for how merge is handled:
+
+            Options include:
+
+            - 'mean': fill with the mean of all data values in the gappy data
+            - <int or float>: fill with a constant, user-defined value, e.g.,
+            0 or 1.23 or 9.999
+            - 'interpolate': linearly interpolate from the last value pre-gap
+            to the first value post-gap
+            - 'latest': fill with the last value of pre-gap data
+            - NoneType: do not fill data gaps, which will lead to stations w/
+            data gaps being removed.
 
         .. note::
             Data processing parameters
@@ -427,6 +444,7 @@ class Pysep:
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
         self.remove_insufficient_length = remove_insufficient_length
+        self.fill_data_gaps = fill_data_gaps
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
@@ -541,6 +559,12 @@ class Pysep:
                 f"`pre_filt` must be a tuple of length 4, representing four "
                 f"corner frequencies for a bandpass filter (f1, f2, f3, f4)"
             )
+
+        acceptable_fill_vals = ["mean", "interpolate", "latest"]
+        if self.fill_data_gaps is not False:
+            if isinstance(self.fill_data_gaps):
+                assert(self.fill_data_gaps in acceptable_fill_vals), \
+                    f"`fill_data_gaps` must be one of {acceptable_fill_vals}"
 
         # Enforce that `write_files` and `plot_files` are sets
         if self.write_files is None:
@@ -1108,7 +1132,9 @@ class Pysep:
             st_out = resample_data(st_out, resample_freq=self.resample_freq)
 
         # Remove data gaps, ensure that all traces have the same start and end
-        st_out = merge_and_trim_start_end_times(st_out)
+        st_out = merge_and_trim_start_end_times(
+            st_out, fill_value=self.fill_data_gaps
+        )
 
         return st_out
 
