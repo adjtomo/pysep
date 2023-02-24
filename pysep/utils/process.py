@@ -226,6 +226,7 @@ def trim_start_end_times(st, starttime=None, endtime=None):
     if endtime is None:
         endtime = min([tr.stats.endtime for tr in st_edit])
 
+    import pdb;pdb.set_trace()
     # Go through all stations and warn and remove about traces that are shorter
     # than given start and end times
     for tr in st_edit:
@@ -270,7 +271,7 @@ def merge_gapped_data(st, fill_value=None, gap_fraction=1.):
         - 'interpolate': linearly interpolate from the last value pre-gap
         to the first value post-gap
         - 'latest': fill with the last value of pre-gap data
-        - NoneType: do not fill data gaps, which will lead to stations w/
+        - False: do not fill data gaps, which will lead to stations w/
         data gaps being removed.
     :type gap_fraction: float
     :param gap_fraction: if `fill_data_gaps` is not None, determines the
@@ -301,13 +302,13 @@ def merge_gapped_data(st, fill_value=None, gap_fraction=1.):
             fillval = fill_value  # dummy value to allow in-place changes
 
             # Check if there are data gaps that we need to address
-            if data_gaps and fill_value is not None:
+            if data_gaps and fill_value is not False:
                 # Determine the percentage of data that comprises gaps
                 gap_duration_samp = data_gaps[0][-1]  # assuming only one set
                 starttime = min([tr.stats.starttime for tr in st_edit_select])
                 endtime = max([tr.stats.endtime for tr in st_edit_select])
-                total_samps = (endtime - starttime) / \
-                                            st_edit_select[0].stats.delta
+                total_samps = \
+                    (endtime - starttime) / st_edit_select[0].stats.delta
 
                 gap_percentage = gap_duration_samp / total_samps
 

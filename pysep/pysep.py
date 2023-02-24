@@ -56,7 +56,7 @@ class Pysep:
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, remove_insufficient_length=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
-                 rotate=None, pre_filt="default", fill_data_gaps=None,
+                 rotate=None, pre_filt="default", fill_data_gaps=False,
                  gap_fraction=1.,
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
@@ -216,9 +216,9 @@ class Pysep:
         :param remove_insufficient_length: remove waveforms whose trace length
             does not match the average (mode) trace length in the stream.
             Defaults to True
-        :type fill_data_gaps: str or int or float
+        :type fill_data_gaps: str or int or float or bool
         :param fill_data_gaps: How to deal with data gaps (missing sections of
-            waveform over a continuous time span). NoneType by default, which
+            waveform over a continuous time span). False by default, which
             means data with gaps are removed completely. Users who want access
             to data with gaps must choose how gaps are filled. See API for
             ObsPy.core.stream.Stream.merge() for how merge is handled:
@@ -231,7 +231,7 @@ class Pysep:
             - 'interpolate': linearly interpolate from the last value pre-gap
             to the first value post-gap
             - 'latest': fill with the last value of pre-gap data
-            - NoneType: do not fill data gaps, which will lead to stations w/
+            - False: do not fill data gaps, which will lead to stations w/
             data gaps being removed.
 
             NOTE: Be careful about data types, as there are no checks that the
