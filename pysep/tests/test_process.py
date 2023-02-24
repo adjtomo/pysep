@@ -59,16 +59,27 @@ def test_merge_data_gaps(test_st):
     Make sure merging data gaps works for a few different options. Does not
     check values, just runs through the function
     """
-    # ATKA already has gappy data on components E and Z
+    # ATKA already has gappy data on components E and N
     st_gap = test_st.select(station="ATKA")
     assert(len(st_gap) == 5)
 
     for fill_value in [None, "mean", "interpolate", "latest", 0, 5.5]:
         st = merge_and_trim_start_end_times(st_gap, fill_value=fill_value)
-        if fill_value is None:
+        if fill_value in [None, 5.5]:
             assert(len(st) == 1)  # removed E and N from stations
         else:
-            assert(len(st) != 0)  # did not remove
+            assert(len(st) == 3)  # successful merge
+
+
+def test_merge_data_gap_fraction(test_st):
+    """Try out the fraction percentage function"""
+    # ATKA already has gappy data on components E and N
+    st_gap = test_st.select(station="ATKA")
+    assert(len(st_gap) == 5)
+
+    st = merge_and_trim_start_end_times(st_gap, fill_value=0,
+                                        gap_fraction=0.01)
+    assert(len(st) == 1)
 
 
 def test_resample_data(test_st):

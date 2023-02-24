@@ -206,11 +206,11 @@ def rotate_to_uvw(st):
     return st_out
 
 
-def merge_and_trim_start_end_times(st, fill_value=None, gap_percent=1.):
+def merge_and_trim_start_end_times(st, fill_value=None, gap_fraction=1.):
     """
     Trim the maximum start and minumum end times for each station to get
     all waveforms to start and end at the same time. Also merges traces with
-    the same ID
+    the same ID, filling gappy data with values if requested.
 
     Replaces old `trim_maxstart_minend`
 
@@ -232,33 +232,46 @@ def merge_and_trim_start_end_times(st, fill_value=None, gap_percent=1.):
     codes = get_codes(st=st_edit, choice="component")
 
     for code in codes:
-        # Subset the stream based on the N number of components
+        # Subset the stream at each component
         net, sta, loc, cha = code.split(".")
         st_edit_select = st_edit.select(network=net, station=sta,
                                         location=loc, channel=cha)
 
-        # Catch any general ObsPy merge errors which may arise due to
-        # different sampling rates
+        # Try-except catches any general ObsPy merge errors to keep code going
         try:
+            data_gaps = st_edit_select.get_gaps()
+            fillval = fill_value  # dummy value to allow in-place changes
+
             # Check if there are data gaps that we need to address
-            if st_edit_select.get_gaps() and fill_value is not None:
+            if data_gaps and fill_value is not None:
                 # Determine the percentage of data that comprises gaps
-                gaps = st_edit_select.get_gaps()[0]  # assuming only one
-                gap_duration_samp = gaps[-1]
+                gap_duration_samp = data_gaps[0][-1]  # assuming only one set
                 total_samps = np.sum([tr.stats.npts for tr in st_edit_select])
+                gap_percentage = gap_duration_samp / total_samps
+                # If we exceed the allowable amount of data gap, do not fill
+                if gap_percentage > gap_fraction:
+                    logger.info(f"{code} has gap fraction "
+                                f"({gap_percentage:.2f}) > allowable "
+                                f"{gap_fraction}, will not fill gaps")
+                    fillval = None
+                else:
+                    # Decide how we're going to fill the gaps
+                    if fill_value == "mean":
+                        # Collect mean value over all data surrounding the gap
+                        # Convert to data type expected by array
+                        fillval = np.nanmean(
+                            [np.nanmean(tr.data) for tr in st_edit_select]
+                        ).astype(st_edit_select[0].data.dtype)
+                    else:
+                        fillval = fill_value
 
-                # Decide how we're going to fill the gaps
-                if fill_value == "mean":
-                    # Collect mean value over all data surrounding the gap(s)
-                    fill_value = np.nanmean(
-                        [np.nanmean(tr.data) for tr in st_edit_select]
-                    )
-                logger.info(f"{code} has data gaps, filling with: {fill_value}")
+                    logger.info(f"{code} has data gaps, filling with: "
+                                f"{fillval}")
             else:
-                fill_value = None
+                fillval = None
 
-            st_edit_select.merge(fill_value=fill_value)  # combine like trace ID
-        except Exception as e:  # NOQAc
+            st_edit_select.merge(fill_value=fillval)  # combine like trace ID
+        except Exception as e:  # NOQA
             logger.warning(f"{code} merge error: {e}")
             continue
 
