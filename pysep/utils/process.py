@@ -226,7 +226,6 @@ def trim_start_end_times(st, starttime=None, endtime=None):
     if endtime is None:
         endtime = min([tr.stats.endtime for tr in st_edit])
 
-    import pdb;pdb.set_trace()
     st_edit.trim(starttime=starttime, endtime=endtime)
 
     return st_edit
