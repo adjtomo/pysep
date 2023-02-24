@@ -1470,9 +1470,9 @@ class RecordSection:
         # set functions as they may overwrite what is done here
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
-        # Partition the figure by user-specified azimuth bins 
+        # Partition the figure by user-specified azimuth bins
         if self.sort_by and "azimuth" in self.sort_by:
-            self._plot_azimuth_bins()
+            self._plot_azimuth_bins(start=start, stop=stop)
 
         # Finalize the figure accoutrements
         self._plot_title(nwav=nwav)
@@ -1581,10 +1581,17 @@ class RecordSection:
             plt.axvline(x=tmark, c=c, linewidth=lw, linestyle=ls, zorder=z,
                         alpha=alpha)
 
-    def _plot_azimuth_bins(self):
+    def _plot_azimuth_bins(self, start=None, stop=None):
         """
         If plotting by azimuth, create visual bin separators so the user has
         a visual understanding of radiation patterns etc.
+
+        :type start: int
+        :param start: optional starting index to determine the bounds of
+            the azimuth bins
+        :type stop: int
+        :param stop: optional stop index to determine the bounds of
+            the azimuth bins
         """
         azimuth_binsize = self.kwargs.get("azimuth_binsize", 45)
 
@@ -1599,6 +1606,16 @@ class RecordSection:
                                  azimuth_binsize)
         # Make sure that the bins go from 0 <= azimuth_bins <= 360
         azimuth_bins = azimuth_bins % 360
+
+        # Cut down the azimuth bins to the closest values if we are doing
+        # multi-page record sections so that we don't end up plotting too many
+        if start is not None and stop is not None:
+            min_az = self.azimuths[self.sorted_idx[start:stop]].min()
+            max_az = self.azimuths[self.sorted_idx[start:stop]].max()
+            # Find the closest azimiuth bins
+            idx_start = np.argmin(np.abs(azimuth_bins - min_az))
+            idx_end = np.argmax(np.abs(azimuth_bins - max_az))
+            azimuth_bins = azimuth_bins[idx_start:idx_end]
 
         # In an absolute plot, the y values are simply the azimuth bins
         if "abs" in self.sort_by:
@@ -2142,14 +2159,16 @@ def parse_args():
 
 def plotw_rs(*args, **kwargs):
     """
-    Main call function for command line use of RecordSection.
+    Plot Waveform Record Section (main call function for RecordSection)
 
-    Runs the record section plotting functions in order. Contains the logic for
-    breaking up figure into multiple pages.
+    Instantiates the RecordSection class, runs processing and parameter getting,
+    and then plots record section. Contains additional logic for breaking up
+    figures into multiple pages if requested by the user, while keeping sort
+    order and waveform spacing consistent across multiple reord sections.
 
     .. note::
-        All arguments should be parsed into the argparser, *args and **kwargs
-        are just there to keep the IDE happy
+
+        See RecordSection.__init__() for acceptable args and kwargs
     """
     _start = datetime.now()
     logger.info(f"starting record section plotter")
