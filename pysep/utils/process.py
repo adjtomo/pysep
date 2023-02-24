@@ -220,10 +220,13 @@ def trim_start_end_times(st, starttime=None, endtime=None):
         the minimum endtime in entire stream
     """
     st_edit = st.copy()
+
     if starttime is None:
         starttime = max([tr.stats.starttime for tr in st_edit])
     if endtime is None:
         endtime = min([tr.stats.endtime for tr in st_edit])
+
+    import pdb;pdb.set_trace()
     st_edit.trim(starttime=starttime, endtime=endtime)
 
     return st_edit
@@ -324,10 +327,13 @@ def merge_gapped_data(st, fill_value=None, gap_fraction=1.):
             logger.warning(f"{code} merge error: {e}")
             continue
 
-        for tr in st_edit_select:
-            if np.ma.is_masked(tr.data):
-                logger.warning(f"{tr.get_id()} has data gaps, removing")
-                st_edit_select.remove(tr)
+        st_out += st_edit_select
+
+    # One last check for data gaps
+    for tr in st_out:
+        if np.ma.is_masked(tr.data):
+            logger.warning(f"{tr.get_id()} has data gaps, removing")
+            st_out.remove(tr)
 
     return st_out
 

@@ -1154,6 +1154,11 @@ class Pysep:
             endtime=self.origin_time + self.seconds_after_ref
         )
 
+        if not st_out:
+            logger.critical("preprocessing removed all traces from Stream, "
+                            "cannot proceed")
+            sys.exit(-1)
+
         return st_out
 
     def _remove_response_llnl(self, st):
@@ -1278,7 +1283,6 @@ class Pysep:
                         logger.debug(f"rotate error: {e}")
                         continue
                     st_out += _st
-            import pdb;pdb.set_trace()
             # Check to see if rotation errors kicked out all stations
             if not st_out:
                 logger.critical("rotation errors have reduced Stream to len 0, "
