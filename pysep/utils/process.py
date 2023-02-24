@@ -226,10 +226,10 @@ def trim_start_end_times(st, starttime=None, endtime=None):
     if endtime is None:
         endtime = min([tr.stats.endtime for tr in st_edit])
 
-    import pdb;pdb.set_trace()
     # Go through all stations and warn and remove about traces that are shorter
     # than given start and end times
     for tr in st_edit:
+        remove = False
         if tr.stats.starttime > starttime:
             logger.warning(f"{tr.get_id()} has too late of a starttime, remove")
             remove = True

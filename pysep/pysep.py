@@ -68,7 +68,7 @@ class Pysep:
                  log_level="DEBUG", timeout=600, write_files="all",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
-                 use_mass_download=False,
+                 use_mass_download=False, extra_download_pct=0.005,
                  **kwargs):
         """
         .. note::
@@ -162,10 +162,18 @@ class Pysep:
         :type seconds_after_ref: float
         :param seconds_after_ref: For waveform fetching. Defines the time
             after `reference_time` to fetch waveform data. Units [s]
+        :type extra_download_pct: float
+        :param extra_download_pct: extra download percentage. Adds a buffer
+            around `origin_time` + `seconds_before_ref` + `extra_download_pct`
+            (also -`seconds_after_ref`), which gathers a bit of extra data which
+            will be trimmed away. Used because gathering data directly at the
+            requested time limits may lead to shorter expected waveforms after
+            resampling or preprocessing procedures. Given as a percent [0,1],
+            defaults to .5%.
         :type networks: str
-        :param networks: name or names of networks to query for, if names plural,
-            must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards okay,
-            defaults to '*'.
+        :param networks: name or names of networks to query for, if names
+            plural, must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards
+            okay, defaults to '*'.
         :type stations: str
         :param stations: station name or names to query for. If multiple
             stations, input as a list of comma-separated values, e.g.,
@@ -254,10 +262,11 @@ class Pysep:
         :type demean: bool
         :param demean: apply demeaning to data during instrument reseponse
             removal. Only applied if `remove_response` == True.
-        :type taper: float
-        :param taper: apply a taper to the waveform with ObsPy taper, fraction
-            between 0 and 1 as the percentage of the waveform to be tapered
-            Applied generally used when data is noisy, e.g., HutchisonGhosh2016
+        :type taper_percentage: float
+        :param taper_percentage: apply a taper to the waveform with ObsPy taper,
+            fraction between 0 and 1 as the percentage of the waveform to be
+            tapered Applied generally used when data is noisy, e.g.,
+            HutchisonGhosh2016
             Note: To get the same results as the default taper in SAC,
             use max_percentage=0.05 and leave type as hann.
             Tapering also happens while resampling (see util_write_cap.py).
@@ -294,8 +303,8 @@ class Pysep:
         :type water_level: float
         :param water_level: a water level threshold to apply during filtering
             for small values. Passed to Obspy.core.trace.Trace.remove_response
-        :type prefilt: str, tuple or NoneType
-        :param prefilt: apply a pre-filter to the waveforms before deconvolving
+        :type pre_filt: str, tuple or NoneType
+        :param pre_filt: apply a pre-filter to the waveforms before deconvolving
             instrument response. Options are:
 
             * 'default': automatically calculate (f0, f1, f2, f3) based on the
@@ -390,6 +399,7 @@ class Pysep:
         self._password = password
         self.taup_model = taup_model
         self.use_mass_download = use_mass_download
+        self._extra_download_pct = extra_download_pct
 
         # Check for LLNL requirement
         if self.client == "LLNL" and not _has_llnl:
@@ -942,8 +952,12 @@ class Pysep:
         :return: Stream of channel-separated waveforms
         """
         bulk = []
-        t1 = self.reference_time - self.seconds_before_ref
-        t2 = self.reference_time + self.seconds_after_ref
+        # Gather x% more on either side of the requested data incase
+        # resampling changes the start and end times. These will get trimmed.
+        t1 = self.reference_time - self.seconds_before_ref * (
+                1 + self._extra_download_pct)
+        t2 = self.reference_time + self.seconds_after_ref * (
+                1 + self._extra_download_pct)
         for net in self.inv:
             for sta in net:
                 # net sta loc cha t1 t2
@@ -1025,9 +1039,13 @@ class Pysep:
                        if "-" in net]
 
         # Set restrictions on the search criteria for data
+        # Gather x% more on either side of the requested data incase
+        # resampling changes the start and end times. These will get trimmed.
         restrictions = Restrictions(
-            starttime=self.reference_time - self.seconds_before_ref,
-            endtime=self.reference_time + self.seconds_after_ref,
+            starttime=self.reference_time - self.seconds_before_ref * (
+                1 + self._extra_download_pct),
+            endtime=self.reference_time + self.seconds_after_ref * (
+                1 + self._extra_download_pct),
             reject_channels_with_gaps=False, minimum_length=0.,
             network=networks, station=stations, location=self.locations,
             channel=self.channels, exclude_networks=net_exclude,
