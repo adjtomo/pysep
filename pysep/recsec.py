@@ -348,8 +348,12 @@ class RecordSection:
             - 'y_axis': Replace tick labels on the y-axis (left side of figure),
                 This won't work if using absolute sorting and will be over-
                 written by 'default'
-            - 'y_axis_abs': Waveform labels overlapping with y-axis labels
+            - 'y_axis_abs': For absolute y-axis only. waveform labels plotted
+               on the left side outside border, with y-axis labels overlapping
                (showing distance or azimuth)
+            - 'y_axis_abs_right': For absolute y-axis only. waveform labels
+               plotted on the right side outside border, with y-axis labels
+               on the left side of the figure (showing distance or azimuth)
             - 'y_axis_right': Replace tick labels on the right side of the
                 y-axis. This option won't work with absolute sorting
             - 'x_min': Place labels on top of the waveforms at the global min
@@ -664,7 +668,8 @@ class RecordSection:
                 err.xlim_s = f"start time must be less than stop time"
 
         acceptable_y_label_loc = ["default", "y_axis", "y_axis_right", "x_min",
-                                  "x_max", "y_axis_abs", None]
+                                  "x_max", "y_axis_abs", "y_axis_abs_right",
+                                  None]
         if self.y_label_loc not in acceptable_y_label_loc:
             err.y_label_loc = f"must be in {acceptable_y_label_loc}"
         if "abs" in self.sort_by and "y_axis" in self.sort_by:
@@ -1667,7 +1672,7 @@ class RecordSection:
             if self.y_label_loc is not None:
                 # By default, place absolute sorted labels on y-axis
                 if self.y_label_loc == "default":
-                    loc = "y_axis_abs"
+                    loc = "y_axis_abs_right"
                 else:
                     loc = self.y_label_loc
                 self._set_y_axis_text_labels(start=start, stop=stop, loc=loc)
@@ -1852,6 +1857,13 @@ class RecordSection:
                 func = min
                 x_val = func(self.stats.xmin)
                 plt.text(0, .99, y_fmt, ha=ha, va=va,
+                         transform=self.ax.transAxes, fontsize=fontsize)
+            elif loc == "y_axis_abs_right":
+                ha = "left"
+                va = "center"
+                func = max
+                x_val = func(self.stats.xmax)
+                plt.text(1., .99, y_fmt, ha=ha, va=va,
                          transform=self.ax.transAxes, fontsize=fontsize)
 
             if self.xlim_s is not None:
