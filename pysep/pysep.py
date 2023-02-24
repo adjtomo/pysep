@@ -57,6 +57,7 @@ class Pysep:
                  remove_clipped=False, remove_insufficient_length=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=None,
+                 gap_fration=1.,
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
@@ -232,6 +233,13 @@ class Pysep:
             - 'latest': fill with the last value of pre-gap data
             - NoneType: do not fill data gaps, which will lead to stations w/
             data gaps being removed.
+        :type gap_fraction: float
+        :param gap_fraction: if `fill_data_gaps` is not None, determines the
+            maximum allowable fraction (percentage) of data that gaps can
+            comprise. For example, a value of 0.3 means that 30% of the data
+            (in samples) can be gaps that will be filled by `fill_data_gaps`.
+            Traces with gap fractions that exceed this value will be removed.
+            Defaults to 1. (100%) of data can be gaps.
 
         .. note::
             Data processing parameters
@@ -445,6 +453,7 @@ class Pysep:
         self.remove_clipped = bool(remove_clipped)
         self.remove_insufficient_length = remove_insufficient_length
         self.fill_data_gaps = fill_data_gaps
+        self.gap_fraction = gap_fraction
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
@@ -1133,7 +1142,8 @@ class Pysep:
 
         # Remove data gaps, ensure that all traces have the same start and end
         st_out = merge_and_trim_start_end_times(
-            st_out, fill_value=self.fill_data_gaps
+            st_out, fill_value=self.fill_data_gaps,
+            gap_fraction=self.gap_fraction
         )
 
         return st_out
