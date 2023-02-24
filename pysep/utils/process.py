@@ -206,18 +206,33 @@ def rotate_to_uvw(st):
     return st_out
 
 
-def merge_and_trim_start_end_times(st, fill_value=None, gap_fraction=1.):
+def trim_start_end_times(st, starttime=None, endtime=None):
     """
-    Trim the maximum start and minumum end times for each station to get
-    all waveforms to start and end at the same time. Also merges traces with
-    the same ID, filling gappy data with values if requested.
+    Trim all traces in a Stream to a unfirom start and end times
 
-    Replaces old `trim_maxstart_minend`
+    :type st: obspy.core.stream.Stream
+    :param st: stream to merge and trim start and end times for
+    :type starttime: obspy.core.UTCDateTime
+    :param starttime: user-defined starttime to trim stream. If None, will get
+        the maximum starttime in entire stream
+    :type endtime: obspy.core.UTCDateTime
+    :param endtime: user-defined endtime to trim stream. If None, will get
+        the minimum endtime in entire stream
+    """
+    st_edit = st.copy()
+    if starttime is None:
+        starttime = max([tr.stats.starttime for tr in st_edit])
+    if endtime is None:
+        endtime = min([tr.stats.endtime for tr in st_edit])
+    st_edit.trim(starttime=starttime, endtime=endtime)
 
-    .. note::
-        A note from the old code said that interpolation and resampling
-        are NOT intended functionalities, so we replace the old 'interpolate'
-        function with a trim.
+    return st_edit
+
+
+def merge_gapped_data(st, fill_value=None, gap_fraction=1.):
+    """
+    Merges traces with the same ID, filling gappy data with values if requested,
+    otherwise removes traces that have gapped data.
 
     .. note::
         Be careful about `fill_value` data types, as there are no checks that
@@ -275,8 +290,13 @@ def merge_and_trim_start_end_times(st, fill_value=None, gap_fraction=1.):
             if data_gaps and fill_value is not None:
                 # Determine the percentage of data that comprises gaps
                 gap_duration_samp = data_gaps[0][-1]  # assuming only one set
-                total_samps = np.sum([tr.stats.npts for tr in st_edit_select])
+                starttime = min([tr.stats.starttime for tr in st_edit_select])
+                endtime = max([tr.stats.endtime for tr in st_edit_select])
+                total_samps = (endtime - starttime) / \
+                                            st_edit_select[0].stats.delta
+
                 gap_percentage = gap_duration_samp / total_samps
+
                 # If we exceed the allowable amount of data gap, do not fill
                 if gap_percentage > gap_fraction:
                     logger.info(f"{code} has gap fraction "
@@ -308,15 +328,6 @@ def merge_and_trim_start_end_times(st, fill_value=None, gap_fraction=1.):
             if np.ma.is_masked(tr.data):
                 logger.warning(f"{tr.get_id()} has data gaps, removing")
                 st_edit_select.remove(tr)
-
-        if st_edit_select:
-            # Trim based on the most latest start and earliest end time, which
-            # will expose stations with insufficient data
-            max_start = max([tr.stats.starttime for tr in st_edit_select])
-            min_end = min([tr.stats.endtime for tr in st_edit_select])
-
-            st_edit_select.trim(starttime=max_start, endtime=min_end)
-            st_out += st_edit_select
 
     return st_out
 

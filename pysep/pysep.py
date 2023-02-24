@@ -40,9 +40,9 @@ from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
-from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
-                                 format_streams_for_rotation, rotate_to_uvw,
-                                 estimate_prefilter_corners)
+from pysep.utils.process import (merge_gapped_data, trim_start_end_times,
+                                 resample_data, format_streams_for_rotation,
+                                 rotate_to_uvw, estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.recsec import RecordSection
 
@@ -57,7 +57,7 @@ class Pysep:
                  remove_clipped=False, remove_insufficient_length=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=None,
-                 gap_fration=1.,
+                 gap_fraction=1.,
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
@@ -575,7 +575,7 @@ class Pysep:
 
         acceptable_fill_vals = ["mean", "interpolate", "latest"]
         if self.fill_data_gaps is not False:
-            if isinstance(self.fill_data_gaps):
+            if isinstance(self.fill_data_gaps, str):
                 assert(self.fill_data_gaps in acceptable_fill_vals), \
                     f"`fill_data_gaps` must be one of {acceptable_fill_vals}"
 
@@ -1144,10 +1144,14 @@ class Pysep:
         if self.resample_freq is not None:
             st_out = resample_data(st_out, resample_freq=self.resample_freq)
 
-        # Remove data gaps, ensure that all traces have the same start and end
-        st_out = merge_and_trim_start_end_times(
-            st_out, fill_value=self.fill_data_gaps,
-            gap_fraction=self.gap_fraction
+        # Remove or fill data gaps
+        st_out = merge_gapped_data(st_out, fill_value=self.fill_data_gaps,
+                                   gap_fraction=self.gap_fraction)
+
+        # Ensure that all traces have the same start and end
+        st_out = trim_start_end_times(
+            st_out,  starttime=self.origin_time - self.seconds_before_ref,
+            endtime=self.origin_time + self.seconds_after_ref
         )
 
         return st_out
@@ -1274,6 +1278,7 @@ class Pysep:
                         logger.debug(f"rotate error: {e}")
                         continue
                     st_out += _st
+            import pdb;pdb.set_trace()
             # Check to see if rotation errors kicked out all stations
             if not st_out:
                 logger.critical("rotation errors have reduced Stream to len 0, "
