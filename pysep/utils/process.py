@@ -206,7 +206,7 @@ def rotate_to_uvw(st):
     return st_out
 
 
-def trim_start_end_times(st, starttime=None, endtime=None):
+def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
     """
     Trim all traces in a Stream to a uniform start and end times. If no 
     `starttime` or `endtime` are provided, they are selected as the outer 
@@ -241,7 +241,8 @@ def trim_start_end_times(st, starttime=None, endtime=None):
         if remove:
             st_edit.remove(tr)
 
-    st_edit.trim(starttime=starttime, endtime=endtime)
+    st_edit.trim(starttime=starttime, endtime=endtime, nearest_sample=False,
+                 fill_value=fill_value)
 
     return st_edit
 

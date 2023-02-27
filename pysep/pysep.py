@@ -416,8 +416,8 @@ class Pysep:
             self.origin_time = None
 
         # Force float type to avoid rounding errors
-        self.seconds_before_event = float(seconds_before_event)
-        self.seconds_after_event = float(seconds_after_event)
+        self.seconds_before_event = seconds_before_event
+        self.seconds_after_event = seconds_after_event
 
         # Optional: if User wants to define an event on their own.
         # `event_depth_km` and `event_magnitude` are also used for client query
@@ -434,6 +434,7 @@ class Pysep:
 
         # Waveform collection parameters
         self.reference_time = reference_time or self.origin_time
+        # Force float type to avoid rounding errors
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
         self.phase_list = phase_list
@@ -623,6 +624,12 @@ class Pysep:
         if self.use_mass_download is True:
             logger.info("will use option `mass_download`, ignoring `client` "
                         "and downloading data from all available data centers")
+
+        # Force all time boundaries to be floats to avoid rounding errors
+        self.seconds_before_ref = float(self.seconds_before_ref)
+        self.seconds_after_ref = float(self.seconds_after_ref)
+        self.seconds_before_event = float(self.seconds_before_event)
+        self.seconds_after_event = float(self.seconds_after_event)
 
     def get_client(self):
         """
@@ -1173,9 +1180,10 @@ class Pysep:
         if self.origin_time:
             st_out = trim_start_end_times(
                 st_out,  starttime=self.origin_time - self.seconds_before_ref,
-                endtime=self.origin_time + self.seconds_after_ref
+                endtime=self.origin_time + self.seconds_after_ref,
+                fill_value=self.fill_data_gaps
             )
-
+        import pdb;pdb.set_trace()
         if not st_out:
             logger.critical("preprocessing removed all traces from Stream, "
                             "cannot proceed")

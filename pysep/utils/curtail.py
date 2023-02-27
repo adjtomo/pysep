@@ -253,7 +253,6 @@ def remove_stations_for_insufficient_length(st):
     logger.debug(f"assuming that the expected stream length is: "
                  f"{expected_length}s")
 
-    import pdb;pdb.set_trace()
     for tr, length in zip(st_out[:], stream_lengths):
         if length <= expected_length:
             logger.debug(f"{tr.get_id()} has unexpected time length of "
@@ -309,7 +308,6 @@ def subset_streams(st_a, st_b):
                  f"{len(sta_ids_a) - len(common_ids)} traces from `st_a`")
     logger.debug(f"stream subset removes "
                  f"{len(sta_ids_b) - len(common_ids)} traces from `st_b`")
-
 
     for station_id in common_ids:
         net, sta, loc, comp = station_id.split(".")
