@@ -961,7 +961,8 @@ class Pysep:
         for net in self.inv:
             for sta in net:
                 # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
+                bulk.append((net.code, sta.code, self.locations, self.channels, 
+                             t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
         assert bulk, (
