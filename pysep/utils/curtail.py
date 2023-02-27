@@ -98,8 +98,8 @@ def quality_check_waveforms_before_processing(st, remove_clipped=True):
     return st_out
 
 
-def quality_check_waveforms_after_processing(
-        st, remove_insufficient_length=True, remove_masked_data=True):
+def quality_check_waveforms_after_processing(st,
+                                             remove_insufficient_length=True):
     """
     Quality assurance to deal with bad data after preprocessing, because
     preprocesing step will merge, filter and rotate data.
@@ -110,17 +110,11 @@ def quality_check_waveforms_after_processing(
     :type remove_insufficient_length: bool
     :param remove_insufficient_length: boolean flag to turn on/off insufficient
         length checker
-    :type remove_masked_data: bool
-    :param remove_masked_data: remove traces that have masked data which is
-        created when you merge data that has data gaps without filling the gaps
     """
     st_out = st.copy()
 
     if remove_insufficient_length:
         st_out = remove_stations_for_insufficient_length(st_out)
-
-    if remove_masked_data:
-        st_out = remove_traces_w_masked_data(st)
 
     return st_out
 

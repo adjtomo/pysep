@@ -182,7 +182,7 @@ def test_rotate_streams(test_st, test_inv, test_event):
     """
     Ensure that stream rotation works as expected after we format SAC headers
     """
-    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
+    sep = Pysep(log_level="DEBUG", rotate=["ZNE", "RTZ"])
     for tr in test_st:
         del tr.stats.back_azimuth
     assert("back_azimuth" not in test_st[0].stats)

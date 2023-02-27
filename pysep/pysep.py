@@ -36,6 +36,7 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing,
+                                 remove_traces_w_masked_data
                                  )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
@@ -476,6 +477,7 @@ class Pysep:
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
         self.remove_insufficient_length = remove_insufficient_length
+        self.remove_masked_data = remove_masked_data
         self.fill_data_gaps = fill_data_gaps
         self.gap_fraction = gap_fraction
 
@@ -1190,6 +1192,10 @@ class Pysep:
                 endtime=self.origin_time + self.seconds_after_ref,
                 fill_value=self.fill_data_gaps
             )
+        # Merging or trimming may introduce masked data, may remove from Stream
+        if self.remove_masked_data:
+            st_out = remove_traces_w_masked_data(st_out)
+
         if not st_out:
             logger.critical("preprocessing removed all traces from Stream, "
                             "cannot proceed")
