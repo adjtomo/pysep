@@ -220,6 +220,18 @@ def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
     :type endtime: obspy.core.UTCDateTime
     :param endtime: user-defined endtime to trim stream. If None, will get
         the minimum endtime in entire stream
+    :type fill_value: str or int or float
+    :param fill_value: How to deal with data gaps (missing sections of
+        waveform before trace start or trace end w.r.t requested start and end
+        times). NoneType by default, which means data with gaps are removed
+        completely.
+
+        Options include:
+
+        - 'mean': fill with the mean of all data values in the gappy data
+        - <int or float>: fill with a constant, user-defined value, e.g.,
+        0 or 1.23 or 9.999
+        - None: do not fill data gaps
     """
     st_edit = st.copy()
 
@@ -228,21 +240,34 @@ def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
     if endtime is None:
         endtime = max([tr.stats.endtime for tr in st_edit])
 
-    # Go through all stations and warn and remove about traces that are shorter
-    # than given start and end times
-    for tr in st_edit:
-        remove = False
-        if tr.stats.starttime > starttime:
-            logger.warning(f"{tr.get_id()} has too late of a starttime, remove")
-            remove = True
-        elif tr.stats.endtime < endtime:
-            logger.warning(f"{tr.get_id()} has too early of an endtime, remove")
-            remove = True
-        if remove:
-            st_edit.remove(tr)
+    # Trace.trim() can only take float or int as fill values
+    if fill_value in ["interpolate", "latest"]:
+        logger.warning("ObsPy cannot use `fill_value` 'interpolate' or "
+                       "'latest' for missing boundary times. Setting to 'mean'")
+        fill_value = "mean"
 
-    st_edit.trim(starttime=starttime, endtime=endtime, nearest_sample=False,
-                 fill_value=fill_value)
+    # Go through all stations and look for those with late starts or early ends.
+    # Then either remove short traces or fill them with acceptable values
+    for tr in st_edit:
+        if tr.stats.starttime > starttime or tr.stats.endtime < endtime:
+            if fill_value:
+                if fill_value == "mean":
+                    _fillval = np.nanmean(tr.data).astype(tr.data.dtype)
+                else:
+                    _fillval = fill_value
+                    
+                logger.info(f"{tr.get_id()} filling start/endtime data gap w/: "
+                            f"{_fillval}")
+
+                tr.trim(starttime=starttime, endtime=endtime, pad=True,
+                        nearest_sample=False, fill_value=_fillval)
+            else:
+                # Directly remove stations with late starttime or early endtime
+                logger.warning(f"{tr.get_id()} start or endtime does not match"
+                               f"requested bounds, remove")
+                st_edit.remove(tr)
+        else:
+            tr.trim(starttime=starttime, endtime=endtime, nearest_sample=False)
 
     return st_edit
 
