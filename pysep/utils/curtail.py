@@ -143,6 +143,19 @@ def remove_traces_for_bad_data_types(st):
     return st_out
 
 
+def remove_traces_w_masked_data(st):
+    """
+    Merge operations may produce masked arrays which are data streams with
+    gaps in them. Remove these from the stream
+    """
+    st_out = st.copy()
+    for tr in st_out:
+        if np.ma.is_masked(tr.data):
+            logger.warning(f"{tr.get_id()} has data gaps, removing")
+            st_out.remove(tr)
+    return st_out
+
+
 def remove_for_clipped_amplitudes(st):
     """
     Removed stations with clipped amplitudes
@@ -252,10 +265,9 @@ def remove_stations_for_insufficient_length(st):
     expected_length = vals[np.argmax(counts)]
     logger.debug(f"assuming that the expected stream length is: "
                  f"{expected_length}s")
-
     for tr, length in zip(st_out[:], stream_lengths):
-        if length != expected_length:
-            logger.debug(f"{tr.get_id()} has insufficient time length of "
+        if length < expected_length:
+            logger.debug(f"{tr.get_id()} has unexpected time length of "
                          f"{length}s, removing")
             st_out.remove(tr)
 
@@ -308,7 +320,6 @@ def subset_streams(st_a, st_b):
                  f"{len(sta_ids_a) - len(common_ids)} traces from `st_a`")
     logger.debug(f"stream subset removes "
                  f"{len(sta_ids_b) - len(common_ids)} traces from `st_b`")
-
 
     for station_id in common_ids:
         net, sta, loc, comp = station_id.split(".")

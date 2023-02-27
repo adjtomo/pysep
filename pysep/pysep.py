@@ -36,6 +36,7 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing,
+                                 remove_traces_w_masked_data
                                  )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
@@ -55,6 +56,7 @@ class Pysep:
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, remove_insufficient_length=True,
+                 remove_masked_data=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
                  gap_fraction=1.,
@@ -224,6 +226,12 @@ class Pysep:
         :param remove_insufficient_length: remove waveforms whose trace length
             does not match the average (mode) trace length in the stream.
             Defaults to True
+        :type remove_masked_data: bool
+        :param remove_masked_data: If `fill_data_gaps` is False or None, data
+            with gaps that go through the merge process will contain masked
+            arrays (essentially retaining gaps). By default, PySEP will remove
+            these data during processing. To keep this data, set
+            `remove_masked_data` == True.
         :type fill_data_gaps: str or int or float or bool
         :param fill_data_gaps: How to deal with data gaps (missing sections of
             waveform over a continuous time span). False by default, which
@@ -414,6 +422,8 @@ class Pysep:
             self.origin_time = UTCDateTime(origin_time)
         except TypeError:
             self.origin_time = None
+
+        # Force float type to avoid rounding errors
         self.seconds_before_event = seconds_before_event
         self.seconds_after_event = seconds_after_event
 
@@ -432,6 +442,7 @@ class Pysep:
 
         # Waveform collection parameters
         self.reference_time = reference_time or self.origin_time
+        # Force float type to avoid rounding errors
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
         self.phase_list = phase_list
@@ -466,6 +477,7 @@ class Pysep:
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
         self.remove_insufficient_length = remove_insufficient_length
+        self.remove_masked_data = remove_masked_data
         self.fill_data_gaps = fill_data_gaps
         self.gap_fraction = gap_fraction
 
@@ -621,6 +633,12 @@ class Pysep:
         if self.use_mass_download is True:
             logger.info("will use option `mass_download`, ignoring `client` "
                         "and downloading data from all available data centers")
+
+        # Force all time boundaries to be floats to avoid rounding errors
+        self.seconds_before_ref = float(self.seconds_before_ref)
+        self.seconds_after_ref = float(self.seconds_after_ref)
+        self.seconds_before_event = float(self.seconds_before_event)
+        self.seconds_after_event = float(self.seconds_after_event)
 
     def get_client(self):
         """
@@ -961,7 +979,8 @@ class Pysep:
         for net in self.inv:
             for sta in net:
                 # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
+                bulk.append((net.code, sta.code, self.locations, self.channels, 
+                             t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
         assert bulk, (
@@ -1170,8 +1189,12 @@ class Pysep:
         if self.origin_time:
             st_out = trim_start_end_times(
                 st_out,  starttime=self.origin_time - self.seconds_before_ref,
-                endtime=self.origin_time + self.seconds_after_ref
+                endtime=self.origin_time + self.seconds_after_ref,
+                fill_value=self.fill_data_gaps
             )
+        # Merging or trimming may introduce masked data, may remove from Stream
+        if self.remove_masked_data:
+            st_out = remove_traces_w_masked_data(st_out)
 
         if not st_out:
             logger.critical("preprocessing removed all traces from Stream, "
