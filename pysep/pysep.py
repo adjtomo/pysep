@@ -55,6 +55,7 @@ class Pysep:
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, remove_insufficient_length=True,
+                 remove_masked_data=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
                  gap_fraction=1.,
@@ -224,6 +225,12 @@ class Pysep:
         :param remove_insufficient_length: remove waveforms whose trace length
             does not match the average (mode) trace length in the stream.
             Defaults to True
+        :type remove_masked_data: bool
+        :param remove_masked_data: If `fill_data_gaps` is False or None, data
+            with gaps that go through the merge process will contain masked
+            arrays (essentially retaining gaps). By default, PySEP will remove
+            these data during processing. To keep this data, set
+            `remove_masked_data` == True.
         :type fill_data_gaps: str or int or float or bool
         :param fill_data_gaps: How to deal with data gaps (missing sections of
             waveform over a continuous time span). False by default, which
@@ -1183,7 +1190,6 @@ class Pysep:
                 endtime=self.origin_time + self.seconds_after_ref,
                 fill_value=self.fill_data_gaps
             )
-        import pdb;pdb.set_trace()
         if not st_out:
             logger.critical("preprocessing removed all traces from Stream, "
                             "cannot proceed")

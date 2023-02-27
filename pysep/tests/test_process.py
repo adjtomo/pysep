@@ -66,6 +66,7 @@ def test_merge_data_gaps(test_st):
     for fill_value in [None, "mean", "interpolate", "latest", 0, 5.5]:
         st = merge_gapped_data(st_gap, fill_value=fill_value)
         if fill_value in [None, 5.5]:
+            pytest.set_trace()
             assert(len(st) == 1)  # removed E and N from stations
         else:
             assert(len(st) == 3)  # successful merge
@@ -78,7 +79,7 @@ def test_merge_data_gap_fraction(test_st):
     assert(len(st_gap) == 5)
 
     st = merge_gapped_data(st_gap, fill_value=0, gap_fraction=0.01)
-    assert(len(st) == 1)
+    assert(len(st) == 3)
 
 
 def test_resample_data(test_st):

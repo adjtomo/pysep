@@ -255,7 +255,7 @@ def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
                     _fillval = np.nanmean(tr.data).astype(tr.data.dtype)
                 else:
                     _fillval = fill_value
-                    
+
                 logger.info(f"{tr.get_id()} filling start/endtime data gap w/: "
                             f"{_fillval}")
 
