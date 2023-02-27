@@ -32,4 +32,8 @@
 	- New hidden parameter `extra_download_pct` handles waveform start and end time 
 	- Resampling now occurs before trace start and end time trimming
 - Bugfix: bulk query request locations was incorrectly hardocded as a wildcard
+- Waveform start and end trim now performed trace by trace with option to fill
+  empty boundaries with `fill_data_gaps`
+- Introduce new parameter `remove_masked_data` which is a toggle flag to remove
+  data which has been merged with no fill value. 
 

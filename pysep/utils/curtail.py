@@ -265,9 +265,8 @@ def remove_stations_for_insufficient_length(st):
     expected_length = vals[np.argmax(counts)]
     logger.debug(f"assuming that the expected stream length is: "
                  f"{expected_length}s")
-
     for tr, length in zip(st_out[:], stream_lengths):
-        if length <= expected_length:
+        if length < expected_length:
             logger.debug(f"{tr.get_id()} has unexpected time length of "
                          f"{length}s, removing")
             st_out.remove(tr)
