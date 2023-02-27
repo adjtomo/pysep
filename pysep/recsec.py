@@ -1326,6 +1326,26 @@ class RecordSection:
 
         return y_axis
 
+    def get_x_axis_tick_values(self):
+        """
+        Determine, based on the length of the plotted traces, how often tick
+        marks should be applied so that they are spaced as aesthetically
+        pleasing values.
+        """
+        # Get a rough estimate for total length of time of the trace in seconds
+        if self.xlim_s:
+            rs_len = self.xlim_s[1] - self.xlim_s[0]
+        else:
+            # Assuming that all waveforms are trimmed to the same length
+            rs_len = self.st[0].stats.endtime - self.st[0].stats.starttime
+
+        # Find order of magnitude of the length to give a rough estimate
+        oom = np.floor(np.log10(rs_len))
+        xtick_major = 10 ** oom
+        xtick_minor = xtick_major / 2
+
+        return xtick_minor, xtick_major
+
     def process_st(self):
         """
         Preprocess the Stream with optional filtering in place.
@@ -1459,6 +1479,12 @@ class RecordSection:
 
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
+        _xtick_minor, _xtick_major = self.get_x_axis_tick_values()
+        # Use kwarg values to avoid double inputs of the same parameter
+        if "xtick_minor" not in self.kwargs:
+            self.kwargs["xtick_minor"] = _xtick_minor
+        if "xtick_major" not in self.kwargs:
+            self.kwargs["xtick_major"] = _xtick_major
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
         # Partition the figure by user-specified azimuth bins 
