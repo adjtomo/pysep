@@ -12,6 +12,7 @@ from obspy import read, read_events, read_inventory, Stream
 
 from pysep import logger, Pysep
 from pysep.utils.cap_sac import append_sac_headers
+from pysep.utils.curtail import remove_traces_w_masked_data
 from pysep.utils.process import (merge_gapped_data, trim_start_end_times,
                                  resample_data, format_streams_for_rotation,
                                  rotate_to_uvw, append_back_azimuth_to_stats)
@@ -65,8 +66,8 @@ def test_merge_data_gaps(test_st):
 
     for fill_value in [None, "mean", "interpolate", "latest", 0, 5.5]:
         st = merge_gapped_data(st_gap, fill_value=fill_value)
+        st = remove_traces_w_masked_data(st)
         if fill_value in [None, 5.5]:
-            pytest.set_trace()
             assert(len(st) == 1)  # removed E and N from stations
         else:
             assert(len(st) == 3)  # successful merge
@@ -79,7 +80,8 @@ def test_merge_data_gap_fraction(test_st):
     assert(len(st_gap) == 5)
 
     st = merge_gapped_data(st_gap, fill_value=0, gap_fraction=0.01)
-    assert(len(st) == 3)
+    st = remove_traces_w_masked_data(st)
+    assert(len(st) == 1)
 
 
 def test_resample_data(test_st):
