@@ -344,12 +344,6 @@ def merge_gapped_data(st, fill_value=None, gap_fraction=1.):
 
         st_out += st_edit_select
 
-    # One last check for data gaps
-    for tr in st_out:
-        if np.ma.is_masked(tr.data):
-            logger.warning(f"{tr.get_id()} has data gaps, removing")
-            st_out.remove(tr)
-
     return st_out
 
 
