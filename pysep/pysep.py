@@ -414,8 +414,10 @@ class Pysep:
             self.origin_time = UTCDateTime(origin_time)
         except TypeError:
             self.origin_time = None
-        self.seconds_before_event = seconds_before_event
-        self.seconds_after_event = seconds_after_event
+
+        # Force float type to avoid rounding errors
+        self.seconds_before_event = float(seconds_before_event)
+        self.seconds_after_event = float(seconds_after_event)
 
         # Optional: if User wants to define an event on their own.
         # `event_depth_km` and `event_magnitude` are also used for client query

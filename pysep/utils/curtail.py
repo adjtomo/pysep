@@ -253,9 +253,10 @@ def remove_stations_for_insufficient_length(st):
     logger.debug(f"assuming that the expected stream length is: "
                  f"{expected_length}s")
 
+    import pdb;pdb.set_trace()
     for tr, length in zip(st_out[:], stream_lengths):
-        if length != expected_length:
-            logger.debug(f"{tr.get_id()} has insufficient time length of "
+        if length <= expected_length:
+            logger.debug(f"{tr.get_id()} has unexpected time length of "
                          f"{length}s, removing")
             st_out.remove(tr)
 
