@@ -263,7 +263,7 @@ def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
                         nearest_sample=False, fill_value=_fillval)
             else:
                 # Directly remove stations with late starttime or early endtime
-                logger.warning(f"{tr.get_id()} start or endtime does not match"
+                logger.warning(f"{tr.get_id()} start or endtime does not match "
                                f"requested bounds, remove")
                 st_edit.remove(tr)
         else:
