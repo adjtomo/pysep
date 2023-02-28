@@ -250,7 +250,7 @@ def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
     # Then either remove short traces or fill them with acceptable values
     for tr in st_edit:
         if tr.stats.starttime > starttime or tr.stats.endtime < endtime:
-            if fill_value:
+            if fill_value is not False:
                 if fill_value == "mean":
                     _fillval = np.nanmean(tr.data).astype(tr.data.dtype)
                 else:
