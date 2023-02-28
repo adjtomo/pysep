@@ -198,9 +198,11 @@ class RecordSection:
             - 'backazimuth': sort by source-receiver backazimuth (deg) with
                 constant vertical spacing. Requires `azimuth_start_deg`
             - 'distance': sort by source-receiver distance (km) with constant
-                vertical spacing. Requires `distance_units`
+                vertical spacing. Smallest distances at the top of the figure.
+                 Requires `distance_units`
             - 'abs_distance': absolute vertical spacing of waveforms defined by
-                source-receiver distance. Requires `distance_units`
+                source-receiver distance. Smallest distance at the top of the
+                figure. Requires `distance_units`
             - 'abs_azimuth': absolute vertical spacing of waveforms defined
                 by source-receiver azimuth (deg).
             - 'abs_backazimuth': absolute vertical spacing of waveforms by
@@ -346,6 +348,12 @@ class RecordSection:
             - 'y_axis': Replace tick labels on the y-axis (left side of figure),
                 This won't work if using absolute sorting and will be over-
                 written by 'default'
+            - 'y_axis_abs': For absolute y-axis only. waveform labels plotted
+               on the left side outside border, with y-axis labels overlapping
+               (showing distance or azimuth)
+            - 'y_axis_abs_right': For absolute y-axis only. waveform labels
+               plotted on the right side outside border, with y-axis labels
+               on the left side of the figure (showing distance or azimuth)
             - 'y_axis_right': Replace tick labels on the right side of the
                 y-axis. This option won't work with absolute sorting
             - 'x_min': Place labels on top of the waveforms at the global min
@@ -660,7 +668,8 @@ class RecordSection:
                 err.xlim_s = f"start time must be less than stop time"
 
         acceptable_y_label_loc = ["default", "y_axis", "y_axis_right", "x_min",
-                                  "x_max", None]
+                                  "x_max", "y_axis_abs", "y_axis_abs_right",
+                                  None]
         if self.y_label_loc not in acceptable_y_label_loc:
             err.y_label_loc = f"must be in {acceptable_y_label_loc}"
         if "abs" in self.sort_by and "y_axis" in self.sort_by:
@@ -1487,9 +1496,9 @@ class RecordSection:
             self.kwargs["xtick_major"] = _xtick_major
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
-        # Partition the figure by user-specified azimuth bins 
+        # Partition the figure by user-specified azimuth bins
         if self.sort_by and "azimuth" in self.sort_by:
-            self._plot_azimuth_bins()
+            self._plot_azimuth_bins(start=start, stop=stop)
 
         # Finalize the figure accoutrements
         self._plot_title(nwav=nwav)
@@ -1598,10 +1607,17 @@ class RecordSection:
             plt.axvline(x=tmark, c=c, linewidth=lw, linestyle=ls, zorder=z,
                         alpha=alpha)
 
-    def _plot_azimuth_bins(self):
+    def _plot_azimuth_bins(self, start=None, stop=None):
         """
         If plotting by azimuth, create visual bin separators so the user has
         a visual understanding of radiation patterns etc.
+
+        :type start: int
+        :param start: optional starting index to determine the bounds of
+            the azimuth bins
+        :type stop: int
+        :param stop: optional stop index to determine the bounds of
+            the azimuth bins
         """
         azimuth_binsize = self.kwargs.get("azimuth_binsize", 45)
 
@@ -1616,6 +1632,16 @@ class RecordSection:
                                  azimuth_binsize)
         # Make sure that the bins go from 0 <= azimuth_bins <= 360
         azimuth_bins = azimuth_bins % 360
+
+        # Cut down the azimuth bins to the closest values if we are doing
+        # multi-page record sections so that we don't end up plotting too many
+        if start is not None and stop is not None:
+            min_az = self.azimuths[self.sorted_idx[start:stop]].min()
+            max_az = self.azimuths[self.sorted_idx[start:stop]].max()
+            # Find the closest azimuth bins
+            idx_start = np.argmin(np.abs(azimuth_bins - min_az))
+            idx_end = np.argmin(np.abs(azimuth_bins - max_az))
+            azimuth_bins = azimuth_bins[idx_start:idx_end]
 
         # In an absolute plot, the y values are simply the azimuth bins
         if "abs" in self.sort_by:
@@ -1687,9 +1713,9 @@ class RecordSection:
         if "abs_" in self.sort_by:
             self._set_y_axis_absolute()
             if self.y_label_loc is not None:
-                # By default, place absolute sorted labels at xmin
+                # By default, place absolute sorted labels on y-axis
                 if self.y_label_loc == "default":
-                    loc = "x_min"
+                    loc = "y_axis_abs_right"
                 else:
                     loc = self.y_label_loc
                 self._set_y_axis_text_labels(start=start, stop=stop, loc=loc)
@@ -1756,6 +1782,10 @@ class RecordSection:
             ytick_major = self.kwargs.get("ytick_major", 90)
             ylabel = f"Azimuth [{DEG}]"
 
+        # Reverse the y-axis to get small values on top when sorting by
+        # distance or azimuth, which is counter to how a y-axis plotted
+        self.ax.invert_yaxis()
+
         # Set ytick label major and minor which is either dist or az
         self.ax.yaxis.set_major_locator(MultipleLocator(ytick_major))
         self.ax.yaxis.set_minor_locator(MultipleLocator(ytick_minor))
@@ -1781,6 +1811,9 @@ class RecordSection:
             - y_axis: Place labels along the y-axis (left side of the figure)
                 Will replace the actual y-tick labels so not applicable for
                 absolute sorting which requries the y-axis labels
+            - y_axis_abs: for absolute plotting, place waveform labels to the
+                left side of the figure (outside border), co-existing with
+                y-axis labels
             - y_axis_right: same as `y_axis` but set on the right side of figure
             - x_min: Place labels on the waveforms at the minimum x value
             - x_max: Place labels on the waveforms at the maximum x value
@@ -1824,9 +1857,10 @@ class RecordSection:
         if self.time_shift_s.sum() != 0:
             y_fmt += "|TSHIFT"
 
+        # Option 1: Replacing y-axis tick labels with waveform labels
         # Set the y-axis labels to the left side of the left figure border
         if loc == "y_axis":
-            # For relative plotting (not abs_), replace y_tick labels with
+            # For relative plotting (not abs_), replace y_tyick labels with
             # station information
             self.ax.set_yticks(self.y_axis[start:stop])
             self.ax.set_yticklabels(y_tick_labels)
@@ -1840,33 +1874,54 @@ class RecordSection:
             self.ax.yaxis.set_label_position("right")
             plt.text(1.01, .99, y_fmt, ha="left", va="top",
                      transform=self.ax.transAxes, fontsize=fontsize)
-        # Set the y-axis labels inside the figure border, at xmin or xmax
+        # Option 2: Plotting labels as text objects, separate from y-axis labels
         else:
+            # 2a: Set the y-axis labels inside the figure border (xmin or xmax)
             # Trying to figure out where the min or max X value is on the plot
             if loc == "x_min":
                 ha = "left"
+                va = "top"
                 func = min
                 x_val = func(self.stats.xmin)
-                plt.text(.01, .99, y_fmt, ha="left", va="top",
+                plt.text(.01, .99, y_fmt, ha=ha, va=va,
                          transform=self.ax.transAxes, fontsize=fontsize)
             elif loc == "x_max":
                 ha = "right"
+                va = "top"
                 func = max
                 x_val = func(self.stats.xmax)
-                plt.text(.99, .99, y_fmt, ha="right", va="top",
+                plt.text(.99, .99, y_fmt, ha=ha, va=va,
                          transform=self.ax.transAxes, fontsize=fontsize)
+            # 2b: Set the y-axis labels outside figure border, co-existing with
+            # y-labels showing distance or azimuth
+            elif loc == "y_axis_abs":
+                ha = "right"
+                va = "center"
+                func = min
+                x_val = func(self.stats.xmin)
+                plt.text(0, .99, y_fmt, ha=ha, va=va,
+                         transform=self.ax.transAxes, fontsize=fontsize)
+            elif loc == "y_axis_abs_right":
+                ha = "left"
+                va = "center"
+                func = max
+                x_val = func(self.stats.xmax)
+                plt.text(1., .99, y_fmt, ha=ha, va=va,
+                         transform=self.ax.transAxes, fontsize=fontsize)
+
             if self.xlim_s is not None:
                 x_val = func([func(self.xlim_s), x_val])
 
             # Plotting y-axis labels for absolute scales
             if len(self.y_axis) == len(self.st):
                 for idx, s in zip(self.sorted_idx[start:stop], y_tick_labels):
-                    plt.text(x=x_val, y=self.y_axis[idx], s=s, ha=ha, c=c,
-                             fontsize=fontsize)
+                    plt.text(x=x_val, y=self.y_axis[idx], s=s, ha=ha, va=va,
+                             c=c, fontsize=fontsize)
             # Plotting y-axis labels for relative scales
             elif len(self.y_axis) == len(y_tick_labels):
                 for y, s in zip(self.y_axis, y_tick_labels):
-                    plt.text(x=x_val, y=y, s=s, ha=ha, c=c, fontsize=fontsize)
+                    plt.text(x=x_val, y=y, s=s, ha=ha, va=va, c=c,
+                             fontsize=fontsize)
 
     def _plot_title(self, nwav=None):
         """
@@ -2008,10 +2063,11 @@ def parse_args():
             - 'backazimuth': sort by source-receiver backazimuth (deg) with
                 constant vertical spacing. Requires `azimuth_start_deg`
             - 'distance': sort by source-receiver distance (km) with constant
-                vertical spacing. Requires `azimuth_start_deg` AND
-                `distance_units`
+                vertical spacing. Smallest distances at top of figure. 
+                Requires `distance_units`
             - 'abs_distance': absolute vertical spacing of waveforms defined by
-                source-receiver distance (km). Requires `distance_units`
+                source-receiver distance (km). Smallest distances at top of 
+                figure. Requires `distance_units`
             - 'abs_azimuth': absolute vertical spacing of waveforms defined
                 by source-receiver azimuth (deg). Requires
                 `azimuth_start_deg`
@@ -2129,14 +2185,16 @@ def parse_args():
 
 def plotw_rs(*args, **kwargs):
     """
-    Main call function for command line use of RecordSection.
+    Plot Waveform Record Section (main call function for RecordSection)
 
-    Runs the record section plotting functions in order. Contains the logic for
-    breaking up figure into multiple pages.
+    Instantiates the RecordSection class, runs processing and parameter getting,
+    and then plots record section. Contains additional logic for breaking up
+    figures into multiple pages if requested by the user, while keeping sort
+    order and waveform spacing consistent across multiple reord sections.
 
     .. note::
-        All arguments should be parsed into the argparser, *args and **kwargs
-        are just there to keep the IDE happy
+
+        See RecordSection.__init__() for acceptable args and kwargs
     """
     _start = datetime.now()
     logger.info(f"starting record section plotter")
