@@ -1638,9 +1638,9 @@ class RecordSection:
         if start is not None and stop is not None:
             min_az = self.azimuths[self.sorted_idx[start:stop]].min()
             max_az = self.azimuths[self.sorted_idx[start:stop]].max()
-            # Find the closest azimiuth bins
+            # Find the closest azimuth bins
             idx_start = np.argmin(np.abs(azimuth_bins - min_az))
-            idx_end = np.argmax(np.abs(azimuth_bins - max_az))
+            idx_end = np.argmin(np.abs(azimuth_bins - max_az))
             azimuth_bins = azimuth_bins[idx_start:idx_end]
 
         # In an absolute plot, the y values are simply the azimuth bins
