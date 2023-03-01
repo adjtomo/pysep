@@ -39,9 +39,8 @@
 
 ## Version 0.3.3 (Devel)
 
-- Source receiver map plot now plots event first so that figures are centered
-  on the epicenter and not on the middle of the stations
 - Fixed failing test which was not removing masked data after a trim function
+- Improved source receiver map plotting functionality (#91)
 
 
 
