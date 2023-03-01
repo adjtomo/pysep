@@ -171,12 +171,12 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
     # Temp change the size of all text objects to get text labels small
     # and make the event size a bit smaller
     with plt.rc_context({"font.size": 6, "lines.markersize": 4}):
+        Catalog(events=[event]).plot(method="cartopy", label=None, show=False)
+
         inv.plot(projection=projection, resolution="i", label=True, show=False,
-                 size=12, color="g", method="cartopy")
+                 size=12, color="g", method="cartopy", fig=plt.gcf())
         # !!! fig=plt.gca() kwarg is a workaround for bug in
         # !!! ObsPy==1.3.0 (obspy.imaging.maps._plot_cartopy_into_axes)
-        Catalog(events=[event]).plot(method="cartopy", label=None,
-                                     fig=plt.gca(), show=False)
 
     # Hijack the ObsPy plot and make some adjustments to make it look nicer
     ax = plt.gca()
