@@ -52,6 +52,7 @@ def test_trim_start_end_times(test_st):
     and also merge existing waveforms, dropping those with data gaps
     """
     st = trim_start_end_times(test_st)
+    st = remove_traces_w_masked_data(st)
     assert(len(test_st) - len(st) == 4)
 
 
