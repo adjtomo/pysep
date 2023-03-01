@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from obspy.core.event import Catalog
+from obspy.core.inventory import Inventory
 from obspy.geodetics import gps2dist_azimuth, degrees2kilometers
 
 from pysep import logger
@@ -130,7 +131,7 @@ def plot_geometric_spreading(distances, max_amplitudes,
         plt.show()
 
 
-def plot_source_receiver_map(inv, event, save="./station_map.png",
+def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
                              projection=None, show=False):
     """
     Simple utility to plot station and event on a single map with Cartopy
@@ -139,6 +140,11 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
     :param event: event to get location from
     :type inv: obspy.core.inventory.Inventory
     :param inv: inventory to get locatiosn from
+    :type subset: list of str
+    :param subset: allow subsetting stations in the Inventory. Station IDs 
+        should match the format output by function `obspy.trace.Trace.get_id()`,
+        that is, NN.SSS.LL.CCC (Network, Station, Location, Channel). Location
+        and channel information are not used during subsetting.
     :type save: str
     :param save: filename to save station map, defaults: ./station_map.png
     :type projection: str
@@ -147,9 +153,20 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
     :type show: bool
     :param show: show the figure in the GUI
     """
+    # Subset the Inventory to only plot certain stations (optional)
+    if subset:
+        stas = []
+        inv_subset = Inventory()
+        for sta_id in subset:
+            net, sta, *_ = sta_id.split(".")
+            if sta not in stas:
+                inv_subset += inv.select(network=net, station=sta)
+                stas.append(sta)
+        inv = inv_subset
+
+    # Calculate the maximum source receiver distance to determine what 
+    # projection we should be in
     if projection is None:
-        # Calculate the maximum source receiver distance to determine what
-        # projection we should be in
         dists = []
         event_latitude = event.preferred_origin().latitude
         event_longitude = event.preferred_origin().longitude
@@ -163,12 +180,15 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
                 dists.append(dist_m * 1E-3)
         if max(dists) < 5000:  # km
             projection = "local"
-        else:
+        elif max(dists) < 10000:  # ~ < circumference of Earth / 4
             projection = "ortho"
+        else:
+            projection = "global"
         logger.debug(f"setting projection {projection} due to max src-rcv "
                      f"distance of {max(dists)}km")
 
-    # Temp change the size of all text objects to get text labels small
+    # Use ObsPy's internal Cartopy calls to plot event and stations
+    # temporarily change the size of all text objects to get text labels small
     # and make the event size a bit smaller
     with plt.rc_context({"font.size": 6, "lines.markersize": 4}):
         Catalog(events=[event]).plot(projection=projection, resolution="i", 
@@ -177,8 +197,26 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
         inv.plot(label=True, show=False, size=12, color="g", method="cartopy", 
                  fig=plt.gcf())
 
-    # Hijack the ObsPy plot and make some adjustments to make it look nicer
+    # Do some post-plot editing of the figure
     ax = plt.gca()
+
+    # Get the extent of stations in the Inventory to resize the figure in local
+    # since the original bounds will be just around the event
+    if projection == "local":
+        sta_lats, sta_lons = [], []
+        for net in inv:
+            for sta in net:
+                sta_lats.append(sta.latitude)
+                sta_lons.append(sta.longitude)
+
+        # Add a small buffer around stations so they're not directly on the edge
+        min_lat = min(sta_lats) * .95
+        max_lat = max(sta_lats) * 1.05
+        min_lon = min(sta_lons) * .95
+        max_lon = max(sta_lons) * 1.05
+        ax.set_extent([min_lon, max_lon, min_lat, max_lat])
+
+    # Hijack the ObsPy plot and make some adjustments to make it look nicer
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False,
                       y_inline=False, linewidth=.25, alpha=.25, color="k")
     gl.top_labels = False
@@ -198,6 +236,8 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
         plt.savefig(save)
     if show:
         plt.show()
+    else:
+        plt.close()
 
 
 def set_plot_aesthetic(ax, **kwargs):
