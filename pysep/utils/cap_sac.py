@@ -281,7 +281,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
                            f"append arrival time SAC headers")
             continue
 
-        # Find earliest arriving phase (likely a P phase but keep it general)
+        # Find earliest arriving phase (likely same as P phase but maybe not)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals)]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
 
@@ -289,7 +289,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         tr.stats.sac["a"] = phase.time  # relative time sec: float
         tr.stats.sac["ka"] = f"{phase.name}"  # name: str
 
-        # Find earliest arriving P phase
+        # Find earliest arriving P phase (must start with letter 'P')
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper().startswith("P")]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
@@ -300,11 +300,11 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
 
         # P phase incident angle (ia) and takeoff angle (ta)
         tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ia"
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"p_IncAng"
         tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ta"
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"p_TkfAng"
 
-        # Find earliest arriving S phase
+        # Find earliest arriving S phase (must start with letter 'S')
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper().startswith("S")]
         idx, _ = min(idx_times, key=lambda x: x[1])
@@ -314,9 +314,9 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         tr.stats.sac[f"k{SACDICT['s_arrival_time']}"] = f"{s.name}"
 
         tr.stats.sac[SACDICT["s_incident_angle"]] = s.incident_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ia"
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"s_IncAng"
         tr.stats.sac[SACDICT["s_takeoff_angle"]] = s.takeoff_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ta"
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"s_TkfAng"
 
     return st_out
 
