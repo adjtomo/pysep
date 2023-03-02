@@ -45,9 +45,9 @@ def get_taup_arrivals(st=None, event=None, inv=None, phase_list=("ttall",),
     :type station: str
     :param station: query only a specific station
     :rtype: dict
-    :return: a dictionary where keys are trace ID's (from trace.get_id()), and
-        values are TauP Arrivals() instances which contain information about
-        phase arrivals
+    :return: a dictionary where keys are trace ID consisting of network and
+        station (NN.SSS), and values are TauP Arrivals() instances which
+        contain information about phase arrivals
     """
     if st is not None:
         logger.debug(f"using SAC headers to fetch phase arrivals '{phase_list}'"
@@ -69,6 +69,7 @@ def get_taup_arrivals(st=None, event=None, inv=None, phase_list=("ttall",),
         for tr in st:
             # Allow selecting for specific networks and stations
             net, sta, *_ = tr.get_id().split(".")
+            trace_id = f"{net}.{sta}"
             if network and net != network:
                 continue
             if station and sta != station:
@@ -89,12 +90,13 @@ def get_taup_arrivals(st=None, event=None, inv=None, phase_list=("ttall",),
                     if not arrivals:
                         logger.debug(f"no TauP arrivals for model {model} and "
                                      f"phases: {phase_list}")
-                    phase_dict[tr.get_id()] = arrivals
+                    phase_dict[trace_id] = arrivals
                     break
                 # This will through a ValueError for invalid phase names
                 except ValueError as e:
                     # Assuming that the error message lists the phase name last
-                    logger.warning(f"{e}")
+                    logger.warning(f"'{e}' invalid phase name, removing from "
+                                   f"phase list")
                     del_phase = str(e).split(" ")[-1]
                     phase_list.remove(del_phase)
                     pass
@@ -120,8 +122,9 @@ def get_taup_arrivals(st=None, event=None, inv=None, phase_list=("ttall",),
                         break
                     # This will through a ValueError for invalid phase names
                     except ValueError as e:
-                        # Assuming that the error message lists the phase name last
-                        logger.warning(f"{e}")
+                        # Assuming that the error message lists phase name last
+                        logger.warning(f"'{e}' invalid phase name, removing "
+                                       f"from phase list")
                         del_phase = str(e).split(" ")[-1]
                         phase_list.remove(del_phase)
                         pass

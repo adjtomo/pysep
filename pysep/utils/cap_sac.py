@@ -266,20 +266,26 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
 
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
+        net_sta = ".".join(tr.get_id().split(".")[:2])  # NN.SSS
+
         # Missing SAC header values may cause certain or all stations to not 
         # be present in the `phase_dict`
-        if tr.get_id() not in phase_dict:
-            continue
-        arrivals = phase_dict[tr.get_id()]
-        # If the TauP arrival calculation fails, `arrivals` will be empty
-        if not arrivals:
-            logger.warning(f"{tr.get_id()} has no TauP phase arrivals, cannot "
+        if net_sta not in phase_dict:
+            logger.warning(f"{tr.get_id()} not present in TauP arrivals, cant "
                            f"append arrival time SAC headers")
             continue
+        arrivals = phase_dict[net_sta]
+        # If the TauP arrival calculation fails, `arrivals` will be empty
+        if not arrivals:
+            logger.warning(f"{tr.get_id()} has no TauP phase arrivals, cant "
+                           f"append arrival time SAC headers")
+            continue
+
         # Find earliest arriving P-wave (P or p)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
-                     a.name.upper() == "P"]
+                     a.name.upper().startswith("P")]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
+
         p = arrivals[idx]  # Earliest P-wave Arrival object
 
         tr.stats.sac["a"] = p.time  # relative time sec: float
@@ -296,7 +302,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
 
         # Find earliest arriving S-wave (S or s)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
-                     a.name.upper() == "S"]
+                     a.name.upper().startswith("S")]
         idx, _ = min(idx_times, key=lambda x: x[1])
         s = arrivals[idx]  # Earliest S-wave Arrival object
 
