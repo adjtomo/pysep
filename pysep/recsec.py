@@ -974,13 +974,16 @@ class RecordSection:
         if self.time_shift_s is not None:
             # User inputs a static time shift
             if isinstance(self.time_shift_s, float):
+                logger.info(f"apply constant time shift {self.time_shift_s}s")
                 time_shift_arr += self.time_shift_s
             # User input an array which should have already been checked for len
             elif isinstance(self.time_shift_s, list):
+                logger.info(f"apply user-defined array time shift values")
                 time_shift_arr = self.time_shift_s
             # Allow shifting by a given phase arrival in the SAC header
             elif isinstance(self.time_shift_s, str):
                 sac_key = SACDICT[self.time_shift_s]
+                logger.info(f"apply time shift by {self.time_shift_s}")
                 time_shift_arr = [tr.stats.sac[sac_key] for tr in self.st]
         time_shift_arr = np.array(time_shift_arr)
 
