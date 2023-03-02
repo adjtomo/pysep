@@ -302,7 +302,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
         tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"p_IncAng"
         tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"p_TkfAng"
+        tr.stats.sac[f"k{SACDICT['p_takeoff_angle']}"] = f"p_TkfAng"
 
         # Find earliest arriving S phase (must start with letter 'S')
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
@@ -316,7 +316,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         tr.stats.sac[SACDICT["s_incident_angle"]] = s.incident_angle
         tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"s_IncAng"
         tr.stats.sac[SACDICT["s_takeoff_angle"]] = s.takeoff_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"s_TkfAng"
+        tr.stats.sac[f"k{SACDICT['s_takeoff_angle']}"] = f"s_TkfAng"
 
     return st_out
 
