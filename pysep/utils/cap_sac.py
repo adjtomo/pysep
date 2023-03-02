@@ -16,7 +16,7 @@ from pysep.utils.fetch import get_taup_arrivals
 
 # SAC HEADER CONSTANTS DEFINING NON-INTUITIVE QUANTITIES
 SACDICT = {
-    "earliest_arrival": "a",
+    "first_arrival_time": "a",
     "p_arrival_time": "t5",
     "p_incident_angle": "user1",
     "p_takeoff_angle": "user3",
@@ -286,8 +286,8 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
 
         phase = arrivals[idx]  # Earliest Arrival object
-        tr.stats.sac[SACDICT["earliest_arrival"]] = phase.time  # 'a'
-        tr.stats.sac[f"k{SACDICT['earliest_arrival']}"] = f"{phase.name}"  # ka
+        tr.stats.sac[SACDICT["first_arrival_time"]] = phase.time  # 'a'
+        tr.stats.sac[f"k{SACDICT['first_arrival_time']}"] = f"{phase.name}" #ka
 
         # Find earliest arriving P phase (must start with letter 'P')
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if

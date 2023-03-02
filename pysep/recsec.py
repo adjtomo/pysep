@@ -247,8 +247,9 @@ class RecordSection:
                 SAC header, defaults to 0. This may have unintended consequences
                 so you should manually check that all values are okay.
                 Available options are:
-                - 'a': shift based on earliest phase arrival
-                - '
+                - 'first_arrival_time': shift based on earliest phase arrival
+                - 'p_arrival_time': shift based on earliest P phase arrival
+                - 's_arrival_time': shift based on earliest S phase arrival
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
@@ -461,7 +462,12 @@ class RecordSection:
 
         # Time shift parameters
         self.move_out = move_out
-        self.time_shift_s = time_shift_s
+        # float check incase command line input provides as a string, and also
+        # to ensure int -> float
+        try:
+            self.time_shift_s = float(time_shift_s)
+        except (TypeError, ValueError):
+            self.time_shift_s = time_shift_s
         self.zero_pad_s = zero_pad_s
 
         # Filtering parameters
@@ -618,12 +624,15 @@ class RecordSection:
                 err.scale_by = f"must be in {acceptable_scale_by}"
 
         if self.time_shift_s is not None:
-            acceptable_time_shift_s = [int, float, list]
+            acceptable_time_shift_s = [float, list, str]
             if type(self.time_shift_s) not in acceptable_time_shift_s:
                 err.time_shift_s = f"must be in {acceptable_time_shift_s}"
             if isinstance(self.time_shift_s, list) and \
                     len(self.time_shift_s) != len(self.st):
                 err.time_shift_s = f"must be list of length {len(self.st)}"
+            elif isinstance(self.time_shift_s, str):
+                if self.time_shift_s not in SACDICT:
+                    err.time_shift_s = f"must be {SACDICT} ending w/ '_time'"
 
         if self.zero_pad_s is not None:
             assert(isinstance(self.zero_pad_s, list)), (
@@ -964,11 +973,15 @@ class RecordSection:
         time_shift_arr = np.zeros(len(self.st))
         if self.time_shift_s is not None:
             # User inputs a static time shift
-            if isinstance(self.time_shift_s, (int, float)):
+            if isinstance(self.time_shift_s, float):
                 time_shift_arr += self.time_shift_s
             # User input an array which should have already been checked for len
-            else:
+            elif isinstance(self.time_shift_s, list):
                 time_shift_arr = self.time_shift_s
+            # Allow shifting by a given phase arrival in the SAC header
+            elif isinstance(self.time_shift_s, str):
+                sac_key = SACDICT[self.time_shift_s]
+                time_shift_arr = [tr.stats.sac[sac_key] for tr in self.st]
         time_shift_arr = np.array(time_shift_arr)
 
         # Further change the time shift if we have move out input
@@ -2111,8 +2124,9 @@ def parse_args():
                         nargs="?", type=float,
                         help="Controls the y-max value on the geometric "
                              "spreading plot.")
-    parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
-                        help="Set a constant time shift in unit: seconds")
+    parser.add_argument("--time_shift_s", default=None, nargs="?",
+                        help="Set a constant time shift in unit: seconds OR "
+                             "shift by a given phase arrival in SAC header")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
                         help="Set a constant velocity-based move out in units:"
                              "`distance_units`/s")
