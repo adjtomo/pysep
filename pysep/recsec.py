@@ -99,7 +99,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
-from pysep.utils.cap_sac import origin_time_from_sac_header
+from pysep.utils.cap_sac import origin_time_from_sac_header, SACDICT
 from pysep.utils.io import read_sem, read_sem_cartesian
 from pysep.utils.curtail import subset_streams
 from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
@@ -233,7 +233,7 @@ class RecordSection:
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
                 the `geometric_spreading_factor`.
                 'k' is calculated automatically if not given.
-        :type time_shift_s: float OR list of float
+        :type time_shift_s: float OR list of float OR str
         :param time_shift_s: apply static time shift to waveforms, two options:
 
             1. float (e.g., -10.2), will shift ALL waveforms by
@@ -241,6 +241,14 @@ class RecordSection:
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
                 match the number of traces in your input stream.
+            3. str: apply time shift based on a theoretical TauP phase arrival
+                if available in the SAC header. These should have been appended
+                by PySEP during data download. If no value is available in the
+                SAC header, defaults to 0. This may have unintended consequences
+                so you should manually check that all values are okay.
+                Available options are:
+                - 'a': shift based on earliest phase arrival
+                - '
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
