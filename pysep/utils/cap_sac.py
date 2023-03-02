@@ -289,16 +289,16 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         p = arrivals[idx]  # Earliest P-wave Arrival object
 
         tr.stats.sac["a"] = p.time  # relative time sec: float
-        tr.stats.sac["ka"] = f"{p.name}_{model}"  # name: str
+        tr.stats.sac["ka"] = f"{p.name}"  # name: str
 
         tr.stats.sac[SACDICT["p_arrival_time"]] = p.time
-        tr.stats.sac[f"k{SACDICT['p_arrival_time']}"] = f"{p.name}_{model}"
+        tr.stats.sac[f"k{SACDICT['p_arrival_time']}"] = f"{p.name}"
 
         # P-wave incident angle (ia) and takeoff angle (ta)
         tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ia_{model}"
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ia"
         tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ta_{model}"
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ta"
 
         # Find earliest arriving S-wave (S or s)
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
@@ -307,12 +307,12 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         s = arrivals[idx]  # Earliest S-wave Arrival object
 
         tr.stats.sac[SACDICT["s_arrival_time"]] = s.time
-        tr.stats.sac[f"k{SACDICT['s_arrival_time']}"] = f"{s.name}_{model}"
+        tr.stats.sac[f"k{SACDICT['s_arrival_time']}"] = f"{s.name}"
 
         tr.stats.sac[SACDICT["s_incident_angle"]] = s.incident_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ia_{model}"
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ia"
         tr.stats.sac[SACDICT["s_takeoff_angle"]] = s.takeoff_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ta_{model}"
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ta"
 
     return st_out
 
