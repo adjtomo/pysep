@@ -281,26 +281,30 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
                            f"append arrival time SAC headers")
             continue
 
-        # Find earliest arriving P-wave (P or p)
+        # Find earliest arriving phase (likely a P phase but keep it general)
+        idx_times = [(i, a.time) for i, a in enumerate(arrivals)]
+        idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
+
+        phase = arrivals[idx]  # Earliest Arrival object
+        tr.stats.sac["a"] = phase.time  # relative time sec: float
+        tr.stats.sac["ka"] = f"{phase.name}"  # name: str
+
+        # Find earliest arriving P phase
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper().startswith("P")]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
 
         p = arrivals[idx]  # Earliest P-wave Arrival object
-
-        tr.stats.sac["a"] = p.time  # relative time sec: float
-        tr.stats.sac["ka"] = f"{p.name}"  # name: str
-
         tr.stats.sac[SACDICT["p_arrival_time"]] = p.time
         tr.stats.sac[f"k{SACDICT['p_arrival_time']}"] = f"{p.name}"
 
-        # P-wave incident angle (ia) and takeoff angle (ta)
+        # P phase incident angle (ia) and takeoff angle (ta)
         tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
         tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ia"
         tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
         tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ta"
 
-        # Find earliest arriving S-wave (S or s)
+        # Find earliest arriving S phase
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper().startswith("S")]
         idx, _ = min(idx_times, key=lambda x: x[1])
