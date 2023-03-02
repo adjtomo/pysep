@@ -11,7 +11,7 @@ from obspy.geodetics import kilometer2degrees, gps2dist_azimuth
 from pysep import logger
 
 
-def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
+def get_taup_arrivals_with_sac_headers(st, phase_list=("ttall",), model="ak135"):
     """
     Retrieve phase arrival times using TauP/TauPy based on a SAC header
     appended to a trace
@@ -25,7 +25,8 @@ def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
     :param st: Stream with appended SAC headers which will be used to gather
         TaupP arrivals from a given `model`
     :type phase_list: list of str
-    :param phase_list: phases to search TauP for. Defaults to 'P' and 'S'
+    :param phase_list: phases to search TauP for. Defaults to 'ttall', which is
+        ObsPy's default for getting all phase arrivals
     :type model: str
     :param model: Model to query TauP with. Looks at ObsPy and PySEP models
     :rtype: dict
@@ -68,8 +69,8 @@ def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
     return phase_dict
 
 
-def get_taup_arrivals(event, inv, phase_list=None, model="ak135", network=None,
-                      station=None):
+def get_taup_arrivals(event, inv, phase_list=("ttall",), model="ak135",
+                      network=None, station=None):
     """
     Retrieve phase arrival times using TauP/TauPy based on event and stations.
     By default only retrieve for first arrivals.
@@ -84,7 +85,8 @@ def get_taup_arrivals(event, inv, phase_list=None, model="ak135", network=None,
     :type inv: obspy.core.inventory.Inventory
     :param inv: inventory object to get locations from
     :type phase_list: list of str
-    :param phase_list: phases to search TauP for. Defaults to 'P' and 'S'
+    :param phase_list: phases to search TauP for.  Defaults to 'ttall', which is
+        ObsPy's default for getting all phase arrivals
     :type model: str
     :param model: Model to query TauP with. Looks at ObsPy and PySEP models
     :type network: str

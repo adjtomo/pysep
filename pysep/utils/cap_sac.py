@@ -233,7 +233,8 @@ def _append_sac_headers_trace(tr, event, inv):
     return tr
 
 
-def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
+def format_sac_header_w_taup_traveltimes(st, model="ak135",
+                                         phase_list=("ttall",)):
     """
     Add TauP travel times to the SAC headers using information in the SAC header
     Also get some information from TauP regarding incident angle, takeoff angle
@@ -256,8 +257,9 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
         defaults to 'ak135'
     :type phase_list: list of str
     :param phase_list: phase names to get ray information from TauP with.
-        Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
-        by TauP (see ObsPy TauP documentation for acceptable phases).
+        Defaults to 'ttall', which is ObsPy's default for getting all phase
+        arrivals. Must match Phases expected by TauP (see ObsPy TauP
+        documentation for acceptable phases).
     """
     st_out = st.copy()
 
@@ -276,7 +278,6 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
                            f"append arrival time SAC headers")
             continue
         # Find earliest arriving P-wave (P or p)
-        import pdb;pdb.set_trace()
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper() == "P"]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time

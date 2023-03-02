@@ -60,7 +60,7 @@ class Pysep:
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
-                 phase_list=None, seconds_before_event=20,
+                 phase_list=("ttall",), seconds_before_event=20,
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
                  user=None, password=None, client_debug=False,
@@ -282,9 +282,11 @@ class Pysep:
 
         :type phase_list: list of str
         :param phase_list: phase names to get ray information from TauP with.
-            Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
-            by TauP (see ObsPy TauP documentation for acceptable phases). Phase
-            information will be added to SAC headers.
+            Defaults to 'ttall', which is ObsPy's default for getting all phase
+            arrivals. Must match Phases expected by TauP (see ObsPy TauP
+            documentation for acceptable phases). Earliest P and S phase
+            arrivals will be added to SAC headers, the remainder will be
+            discarded.
         :type taup_model: str
         :param taup_model: name of TauP model to use to calculate phase arrivals
             See also `phase_list` which defines phases to grab arrival data
