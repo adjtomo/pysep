@@ -984,7 +984,7 @@ class RecordSection:
             elif isinstance(self.time_shift_s, str):
                 sac_key = SACDICT[self.time_shift_s]
                 logger.info(f"apply time shift by {self.time_shift_s}")
-                time_shift_arr = [tr.stats.sac[sac_key] for tr in self.st]
+                time_shift_arr = [-1 * tr.stats.sac[sac_key] for tr in self.st]
         time_shift_arr = np.array(time_shift_arr)
 
         # Further change the time shift if we have move out input
