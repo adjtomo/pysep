@@ -206,21 +206,108 @@ def rotate_to_uvw(st):
     return st_out
 
 
-def merge_and_trim_start_end_times(st):
+def trim_start_end_times(st, starttime=None, endtime=None, fill_value=None):
     """
-    Trim the maximum start and minumum end times for each station to get
-    all waveforms to start and end at the same time. Also merges traces with
-    the same ID
-
-    Replaces old `trim_maxstart_minend`
-
-    .. note::
-        A note from the old code said we that interpolation and resampling
-        are NOT intended functionalities, so we replace the old 'interpolate'
-        function with a trim.
+    Trim all traces in a Stream to a uniform start and end times. If no 
+    `starttime` or `endtime` are provided, they are selected as the outer 
+    bounds of the Streams time bounds.
 
     :type st: obspy.core.stream.Stream
     :param st: stream to merge and trim start and end times for
+    :type starttime: obspy.core.UTCDateTime
+    :param starttime: user-defined starttime to trim stream. If None, will get
+        the maximum starttime in entire stream
+    :type endtime: obspy.core.UTCDateTime
+    :param endtime: user-defined endtime to trim stream. If None, will get
+        the minimum endtime in entire stream
+    :type fill_value: str or int or float
+    :param fill_value: How to deal with data gaps (missing sections of
+        waveform before trace start or trace end w.r.t requested start and end
+        times). NoneType by default, which means data with gaps are removed
+        completely.
+
+        Options include:
+
+        - 'mean': fill with the mean of all data values in the gappy data
+        - <int or float>: fill with a constant, user-defined value, e.g.,
+        0 or 1.23 or 9.999
+        - None: do not fill data gaps
+    """
+    st_edit = st.copy()
+
+    if starttime is None:
+        starttime = min([tr.stats.starttime for tr in st_edit])
+    if endtime is None:
+        endtime = max([tr.stats.endtime for tr in st_edit])
+
+    # Trace.trim() can only take float or int as fill values
+    if fill_value in ["interpolate", "latest"]:
+        logger.warning("ObsPy cannot use `fill_value` 'interpolate' or "
+                       "'latest' for missing boundary times. Setting to 'mean'")
+        fill_value = "mean"
+
+    # Go through all stations and look for those with late starts or early ends.
+    # Then either remove short traces or fill them with acceptable values
+    for tr in st_edit:
+        if tr.stats.starttime > starttime or tr.stats.endtime < endtime:
+            if fill_value is not False:
+                if fill_value == "mean":
+                    _fillval = np.nanmean(tr.data).astype(tr.data.dtype)
+                else:
+                    _fillval = fill_value
+
+                logger.info(f"{tr.get_id()} filling start/endtime data gap w/: "
+                            f"{_fillval}")
+
+                tr.trim(starttime=starttime, endtime=endtime, pad=True,
+                        nearest_sample=False, fill_value=_fillval)
+            else:
+                # Directly remove stations with late starttime or early endtime
+                logger.warning(f"{tr.get_id()} start or endtime does not match "
+                               f"requested bounds, remove")
+                st_edit.remove(tr)
+        else:
+            tr.trim(starttime=starttime, endtime=endtime, nearest_sample=False)
+
+    return st_edit
+
+
+def merge_gapped_data(st, fill_value=None, gap_fraction=1.):
+    """
+    Merges traces with the same ID, filling gappy data with values if requested,
+    otherwise removes traces that have gapped data.
+
+    .. note::
+        Be careful about `fill_value` data types, as there are no checks that
+        the fill value matches the internal data types. This may cause
+        unexpected errors.
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to merge and trim start and end times for
+    :type fill_value: str or int or float
+    :param fill_value: How to deal with data gaps (missing sections of
+        waveform over a continuous time span). NoneType by default, which
+        means data with gaps are removed completely. Users who want access
+        to data with gaps must choose how gaps are filled. See API for
+        ObsPy.core.stream.Stream.merge() for how merge is handled:
+
+        Options include:
+
+        - 'mean': fill with the mean of all data values in the gappy data
+        - <int or float>: fill with a constant, user-defined value, e.g.,
+        0 or 1.23 or 9.999
+        - 'interpolate': linearly interpolate from the last value pre-gap
+        to the first value post-gap
+        - 'latest': fill with the last value of pre-gap data
+        - False: do not fill data gaps, which will lead to stations w/
+        data gaps being removed.
+    :type gap_fraction: float
+    :param gap_fraction: if `fill_data_gaps` is not None, determines the
+        maximum allowable fraction (percentage) of data that gaps can
+        comprise. For example, a value of 0.3 means that 30% of the data
+        (in samples) can be gaps that will be filled by `fill_data_gaps`.
+        Traces with gap fractions that exceed this value will be removed.
+        Defaults to 1. (100%) of data can be gaps.
     :rtype: obspy.core.stream.Stream
     :return: Stream that has been trimmed
     """
@@ -228,29 +315,59 @@ def merge_and_trim_start_end_times(st):
 
     logger.info("trimming start and end times on a per-station basis")
     st_out = Stream()
-    # e.g., NN.SSS.LL.CC?  i.e., only getting per-station codes
-    codes = get_codes(st=st_edit, choice="channel", suffix="?")
+    # e.g., NN.SSS.LL.CC?  i.e., only getting per-component codes
+    codes = get_codes(st=st_edit, choice="component")
 
     for code in codes:
-        # Subset the stream based on the N number of components
+        # Subset the stream at each component
         net, sta, loc, cha = code.split(".")
         st_edit_select = st_edit.select(network=net, station=sta,
                                         location=loc, channel=cha)
 
-        st_edit_select.merge()  # combining like trace IDs
-        for tr in st_edit_select:
-            if np.ma.is_masked(tr.data):
-                logger.warning(f"{tr.get_id()} has data gaps, removing")
-                st_edit_select.remove(tr)
+        # Try-except catches any general ObsPy merge errors to keep code going
+        try:
+            data_gaps = st_edit_select.get_gaps()
+            fillval = fill_value  # dummy value to allow in-place changes
 
-        if st_edit_select:
-            # Trim based on the most latest start and earliest end time, which
-            # will expose stations with insufficient data
-            max_start = max([tr.stats.starttime for tr in st_edit_select])
-            min_end = min([tr.stats.endtime for tr in st_edit_select])
+            # Check if there are data gaps that we need to address
+            if data_gaps and fill_value is not False:
+                # Determine the percentage of data that comprises gaps
+                gap_duration_samp = data_gaps[0][-1]  # assuming only one set
+                starttime = min([tr.stats.starttime for tr in st_edit_select])
+                endtime = max([tr.stats.endtime for tr in st_edit_select])
+                total_samps = \
+                    (endtime - starttime) / st_edit_select[0].stats.delta
 
-            st_edit_select.trim(starttime=max_start, endtime=min_end)
-            st_out += st_edit_select
+                gap_percentage = gap_duration_samp / total_samps
+
+                # If we exceed the allowable amount of data gap, do not fill
+                if gap_percentage > gap_fraction:
+                    logger.info(f"{code} has gap fraction "
+                                f"({gap_percentage:.2f}) > allowable "
+                                f"{gap_fraction}, will not fill gaps")
+                    fillval = None
+                else:
+                    # Decide how we're going to fill the gaps
+                    if fill_value == "mean":
+                        # Collect mean value over all data surrounding the gap
+                        # Convert to data type expected by array
+                        fillval = np.nanmean(
+                            [np.nanmean(tr.data) for tr in st_edit_select]
+                        ).astype(st_edit_select[0].data.dtype)
+                    else:
+                        fillval = fill_value
+
+                    logger.info(f"{code} has data gaps, filling with: "
+                                f"{fillval}")
+            else:
+                fillval = None
+
+            st_edit_select.merge(fill_value=fillval)  # combine like trace ID
+        except Exception as e:  # NOQA
+            logger.warning(f"{code} merge error: {e}")
+            continue
+
+        st_out += st_edit_select
 
     return st_out
 

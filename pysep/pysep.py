@@ -36,13 +36,14 @@ from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing,
+                                 remove_traces_w_masked_data
                                  )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
 from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
-from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
-                                 format_streams_for_rotation, rotate_to_uvw,
-                                 estimate_prefilter_corners)
+from pysep.utils.process import (merge_gapped_data, trim_start_end_times,
+                                 resample_data, format_streams_for_rotation,
+                                 rotate_to_uvw, estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.recsec import RecordSection
 
@@ -55,8 +56,10 @@ class Pysep:
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
                  remove_clipped=False, remove_insufficient_length=True,
+                 remove_masked_data=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
-                 rotate=None, pre_filt="default",
+                 rotate=None, pre_filt="default", fill_data_gaps=False,
+                 gap_fraction=1.,
                  mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
@@ -67,7 +70,7 @@ class Pysep:
                  log_level="DEBUG", timeout=600, write_files="all",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
-                 use_mass_download=False,
+                 use_mass_download=False, extra_download_pct=0.005,
                  **kwargs):
         """
         .. note::
@@ -161,10 +164,18 @@ class Pysep:
         :type seconds_after_ref: float
         :param seconds_after_ref: For waveform fetching. Defines the time
             after `reference_time` to fetch waveform data. Units [s]
+        :type extra_download_pct: float
+        :param extra_download_pct: extra download percentage. Adds a buffer
+            around `origin_time` + `seconds_before_ref` + `extra_download_pct`
+            (also -`seconds_after_ref`), which gathers a bit of extra data which
+            will be trimmed away. Used because gathering data directly at the
+            requested time limits may lead to shorter expected waveforms after
+            resampling or preprocessing procedures. Given as a percent [0,1],
+            defaults to .5%.
         :type networks: str
-        :param networks: name or names of networks to query for, if names plural,
-            must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards okay,
-            defaults to '*'.
+        :param networks: name or names of networks to query for, if names
+            plural, must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards
+            okay, defaults to '*'.
         :type stations: str
         :param stations: station name or names to query for. If multiple
             stations, input as a list of comma-separated values, e.g.,
@@ -215,6 +226,40 @@ class Pysep:
         :param remove_insufficient_length: remove waveforms whose trace length
             does not match the average (mode) trace length in the stream.
             Defaults to True
+        :type remove_masked_data: bool
+        :param remove_masked_data: If `fill_data_gaps` is False or None, data
+            with gaps that go through the merge process will contain masked
+            arrays (essentially retaining gaps). By default, PySEP will remove
+            these data during processing. To keep this data, set
+            `remove_masked_data` == True.
+        :type fill_data_gaps: str or int or float or bool
+        :param fill_data_gaps: How to deal with data gaps (missing sections of
+            waveform over a continuous time span). False by default, which
+            means data with gaps are removed completely. Users who want access
+            to data with gaps must choose how gaps are filled. See API for
+            ObsPy.core.stream.Stream.merge() for how merge is handled:
+
+            Options include:
+
+            - 'mean': fill with the mean of all data values in the gappy data
+            - <int or float>: fill with a constant, user-defined value, e.g.,
+            0 or 1.23 or 9.999
+            - 'interpolate': linearly interpolate from the last value pre-gap
+            to the first value post-gap
+            - 'latest': fill with the last value of pre-gap data
+            - False: do not fill data gaps, which will lead to stations w/
+            data gaps being removed.
+
+            NOTE: Be careful about data types, as there are no checks that the
+            fill value matches the internal data types. This may cause
+            unexpected errors.
+        :type gap_fraction: float
+        :param gap_fraction: if `fill_data_gaps` is not None, determines the
+            maximum allowable fraction (percentage) of data that gaps can
+            comprise. For example, a value of 0.3 means that 30% of the data
+            (in samples) can be gaps that will be filled by `fill_data_gaps`.
+            Traces with gap fractions that exceed this value will be removed.
+            Defaults to 1. (100%) of data can be gaps.
 
         .. note::
             Data processing parameters
@@ -225,10 +270,11 @@ class Pysep:
         :type demean: bool
         :param demean: apply demeaning to data during instrument reseponse
             removal. Only applied if `remove_response` == True.
-        :type taper: float
-        :param taper: apply a taper to the waveform with ObsPy taper, fraction
-            between 0 and 1 as the percentage of the waveform to be tapered
-            Applied generally used when data is noisy, e.g., HutchisonGhosh2016
+        :type taper_percentage: float
+        :param taper_percentage: apply a taper to the waveform with ObsPy taper,
+            fraction between 0 and 1 as the percentage of the waveform to be
+            tapered Applied generally used when data is noisy, e.g.,
+            HutchisonGhosh2016
             Note: To get the same results as the default taper in SAC,
             use max_percentage=0.05 and leave type as hann.
             Tapering also happens while resampling (see util_write_cap.py).
@@ -265,8 +311,8 @@ class Pysep:
         :type water_level: float
         :param water_level: a water level threshold to apply during filtering
             for small values. Passed to Obspy.core.trace.Trace.remove_response
-        :type prefilt: str, tuple or NoneType
-        :param prefilt: apply a pre-filter to the waveforms before deconvolving
+        :type pre_filt: str, tuple or NoneType
+        :param pre_filt: apply a pre-filter to the waveforms before deconvolving
             instrument response. Options are:
 
             * 'default': automatically calculate (f0, f1, f2, f3) based on the
@@ -363,6 +409,7 @@ class Pysep:
         self._password = password
         self.taup_model = taup_model
         self.use_mass_download = use_mass_download
+        self._extra_download_pct = extra_download_pct
 
         # Check for LLNL requirement
         if self.client == "LLNL" and not _has_llnl:
@@ -377,6 +424,8 @@ class Pysep:
             self.origin_time = UTCDateTime(origin_time)
         except TypeError:
             self.origin_time = None
+
+        # Force float type to avoid rounding errors
         self.seconds_before_event = seconds_before_event
         self.seconds_after_event = seconds_after_event
 
@@ -395,6 +444,7 @@ class Pysep:
 
         # Waveform collection parameters
         self.reference_time = reference_time or self.origin_time
+        # Force float type to avoid rounding errors
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
         self.phase_list = phase_list
@@ -429,6 +479,9 @@ class Pysep:
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
         self.remove_insufficient_length = remove_insufficient_length
+        self.remove_masked_data = remove_masked_data
+        self.fill_data_gaps = fill_data_gaps
+        self.gap_fraction = gap_fraction
 
         # Program related parameters
         self.output_dir = output_dir or os.getcwd()
@@ -544,6 +597,12 @@ class Pysep:
                 f"corner frequencies for a bandpass filter (f1, f2, f3, f4)"
             )
 
+        acceptable_fill_vals = ["mean", "interpolate", "latest"]
+        if self.fill_data_gaps is not False:
+            if isinstance(self.fill_data_gaps, str):
+                assert(self.fill_data_gaps in acceptable_fill_vals), \
+                    f"`fill_data_gaps` must be one of {acceptable_fill_vals}"
+
         # Enforce that `write_files` and `plot_files` are sets
         if self.write_files is None:
             self.write_files = {}
@@ -576,6 +635,12 @@ class Pysep:
         if self.use_mass_download is True:
             logger.info("will use option `mass_download`, ignoring `client` "
                         "and downloading data from all available data centers")
+
+        # Force all time boundaries to be floats to avoid rounding errors
+        self.seconds_before_ref = float(self.seconds_before_ref)
+        self.seconds_after_ref = float(self.seconds_after_ref)
+        self.seconds_before_event = float(self.seconds_before_event)
+        self.seconds_after_event = float(self.seconds_after_event)
 
     def get_client(self):
         """
@@ -907,12 +972,17 @@ class Pysep:
         :return: Stream of channel-separated waveforms
         """
         bulk = []
-        t1 = self.reference_time - self.seconds_before_ref
-        t2 = self.reference_time + self.seconds_after_ref
+        # Gather x% more on either side of the requested data incase
+        # resampling changes the start and end times. These will get trimmed.
+        t1 = self.reference_time - self.seconds_before_ref * (
+                1 + self._extra_download_pct)
+        t2 = self.reference_time + self.seconds_after_ref * (
+                1 + self._extra_download_pct)
         for net in self.inv:
             for sta in net:
                 # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
+                bulk.append((net.code, sta.code, self.locations, self.channels, 
+                             t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
         assert bulk, (
@@ -990,9 +1060,13 @@ class Pysep:
                        if "-" in net]
 
         # Set restrictions on the search criteria for data
+        # Gather x% more on either side of the requested data incase
+        # resampling changes the start and end times. These will get trimmed.
         restrictions = Restrictions(
-            starttime=self.reference_time - self.seconds_before_ref,
-            endtime=self.reference_time + self.seconds_after_ref,
+            starttime=self.reference_time - self.seconds_before_ref * (
+                1 + self._extra_download_pct),
+            endtime=self.reference_time + self.seconds_after_ref * (
+                1 + self._extra_download_pct),
             reject_channels_with_gaps=False, minimum_length=0.,
             network=networks, station=stations, location=self.locations,
             channel=self.channels, exclude_networks=net_exclude,
@@ -1106,9 +1180,28 @@ class Pysep:
             st_out = scale_llnl_waveform_amplitudes(st_out)
 
         # Apply pre-resample lowpass, resample waveforms, make contiguous
-        st_out = merge_and_trim_start_end_times(st_out)
         if self.resample_freq is not None:
             st_out = resample_data(st_out, resample_freq=self.resample_freq)
+
+        # Remove or fill data gaps
+        st_out = merge_gapped_data(st_out, fill_value=self.fill_data_gaps,
+                                   gap_fraction=self.gap_fraction)
+
+        # Ensure that all traces have the same start and end
+        if self.origin_time:
+            st_out = trim_start_end_times(
+                st_out,  starttime=self.origin_time - self.seconds_before_ref,
+                endtime=self.origin_time + self.seconds_after_ref,
+                fill_value=self.fill_data_gaps
+            )
+        # Merging or trimming may introduce masked data, may remove from Stream
+        if self.remove_masked_data:
+            st_out = remove_traces_w_masked_data(st_out)
+
+        if not st_out:
+            logger.critical("preprocessing removed all traces from Stream, "
+                            "cannot proceed")
+            sys.exit(-1)
 
         return st_out
 

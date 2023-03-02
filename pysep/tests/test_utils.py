@@ -219,7 +219,6 @@ def test_get_usgs_moment_tensor():
     """
     event = test_get_gcmt_moment_tensor()
     del event.focal_mechanisms
-
     cat = get_usgs_moment_tensor(event=event)
     assert(len(cat) == 1)
     event = cat[0]
