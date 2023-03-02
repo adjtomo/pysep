@@ -41,6 +41,8 @@
 
 - Fixed failing test which was not removing masked data after a trim function
 - Improved source receiver map plotting functionality (#91)
-
+- Revamp TauP theoretical arrival time appending to SAC headers (#94)
+- RecSec `time_shift_s` now allows shifting by phase arrivals in SAC headers (#94)
+- Remove hard no-NoneType restriction on PySEP parameters `water_level` and `output_unit`
 
 
