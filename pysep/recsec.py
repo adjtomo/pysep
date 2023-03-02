@@ -99,7 +99,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
-from pysep.utils.cap_sac import origin_time_from_sac_header
+from pysep.utils.cap_sac import origin_time_from_sac_header, SACDICT
 from pysep.utils.io import read_sem, read_sem_cartesian
 from pysep.utils.curtail import subset_streams
 from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
@@ -233,7 +233,7 @@ class RecordSection:
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
                 the `geometric_spreading_factor`.
                 'k' is calculated automatically if not given.
-        :type time_shift_s: float OR list of float
+        :type time_shift_s: float OR list of float OR str
         :param time_shift_s: apply static time shift to waveforms, two options:
 
             1. float (e.g., -10.2), will shift ALL waveforms by
@@ -241,6 +241,15 @@ class RecordSection:
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
                 match the number of traces in your input stream.
+            3. str: apply time shift based on a theoretical TauP phase arrival
+                if available in the SAC header. These should have been appended
+                by PySEP during data download. If no value is available in the
+                SAC header, defaults to 0. This may have unintended consequences
+                so you should manually check that all values are okay.
+                Available options are:
+                - 'first_arrival_time': shift based on earliest phase arrival
+                - 'p_arrival_time': shift based on earliest P phase arrival
+                - 's_arrival_time': shift based on earliest S phase arrival
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
@@ -453,7 +462,12 @@ class RecordSection:
 
         # Time shift parameters
         self.move_out = move_out
-        self.time_shift_s = time_shift_s
+        # float check incase command line input provides as a string, and also
+        # to ensure int -> float
+        try:
+            self.time_shift_s = float(time_shift_s)
+        except (TypeError, ValueError):
+            self.time_shift_s = time_shift_s
         self.zero_pad_s = zero_pad_s
 
         # Filtering parameters
@@ -610,12 +624,15 @@ class RecordSection:
                 err.scale_by = f"must be in {acceptable_scale_by}"
 
         if self.time_shift_s is not None:
-            acceptable_time_shift_s = [int, float, list]
+            acceptable_time_shift_s = [float, list, str]
             if type(self.time_shift_s) not in acceptable_time_shift_s:
                 err.time_shift_s = f"must be in {acceptable_time_shift_s}"
             if isinstance(self.time_shift_s, list) and \
                     len(self.time_shift_s) != len(self.st):
                 err.time_shift_s = f"must be list of length {len(self.st)}"
+            elif isinstance(self.time_shift_s, str):
+                if self.time_shift_s not in SACDICT:
+                    err.time_shift_s = f"must be {SACDICT} ending w/ '_time'"
 
         if self.zero_pad_s is not None:
             assert(isinstance(self.zero_pad_s, list)), (
@@ -956,11 +973,18 @@ class RecordSection:
         time_shift_arr = np.zeros(len(self.st))
         if self.time_shift_s is not None:
             # User inputs a static time shift
-            if isinstance(self.time_shift_s, (int, float)):
+            if isinstance(self.time_shift_s, float):
+                logger.info(f"apply constant time shift {self.time_shift_s}s")
                 time_shift_arr += self.time_shift_s
             # User input an array which should have already been checked for len
-            else:
+            elif isinstance(self.time_shift_s, list):
+                logger.info(f"apply user-defined array time shift values")
                 time_shift_arr = self.time_shift_s
+            # Allow shifting by a given phase arrival in the SAC header
+            elif isinstance(self.time_shift_s, str):
+                sac_key = SACDICT[self.time_shift_s]
+                logger.info(f"apply time shift by {self.time_shift_s}")
+                time_shift_arr = [-1 * tr.stats.sac[sac_key] for tr in self.st]
         time_shift_arr = np.array(time_shift_arr)
 
         # Further change the time shift if we have move out input
@@ -2103,8 +2127,9 @@ def parse_args():
                         nargs="?", type=float,
                         help="Controls the y-max value on the geometric "
                              "spreading plot.")
-    parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
-                        help="Set a constant time shift in unit: seconds")
+    parser.add_argument("--time_shift_s", default=None, nargs="?",
+                        help="Set a constant time shift in unit: seconds OR "
+                             "shift by a given phase arrival in SAC header")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
                         help="Set a constant velocity-based move out in units:"
                              "`distance_units`/s")
