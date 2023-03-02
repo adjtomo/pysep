@@ -308,7 +308,7 @@ class Pysep:
             `remove_response`==True. See ObsPy.core.trace.Trace.remove_response
             for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
             (displacement [m], velocity [m/s], acceleration [m/s^2]).
-        :type water_level: float
+        :type water_level: float or None
         :param water_level: a water level threshold to apply during filtering
             for small values. Passed to Obspy.core.trace.Trace.remove_response
         :type pre_filt: str, tuple or NoneType
@@ -553,14 +553,6 @@ class Pysep:
             logger.warning("`networks`=='*' will search ALL networks, which "
                            "may take a long time depending on data availability"
                            )
-
-        # Check preprocessing flags
-        if self.remove_response:
-            for par in [self.output_unit, self.water_level]:
-                assert (par is not None), (
-                    "`remove_response` requires parameters:"
-                    "`output_unit`, `water_level` "
-                )
 
         if not (0 <= self.minazimuth <= 360):
             _old_val = self.minazimuth
