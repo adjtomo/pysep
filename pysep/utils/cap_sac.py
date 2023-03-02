@@ -12,7 +12,7 @@ from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
 from pysep import logger
 from pysep.utils.fmt import format_event_tag_legacy
-from pysep.utils.fetch import get_taup_arrivals_with_sac_headers
+from pysep.utils.fetch import get_taup_arrivals
 
 # SAC HEADER CONSTANTS DEFINING NON-INTUITIVE QUANTITIES
 SACDICT = {
@@ -262,9 +262,8 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
         documentation for acceptable phases).
     """
     st_out = st.copy()
+    phase_dict = get_taup_arrivals(st=st, model=model, phase_list=phase_list)
 
-    phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
-                                                    phase_list=phase_list)
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
         # Missing SAC header values may cause certain or all stations to not 
