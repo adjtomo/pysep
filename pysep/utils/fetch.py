@@ -34,9 +34,6 @@ def get_taup_arrivals_with_sac_headers(st, phase_list=None, model="ak135",):
         phase arrivals
     """
     phase_dict = {}
-    if phase_list is None:
-        phase_list = ["P", "S"]
-
     taup_model = _get_or_build_taup_model(model)
 
     taup_func = taup_model.get_travel_times
@@ -100,9 +97,6 @@ def get_taup_arrivals(event, inv, phase_list=None, model="ak135", network=None,
         phase arrivals
     """
     phase_dict = {}
-    if phase_list is None:
-        phase_list = ["P", "S"]
-
     taup_model = _get_or_build_taup_model(model)
 
     taup_func = taup_model.get_travel_times

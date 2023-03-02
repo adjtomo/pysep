@@ -261,10 +261,6 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
     """
     st_out = st.copy()
 
-    # Call TauP with a specific model to retrieve travel times etc.
-    if not phase_list:
-        phase_list = ["p", "P", "s", "S"]
-
     phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
                                                     phase_list=phase_list)
     # Arrivals may return multiple entires for each phase, pick earliest
@@ -280,6 +276,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
                            f"append arrival time SAC headers")
             continue
         # Find earliest arriving P-wave (P or p)
+        import pdb;pdb.set_trace()
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
                      a.name.upper() == "P"]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
