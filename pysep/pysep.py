@@ -29,7 +29,7 @@ from obspy.clients.fdsn.mass_downloader import (RectangularDomain, Restrictions,
 from obspy.core.event import Event, Origin, Magnitude
 from obspy.geodetics import kilometer2degrees
 
-from pysep import logger
+from pysep import logger, __version__
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
                                  format_sac_header_w_taup_traveltimes,
                                  format_sac_headers_post_rotation)
@@ -1608,6 +1608,8 @@ class Pysep:
         :param st: optional user-provided strean object which will force a
             skip over waveform searching
         """
+        logger.debug(f"running PySEP version {__version__}")
+
         # Overload default parameters with event input file and check validity
         self.load(**kwargs)
         self.check()
