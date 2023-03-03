@@ -697,6 +697,8 @@ class Pysep:
                     if val != old_val:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
+                else:
+                    self.kwargs[key] = val
 
         # Reset log level based on the config file
         if self.log_level is not None:
@@ -1537,17 +1539,21 @@ class Pysep:
         """
         Plot map and record section if requested
         """
+        show_map = self.kwargs.get("show_map", False)
+        show_rs = self.kwargs.get("show_rs", False)
+
         if "map" in self.plot_files or "all" in self.plot_files:
             logger.info("plotting source receiver map")
             fid = os.path.join(self.output_dir, f"station_map.png")
-            plot_source_receiver_map(self.inv, self.event, save=fid)
+            plot_source_receiver_map(self.inv, self.event, save=fid, 
+                                     show=show_map)
 
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
             # Default settings to create a general record section
             rs = RecordSection(st=self.st, sort_by="distance",
-                               scale_by="normalize", overwrite=True, show=False,
-                               save=fid)
+                               scale_by="normalize", overwrite=True, 
+                               show=show_rs, save=fid)
             rs.run()
 
     def _event_tag_and_output_dir(self):
