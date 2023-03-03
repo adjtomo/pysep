@@ -1,5 +1,7 @@
 import logging
 
+__version__ = "0.3.2"
+
 logger = logging.getLogger("pysep")
 logger.setLevel("INFO")
 logger.propagate = 0
