@@ -55,7 +55,7 @@ class Pysep:
                  networks="*", stations="*", locations="*", channels="*",
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
-                 remove_clipped=False, remove_insufficient_length=True,
+                 remove_clipped=True, remove_insufficient_length=True,
                  remove_masked_data=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
