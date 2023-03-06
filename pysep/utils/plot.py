@@ -201,7 +201,8 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
     ax = plt.gca()
 
     # Get the extent all points plotted to resize the figure in local
-    # since the original bounds will be just around the event
+    # since the original bounds will be confined to a small reigon around the
+    # event
     if projection == "local":
         lats, lons = [], []
         for net in inv:
@@ -214,8 +215,8 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
         lons = np.array(lons)
 
         # Copied verbatim from obspy.imaging.maps.plot_map(), find aspect ratio
-        # based on the points plotted. Need to re-do since we have both an
-        # event and stations
+        # based on the points plotted. Need to re-do this operation since we
+        # have both event and stations
         if min(lons) < -150 and max(lons) > 150:
             max_lons = max(np.array(lons) % 360)
             min_lons = min(np.array(lons) % 360)
@@ -237,8 +238,8 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
         else:
             height = 2.0 * deg2m_lat
             width = 5.0 * deg2m_lon
-        # Do intelligent aspect calculation for local projection
-        # adjust to figure dimensions
+        # Do intelligent aspect calculation for local projection to adjust to
+        # figure dimensions
         w, h = plt.gcf().get_size_inches()
         aspect = w / h
 
@@ -247,12 +248,11 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
         else:
             height = width / aspect
 
-        import pdb;pdb.set_trace()
-        # x0, y0 = proj.transform_point(lon_0, lat_0, proj.as_geodetic())
-        # map_ax.set_xlim(x0 - width / 2, x0 + width / 2)
-        # map_ax.set_ylim(y0 - height / 2, y0 + height / 2)
-        #
-        # ax.set_extent([x0, x1, y0, y1])
+        # We are ASSUMING that the event is located at the center of the figure
+        # (0, 0), which it should be since we plotted it first
+        x0, y0 = 0, 0  # modified from ObsPy function
+        ax.set_xlim(x0 - width / 2, x0 + width / 2)
+        ax.set_ylim(y0 - height / 2, y0 + height / 2)
 
     # Hijack the ObsPy plot and make some adjustments to make it look nicer
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False,
