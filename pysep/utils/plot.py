@@ -200,21 +200,59 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
     # Do some post-plot editing of the figure
     ax = plt.gca()
 
-    # Get the extent of stations in the Inventory to resize the figure in local
+    # Get the extent all points plotted to resize the figure in local
     # since the original bounds will be just around the event
     if projection == "local":
-        sta_lats, sta_lons = [], []
+        lats, lons = [], []
         for net in inv:
             for sta in net:
-                sta_lats.append(sta.latitude)
-                sta_lons.append(sta.longitude)
+                lats.append(sta.latitude)
+                lons.append(sta.longitude)
+        lats.append(event.preferred_origin().latitude)
+        lons.append(event.preferred_origin().longitude)
+        lats = np.array(lats)
+        lons = np.array(lons)
 
-        # Add a small buffer around stations so they're not directly on the edge
-        min_lat = min(sta_lats) * .95
-        max_lat = max(sta_lats) * 1.05
-        min_lon = min(sta_lons) * .95
-        max_lon = max(sta_lons) * 1.05
-        ax.set_extent([min_lon, max_lon, min_lat, max_lat])
+        # Copied verbatim from obspy.imaging.maps.plot_map(), find aspect ratio
+        # based on the points plotted. Need to re-do since we have both an
+        # event and stations
+        if min(lons) < -150 and max(lons) > 150:
+            max_lons = max(np.array(lons) % 360)
+            min_lons = min(np.array(lons) % 360)
+        else:
+            max_lons = max(lons)
+            min_lons = min(lons)
+        lat_0 = max(lats) / 2. + min(lats) / 2.
+        lon_0 = max_lons / 2. + min_lons / 2.
+        if lon_0 > 180:
+            lon_0 -= 360
+        deg2m_lat = 2 * np.pi * 6371 * 1000 / 360
+        deg2m_lon = deg2m_lat * np.cos(lat_0 / 180 * np.pi)
+        if len(lats) > 1:
+            height = (max(lats) - min(lats)) * deg2m_lat
+            width = (max_lons - min_lons) * deg2m_lon
+            margin = 0.2 * (width + height)
+            height += margin
+            width += margin
+        else:
+            height = 2.0 * deg2m_lat
+            width = 5.0 * deg2m_lon
+        # Do intelligent aspect calculation for local projection
+        # adjust to figure dimensions
+        w, h = plt.gcf().get_size_inches()
+        aspect = w / h
+
+        if width / height < aspect:
+            width = height * aspect
+        else:
+            height = width / aspect
+
+        import pdb;pdb.set_trace()
+        # x0, y0 = proj.transform_point(lon_0, lat_0, proj.as_geodetic())
+        # map_ax.set_xlim(x0 - width / 2, x0 + width / 2)
+        # map_ax.set_ylim(y0 - height / 2, y0 + height / 2)
+        #
+        # ax.set_extent([x0, x1, y0, y1])
 
     # Hijack the ObsPy plot and make some adjustments to make it look nicer
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False,
