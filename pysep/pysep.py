@@ -29,7 +29,7 @@ from obspy.clients.fdsn.mass_downloader import (RectangularDomain, Restrictions,
 from obspy.core.event import Event, Origin, Magnitude
 from obspy.geodetics import kilometer2degrees
 
-from pysep import logger
+from pysep import logger, __version__
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
                                  format_sac_header_w_taup_traveltimes,
                                  format_sac_headers_post_rotation)
@@ -55,7 +55,7 @@ class Pysep:
                  networks="*", stations="*", locations="*", channels="*",
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None, remove_response=True,
-                 remove_clipped=False, remove_insufficient_length=True,
+                 remove_clipped=True, remove_insufficient_length=True,
                  remove_masked_data=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
@@ -697,6 +697,8 @@ class Pysep:
                     if val != old_val:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
+                else:
+                    self.kwargs[key] = val
 
         # Reset log level based on the config file
         if self.log_level is not None:
@@ -1537,17 +1539,21 @@ class Pysep:
         """
         Plot map and record section if requested
         """
+        show_map = self.kwargs.get("show_map", False)
+        show_rs = self.kwargs.get("show_rs", False)
+
         if "map" in self.plot_files or "all" in self.plot_files:
             logger.info("plotting source receiver map")
             fid = os.path.join(self.output_dir, f"station_map.png")
-            plot_source_receiver_map(self.inv, self.event, save=fid)
+            plot_source_receiver_map(self.inv, self.event, save=fid, 
+                                     show=show_map)
 
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
             # Default settings to create a general record section
             rs = RecordSection(st=self.st, sort_by="distance",
-                               scale_by="normalize", overwrite=True, show=False,
-                               save=fid)
+                               scale_by="normalize", overwrite=True, 
+                               show=show_rs, save=fid)
             rs.run()
 
     def _event_tag_and_output_dir(self):
@@ -1602,6 +1608,8 @@ class Pysep:
         :param st: optional user-provided strean object which will force a
             skip over waveform searching
         """
+        logger.debug(f"running PySEP version {__version__}")
+
         # Overload default parameters with event input file and check validity
         self.load(**kwargs)
         self.check()
