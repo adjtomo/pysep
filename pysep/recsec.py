@@ -1379,6 +1379,32 @@ class RecordSection:
 
         return xtick_minor, xtick_major
 
+    def get_y_axis_tick_values(self):
+        """
+        Determine, based on the y limits of the plot, how often to place
+        tick marks for the Y-axis which could be sorted by azimuth, distance,
+        etc. This is only required for absolute plotting because relative plots
+        create their own tick marks
+        """
+        # Relative sorting does not require tick marks because each trace
+        # is its own tick mark
+        ytick_minor = None
+        ytick_major = None
+        if "abs_" in self.sort_by:
+            # Hard code tick marks for azimuth sorting
+            if "azimuth" in self.sort_by:
+                ytick_minor = 15
+                ytick_major = 30
+            elif "distance" in self.sort_by:
+                ymin, ymax = self.ax.get_ylim()
+                dist_span = ymax - ymin
+
+                # Find order of magnitude of the length to give a rough estimate
+                oom = np.floor(np.log10(dist_span))
+                ytick_major = 10 ** oom
+                ytick_minor = ytick_major / 2
+        return ytick_minor, ytick_major
+
     def process_st(self):
         """
         Preprocess the Stream with optional filtering in place.
@@ -1513,11 +1539,14 @@ class RecordSection:
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
         _xtick_minor, _xtick_major = self.get_x_axis_tick_values()
+        _ytick_minor, _ytick_major = self.get_y_axis_tick_values()
         # Use kwarg values to avoid double inputs of the same parameter
-        if "xtick_minor" not in self.kwargs:
-            self.kwargs["xtick_minor"] = _xtick_minor
-        if "xtick_major" not in self.kwargs:
-            self.kwargs["xtick_major"] = _xtick_major
+        for name, val in zip(
+                ["xtick_minor", "xtick_major", "ytick_minor", "ytick_major"],
+                [_xtick_minor, _xtick_major, _ytick_minor, _ytick_major]
+        ):
+            if name not in self.kwargs:
+                self.kwargs[name] = val
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
         # Partition the figure by user-specified azimuth bins
