@@ -1583,7 +1583,14 @@ class RecordSection:
         else:
             toffset_str = "  None"
 
-        y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
+        # Flip the sign of the y-axis if we are doing normal absolute
+        # sorting because we are flipping the y-axis in _plot_axes()
+        if "abs_" in self.sort_by and "_r" not in self.sort_by:
+            sign = -1
+        else:
+            sign = 1
+
+        y = sign * tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. Make the distinction
         # between data and synthetics which may have different start and end 
@@ -1764,11 +1771,15 @@ class RecordSection:
             logger.info("turning off y-axis as it contains no information")
             self.ax.get_yaxis().set_visible(False)
 
-        # Reverse the y-axis if we are doing absolute y-axis and reversing
-        if "abs_" in self.sort_by and "_r" in self.sort_by:
+        # Reverse the y-axis if we are doing absolute y-axis so that smaller
+        # values appear at the top, which is opposite of how the y-axis works.
+        # !!! This also requires flipping the sign of the plotted data in
+        # !!! _plot_trace() to deal with the axis flip.
+        if "abs_" in self.sort_by and "_r" not in self.sort_by:
+            self.ax.invert_yaxis()
+        else:
             logger.info("user requests inverting y-axis with absolute "
                         "reverse sort")
-            self.ax.invert_yaxis()
 
         # X-axis label is different if we time shift
         if self.time_shift_s.sum() == 0:
@@ -1805,10 +1816,6 @@ class RecordSection:
             ytick_minor = self.kwargs.get("ytick_minor", 45)
             ytick_major = self.kwargs.get("ytick_major", 90)
             ylabel = f"Azimuth [{DEG}]"
-
-        # Reverse the y-axis to get small values on top when sorting by
-        # distance or azimuth, which is counter to how a y-axis plotted
-        self.ax.invert_yaxis()
 
         # Set ytick label major and minor which is either dist or az
         self.ax.yaxis.set_major_locator(MultipleLocator(ytick_major))
