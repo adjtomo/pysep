@@ -382,7 +382,7 @@ class RecordSection:
         :param show: show the figure as a graphical output
         :type save: str
         :param save: path to save output figure, will create the parent
-            directory if it doesn't exist. If None, will not save.
+            directory if it doesn't exist. If None, will not save (default).
 
         .. note::
             Internal RecSec parameters
@@ -696,15 +696,16 @@ class RecordSection:
         if len(self.figsize) != 2:
             err.figsize = "must be tuple defining (horizontal, vertical) extent"
 
-        if os.path.exists(self.save) and not self.overwrite:
-            err.save = (f"path {self.save} already exists. Use '--overwrite' " 
-                        f"flag to save over existing figures.")
-
         if self.save:
-            _dirname = os.path.abspath(os.path.dirname(self.save))
-            if not os.path.exists(_dirname):
-                logger.info(f"creating output directory {_dirname}")
-                os.makedirs(_dirname)
+            if os.path.exists(self.save) and not self.overwrite:
+                err.save = (f"path {self.save} already exists. Use "
+                            f"'--overwrite' flag to save over existing figures"
+                            )
+            else:
+                _dirname = os.path.abspath(os.path.dirname(self.save))
+                if not os.path.exists(_dirname):
+                    logger.info(f"creating output directory {_dirname}")
+                    os.makedirs(_dirname)
 
         if err:
             out = "ERROR - Parameter errors, please make following changes:\n"
