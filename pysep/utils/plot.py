@@ -263,11 +263,15 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
     ax.spines["geo"].set_linewidth(1.5)
 
     title = (f"{format_event_tag(event)}\n"
-             f"NSTA: {len(inv.get_contents()['stations'])} // "
-             f"DEPTH: {event.preferred_origin().depth * 1E-3}km // "
-             f"{event.preferred_magnitude().magnitude_type} "
-             f"{event.preferred_magnitude().mag}"
-             )
+             f"NSTA: {len(inv.get_contents()['stations'])} // ")
+
+    # Event may not have have depth or magnitude information, don't let that
+    # break the plotting function
+    if hasattr(event.preferred_origin(), "depth"):
+        title += f"DEPTH: {event.preferred_origin().depth * 1E-3}km // "
+    if hasattr(event.preferred_magnitude(), "mag"):
+        title += (f"{event.preferred_magnitude().magnitude_type} "
+                  f"{event.preferred_magnitude().mag}")
 
     ax.set_title(title)
     if save:
