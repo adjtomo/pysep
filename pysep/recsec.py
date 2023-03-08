@@ -601,7 +601,7 @@ class RecordSection:
         # Check the `sort_by` sorting parameter options
         acceptable_sort_by = ["default", "azimuth", "backazimuth",
                               "distance", "alphabetical", "abs_azimuth",
-                              "abs_distance"]
+                              "abs_distance", "abs_backazimuth"]
         # Allow reverse sorts
         acceptable_sort_by += [f"{_}_r" for _ in acceptable_sort_by]
         if self.sort_by not in acceptable_sort_by:
@@ -1514,10 +1514,10 @@ class RecordSection:
         # set functions as they may overwrite what is done here
         _xtick_minor, _xtick_major = self.get_x_axis_tick_values()
         # Use kwarg values to avoid double inputs of the same parameter
-        if "xtick_minor" not in self.kwargs:
-            self.kwargs["xtick_minor"] = _xtick_minor
-        if "xtick_major" not in self.kwargs:
-            self.kwargs["xtick_major"] = _xtick_major
+        for name, val in zip(["xtick_minor", "xtick_major"],
+                             [_xtick_minor, _xtick_major]):
+            if name not in self.kwargs:
+                self.kwargs[name] = val
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
         # Partition the figure by user-specified azimuth bins
@@ -1583,7 +1583,14 @@ class RecordSection:
         else:
             toffset_str = "  None"
 
-        y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
+        # Flip the sign of the y-axis if we are doing normal absolute
+        # sorting because we are flipping the y-axis in _plot_axes()
+        if "abs_" in self.sort_by and "_r" not in self.sort_by:
+            sign = -1
+        else:
+            sign = 1
+
+        y = sign * tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. Make the distinction
         # between data and synthetics which may have different start and end 
@@ -1764,11 +1771,15 @@ class RecordSection:
             logger.info("turning off y-axis as it contains no information")
             self.ax.get_yaxis().set_visible(False)
 
-        # Reverse the y-axis if we are doing absolute y-axis and reversing
-        if "abs_" in self.sort_by and "_r" in self.sort_by:
+        # Reverse the y-axis if we are doing absolute y-axis so that smaller
+        # values appear at the top, which is opposite of how the y-axis works.
+        # !!! This also requires flipping the sign of the plotted data in
+        # !!! _plot_trace() to deal with the axis flip.
+        if "abs_" in self.sort_by and "_r" not in self.sort_by:
+            self.ax.invert_yaxis()
+        else:
             logger.info("user requests inverting y-axis with absolute "
                         "reverse sort")
-            self.ax.invert_yaxis()
 
         # X-axis label is different if we time shift
         if self.time_shift_s.sum() == 0:
@@ -1794,21 +1805,20 @@ class RecordSection:
         self.ax.tick_params(axis="y", labelsize=ytick_fontsize)
 
         if "distance" in self.sort_by:
-            if "km" in self.distance_units:
-                ytick_minor = self.kwargs.get("ytick_minor", 25)
-                ytick_major = self.kwargs.get("ytick_major", 100)
-            elif "deg" in self.distance_units:
-                ytick_minor = self.kwargs.get("ytick_minor", 0.25)
-                ytick_major = self.kwargs.get("ytick_major", 1.0)
+            # Dynamically determine y-axis ticks based on the the total span
+            # of the y-axis
+            ymin, ymax = self.ax.get_ylim()
+            dist_span = ymax - ymin
+            oom = np.floor(np.log10(dist_span))
+            _ytick_major = 10 ** oom
+            _ytick_minor = _ytick_major / 2
+            ytick_minor = self.kwargs.get("ytick_minor", _ytick_minor)
+            ytick_major = self.kwargs.get("ytick_major", _ytick_major)
             ylabel = f"Distance [{self.distance_units}]"
         elif "azimuth" in self.sort_by:
             ytick_minor = self.kwargs.get("ytick_minor", 45)
             ytick_major = self.kwargs.get("ytick_major", 90)
             ylabel = f"Azimuth [{DEG}]"
-
-        # Reverse the y-axis to get small values on top when sorting by
-        # distance or azimuth, which is counter to how a y-axis plotted
-        self.ax.invert_yaxis()
 
         # Set ytick label major and minor which is either dist or az
         self.ax.yaxis.set_major_locator(MultipleLocator(ytick_major))
