@@ -601,7 +601,7 @@ class RecordSection:
         # Check the `sort_by` sorting parameter options
         acceptable_sort_by = ["default", "azimuth", "backazimuth",
                               "distance", "alphabetical", "abs_azimuth",
-                              "abs_distance"]
+                              "abs_distance", "abs_backazimuth"]
         # Allow reverse sorts
         acceptable_sort_by += [f"{_}_r" for _ in acceptable_sort_by]
         if self.sort_by not in acceptable_sort_by:
