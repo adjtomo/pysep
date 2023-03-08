@@ -1,4 +1,5 @@
-# RecSec: record sections
+RecSec: record sections
+=======================
 
 RecordSection (abbreviated RecSec) is a record section tool used to plot 
 a number of waveforms on a single figure. Waveforms can be processed, and sorted
@@ -6,10 +7,13 @@ by various attributes, such as epicentral distance or azimuth. Data can be
 further modified, for example amplitudes can be scaled by expected geometrical
 spreading factor to visualize site amplification effects.
 
-> __Note__: See [RecordSection class API documentation]( 
-  https://adjtomo.github.io/pysep/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection ) for a list of available input parameters
+.. note::
+    See `RecordSection class API documentation
+    <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__ for a list
+    of available input parameters
 
-### What it does:
+What it does:
+
 * Plot waveform data and synthetic seismograms (by themselves or together)
 * Sort source-receiver pairs by absolute or relative distance or (back)azimuth
 * Apply time shifts, zero padding, move out and amplitude scaling
@@ -17,50 +21,73 @@ spreading factor to visualize site amplification effects.
 * Preprocess data with filters and detrends prior to plotting 
 
 
-
-## Record Section via the Command Line
-
-PySEP also comes with a pretty sophisticated record section tool, which plots
-seismic data acquired by PySEP. When you have successfully collected your data,
-it will reside in the /SAC folder of the PySEP output directory. 
-
+Record Section via the Command Line
+-----------------------------------
 
 To see available record section plotting commands
 
-```bash
-recsec -h  # RECordSECtion
-```
+.. code:: bash
+    recsec -h  # RECordSECtion
+
 
 To plot the waveform data in a record section with default parameters
 
-```bash
-recsec --pysep_path ./SAC
-```
+.. code:: bash
+    recsec --pysep_path ./SAC
 
 To plot a record section with a 7km/s move out, high-pass filtered at 1s
-s
-```bash
-recsec --pysep_path ./SAC --move_out 7 --min_period_s 1
-```
+
+.. code:: bash
+    recsec --pysep_path ./SAC --move_out 7 --min_period_s 1
+
 
 To sort your record section by azimuth and not distance (default sorting)
 
-```bash
-recsec --pysep_path ./SAC --sort_by azimuth
-```
+.. code:: bash
+    recsec --pysep_path ./SAC --sort_by azimuth
 
-Have a look at the -h/--help message and the docstring at the top of `recsec.py`
+Have a look at the -h/--help message and the `RecordSection class API
+documentation <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
 for more options.
 
 
-> __Note__: See [RecordSection class API documentation]( 
-  https://adjtomo.github.io/pysep/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection ) for a list of available input parameters
+Scripting RecSec
+----------------
+The RECord SECtion tool can also be scripted. You can feed it the same
+`pysep_path` as in the command line usage, or directly inject ObsPy Streams.
 
-### Customizing RecSec figures
+The `plotw_rs` function can be used to call RecSec with some logic that allows
+for multi-page record sections.
+
+.. note::
+
+    If using ObsPy Streams, all traces must have SAC headers with appropriate
+    event and station locations. It is recommended that data fed into RecSec
+    is gathered directly via PySEP to ensure appropriate SAC header values.
+
+.. code:: python
+
+    from obspy import read, read_inventory, read_events
+    from pysep import plotw_rs
+    from pysep.utils.cap_sac import append_sac_headers
+
+    st = read()
+    inv = read_inventory()
+    event = read_events()[0]
+    st = append_sac_headers(st, event, inv)  # RecordSection requires SAC header
+
+    plotw_rs(st=st, sort_by="distance", scale_by="normalize")
+
+Have a look at the `RecordSection class API
+documentation <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
+for available options.
+
+Customizing RecSec figures
+--------------------------
 
 Much of the aesthetic look of RecSec figures is hardcoded, however there are 
-some keyword arguments that you can provide as flags which may help. The 
-following parameters correspond to Matplotlib plot adjustments. 
+some keyword arguments that you can provide as flags which may help to achieve
+publication-ready figures. Some of these parameters include:
 
 - ytick_fontsize: Fontsize of the Y-axis tick labels
 - xtick_fontsize: Fontsize of the X-axis tick labels
@@ -74,10 +101,17 @@ following parameters correspond to Matplotlib plot adjustments.
 
 To set one of these parameters, just set as a flag, e.g.,
 
-```bash
-recsec --pysep_path ./SAC --xtick_minor 100 --xtick_major 500
-```
+.. code:: bash
+    recsec --pysep_path ./SAC --xtick_minor 100 --xtick_major 500
 
+Or when scripting RecSec
+
+.. code:: python
+
+    plotw_rs(pysep_path="./SAC", xtick_minor=100, xtick_major=500)
+
+See :meth:`set_plot_aesthetic <pysep.utils.plot.set_plot_aesthetic>` function
+for the entire list of available tuning options for Record Sections.
 
 ### Plotting SPECFEM synthetics
 
@@ -154,27 +188,5 @@ synthetics in a directory called 'synthetic/'
 recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
 ```
 
-
---------------------------------------------------
-
-## Scripting RecSec
-
-The RECord SECtion tool can also be scripted. It simply requires an ObsPy Stream
-object as input. Tuning parameters can be fed in as input variables.
-
-> __Note__: See [RecordSection class API documentation]( 
-  https://adjtomo.github.io/pysep/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection ) for a list of available input parameters
-
-```python
-from obspy import read, read_inventory, read_events
-from pysep import RecordSection
-from pysep.utils.cap_sac import append_sac_headers
-st = read()
-inv = read_inventory()
-event = read_events()[0]
-st = append_sac_headers(st, event, inv)  # RecordSection requires SAC headers
-rs = RecordSection(st=st, sort_by="distance", scale_by="normalize")
-rs.run()
-```
 
 
