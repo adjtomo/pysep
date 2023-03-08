@@ -1537,7 +1537,10 @@ class Pysep:
 
     def plot(self):
         """
-        Plot map and record section if requested
+        Plot map and record section if requested. Allow general error catching
+        for mapping and record section plotting because we don't want these
+        auxiliary steps to crash the entire workflow since they are not
+        critical.
         """
         show_map = self.kwargs.get("show_map", False)
         show_rs = self.kwargs.get("show_rs", False)
@@ -1545,16 +1548,22 @@ class Pysep:
         if "map" in self.plot_files or "all" in self.plot_files:
             logger.info("plotting source receiver map")
             fid = os.path.join(self.output_dir, f"station_map.png")
-            plot_source_receiver_map(self.inv, self.event, save=fid, 
-                                     show=show_map)
+            try:
+                plot_source_receiver_map(self.inv, self.event, save=fid,
+                                         show=show_map)
+            except Exception as e:  # NOQA
+                logger.warning(f"could not plot source receiver map: {e}")
 
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
-            # Default settings to create a general record section
-            rs = RecordSection(st=self.st, sort_by="distance",
-                               scale_by="normalize", overwrite=True, 
-                               show=show_rs, save=fid)
-            rs.run()
+            try:
+                # Default settings to create a general record section
+                rs = RecordSection(st=self.st, sort_by="distance",
+                                   scale_by="normalize", overwrite=True,
+                                   show=show_rs, save=fid)
+                rs.run()
+            except Exception as e:  # NOQA
+                logger.warning("could not plot record section: {e}")
 
     def _event_tag_and_output_dir(self):
         """

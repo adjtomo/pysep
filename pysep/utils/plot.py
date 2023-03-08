@@ -278,31 +278,69 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
         plt.close()
 
 
-def set_plot_aesthetic(ax, **kwargs):
+def set_plot_aesthetic(
+        ax, ytick_fontsize=8., xtick_fontsize=12., tick_linewidth=1.5,
+        tick_length=5., tick_direction="in", xlabel_fontsize=10.,
+        ylabel_fontsize=10., axis_linewidth=2., spine_zorder=8, spine_top=True,
+        spine_bot=True, spine_left=True, spine_right=True, title_fontsize=10.,
+        xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
+        xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
+        **kwargs):
     """
     Give a nice look to the output figure by creating thick borders on the
     axis, adjusting fontsize etc. All plot aesthetics should be placed here
     so it's easiest to find.
-    """
-    ytick_fontsize = kwargs.get("ytick_fontsize", 8)
-    xtick_fontsize = kwargs.get("xtick_fontsize", 12)
-    tick_linewidth = kwargs.get("tick_linewidth", 1.5)
-    tick_length = kwargs.get("tick_length", 5)
-    tick_direction = kwargs.get("tick_direction", "in")
-    xlabel_fontsize = kwargs.get("xlabel_fontsize", 10)
-    ylabel_fontsize = kwargs.get("ylabel_fontsize", 10)
-    axis_linewidth = kwargs.get("axis_linewidth", 2.)
-    title_fontsize = kwargs.get("title_fontsize", 10)
-    xtick_minor = kwargs.get("xtick_minor", 25)
-    xtick_major = kwargs.get("xtick_major", 100)
-    ytick_minor = kwargs.get("ytick_minor", None)
-    ytick_major = kwargs.get("ytick_major", None)
-    xgrid_major = kwargs.get("xgrid_major", True)
-    xgrid_minor = kwargs.get("xgrid_minor", True)
-    ygrid_major = kwargs.get("ygrid_major", True)
-    ygrid_minor = kwargs.get("ygrid_minor", True)
-    spine_zorder = kwargs.get("spine_zorder", 8)
 
+    :type ax: matplotlib.axes._subplots.AxesSubplot
+    :param ax: matplotlib axis figure to set plot aesthetic for
+    :type ytick_fontsize: float
+    :param ytick_fontsize: fontsize for labels next to Y-axis ticks
+    :type xtick_fontsize: float
+    :param xtick_fontsize: fontsize for labels next to X-axis ticks
+    :type tick_linewidth: float
+    :param tick_linewidth: thickness of tick marks for both X and Y axes
+    :type tick_length: float
+    :param tick_length: length of tick marks for both X and Y axes
+    :type tick_direction: str
+    :param tick_direction: 'in' for ticks pointing inwards, 'out' for ticks
+        pointing outwards
+    :type xlabel_fontsize: float
+    :param xlabel_fontsize: font size for the X-axis main label (e.g., Time)
+    :type ylabel_fontsize: float
+    :param ylabel_fontsize: font size for the Y-axis main label (e.g., Ampli)
+    :type axis_linewidth: float
+    :param axis_linewidth: line thickness for the borders of the figure
+    :type spine_zorder: int
+    :param spine_zorder: Z order (visibility) of the axis borders (spines)
+    :type spine_top: bool
+    :param spine_top: toggle on/off the top axis border
+    :type spine_bot: bool
+    :param spine_bot: toggle on/off the bottom axis border
+    :type spine_left: bool
+    :param spine_left: toggle on/off the left axis border
+    :type spine_right: bool
+    :param spine_right: toggle on/off the right axis border
+    :type title_fontsize: float
+    :param title_fontsize: font size of the main title at the top of the figure
+    :type xtick_minor: float
+    :param xtick_minor: how often minor tick marks are drawn on X axis
+    :type xtick_major: float
+    :param xtick_major: how often major tick marks are drawn on X axis
+    :type ytick_minor: float
+    :param xtick_minor: how often minor tick marks are drawn on Y axis
+    :type ytick_major: float
+    :param ytick_major: how often major tick marks are drawn on Y axis
+    :type xgrid_minor: bool
+    :param xgrid_minor: turn on grid lines for each minor X tick
+    :type xgrid_major: bool
+    :param xgrid_major: turn on grid lines for each major X tick
+    :type ygrid_minor: bool
+    :param ygrid_minor: turn on grid lines for each minor Y tick
+    :type ygrid_major: bool
+    :param ygrid_major: turn on grid lines for each minor Y tick
+    :rtype: matplotlib.axes._subplots.AxesSubplot
+    :return: input axis with aesthetic changed
+    """
     ax.title.set_fontsize(title_fontsize)
     ax.tick_params(axis="both", which="both", width=tick_linewidth,
                         direction=tick_direction, length=tick_length)
@@ -312,16 +350,22 @@ def set_plot_aesthetic(ax, **kwargs):
     ax.yaxis.label.set_size(ylabel_fontsize)
 
     # Thicken up the bounding axis lines
-    for axis in ["top", "bottom", "left", "right"]:
-        ax.spines[axis].set_linewidth(axis_linewidth)
+    for axis, flag in zip(["top", "bottom", "left", "right"],
+                          [spine_top, spine_bot, spine_left, spine_right]):
+        if flag:
+            ax.spines[axis].set_visible(False)
+        else:
+            ax.spines[axis].set_linewidth(axis_linewidth)
 
     # Set spines above azimuth bins
     for spine in ax.spines.values():
         spine.set_zorder(spine_zorder)
 
     # Set xtick label major and minor which is assumed to be a time series
-    ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
-    ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
+    if xtick_major:
+        ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
+    if xtick_minor:
+        ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
     if ytick_minor:
         ax.yaxis.set_major_locator(MultipleLocator(float(ytick_major)))
     if ytick_major:
