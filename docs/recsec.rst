@@ -8,6 +8,7 @@ further modified, for example amplitudes can be scaled by expected geometrical
 spreading factor to visualize site amplification effects.
 
 .. note::
+
     See `RecordSection class API documentation
     <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__ for a list
     of available input parameters
@@ -27,23 +28,27 @@ Record Section via the Command Line
 To see available record section plotting commands
 
 .. code:: bash
+
     recsec -h  # RECordSECtion
 
 
 To plot the waveform data in a record section with default parameters
 
 .. code:: bash
+
     recsec --pysep_path ./SAC
 
 To plot a record section with a 7km/s move out, high-pass filtered at 1s
 
 .. code:: bash
+
     recsec --pysep_path ./SAC --move_out 7 --min_period_s 1
 
 
 To sort your record section by azimuth and not distance (default sorting)
 
 .. code:: bash
+
     recsec --pysep_path ./SAC --sort_by azimuth
 
 Have a look at the -h/--help message and the `RecordSection class API
@@ -82,6 +87,26 @@ Have a look at the `RecordSection class API
 documentation <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
 for available options.
 
+Subsetting Stations
+```````````````````
+
+When plotting Streams, it may be useful to subset data, e.g., by network.
+This can be achieved directly using ObsPy's Stream object
+
+.. code:: python
+
+    st_new = st.select(network="II")
+    plotw_rs(st=st)
+
+.. note::
+
+    This can be combined with source receiver map plotting to get a station
+    map of the subsetted traces in the record section. See the
+    `map plotting documentation
+    <cookbook.html#generating-source-receiver-maps>`__ for an example of how to
+    do this.
+
+
 Customizing RecSec figures
 --------------------------
 
@@ -102,6 +127,7 @@ publication-ready figures. Some of these parameters include:
 To set one of these parameters, just set as a flag, e.g.,
 
 .. code:: bash
+
     recsec --pysep_path ./SAC --xtick_minor 100 --xtick_major 500
 
 Or when scripting RecSec
@@ -113,36 +139,72 @@ Or when scripting RecSec
 See :meth:`set_plot_aesthetic <pysep.utils.plot.set_plot_aesthetic>` function
 for the entire list of available tuning options for Record Sections.
 
-### Plotting SPECFEM synthetics
+Plotting SPECFEM synthetics
+---------------------------
 
 RecSec can plot SPECFEM-generated synthetic seismograms in ASCII format. Here 
 the domain should be defined by geographic coordinates (latitude/longitude). If 
-your domain is defined in Cartesian, see below.
+your domain is defined in Cartesian, see the next section.
 
-Record sections  can be plotted standalone, or alongside observed seismograms 
-to look at data-synthetic misfit. 
+.. note::
 
-To access metadata, RecSec requires the CMTSOLUTION and STATIONS file that were 
-used by SPECFEM to generate the synthetics. Based on a standard 
-SPECFEM3D_Cartesian working directory, plotting synthetics only would have 
-the following call structure:
+    Record sections  can be plotted standalone, or alongside observed seismograms
+    to look at data-synthetic misfit.
 
-```bash
-recsec --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS
-```
+To access metadata, RecSec requires the `CMTSOLUTION` and `STATIONS` file that
+are used by SPECFEM to generate the synthetics. Based on a standard SPECFEM
+working directory, plotting synthetics only would have the following call
+structure:
+
+.. code:: bash
+
+    recsec --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS
+
+Or when scripting,
+
+.. code:: python
+
+    plotw_rs(syn_path="OUTPUT_FILES", cmtsolution="DATA/CMTSOLUTION",
+             stations="DATA/STATIONS")
+
+You can also directly feed in an ObsPy stream containing your synthetic data
+with appropriate SAC headers
+
+.. code:: python
+
+    from glob import glob
+    from obspy import Stream
+    from pysep.utils.io import read_sem
+
+    st_syn = Stream()
+    for fid in glob("OUTPUT_FILES/*.semd"):
+        st_syn += read_sem(fid=fid, source="DATA/CMTSOLUTION",
+                           stations="DATA/STATIONS")
+
+    plotw_rs(st_syn=st_syn)
 
 To compare observed and synthetic data, you would have name the --pysep_path
 and tell RecSec to preprocess both data streams identically
 
-```bash
-recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
-```
+.. code:: bash
 
-Preprocessing flags such as filtering and move out will be applied to both
-observed and synthetic data.
+    recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
+
+Preprocessing flags can be applied to the observed data only (`st`), synthetic
+data only (`st_syn`) or both (`both`). See the `preprocess` parameter in the
+`RecordSection class API
+documentation <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
+
+While scripting, Streams for both observed and synthetic data can be injected
+together:
+
+.. code:: python
+
+    plotw_rs(st=st, st_syn=st_syn, preprocess="both")
 
 
-### Plotting SPECFEM synthetics in Cartesian
+Plotting SPECFEM synthetics in Cartesian
+````````````````````````````````````````
 
 Under the hood, RecSec uses some of ObsPy's geodetic
 functions to calculate distances and azimuths. Because of this, RecSec will 
@@ -156,19 +218,28 @@ similar to the above:
 
 For SPECFEM3D_Cartesian this would look like
 
-```bash
-recsec --syn_path OUTPUT_FILES --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --cartesian
-```
+.. code:: bash
+
+    recsec --syn_path OUTPUT_FILES --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --cartesian
+
 
 For SPECFEM2D, the source file may not be a CMTSOLUTION. Additionally, the 
 default seismogram components may not be defined in ZNE
 
-```bash
-recsec --syn_path OUTPUT_FILES --cmtsolution DATA/SOURCE --stations DATA/STATIONS --components Y --cartesian
-```
+.. code:: bash
+
+    recsec --syn_path OUTPUT_FILES --cmtsolution DATA/SOURCE --stations DATA/STATIONS --components Y --cartesian
 
 
-### Plotting two sets of synthetics (synsyn)
+While scripting, the input parameter `cartesian` can be used:
+
+.. code:: python
+
+    plotw_rs(..., cartesian=True)
+
+
+Plotting two sets of synthetics (synsyn)
+````````````````````````````````````````
 
 It is often useful to compare two sets of synthetic seismograms, where one set
 represents 'data', while the other represents synthetics. For example, during
@@ -178,15 +249,18 @@ RecSec can plot two sets of synthetics in a similar vein as plotting
 data and synthetics together. The User only needs to add the `--synsyn` flag 
 and provide paths to both `--pysep_path` and `--syn_path`. 
 
->__NOTE__: RecSec makes the assumption that both sets of synthetics share the 
-> same metadata provided in the `--cmtsolution` and `--stations` flags.
+.. note::
+
+    RecSec makes the assumption that both sets of synthetics share the
+    same metadata provided in the `--cmtsolution` and `--stations` flags.
 
 Let's say you've stored your 'data' in a directory called 'observed/' and your
 synthetics in a directory called 'synthetic/'
 
-```bash
-recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
-```
+.. code:: bash
+
+    recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
+
 
 
 
