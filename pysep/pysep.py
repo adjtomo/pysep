@@ -53,12 +53,13 @@ class Pysep:
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
                  networks="*", stations="*", locations="*", channels="*",
-                 station_ids=None,
+                 station_ids=None, use_mass_download=False,
+                 extra_download_pct=0.005,
                  event_latitude=None, event_longitude=None, event_depth_km=None,
                  event_magnitude=None,
                  remove_response=True, remove_clipped=True,
                  remove_insufficient_length=True, remove_masked_data=True,
-                 water_level=60, detrend=True, demean=True, taper_percentage=0,
+                 water_level=60, detrend=True, demean=True, taper_percentage=0.,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
                  gap_fraction=1.,
                  mindistance_km=0, maxdistance_km=20E3, minazimuth=0,
@@ -71,7 +72,6 @@ class Pysep:
                  log_level="DEBUG", timeout=600, write_files="all",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
-                 use_mass_download=False, extra_download_pct=0.005,
                  **kwargs):
         """
         .. note::
@@ -142,7 +142,7 @@ class Pysep:
         :param event_longitude: longitude of the event in units of degrees.
             used for defining the event hypocenter and for removing stations
             based on distance from the event.
-        :type event_depth_km: float
+        :type event_depth_km: float or NoneType
         :param event_depth_km: depth of event in units of kilometers. postive
             values for deeper depths. Used for:
 
@@ -151,11 +151,10 @@ class Pysep:
             3) plotting events and title on source receiver maps
 
             If set to None, (2) and (3) will fail. Best-guesses are acceptable.
-        :type event_magnitude: float
-        :param event_magnitude: event magnitude in Mw used for:
-
-            1) `event_selection`=='search'
-            2)
+        :type event_magnitude: float or NoneType
+        :param event_magnitude: event magnitude in Mw used for
+            `event_selection`=='search' and source receiver map plotting. If
+            provided as None, map plotting will fail.
         :type seconds_before_event: float
         :param seconds_before_event: For event selection only, only used if
             `event_selection`=='search'. Time [s] before given `origin_time` to
@@ -401,9 +400,10 @@ class Pysep:
             - config_file: save YAML config file containing all input parameters
             - sac: save all waveforms as SAC (.sac) files separated by component
             - sac_raw: save the raw (pre-rotation) SAC files
-            - all: write all of the above (default value)
+
+            By default, writes all files listed above
             Example input: `write_files`=='inv,event,stream,sac'
-            If None, no files will be written. This is generally not advised.
+            If NoneType or an empty string, no files will be written.
         :type plot_files: str or NoneType
         :param write_files: What to plot after data gathering.
             Should be a comma-separated list of the following:
@@ -589,6 +589,10 @@ class Pysep:
                     f"`station_id` entries must have format NN.SSS.LL.CC; {id_}"
                 )
 
+        if self.use_mass_download is True:
+            logger.info("will use option `mass_download`, ignoring `client` "
+                        "and downloading data from all available data centers")
+
         if not (0 <= self.minazimuth <= 360):
             _old_val = self.minazimuth
             self.minazimuth = self.minazimuth % 360
@@ -630,38 +634,46 @@ class Pysep:
                 assert(self.fill_data_gaps in acceptable_fill_vals), \
                     f"`fill_data_gaps` must be one of {acceptable_fill_vals}"
 
-        # Enforce that `write_files` and `plot_files` are sets
-        if self.write_files is None:
+        # Enforce acceptable writing options
+        acceptable_write_files = self.write(_return_filenames=True)
+        # Empty string or NoneType translates to 'dont write anything'
+        if not self.write_files:
             self.write_files = {}
+        # Default behavior, write everything under the sun
+        elif self.write_files == "all":
+            self.write_files = acceptable_write_files
+        # User-defined, comma-separated list of values which must match
+        # against acceptable types
         else:
             try:
                 self.write_files = set(self.write_files.split(","))
             # TypeError thrown if we're trying to do {{*}}
             except TypeError:
                 pass
-
-            acceptable_write_files = self.write(_return_filenames=True)
             assert(self.write_files.issubset(acceptable_write_files)), (
                 f"`write_files` must be a list of some or all of: "
                 f"{acceptable_write_files}"
             )
 
-        if self.plot_files is None:
+        # Enforce acceptable plotting options
+        acceptable_plot_files = {"map", "record_section"}
+        # Empty string or NoneType translate to do not plot
+        if not self.plot_files:
             self.plot_files = {}
+        # Default behavior, plot everything under the sun
+        elif self.plot_files == "all":
+            self.plot_files = acceptable_plot_files
+        # User-defined, comma-separated list of values which must match
+        # against acceptable types
         else:
             try:
                 self.plot_files = set(self.plot_files.split(","))
             except TypeError:
                 pass
-            acceptable_plot_files = {"map", "record_section", "all"}
             assert(self.plot_files.issubset(acceptable_plot_files)), (
                 f"`plot_files` must be a list of some or all of: "
                 f"{acceptable_plot_files}"
             )
-
-        if self.use_mass_download is True:
-            logger.info("will use option `mass_download`, ignoring `client` "
-                        "and downloading data from all available data centers")
 
         # Force all time boundaries to be floats to avoid rounding errors
         self.seconds_before_ref = float(self.seconds_before_ref)
@@ -1412,14 +1424,14 @@ class Pysep:
 
         return st_out
 
-    def write(self, write_files=None, _return_filenames=False,
-              config_fid=None, station_fid=None, inv_fid=None, event_fid=None,
-              stream_fid=None, **kwargs):
+    def write(self, write_files=None, _return_filenames=False, _subset=None,
+              **kwargs):
         """
         Write out various files specifying information about the collected
         stations and waveforms.
 
         Options are:
+
             * weights_dist: write out 'weights.dat' file sorted by distance
             * weights_az: write out 'weights.dat' file sorted by azimuth
             * weights_code: write out 'weights.dat' file sorted by sta code
@@ -1430,7 +1442,6 @@ class Pysep:
             * sac: write the stream as individual (per-channel) SAC files with
                 the appropriate SAC header
             * config_file: write the current configuration as a YAML file
-            * all: ignores all other options, writes everything listed above
 
         :type write_files: list of str
         :param write_files: list of files that should be written out, must
@@ -1441,28 +1452,41 @@ class Pysep:
             but just return a list of acceptable filenames. This keeps all the
             file naming definitions in one function. This is only required by
             the check() function.
-        :type config_fid: str
-        :param config_fid: optional name for the configuration file name
-            defaults to 'pysep_config.yaml'
-        :type station_fid: str
-        :param station_fid: optional name for the stations list file name
-            defaults to 'station_list.txt'
-        :type inv_fid: str
-        :param inv_fid: optional name for saved ObsPy inventory object,
-            defaults to 'inv.xml'
-        :type event_fid: optional name for saved ObsPy Event object, defaults to
-            'event.xml'
-        :type stream_fid: optional name for saved ObsPy Stream miniseed object,
-            defaults to 'stream.ms'
+        :type _subset: list
+        :param _subset: internal parameter used for intermediate file saving.
+            PySEP will attempt to save files once they have been collected
+            however if the files it tries to save do not match against the
+            User-defined file list, they will be ignored.
+
+        Keyword Arguments
+        ::
+            order_station_list_by (str): how to order the station list
+                available options are: network, station, latitude, longitude,
+                elevation, burial.
+            config_fid (str): optional name for the configuration file name
+                defaults to 'pysep_config.yaml'
+            station_fid (str): optional name for the stations list file name
+                defaults to 'station_list.txt'
+            inv_fid (str): optional name for saved ObsPy inventory object,
+                defaults to 'inv.xml'
+            event_fid (str): optional name for saved ObsPy Event object,
+                defaults to 'event.xml'
+            stream_fid (str): optional name for saved ObsPy Stream miniseed
+                object, defaults to 'stream.ms'
         """
-        # Collect kwargs for writing
-        order_station_list_by = kwargs.get("order_station_list_by", None)
+        # Set some default values that can be overridden with kwargs
+        order_station_list_by = self.kwargs.get("order_station_list_by", None)
+        config_fid = self.kwargs.get("config_fid", "pysep_config.yaml")
+        station_fid = self.kwargs.get("station_fid", "station_file.txt")
+        inv_fid = self.kwargs.get("inv_fid", "inv.xml")
+        event_fid = self.kwargs.get("event_fid", "event.xml")
+        stream_fid = self.kwargs.get("stream_fid", "stream.ms")
 
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "sac_raw", "all"}
+                             "config_file", "sac", "sac_raw"}
         if _return_filenames:
             return _acceptable_files
 
@@ -1478,21 +1502,24 @@ class Pysep:
                 f"{_acceptable_files}"
             )
 
+        # Allow for intermediate file saving validated against user-defined list
+        # Skip over subset assertion because Users don't have access to this
+        if _subset:
+            write_files = write_files.intersection(set(_subset))
+        import pdb;pdb.set_trace()
+
         for weights_fid in ["weights_dist", "weights_az", "weights_code"]:
-            if weights_fid in write_files or "all" in write_files:
+            if weights_fid in write_files:
                 order_by = weights_fid.split("_")[1]
                 write_cap_weights_files(st=self.st, order_by=order_by,
                                         path_out=self.output_dir)
 
-        if "config_file" in write_files or "all" in write_files:
+        if "config_file" in write_files:
             logger.info("writing config YAML file")
-            fid = os.path.join(self.output_dir,
-                               config_fid or f"pysep_config.yaml")
-            self.write_config(fid=fid)
+            self.write_config(fid=os.path.join(self.output_dir, config_fid))
 
         if "station_list" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir,
-                               station_fid or "station_list.txt")
+            fid = os.path.join(self.output_dir, station_fid)
             logger.info("writing stations file")
             logger.debug(fid)
             write_pysep_station_file(
@@ -1500,20 +1527,20 @@ class Pysep:
                     order_station_list_by=order_station_list_by
                     )
 
-        if "inv" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
+        if "inv" in write_files:
+            fid = os.path.join(self.output_dir, inv_fid)
             logger.info("writing inventory as StationXML")
             logger.debug(fid)
             self.inv.write(fid, format="STATIONXML")
 
-        if "event" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, event_fid or f"event.xml")
+        if "event" in write_files:
+            fid = os.path.join(self.output_dir, event_fid)
             logger.info("writing event as QuakeML")
             logger.debug(fid)
             self.event.write(fid, format="QuakeML")
 
-        if "stream" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, stream_fid or f"stream.ms")
+        if "stream" in write_files:
+            fid = os.path.join(self.output_dir, stream_fid)
             logger.info("writing waveform stream in MiniSEED")
             logger.debug(fid)
             with warnings.catch_warnings():
@@ -1521,7 +1548,7 @@ class Pysep:
                 warnings.simplefilter("ignore")
                 self.st.write(fid, format="MSEED")
 
-        if "sac" in write_files or "all" in write_files:
+        if "sac" in write_files:
             logger.info("writing each waveform trace in SAC format")
             # Old PySEP dumped all files into output dir. New PySEP makes subdir
             if self._legacy_naming:
@@ -1530,10 +1557,14 @@ class Pysep:
                 _output_dir = os.path.join(self.output_dir, "SAC")
             self._write_sac(st=self.st, output_dir=_output_dir)
 
+        if "sac_raw" in write_files:
+            if self._legacy_naming:
+                _output_dir = self.output_dir
+            else:
+                _output_dir = os.path.join(self.output_dir, "SAC", "RAW")
             # Write RAW sac files
             if self.st_raw is not None:
-                self._write_sac(st=self.st_raw,
-                                output_dir=os.path.join(_output_dir, "RAW"))
+                self._write_sac(st=self.st_raw, output_dir=_output_dir)
 
     def _write_sac(self, st, output_dir=os.getcwd()):
         """
@@ -1564,6 +1595,7 @@ class Pysep:
         also re-usable for repeat queries.
 
         :type fid: str
+        :param fid: name of the file to write. defaults to config.yaml
         :param fid: name of the file to write. defaults to config.yaml
         """
         if fid is None:
@@ -1680,21 +1712,24 @@ class Pysep:
         self.check()
         self.c = self.get_client()
 
-        # Get metadata (QuakeML, StationXML)
+        # Get QuakeML (event) metadata
         if event is None:
             self.event = self.get_event()
         else:
             self.event = event
-
         self.event_tag, self.output_dir = self._event_tag_and_output_dir()
 
-        # Standard method of retrieving waveforms from data center
+        # Intermediate write of Config file and QuakeML
+        self.write(_subset=["config_file", "event"], **kwargs)
+
+        # Default method of retrieving waveforms/metadata from data center
         if self.use_mass_download is False:
             if inv is None:
                 self.inv = self.get_stations()
             else:
                 self.inv = inv
             self.inv = self.curtail_stations()
+            self.write(write_files=["inv"], **kwargs)  # write out inventory
 
             # Get waveforms, format and assess waveform quality
             if st is None:
