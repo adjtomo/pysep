@@ -60,7 +60,7 @@ class Pysep:
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
                  gap_fraction=1.,
-                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
+                 mindistance_km=0, maxdistance_km=20E3, minazimuth=0, maxazimuth=360,
                  minlatitude=None, minlongitude=None, maxlatitude=None,
                  maxlongitude=None, resample_freq=None, scale_factor=1,
                  phase_list=("ttall",), seconds_before_event=20,
@@ -193,16 +193,16 @@ class Pysep:
         .. note::
             Station removal and curtailing parameters
 
-        :type mindistance: float
-        :param mindistance: Used for removing stations and mass download option
+        :type mindistance_km: float
+        :param mindistance_km: Used for removing stations and mass download option
 
             - Removing stations: Remove any stations who are closer than the
             given minimum distance away from event (units: km). Always applied
             - Mass Download: If `use_mass_download` is True and
             `domain_type`=='circular', defines the minimum radius around the
             event hypocenter to gather waveform data and station metadata
-        :type maxdistance: float
-        :param maxdistance: Used for removing stations and mass download option
+        :type maxdistance_km: float
+        :param maxdistance_km: Used for removing stations and mass download option
 
             - Removing stations: Remove any stations who are farther than the
             given maximum distance away from event (units: km). Always applied
@@ -457,8 +457,8 @@ class Pysep:
         )
 
         # Event and station search and curtailing criteria
-        self.mindistance = mindistance
-        self.maxdistance = maxdistance
+        self.mindistance_km = mindistance_km
+        self.maxdistance_km = maxdistance_km
         self.minazimuth = minazimuth
         self.maxazimuth = maxazimuth
         self.minlatitude = minlatitude
@@ -1007,8 +1007,8 @@ class Pysep:
                 - rectangular: rectangular bounding box defined by min/max
                   latitude/longitude
                 - circular: circular bounding circle defined by the events
-                  latitude and longitude, with radii defined by `mindistance`
-                  and `maxdistance`
+                  latitude and longitude, with radii defined by `mindistance_km`
+                  and `maxdistance_km`
             bool delete_tmpdir:
                 Remove the temporary directories that store the MSEED and
                 StationXML files which were downloaded by the mass downloader.
@@ -1036,8 +1036,8 @@ class Pysep:
             logger.info("using a circular domain for mass downloader")
             domain = CircularDomain(
                 latitude=self.event_latitude, longitude=self.event_longitude,
-                minradius=kilometer2degrees(self.mindistance),
-                maxradius=kilometer2degrees(self.maxdistance)
+                minradius=kilometer2degrees(self.mindistance_km),
+                maxradius=kilometer2degrees(self.maxdistance_km)
             )
         else:
             raise NotImplementedError(f"`domain_type` must be 'rectangular' or"
@@ -1110,8 +1110,8 @@ class Pysep:
         inv = self.inv.copy()
 
         inv = curtail_by_station_distance_azimuth(
-            event=self.event, inv=inv, mindistance=self.mindistance,
-            maxdistance=self.maxdistance, minazimuth=self.minazimuth,
+            event=self.event, inv=inv, mindistance_km=self.mindistance_km,
+            maxdistance_km=self.maxdistance_km, minazimuth=self.minazimuth,
             maxazimuth=self.maxazimuth
         )
 

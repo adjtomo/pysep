@@ -199,8 +199,8 @@ two additional keyword arguments which you can provide  from the command line.
     - `rectangular`: rectangular bounding box defined by `minlatitude`,
        `minlongitude,` `maxlatitude` and `maxlongitude`
     - `circular`: circular bounding circle defined by the `event_latitude`,
-      `event_longitude` and min and max radii defined by `mindistance` and 
-      `maxdistance`
+      `event_longitude` and min and max radii defined by `mindistance_km` and
+      `maxdistance_km`
 - delete_tmpdir (bool): Removes the temporary directories that store the MSEED and
   StationXML files which were downloaded by the mass downloader.
   Saves space but also if anything fails prior to saving data,

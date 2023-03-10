@@ -20,8 +20,8 @@ reference_time: '2014-08-25T16:19:03.000000Z'
 seconds_before_ref: 60
 seconds_after_ref: 360
 phase_list: null
-mindistance: 20.0
-maxdistance: 300.0
+mindistance_km: 20.0
+maxdistance_km: 300.0
 minazimuth: 0
 maxazimuth: 360
 minlatitude: null
