@@ -70,7 +70,7 @@ class Pysep:
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
                  user=None, password=None, client_debug=False,
                  log_level="DEBUG", timeout=600,
-                 write_files="inv,event,stream,config_file,sac",
+                 write_files="inv,event,stream,sac,config_file,station_list",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
                  **kwargs):
@@ -309,7 +309,7 @@ class Pysep:
             (order insensitive):
 
             * ZNE: Rotate from arbitrary components to North, East, Up
-            * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
+            * RTZ: Rotate from ZNE to Radial, Transverse, Up
             * UVW: Rotate from ZNE to orthogonal UVW orientation
             If set to None, no rotation processing will take place.
         :type resample_freq: float
@@ -400,12 +400,15 @@ class Pysep:
                 - event: save a QuakeML (.xml) file (ObsPy Catalog)
                 - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
                 - config_file: save YAML config file w/ all input parameters
-                - sac_zne: save all waveforms as SAC (.sac) files for ZNE comp
-                - sac_rtz: save all waveforms as SAC (.sac) files for RTZ comp
-                - sac_raw: save the raw (pre-rotation) SAC files
+                - sac: save all waveforms as SAC (.sac) files w/ correct headers
+                - sac_raw: save raw waveforms. these are straight from the
+                    data center with no quality check and no SAC headers
+                - sac_zne: save only ZNE channel SAC files
+                - sac_rtz: save only RTZ channel SAC files
+                - sac_uvw: save only UVW channel SAC files
 
             Example input: `write_files`=='inv,event,stream,sac'
-            By default, only write: 'inv,event,stream,config_file,sac'
+            By Default: 'inv,event,stream,sac,config_file,station_list'
             2) If NoneType or an empty string, no files will be written.
             3) If 'all', write all files listed in (1)
         :type plot_files: str or NoneType
@@ -1438,9 +1441,7 @@ class Pysep:
 
         Options are:
 
-            * weights_dist: write out 'weights.dat' file sorted by distance
-            * weights_az: write out 'weights.dat' file sorted by azimuth
-            * weights_code: write out 'weights.dat' file sorted by sta code
+            * config_file: write the current configuration as a YAML file
             * station_list: write a text file with station information
             * inv: write the inventory as a StationXML file
             * event: write the event as a QuakeML file
@@ -1449,7 +1450,9 @@ class Pysep:
                 for ZNE components with the appropriate SAC header
             * sac_rtz: write out per-channel SAC files for RTZ components
             * sac_uvw: write out per-channel SAC files for UVW components
-            * config_file: write the current configuration as a YAML file
+            * weights_dist: write out CAP 'weights.dat' file sorted by distance
+            * weights_az: write out CAP 'weights.dat' file sorted by azimuth
+            * weights_code: write out CAP 'weights.dat' file sorted by sta code
 
         :type write_files: list of str
         :param write_files: list of files that should be written out, must
@@ -1494,8 +1497,8 @@ class Pysep:
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "stream_raw" "config_file", "sac_zne", "sac_rtz",
-                             "sac_uvw", "sac_raw"}
+                             "config_file", "sac_zne", "sac_rtz", "sac_uvw",
+                             "sac_raw"}
         if _return_filenames:
             return _acceptable_files
 
@@ -1557,15 +1560,6 @@ class Pysep:
                 warnings.simplefilter("ignore")
                 st.write(fid, format="MSEED")
 
-        if "stream_raw" in write_files:
-            fid = os.path.join(self.output_dir, f"raw_{stream_fid}")
-            logger.info("writing raw waveform stream in MiniSEED")
-            logger.debug(fid)
-            with warnings.catch_warnings():
-                # ignore the encoding warning that comes from ObsPy
-                warnings.simplefilter("ignore")
-                self.st_raw.write(fid, format="MSEED")
-
         # Used for determining where to save SAC files
         if self._legacy_naming:
             _output_dir = self.output_dir
@@ -1576,26 +1570,26 @@ class Pysep:
             self._write_sac(st=self.st_raw,
                             output_dir=os.path.join(_output_dir, "RAW"))
 
+        if "sac" in write_files:
+            logger.info("writing all waveforms trace in SAC format")
+            self._write_sac(st=self.st, output_dir=_output_dir)
+
+        # Allow outputting only certain components. If used together with 'sac',
+        # probably these will overwrite already written files
         if "sac_zne" in write_files:
-            if self.st_zne:
-                logger.info("writing ZNE waveforms trace in SAC format")
-                self._write_sac(st=self.st_zne, output_dir=_output_dir)
-            else:
-                logger.warning("cant write `sac_zne`, no ZNE traces in stream")
+            logger.info("writing ZNE waveforms trace in SAC format")
+            self._write_sac(st=self.st.select(channel="ZNE"),
+                            output_dir=_output_dir)
 
         if "sac_rtz" in write_files:
-            if self.st_rtz:
-                logger.info("writing RTZ waveforms trace in SAC format")
-                self._write_sac(st=self.st_rtz, output_dir=_output_dir)
-            else:
-                logger.warning("cant write `sac_rtz`, no ZNE traces in stream")
+            logger.info("writing RTZ waveforms trace in SAC format")
+            self._write_sac(st=self.st.select(channel="RTZ"),
+                            output_dir=_output_dir)
 
         if "sac_uvw" in write_files:
-            if self.st_uvw:
-                logger.info("writing ZNE waveforms trace in SAC format")
-                self._write_sac(st=self.st_uvw, output_dir=_output_dir)
-            else:
-                logger.warning("cant write `sac_rtz`, no ZNE traces in stream")
+            logger.info("writing UVW waveforms trace in SAC format")
+            self._write_sac(st=self.st.select(channel="UVW"),
+                            output_dir=_output_dir)
 
     def _write_sac(self, st, output_dir=os.getcwd()):
         """
@@ -1772,35 +1766,39 @@ class Pysep:
             self.st_raw, self.inv = self.mass_download()
 
         # Intermediate write of StationXML and raw waveforms
-        self.write(_subset=["st_raw", "inv"], **kwargs)
+        self.write(_subset=["st_raw", "inv", "station_list"], **kwargs)
 
         # Quality check and process the raw waveforms. `st` is an intermediate
         # attribute and will NOT be written
         self.st = quality_check_waveforms_before_processing(
             self.st_raw, remove_clipped=self.remove_clipped
         )
+        # Free up some memory here because we no longer need raw data. If the
+        # user wants it, it should have been written out
+        del self.st_raw
+
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
             self.st = format_sac_header_w_taup_traveltimes(self.st, 
                                                            self.taup_model,
                                                            self.phase_list)
-
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
 
         # Rotation to various orientations. The output stream will have ALL
         # components, both rotated and non-rotated
         if self.rotate is not None:
-            self.st, self.st_zne, self.st_rtz, self.st_uvw = \
-                self.rotate_streams()
+            self.st = self.rotate_streams()
 
         # Final quality checks on ALL waveforms before we write them out
         self.st = quality_check_waveforms_after_processing(
             self.st, remove_insufficient_length=self.remove_insufficient_length
         )
 
-        # Generate outputs for user consumption
-        self.write(**{**kwargs, **self.kwargs})
+        # Write out the remainder files and make figures for user consumption
+        self.write(_subset=["stream", "sac", "sac_zne", "sac_rtz", "sac_uvw",
+                            "weights_dist", "weights_az", "weights_code"],
+                   **kwargs)
         self.plot()
 
 
