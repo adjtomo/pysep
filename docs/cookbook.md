@@ -8,14 +8,14 @@ inversion software.
 
 PySEP generates QuakeML and StationXML files during data gathering, which can 
 be used to plot source receiver maps. By default, these files are saved to the
-main output directory under the names `event.xml` and `stations.xml`.
+main output directory under the names `event.xml` and `inv.xml`.
 
 ```python
 from obspy import read_events, read_inventory
 from pysep.utils.plot import plot_source_receiver_map
 
 event = read_events("event.xml")[0]
-inv = read_inventory("stations.xml")
+inv = read_inventory("inv.xml")
 
 plot_source_receiver_map(inv=inv, event=event)
 ```
