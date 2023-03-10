@@ -78,7 +78,6 @@ To run this configuration file:
     pysep -c pysep_config.yaml
 
 
-
 Input Parameters and YAML Parameter File
 ````````````````````````````````````````
 
@@ -107,110 +106,6 @@ To generate a template parameter file you can run:
 .. code:: bash
 
     pysep -W  # or pysep --write
-
-Multiple Event Input
-````````````````````
-
-To use the same configuration file with multiple events, you can use an event 
-file passed to PySEP through the command line.
-
-When using this option, the event parameters inside the config file will be
-ignored, but all the other parameters will be used to gather data and metadata.
-
-Event input files should be text files where each row describes one event with 
-the following parameters as columns:
-
-.. ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
-
-For an example event input file called 'event_input.txt', call structure is:
-
-.. code:: bash
-
-    pysep -c pysep_config.yaml -E event_input.txt
-
-
-Legacy Filenaming Schema
-````````````````````````
-The new version of PySEP uses a file naming schema that is incompatible with
-previous versions, which may lead to problems in established workflows. 
-
-To honor the legacy naming schema of PySEP, simply use the `--legacy_naming`
-argument in the command line. This will change how the event tag is formatted,
-how the output directory is structured, and how the output SAC files are named.
-
-.. code:: bash
-
-    pysep -c pysep_config.yaml --legacy_naming
-
-
-
-Output Filename Control
-```````````````````````
-
-The event tag used to name the output directory and written SAC files can be set
-manually by the user using the `--event_tag` argument. If not given, the tag
-will default to a string consisting of event origin time and Flinn-Engdahl 
-region (or just origin time if `--legacy_naming` is used). Other output files
-such as the config file and ObsPy objects can be set as in the following: 
-
-.. code:: bash
-
-    pysep -c pysep_config.yaml \
-        --overwrite_event_tag event_abc \
-        --config_fid event_abc.yaml \
-        --stations_fid event_abc_stations.txt \
-        --inv_fid event_abc_inv.xml \
-        --event_fid event_abc_event.xml \
-        --stream_fid event_abc_st.ms
-
-
-Please note: the output SAC file names are hardcoded and cannot be changed 
-by the user. If this is a required feature, please open up a GitHub issue, and 
-the developers will address this need.
-
-
-ObsPy Mass Downloader
-`````````````````````
-
-`ObsPy's Mass Download
-<https://docs.obspy.org/packages/autogen/obspy.clients.fdsn.mass_downloader.html>`__
-feature allows for large data downloads over all available data services. This
-may be useful if you don't care where your data comes from and just want to
-download all data available.
-
-.. note::
-
-    This ignores the `client` parameter and downloads waveform and station
-    metadata for all available data services.
-
-To use the mass download option from the command line, you will first need to
-add the following parameter to your YAML config file:
-
-.. code:: yaml
-
-    use_mass_download: true
-
-
-Then from the command line, you can run things as normal, PySEP will know to
-use the mass download option to grab waveform and station metadata. There are
-two additional keyword arguments which you can provide  from the command line.
-
-- domain_type (str): Define the search region domain as 
-    - `rectangular`: rectangular bounding box defined by `minlatitude`,
-       `minlongitude,` `maxlatitude` and `maxlongitude`
-    - `circular`: circular bounding circle defined by the `event_latitude`,
-      `event_longitude` and min and max radii defined by `mindistance` and 
-      `maxdistance`
-- delete_tmpdir (bool): Removes the temporary directories that store the MSEED and
-  StationXML files which were downloaded by the mass downloader.
-  Saves space but also if anything fails prior to saving data,
-  the downloaded data will not be saved. Defaults to True.
-
-.. code:: bash
-
-    pysep -c config.yaml --domain_type circular --delete_tmpdir False
-
--------------------------------------------------------------------------------
 
 Scripting PySEP
 ---------------
@@ -245,7 +140,7 @@ important attributes are
     sep.event
 
 
-You can also pass parameters directly to the instantiation of the PySEP 
+You can also pass parameters directly to the instantiation of the PySEP
 class. See the PySEP docstring for input parameter types and definitions.
 
 .. code:: python
@@ -255,4 +150,165 @@ class. See the PySEP docstring for input parameter types and definitions.
                 event_longitude=-147.8498, event_depth_km=15., ....
                 )
 
+-------------------------------------------------------------------------------
 
+
+Multiple Event Input
+--------------------
+
+To use the same configuration file with multiple events, you can use an event 
+file passed to PySEP through the command line.
+
+When using this option, the event parameters inside the config file will be
+ignored, but all the other parameters will be used to gather data and metadata.
+
+Event input files should be text files where each row describes one event with 
+the following parameters as columns:
+
+.. ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
+
+For an example event input file called 'event_input.txt', call structure is:
+
+.. code:: bash
+
+    pysep -c pysep_config.yaml -E event_input.txt
+
+.. note::
+
+    Multiple event input is only available for command line usage of PySEP.
+    We suggest using a for loop if you would like to script multiple event
+    input using PySEP
+
+
+Legacy Filenaming Schema
+------------------------
+
+The new version of PySEP uses a file naming schema that is incompatible with
+previous versions, which may lead to problems in established workflows. 
+
+To honor the legacy naming schema of PySEP, simply use the `--legacy_naming`
+argument in the command line. This will change how the event tag is formatted,
+how the output directory is structured, and how the output SAC files are named.
+
+.. code:: bash
+
+    pysep -c pysep_config.yaml --legacy_naming
+
+Or with scripting
+
+.. code:: python
+
+    sep = Pysep(legacy_naming=True, ...)
+
+
+Output Filename Control
+```````````````````````
+
+The event tag used to name the output directory and written SAC files can be set
+manually by the user using the `--event_tag` argument. If not given, the tag
+will default to a string consisting of event origin time and Flinn-Engdahl 
+region (or just origin time if `--legacy_naming` is used). Other output files
+such as the config file and ObsPy objects can be set as in the following: 
+
+.. code:: bash
+
+    pysep -c pysep_config.yaml \
+        --overwrite_event_tag event_abc \
+        --config_fid event_abc.yaml \
+        --stations_fid event_abc_stations.txt \
+        --inv_fid event_abc_inv.xml \
+        --event_fid event_abc_event.xml \
+        --stream_fid event_abc_st.ms
+
+Or with scripting
+
+.. code:: python
+
+    sep = Pysep(overwrite_event_tag="event_abc",
+                config_fid="event_abc.yaml", ...)
+
+
+.. note::
+
+    The output SAC file names are hardcoded and cannot be changed
+    by the user. If this is a required feature, please open up a GitHub issue,
+    and the developers will address this need.
+
+
+ObsPy Mass Downloader
+`````````````````````
+
+`ObsPy's Mass Download
+<https://docs.obspy.org/packages/autogen/obspy.clients.fdsn.mass_downloader.html>`__
+feature allows for large data downloads over all available data services. This
+may be useful if you don't care where your data comes from and just want to
+download all data available.
+
+.. note::
+
+    This ignores the `client` parameter and downloads waveform and station
+    metadata for all available data services.
+
+To use the mass download option from the command line, you will first need to
+add the following parameter to your YAML config file:
+
+.. code:: yaml
+
+    use_mass_download: true
+
+
+Then from the command line, you can run things as normal, PySEP will know to
+use the mass download option to grab waveform and station metadata. There are
+two additional keyword arguments which you can provide  from the command line.
+
+- domain_type (str): Define the search region domain as 
+    - `rectangular`: rectangular bounding box defined by `minlatitude`,
+       `minlongitude,` `maxlatitude` and `maxlongitude`
+    - `circular`: circular bounding circle defined by the `event_latitude`,
+      `event_longitude` and min and max radii defined by `mindistance_km` and
+      `maxdistance_km`
+- delete_tmpdir (bool): Removes the temporary directories that store the MSEED and
+  StationXML files which were downloaded by the mass downloader.
+  Saves space but also if anything fails prior to saving data,
+  the downloaded data will not be saved. Defaults to True.
+
+.. code:: bash
+
+    pysep -c config.yaml --domain_type circular --delete_tmpdir False
+
+Or with scripting
+
+.. code:: python
+
+    sep = Pysep(config_file="config.yaml", use_mass_download=True,
+                domain_type="circular", delete_tmpdir=False, ...)
+
+
+
+Select Trace ID Input
+---------------------
+
+It may be useful to not download data for all possible combinations of
+`network`, `station`, `location` and `channel`, but rather to gather data
+by trace id only.
+
+PySEP accepts a list of station IDs under the parameter `station_ids`, which
+allows users to selectively gather data and metadata for a particular event.
+
+.. note::
+
+    Using the `station_ids` option will **ignore** any values provided to
+    `network`, `station`, `location` and `channel`. Trace IDs must be in the
+    form: 'NN.SSS.LL.CCC'
+
+.. note::
+
+    Select trace ID input is only available through scripting. If this is
+    desirable as a command line input, please open up a GitHub issue.
+
+.. code:: python
+
+    from pysep import Pysep
+
+    station_ids = ["II.DAV.00.LHZ", "IU.XMAS.*.LHZ", "IU.SDV.10.LHZ"]
+    sep = Pysep(station_ids=station_ids, ...)

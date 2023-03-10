@@ -10,8 +10,8 @@ from pysep import logger
 from pysep.utils.fmt import get_codes
 
 
-def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
-                                        maxdistance=1E6, minazimuth=0.,
+def curtail_by_station_distance_azimuth(event, inv, mindistance_km=0.,
+                                        maxdistance_km=1E6, minazimuth=0.,
                                         maxazimuth=360.):
     """
     Remove stations that are greater than a certain distance from event
@@ -21,10 +21,10 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
     :param event: Event object to get location from
     :type inv: obspy.core.inventory.Inventory
     :param inv: inventory object to get locations from
-    :type mindistance: float
-    :param mindistance: minimum acceptable source-receiver distance in km
-    :type maxdistance: float
-    :param maxdistance: maximum acceptable source-receiver distance in km
+    :type mindistance_km: float
+    :param mindistance_km: minimum acceptable source-receiver distance in km
+    :type maxdistance_km: float
+    :param maxdistance_km: maximum acceptable source-receiver distance in km
     :type minazimuth: float
     :param minazimuth: minimum acceptable azimuth in deg
     :type maxazimuth: float
@@ -48,7 +48,7 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
                                                lon2=sta.longitude
                                                )
             dist_km = dist_m / 1E3
-            if not (mindistance <= dist_km <= maxdistance):
+            if not (mindistance_km <= dist_km <= maxdistance_km):
                 remove_for_distance.append(netsta_code)
             elif not (minazimuth <= az <= maxazimuth):
                 remove_for_azimuth.append(netsta_code)
@@ -57,7 +57,7 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
                 azimuths[netsta_code] = az
 
     logger.info(f"{len(remove_for_distance)} traces outside distance "
-                f"bounds [{mindistance}, {maxdistance}]km"
+                f"bounds [{mindistance_km}, {maxdistance_km}]km"
                 )
     if remove_for_distance:
         for remove in remove_for_distance:

@@ -53,17 +53,18 @@ class Pysep:
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
                  networks="*", stations="*", locations="*", channels="*",
+                 station_ids=None,
                  event_latitude=None, event_longitude=None, event_depth_km=None,
-                 event_magnitude=None, remove_response=True,
-                 remove_clipped=True, remove_insufficient_length=True,
-                 remove_masked_data=True,
+                 event_magnitude=None,
+                 remove_response=True, remove_clipped=True,
+                 remove_insufficient_length=True, remove_masked_data=True,
                  water_level=60, detrend=True, demean=True, taper_percentage=0,
                  rotate=None, pre_filt="default", fill_data_gaps=False,
                  gap_fraction=1.,
-                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
-                 minlatitude=None, minlongitude=None, maxlatitude=None,
-                 maxlongitude=None, resample_freq=None, scale_factor=1,
-                 phase_list=("ttall",), seconds_before_event=20,
+                 mindistance_km=0, maxdistance_km=20E3, minazimuth=0,
+                 maxazimuth=360, minlatitude=None, minlongitude=None,
+                 maxlatitude=None, maxlongitude=None, resample_freq=None,
+                 scale_factor=1, phase_list=None, seconds_before_event=20,
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
                  user=None, password=None, client_debug=False,
@@ -189,20 +190,29 @@ class Pysep:
         :param channels: channel name or names to query for, wildcard okay. If
             multiple stations, input as a list of comma-separated values, e.g.,
             'HH?,BH?'. Wildcards acceptable. Defaults to '*'.
+        :type station_ids: list of str
+        :param station_ids: an alternative to gathering based on individual
+            codes, allow the user to input a direct list of trace IDs which
+            will be broken up and used to gather waveforms and metadata.
+            NOTE: OVERRIDES `network`, `stations`, `locations`, and `channels`,
+            these parameters will NOT be used.
+            Station ids should be provided as: ['NN.SSS.LL.CCC', ...]
 
         .. note::
             Station removal and curtailing parameters
 
-        :type mindistance: float
-        :param mindistance: Used for removing stations and mass download option
+        :type mindistance_km: float
+        :param mindistance_km: Used for removing stations and mass download
+            option
 
             - Removing stations: Remove any stations who are closer than the
             given minimum distance away from event (units: km). Always applied
             - Mass Download: If `use_mass_download` is True and
             `domain_type`=='circular', defines the minimum radius around the
             event hypocenter to gather waveform data and station metadata
-        :type maxdistance: float
-        :param maxdistance: Used for removing stations and mass download option
+        :type maxdistance_km: float
+        :param maxdistance_km: Used for removing stations and mass download
+            option
 
             - Removing stations: Remove any stations who are farther than the
             given maximum distance away from event (units: km). Always applied
@@ -441,13 +451,16 @@ class Pysep:
         self.stations = stations
         self.channels = channels
         self.locations = locations
+        self.station_ids = station_ids
 
         # Waveform collection parameters
         self.reference_time = reference_time or self.origin_time
-        # Force float type to avoid rounding errors
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
-        self.phase_list = phase_list
+        if phase_list is None:
+            self.phase_list = ["ttall"]  # default ObsPy value gather ALL phase
+        else:
+            self.phase_list = phase_list
 
         # NOTE: This default is a UAF LUNGS system-specific database path.
         # If you are not on LUNGS, you will need to set this path manually
@@ -457,8 +470,8 @@ class Pysep:
         )
 
         # Event and station search and curtailing criteria
-        self.mindistance = mindistance
-        self.maxdistance = maxdistance
+        self.mindistance_km = mindistance_km
+        self.maxdistance_km = maxdistance_km
         self.minazimuth = minazimuth
         self.maxazimuth = maxazimuth
         self.minlatitude = minlatitude
@@ -553,6 +566,14 @@ class Pysep:
             logger.warning("`networks`=='*' will search ALL networks, which "
                            "may take a long time depending on data availability"
                            )
+
+        if self.station_ids is not None:
+            logger.debug("`station_ids` provided, ignoring parameters "
+                         "`networks`, `stations`, `locations` and `channels`")
+            for id_ in self.station_ids:
+                assert(len(id_.split(".")) == 4), (
+                    f"`station_id` entries must have format NN.SSS.LL.CC; {id_}"
+                )
 
         if not (0 <= self.minazimuth <= 360):
             _old_val = self.minazimuth
@@ -898,6 +919,19 @@ class Pysep:
                     minlongitude=self.minlongitude,
                     maxlongitude=self.maxlongitude
                     )
+        elif self.station_ids is not None:
+            inv = Inventory()
+            # Gather data based on individual station IDs, one at a time
+            for id_ in self.station_ids:
+                net, sta, loc, cha = id_.split(".")
+                inv += self.c.get_stations(
+                    network=net, location=loc,  station=sta, channel=cha,
+                    starttime=self.origin_time - self.seconds_before_ref,
+                    endtime=self.origin_time + self.seconds_after_ref,
+                    minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
+                    minlongitude=self.minlongitude,
+                    maxlongitude=self.maxlongitude, level="response"
+                )
         else:
             # Standard behavior is to simply wrap get_stations()
             inv = self.c.get_stations(
@@ -947,6 +981,7 @@ class Pysep:
         elif self.client.upper() == "LLNL":
             event_id = int(self.event.event_descriptions[0].text)
             st = self.c.get_waveforms_for_event(event_id)  # looks for integers
+        # Default behavior, gather data from client
         else:
             st = self._bulk_query_waveforms_from_client()
 
@@ -959,9 +994,6 @@ class Pysep:
         Make a bulk request query to the Client based on the internal `inv`
         attribute defining the available station metadata.
 
-        TODO removed 'make_bulk_list_from_stalist' which used TauP to gather
-            data between P and S arrivals. Do we need this?
-
         :rtype: obspy.core.stream.Stream
         :return: Stream of channel-separated waveforms
         """
@@ -972,11 +1004,21 @@ class Pysep:
                 1 + self._extra_download_pct)
         t2 = self.reference_time + self.seconds_after_ref * (
                 1 + self._extra_download_pct)
-        for net in self.inv:
-            for sta in net:
-                # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, self.locations, self.channels, 
-                             t1, t2))
+        # Option to gather data for specific trace ids
+        if self.station_ids:
+            for net in self.inv:
+                for sta in net:
+                    for cha in sta:
+                        # net sta loc cha t1 t2
+                        bulk.append((net.code, sta.code, cha._location_code,
+                                     cha.code, t1, t2))
+        # Or, default option is to gather data for ALL available combinations
+        else:
+            for net in self.inv:
+                for sta in net:
+                    # net sta loc cha t1 t2
+                    bulk.append((net.code, sta.code, self.locations,
+                                 self.channels, t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
         assert bulk, (
@@ -1007,8 +1049,8 @@ class Pysep:
                 - rectangular: rectangular bounding box defined by min/max
                   latitude/longitude
                 - circular: circular bounding circle defined by the events
-                  latitude and longitude, with radii defined by `mindistance`
-                  and `maxdistance`
+                  latitude and longitude, with radii defined by `mindistance_km`
+                  and `maxdistance_km`
             bool delete_tmpdir:
                 Remove the temporary directories that store the MSEED and
                 StationXML files which were downloaded by the mass downloader.
@@ -1036,8 +1078,8 @@ class Pysep:
             logger.info("using a circular domain for mass downloader")
             domain = CircularDomain(
                 latitude=self.event_latitude, longitude=self.event_longitude,
-                minradius=kilometer2degrees(self.mindistance),
-                maxradius=kilometer2degrees(self.maxdistance)
+                minradius=kilometer2degrees(self.mindistance_km),
+                maxradius=kilometer2degrees(self.maxdistance_km)
             )
         else:
             raise NotImplementedError(f"`domain_type` must be 'rectangular' or"
@@ -1110,8 +1152,8 @@ class Pysep:
         inv = self.inv.copy()
 
         inv = curtail_by_station_distance_azimuth(
-            event=self.event, inv=inv, mindistance=self.mindistance,
-            maxdistance=self.maxdistance, minazimuth=self.minazimuth,
+            event=self.event, inv=inv, mindistance_km=self.mindistance_km,
+            maxdistance_km=self.maxdistance_km, minazimuth=self.minazimuth,
             maxazimuth=self.maxazimuth
         )
 
@@ -1520,7 +1562,7 @@ class Pysep:
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
         attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
-                            "plot_files", "output_dir"]
+                            "plot_files", "output_dir", "station_ids"]
 
         if self.client.upper() != "LLNL":
             attr_remove_list.append("llnl_db_path")  # not important unless LLNL
