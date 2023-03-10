@@ -201,6 +201,12 @@ Or with scripting
     sep = Pysep(legacy_naming=True, ...)
 
 
+Output Directory Control
+------------------------
+
+By default, PySEP
+
+
 Output Filename Control
 ```````````````````````
 

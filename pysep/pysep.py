@@ -7,6 +7,7 @@ metadata. Save waveforms as SAC files for use in moment tensor inversion and
 adjoint tomography codes.
 """
 import argparse
+import logging
 import os
 import shutil
 import sys
@@ -290,8 +291,8 @@ class Pysep:
             Data processing parameters
 
         :type detrend: bool
-        :param detrend: apply simple linear detrend to data during prior to
-            removing instrument response (if `remove_response`==True)
+        :param detrend: apply simple linear detrend as the first preprocessing
+            step
         :type demean: bool
         :param demean: apply demeaning to data during instrument reseponse
             removal. Only applied if `remove_response` == True.
@@ -1716,13 +1717,25 @@ class Pysep:
 
         full_output_dir = os.path.join(self.output_dir, event_tag)
         logger.info(f"full output directory is: {full_output_dir}")
+
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
         elif not self._overwrite:
             logger.warning(f"output directory '{full_output_dir}' exists and "
                            f"overwrite flag (-o/--overwrite) not set, exiting")
             sys.exit(0)
+
         return event_tag, full_output_dir
+
+    def _set_log_file(self):
+        """
+        Write logger to file as well as stdout, with the same format as the
+        stdout logger
+        """
+        log_file = self.kwargs.get("log_file", "pysep.log")
+        fh = logging.FileHandler(os.path.join(self.output_dir, log_file))
+        fh.setFormatter(logger.handlers[0].formatter)
+        logger.addHandler(fh)
 
     def run(self, event=None, inv=None, st=None, **kwargs):
         """
@@ -1747,6 +1760,7 @@ class Pysep:
         :param st: optional user-provided strean object which will force a
             skip over waveform searching
         """
+        self._set_log_file()
         logger.debug(f"running PySEP version {__version__}")
 
         # Overload default parameters with event input file and check validity
