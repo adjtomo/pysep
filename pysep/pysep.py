@@ -72,7 +72,8 @@ class Pysep:
                  log_level="DEBUG", timeout=600,
                  write_files="inv,event,stream,sac,config_file,station_list",
                  plot_files="all", llnl_db_path=None, output_dir=None,
-                 overwrite=False, legacy_naming=False, overwrite_event_tag=None,
+                 overwrite=False, legacy_naming=False,
+                 overwrite_event_tag=None,
                  **kwargs):
         """
         .. note::
@@ -380,9 +381,16 @@ class Pysep:
             SAC files. Legacy filenames look something like
             '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
             station, location, channel, component). Default to False
-        :type overwrite_event_tag: str
+        :type overwrite_event_tag: str or bool
         :param overwrite_event_tag: option to allow the user to set their own
-            event tag, rather than the automatically generated one
+            event tag, rather than the automatically generated one.
+
+            - NoneType (default): use automatically generated event tag which
+                consists of event origin time and Flinn-Engdahl region
+            - '': empty string will dump ALL files into `output_dir`, no new
+                directories will be made
+            - str: User-defined event tag which will be created in `output_dir`,
+                all files will be stored in {output_dir}/{overwrite_event_tag}/*
 
         .. note::
             Output file and figure control
@@ -532,9 +540,6 @@ class Pysep:
         self.inv = None
         self.event = None
         self.st_raw = None
-        self.st_zne = None
-        self.st_rtz = None
-        self.st_uvw = None
 
         # Allow the user to manipulate the logger during __init__
         if log_level is not None:
@@ -1497,8 +1502,8 @@ class Pysep:
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac_zne", "sac_rtz", "sac_uvw",
-                             "sac_raw"}
+                             "config_file", "sac", "sac_raw", "sac_zne",
+                             "sac_rtz", "sac_uvw"}
         if _return_filenames:
             return _acceptable_files
 
@@ -1554,11 +1559,10 @@ class Pysep:
             fid = os.path.join(self.output_dir, stream_fid)
             logger.info("writing waveform stream in MiniSEED")
             logger.debug(fid)
-            st = self.st_zne + self.st_rtz + self.st_uvw
             with warnings.catch_warnings():
                 # ignore the encoding warning that comes from ObsPy
                 warnings.simplefilter("ignore")
-                st.write(fid, format="MSEED")
+                self.st.write(fid, format="MSEED")
 
         # Used for determining where to save SAC files
         if self._legacy_naming:
@@ -1567,27 +1571,28 @@ class Pysep:
             _output_dir = os.path.join(self.output_dir, "SAC")
 
         if "sac_raw" in write_files:
+            logger.info("writing RAW waveforms traces in SAC format")
             self._write_sac(st=self.st_raw,
                             output_dir=os.path.join(_output_dir, "RAW"))
 
         if "sac" in write_files:
-            logger.info("writing all waveforms trace in SAC format")
+            logger.info("writing all waveforms traces in SAC format")
             self._write_sac(st=self.st, output_dir=_output_dir)
 
         # Allow outputting only certain components. If used together with 'sac',
         # probably these will overwrite already written files
         if "sac_zne" in write_files:
-            logger.info("writing ZNE waveforms trace in SAC format")
+            logger.info("writing ZNE waveforms traces in SAC format")
             self._write_sac(st=self.st.select(channel="ZNE"),
                             output_dir=_output_dir)
 
         if "sac_rtz" in write_files:
-            logger.info("writing RTZ waveforms trace in SAC format")
+            logger.info("writing RTZ waveforms traces in SAC format")
             self._write_sac(st=self.st.select(channel="RTZ"),
                             output_dir=_output_dir)
 
         if "sac_uvw" in write_files:
-            logger.info("writing UVW waveforms trace in SAC format")
+            logger.info("writing UVW waveforms traces in SAC format")
             self._write_sac(st=self.st.select(channel="UVW"),
                             output_dir=_output_dir)
 
@@ -1603,10 +1608,16 @@ class Pysep:
             if self._legacy_naming:
                 # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
                 _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
-                tag = f"{self.event_tag}.{_trace_id}"
+                if self.event_tag:
+                    tag = f"{self.event_tag}.{_trace_id}"
+                else:
+                    tag = _trace_id
             else:
                 # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
-                tag = f"{self.event_tag}.{tr.get_id()}.sac"
+                if self.event_tag:
+                    tag = f"{self.event_tag}.{tr.get_id()}.sac"
+                else:
+                    tag = f"{tr.get_id()}.sac"
 
             fid = os.path.join(output_dir, tag)
             logger.debug(os.path.basename(fid))
@@ -1686,19 +1697,21 @@ class Pysep:
         :rtype: tuple of str
         :return: (unique event tag, path to output directory)
         """
-        # Options for choosing how to name things. Legacy, manual or new-style
-        if self._legacy_naming:
-            logger.debug("reverting to legacy style file naming")
-            event_tag = format_event_tag_legacy(self.event)
+        # Default behavior, auto-generate event tag
+        if self._overwrite_event_tag is None:
+            # Options for choosing how to name things. Legacy or new-style
+            if self._legacy_naming:
+                logger.debug("reverting to legacy style file naming")
+                event_tag = format_event_tag_legacy(self.event)
+            else:
+                event_tag = format_event_tag(self.event)
+        # Either User turns off event tag so dump files directly to `output_dir`
+        # or User defines their own `event_tag`
         else:
-            event_tag = format_event_tag(self.event)
-
-        if self._overwrite_event_tag:
-            logger.debug("overwriting automatically generated event tag")
             event_tag = self._overwrite_event_tag
 
-        logger.info(f"event tag is: {event_tag}")
         full_output_dir = os.path.join(self.output_dir, event_tag)
+        logger.info(f"full output directory is: {full_output_dir}")
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
         elif not self._overwrite:
@@ -1766,14 +1779,14 @@ class Pysep:
             self.st_raw, self.inv = self.mass_download()
 
         # Intermediate write of StationXML and raw waveforms
-        self.write(_subset=["st_raw", "inv", "station_list"], **kwargs)
+        self.write(_subset=["sac_raw", "inv", "station_list"], **kwargs)
 
         # Quality check and process the raw waveforms. `st` is an intermediate
         # attribute and will NOT be written
         self.st = quality_check_waveforms_before_processing(
             self.st_raw, remove_clipped=self.remove_clipped
         )
-        # Free up some memory here because we no longer need raw data. If the
+        # Mark `st_raw` for deletion because we no longer need raw data. If the
         # user wants it, it should have been written out
         del self.st_raw
 
@@ -1844,7 +1857,7 @@ def parse_args():
     parser.add_argument("--legacy_naming", default=False, action="store_true",
                         help="use the file naming schema and directory "
                              "structure of the legacy version of PySEP.")
-    parser.add_argument("--overwrite_event_tag", default="", type=str,
+    parser.add_argument("--overwrite_event_tag", default=None, type=str,
                         nargs="?",
                         help="Manually set the event tag used to name the "
                              "output directory and SAC files. If None, will "
