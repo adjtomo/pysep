@@ -1477,22 +1477,28 @@ class Pysep:
 
         Keyword Arguments
         ::
-            order_station_list_by (str): how to order the station list
-                available options are: network, station, latitude, longitude,
-                elevation, burial.
-            config_fid (str): optional name for the configuration file name
-                defaults to 'pysep_config.yaml'
-            station_fid (str): optional name for the stations list file name
-                defaults to 'station_list.txt'
-            inv_fid (str): optional name for saved ObsPy inventory object,
-                defaults to 'inv.xml'
-            event_fid (str): optional name for saved ObsPy Event object,
-                defaults to 'event.xml'
-            stream_fid (str): optional name for saved ObsPy Stream miniseed
-                object, defaults to 'stream.ms'
-            sac_subdir (str): sub-directory within output directory and event
-                directory to save SAC files. Defaults to SAC/. Use an empty
-                string to dump files directly into the event directory
+            str order_station_list_by:
+                how to order the station list available options are:
+                network, station, latitude, longitude, elevation, burial.
+            str config_fid:
+                optional name for the configuration file name defaults to
+                'pysep_config.yaml'
+            str station_fid:
+                optional name for the stations list file name defaults to
+                'station_list.txt'
+            str inv_fid:
+                optional name for saved ObsPy inventory object, defaults to
+                'inv.xml'
+            str event_fid:
+                optional name for saved ObsPy Event object, defaults to
+                'event.xml'
+            str stream_fid:
+                optional name for saved ObsPy Stream miniseed object,
+                defaults to 'stream.ms'
+            str sac_subdir:
+                sub-directory within output directory and event directory to
+                save SAC files. Defaults to SAC/. Use an empty string to dump
+                files directly into the event directory
         """
         # Set some default values that can be overridden with kwargs
         order_station_list_by = self.kwargs.get("order_station_list_by", None)
@@ -1592,7 +1598,6 @@ class Pysep:
                             components="ZNE")
 
         if "sac_rtz" in write_files:
-            import pdb;pdb.set_trace()
             logger.info("writing RTZ waveforms traces in SAC format")
             self._write_sac(st=self.st, output_dir=_output_dir,
                             components="RTZ")

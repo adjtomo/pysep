@@ -153,128 +153,90 @@ class. See the PySEP docstring for input parameter types and definitions.
 -------------------------------------------------------------------------------
 
 
-Multiple Event Input
---------------------
-
-To use the same configuration file with multiple events, you can use an event 
-file passed to PySEP through the command line.
-
-When using this option, the event parameters inside the config file will be
-ignored, but all the other parameters will be used to gather data and metadata.
-
-Event input files should be text files where each row describes one event with 
-the following parameters as columns:
-
-.. ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
-
-For an example event input file called 'event_input.txt', call structure is:
-
-.. code:: bash
-
-    pysep -c pysep_config.yaml -E event_input.txt
-
-.. note::
-
-    Multiple event input is only available for command line usage of PySEP.
-    We suggest using a for loop if you would like to script multiple event
-    input using PySEP
-
-
-Legacy Filenaming Schema
-------------------------
-
-The new version of PySEP uses a file naming schema that is incompatible with
-previous versions, which may lead to problems in established workflows. 
-
-To honor the legacy naming schema of PySEP, simply use the `--legacy_naming`
-argument in the command line. This will change how the event tag is formatted,
-how the output directory is structured, and how the output SAC files are named.
-
-.. code:: bash
-
-    pysep -c pysep_config.yaml --legacy_naming
-
-Or with scripting
-
-.. code:: python
-
-    sep = Pysep(legacy_naming=True, ...)
-
-
 Output Control
 --------------
 
-By default, PySEP writes all files to the User-defined parameter `output_dir`,
+By default, PySEP writes all files to the User-defined parameter ``output_dir``,
 which defaults to the current working directory.
 
-Files are normally written into a sub-directory defined by the `event_tag` which
-is dynamically generated based on the event origin time, and its Flinn-Engdahl
-region. For example
+Files are normally written into a sub-directory defined by the ``event_tag``
+which is dynamically generated based on the event origin time, and Flinn-Engdahl
+region. For example:
 
-.. code::
+..
 
     2009-04-07T201255_SOUTHERN_ALASKA
 
-All waveform files are saved in a further sub-directory `SAC`, to avoid
+All waveform files are saved in a further sub-directory ``SAC``, to avoid
 cluttering up the output directory.
 
-.. note::
-
-    Users can use the parameters `write_files` and `plot_files` to control
-    exactly what files are produced during a PySEP (`see API documentation
-    <autoapi/pysep/pysep/index.html#pysep.pysep.Pysep>`__).
+Users can use the parameters ``write_files`` and ``plot_files`` to control
+exactly what files are produced during a PySEP (see `API documentation
+<autoapi/pysep/pysep/index.html#pysep.pysep.Pysep>`__ for details).
 
 By default, PySEP will write SAC files, StationXML, QuakeML and config files,
 and create a source-receiver map and record section.
 
 Directory Control
------------------
+`````````````````
 
 In some cases it may be useful for Users to save files directly to their
 working directory, without all the automatically generated sub-directories.
 
-To ignore the automatically generated event tag, you can use the
-`overwrite_event_tag` parameter. Via the command line:
+* To ignore the automatically generated event tag, you can set the
+  ``overwrite_event_tag`` parameter as an empty string. Via the command line:
 
-.. code:: bash
+  .. code:: bash
 
-    pysep -c pysep_config.yaml --overwrite_event_tag ''
+      pysep -c pysep_config.yaml --overwrite_event_tag ''
 
-Or via scripting:
+  or via scripting:
 
-.. code:: python
+  .. code:: python
 
-    sep = Pysep(overwrite_event_tag='')
+      sep = Pysep(overwrite_event_tag="")
 
-To save waveform files directly in the output directory, use the `sac_subdir`
-parameter, which should be input in your YAML parameter file:
+* To ignore the SAC subdirectory and save waveform files directly in the
+  output directory, use the ``sac_subdir`` parameter, which should be input in
+  your YAML parameter file:
 
-.. code:: yaml
+  .. code:: yaml
 
-    sac_subdir: ''
+      sac_subdir: ''
 
-or via scripting
+  or via scripting
 
-.. code:: python
+  .. code:: python
 
-    sep = Pysep(sac_subdir='')
+      sep = Pysep(sac_subdir="")
 
-One useful example of this is if a User only wants to save SAC waveforms for
-the rotated RTZ component within their current working directory:
+* `Example`: if a User only wants to save SAC waveforms for the rotated RTZ
+  component within their current working directory, ignoring all automatically
+  generated sub directories, all other written files and all plots:
 
-.. code:: python
+  .. code:: python
 
-    sep = Pysep(overwrite_event_tag='', sac_subdir='', write_files='sac_rtz')
+      sep = Pysep(overwrite_event_tag="", sac_subdir="", write_files="sac_rtz",
+                  plot_files="")
 
 
 Output Filename Control
 ```````````````````````
 
+.. note::
+
+    The output SAC file names are hardcoded as trace IDs with or without the
+    event tag. If control over file IDs is a required feature, please open up a
+    GitHub issue.
+
 The event tag used to name the output directory and written SAC files can be set
-manually by the user using the `--event_tag` argument. If not given, the tag
-will default to a string consisting of event origin time and Flinn-Engdahl 
-region (or just origin time if `--legacy_naming` is used). Other output files
-such as the config file and ObsPy objects can be set as in the following: 
+manually by the user using the ``overwrite_event_tag`` argument.
+
+Other output file names can also be changed from their default values, see the
+:meth:`write function <pysep.pysep.Pysep.write>` for write file options and
+arguments to use for changing file names.
+
+An example of this via the command line:
 
 .. code:: bash
 
@@ -293,15 +255,57 @@ Or with scripting
     sep = Pysep(overwrite_event_tag="event_abc",
                 config_fid="event_abc.yaml", ...)
 
+
+Legacy Filenaming Schema
+````````````````````````
+
+The new version of PySEP uses a file naming schema that is incompatible with
+previous versions, which may lead to problems in established workflows.
+
+To honor the legacy naming schema of PySEP, simply use the ``legacy_naming``
+parameter. This will change how the event tag is formatted, how the output
+directory is structured, and how the output SAC files are named.
+
+.. code:: bash
+
+    pysep -c pysep_config.yaml --legacy_naming
+
+Or with scripting
+
+.. code:: python
+
+    sep = Pysep(legacy_naming=True, ...)
+
+
+Multiple Event Input
+--------------------
+
+To use the same configuration file with multiple events, you can use an event
+file passed to PySEP through the command line.
+
+When using this option, the event parameters inside the config file will be
+ignored, but all the other parameters will be used to gather data and metadata.
+
+Event input files should be text files where each row describes one event with
+the following parameters as columns:
+
+.. ORIGIN_TIME LONGITUDE LATITUDE DEPTH[KM] MAGNITUDE
+
+For an example event input file called 'event_input.txt', call structure is:
+
+.. code:: bash
+
+    pysep -c pysep_config.yaml -E event_input.txt
+
 .. note::
 
-    The output SAC file names are hardcoded as trace IDs and cannot be changed
-    by the user. If this is a required feature, please open up a GitHub issue,
-    and the developers will address this need.
+    Multiple event input is only available for command line usage of PySEP.
+    We suggest using a for loop if you would like to script multiple event
+    input using PySEP
 
 
 ObsPy Mass Downloader
-`````````````````````
+---------------------
 
 `ObsPy's Mass Download
 <https://docs.obspy.org/packages/autogen/obspy.clients.fdsn.mass_downloader.html>`__
