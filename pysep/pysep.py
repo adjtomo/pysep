@@ -64,7 +64,7 @@ class Pysep:
                  mindistance_km=0, maxdistance_km=20E3, minazimuth=0,
                  maxazimuth=360, minlatitude=None, minlongitude=None,
                  maxlatitude=None, maxlongitude=None, resample_freq=None,
-                 scale_factor=1, phase_list=("ttall",), seconds_before_event=20,
+                 scale_factor=1, phase_list=None, seconds_before_event=20,
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
                  user=None, password=None, client_debug=False,
@@ -458,7 +458,10 @@ class Pysep:
         # Force float type to avoid rounding errors
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
-        self.phase_list = phase_list
+        if phase_list is None:
+            self.phase_list = ["ttall"]
+        else:
+            self.phase_list = phase_list
 
         # NOTE: This default is a UAF LUNGS system-specific database path.
         # If you are not on LUNGS, you will need to set this path manually
