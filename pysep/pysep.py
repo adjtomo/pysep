@@ -1456,7 +1456,7 @@ class Pysep:
             defaults to 'stream.ms'
         """
         # Collect kwargs for writing
-        order_stations_list_by = kwargs.get("order_stations_list_by", None)
+        order_station_list_by = kwargs.get("order_station_list_by", None)
 
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
@@ -1492,12 +1492,12 @@ class Pysep:
 
         if "station_list" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir,
-                               stations_fid or "stations_list.txt")
+                               stations_fid or "station_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
             write_pysep_stations_file(
                     self.inv, self.event, fid, 
-                    order_stations_list_by=order_stations_list_by
+                    order_station_list_by=order_station_list_by
                     )
 
         if "inv" in write_files or "all" in write_files:

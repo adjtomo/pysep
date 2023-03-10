@@ -559,8 +559,8 @@ def write_sem(st, unit, path="./", time_offset=0):
         np.savetxt(fid, data, ["%13.7f", "%17.7f"])
 
 
-def write_pysep_stations_file(inv, event, fid="./stations_list.txt", 
-                              order_stations_list_by=None):
+def write_pysep_station_file(inv, event, fid="./station_list.txt", 
+                             order_station_list_by=None):
     """
     Write a list of station codes, distances, etc. useful for understanding
     characterization of all collected stations
@@ -572,20 +572,20 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt",
     :param inv: optional user-provided inventory object which will force a
         skip over StationXML/inventory searching
     :type fid: str
-    :param fid: name of the file to write to. defaults to ./stations_list.txt
-    :type order_by: str
-    :param order_by: how to order the stations written to file. Available
-        are: network, station, latitude, longitude, elevation, burial.
+    :param fid: name of the file to write to. defaults to ./station_list.txt
+    :type order_station_list_by: str
+    :param order_station_list_by: how to order the stations written to file.
+        Available are: network, station, latitude, longitude, elevation, burial.
         If not given, order is determined by the internal sorting of the
         input Inventory
     """
     # Key indices correspond to stations list
     keys = ["station", "network", "latitude", "longitude", "distance",
             "azimuth"]
-    if order_stations_list_by and order_stations_list_by not in keys:
-        logger.warning(f"`order_stations_by` must be in {keys}, "
+    if order_station_list_by and order_station_list_by not in keys:
+        logger.warning(f"`order_station_by` must be in {keys}, "
                        f"setting default")
-        order_stations_by = None
+        order_station_by = None
 
     event_latitude = event.preferred_origin().latitude
     event_longitude = event.preferred_origin().longitude
@@ -603,8 +603,8 @@ def write_pysep_stations_file(inv, event, fid="./stations_list.txt",
                              dist_km, az])
 
     # Set the order of the station file based on the order of keys
-    if order_stations_list_by:
-        idx = keys.index(order_stations_list_by)
+    if order_station_list_by:
+        idx = keys.index(order_station_list_by)
         stations.sort(key=lambda x: x[idx])
 
     with open(fid, "w") as f:
@@ -677,6 +677,7 @@ def write_stations_file(inv, fid="./STATIONS", order_by=None,
             f.write(f"{s[0]:>6}{s[1]:>6}{s[2]:12.4f}{s[3]:12.4f}"
                     f"{s[4]:7.1f}{s[5]:7.1f}\n"
                     )
+
 
 def write_cat_to_event_list(cat, fid_out="event_input.txt"):
     """
