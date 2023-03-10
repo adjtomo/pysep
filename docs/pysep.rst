@@ -153,22 +153,19 @@ class. See the PySEP docstring for input parameter types and definitions.
 -------------------------------------------------------------------------------
 
 
-Output Control
+PySEP Outputs
 --------------
 
-By default, PySEP writes all files to the User-defined parameter ``output_dir``,
-which defaults to the current working directory.
+PySEP uses a default directory structure when saving files:
 
-Files are normally written into a sub-directory defined by the ``event_tag``
-which is dynamically generated based on the event origin time, and Flinn-Engdahl
-region. For example:
-
-..
-
-    2009-04-07T201255_SOUTHERN_ALASKA
-
-All waveform files are saved in a further sub-directory ``SAC``, to avoid
-cluttering up the output directory.
+* ``output_dir``: By default, PySEP writes all files to the User-defined
+  parameter ``output_dir``, which defaults to the current working directory.
+* ``event_tag``: Files are written into a sub-directory defined by the event
+  origin time, and Flinn-Engdahl region. For example:
+  ``2009-04-07T201255_SOUTHERN_ALASKA``
+* ``sac_subdir``: All waveform files are saved in a further sub-directory
+  (default: `SAC/`), to avoid cluttering up the output directory. Waveform
+  files are tagged by the `event_tag` and trace ID.
 
 Users can use the parameters ``write_files`` and ``plot_files`` to control
 exactly what files are produced during a PySEP (see `API documentation
@@ -177,8 +174,8 @@ exactly what files are produced during a PySEP (see `API documentation
 By default, PySEP will write SAC files, StationXML, QuakeML and config files,
 and create a source-receiver map and record section.
 
-Directory Control
-`````````````````
+Override Directory Names
+````````````````````````
 
 In some cases it may be useful for Users to save files directly to their
 working directory, without all the automatically generated sub-directories.
@@ -196,6 +193,12 @@ working directory, without all the automatically generated sub-directories.
 
       sep = Pysep(overwrite_event_tag="")
 
+* To set your own event tag, use a string value
+
+  .. code:: bash
+
+        pysep -c pysep_config.yaml --overwrite_event_tag event_abc
+
 * To ignore the SAC subdirectory and save waveform files directly in the
   output directory, use the ``sac_subdir`` parameter, which should be input in
   your YAML parameter file:
@@ -208,7 +211,7 @@ working directory, without all the automatically generated sub-directories.
 
   .. code:: python
 
-      sep = Pysep(sac_subdir="")
+      sep = Pysep(sac_subdir="")  # or use a string value to define your own
 
 * `Example`: if a User only wants to save SAC waveforms for the rotated RTZ
   component within their current working directory, ignoring all automatically
@@ -220,14 +223,14 @@ working directory, without all the automatically generated sub-directories.
                   plot_files="")
 
 
-Output Filename Control
-```````````````````````
+Override Filenames
+``````````````````
 
 .. note::
 
-    The output SAC file names are hardcoded as trace IDs with or without the
-    event tag. If control over file IDs is a required feature, please open up a
-    GitHub issue.
+    The output SAC file names are hardcoded as trace IDs (with or without the
+    event tag). If additional control over file IDs is a required feature,
+    please open up a `GitHub issue <https://github.com/adjtomo/pysep/issues>`__
 
 The event tag used to name the output directory and written SAC files can be set
 manually by the user using the ``overwrite_event_tag`` argument.
@@ -283,6 +286,13 @@ Multiple Event Input
 To use the same configuration file with multiple events, you can use an event
 file passed to PySEP through the command line.
 
+.. note::
+
+    Multiple event input is only available for command line usage of PySEP.
+    We suggest using a for loop if you would like to script multiple event
+    input using PySEP
+
+
 When using this option, the event parameters inside the config file will be
 ignored, but all the other parameters will be used to gather data and metadata.
 
@@ -296,12 +306,6 @@ For an example event input file called 'event_input.txt', call structure is:
 .. code:: bash
 
     pysep -c pysep_config.yaml -E event_input.txt
-
-.. note::
-
-    Multiple event input is only available for command line usage of PySEP.
-    We suggest using a for loop if you would like to script multiple event
-    input using PySEP
 
 
 ObsPy Mass Downloader
