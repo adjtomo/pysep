@@ -1521,8 +1521,10 @@ class RecordSection:
                 self.kwargs[name] = val
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
-        # Partition the figure by user-specified azimuth bins
-        if self.sort_by and "azimuth" in self.sort_by:
+        # Partition the figure by user-specified azimuth bins for relative
+        # (back)azimuth sorting only (not absolute)
+        if self.sort_by and ("azimuth" in self.sort_by) and \
+                ("abs_" not in self.sort_by):
             self._plot_azimuth_bins(start=start, stop=stop)
 
         # Finalize the figure accoutrements
