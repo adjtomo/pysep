@@ -1489,6 +1489,9 @@ class Pysep:
                 defaults to 'event.xml'
             stream_fid (str): optional name for saved ObsPy Stream miniseed
                 object, defaults to 'stream.ms'
+            sac_subdir (str): sub-directory within output directory and event
+                directory to save SAC files. Defaults to SAC/. Use an empty
+                string to dump files directly into the event directory
         """
         # Set some default values that can be overridden with kwargs
         order_station_list_by = self.kwargs.get("order_station_list_by", None)
@@ -1497,6 +1500,7 @@ class Pysep:
         inv_fid = self.kwargs.get("inv_fid", "inv.xml")
         event_fid = self.kwargs.get("event_fid", "event.xml")
         stream_fid = self.kwargs.get("stream_fid", "stream.ms")
+        sac_subdir = self.kwargs.get("sac_subdir", "SAC")
 
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
@@ -1568,7 +1572,7 @@ class Pysep:
         if self._legacy_naming:
             _output_dir = self.output_dir
         else:
-            _output_dir = os.path.join(self.output_dir, "SAC")
+            _output_dir = os.path.join(self.output_dir, sac_subdir)
 
         if "sac_raw" in write_files:
             logger.info("writing RAW waveforms traces in SAC format")
