@@ -455,11 +455,10 @@ class Pysep:
 
         # Waveform collection parameters
         self.reference_time = reference_time or self.origin_time
-        # Force float type to avoid rounding errors
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
         if phase_list is None:
-            self.phase_list = ["ttall"]
+            self.phase_list = ["ttall"]  # default ObsPy value gather ALL phase
         else:
             self.phase_list = phase_list
 

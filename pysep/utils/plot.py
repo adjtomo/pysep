@@ -356,10 +356,11 @@ def set_plot_aesthetic(
     # Thicken up the bounding axis lines
     for axis, flag in zip(["top", "bottom", "left", "right"],
                           [spine_top, spine_bot, spine_left, spine_right]):
-        if flag:
-            ax.spines[axis].set_visible(False)
-        else:
-            ax.spines[axis].set_linewidth(axis_linewidth)
+        # Deal with the case where command line users are inputting strings
+        if isinstance(flag, str):
+            flag = bool(flag.capitalize() == "True")
+        ax.spines[axis].set_visible(flag)
+        ax.spines[axis].set_linewidth(axis_linewidth)
 
     # Set spines above azimuth bins
     for spine in ax.spines.values():
