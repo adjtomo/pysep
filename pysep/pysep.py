@@ -1588,28 +1588,41 @@ class Pysep:
         # probably these will overwrite already written files
         if "sac_zne" in write_files:
             logger.info("writing ZNE waveforms traces in SAC format")
-            self._write_sac(st=self.st.select(channel="ZNE"),
-                            output_dir=_output_dir)
+            self._write_sac(st=self.st, output_dir=_output_dir,
+                            components="ZNE")
 
         if "sac_rtz" in write_files:
+            import pdb;pdb.set_trace()
             logger.info("writing RTZ waveforms traces in SAC format")
-            self._write_sac(st=self.st.select(channel="RTZ"),
-                            output_dir=_output_dir)
+            self._write_sac(st=self.st, output_dir=_output_dir,
+                            components="RTZ")
 
         if "sac_uvw" in write_files:
             logger.info("writing UVW waveforms traces in SAC format")
-            self._write_sac(st=self.st.select(channel="UVW"),
-                            output_dir=_output_dir)
+            self._write_sac(st=self.st, output_dir=_output_dir,
+                            components="UVW")
 
-    def _write_sac(self, st, output_dir=os.getcwd()):
+    def _write_sac(self, st, output_dir=os.getcwd(), components=None):
         """
         Write SAC files with a specific naming schema, which allows for both
         legacy (old PySEP) or non-legacy (new PySEP) naming.
+
+        :type st: obspy.core.stream.Stream
+        :param st: Stream to be written
+        :type output_dir: str
+        :param output_dir: where to save the SAC files, defaults to the
+            current working directory
+        :type components: str
+        :param components: acceptable component values for saving files,
+            allows only saving subsets of the Stream. Example 'RTZNE' or
+            just 'R'. Must match against Trace.stats.component
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         for tr in st:
+            if components and tr.stats.component not in components:
+                continue
             if self._legacy_naming:
                 # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
                 _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
@@ -1785,7 +1798,7 @@ class Pysep:
             else:
                 self.inv = inv
             self.inv = self.curtail_stations()
-            self.write(write_files=["inv"], **kwargs)  # write out inventory
+            self.write(_subset=["inv"], **kwargs)  # write out inventory
 
             # Get waveforms, format and assess waveform quality
             if st is None:

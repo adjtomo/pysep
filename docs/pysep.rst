@@ -201,10 +201,70 @@ Or with scripting
     sep = Pysep(legacy_naming=True, ...)
 
 
-Output Directory Control
-------------------------
+Output Control
+--------------
 
-By default, PySEP
+By default, PySEP writes all files to the User-defined parameter `output_dir`,
+which defaults to the current working directory.
+
+Files are normally written into a sub-directory defined by the `event_tag` which
+is dynamically generated based on the event origin time, and its Flinn-Engdahl
+region. For example
+
+.. code::
+
+    2009-04-07T201255_SOUTHERN_ALASKA
+
+All waveform files are saved in a further sub-directory `SAC`, to avoid
+cluttering up the output directory.
+
+.. note::
+
+    Users can use the parameters `write_files` and `plot_files` to control
+    exactly what files are produced during a PySEP (`see API documentation
+    <autoapi/pysep/pysep/index.html#pysep.pysep.Pysep>`__).
+
+By default, PySEP will write SAC files, StationXML, QuakeML and config files,
+and create a source-receiver map and record section.
+
+Directory Control
+-----------------
+
+In some cases it may be useful for Users to save files directly to their
+working directory, without all the automatically generated sub-directories.
+
+To ignore the automatically generated event tag, you can use the
+`overwrite_event_tag` parameter. Via the command line:
+
+.. code:: bash
+
+    pysep -c pysep_config.yaml --overwrite_event_tag ''
+
+Or via scripting:
+
+.. code:: python
+
+    sep = Pysep(overwrite_event_tag='')
+
+To save waveform files directly in the output directory, use the `sac_subdir`
+parameter, which should be input in your YAML parameter file:
+
+.. code:: yaml
+
+    sac_subdir: ''
+
+or via scripting
+
+.. code:: python
+
+    sep = Pysep(sac_subdir='')
+
+One useful example of this is if a User only wants to save SAC waveforms for
+the rotated RTZ component within their current working directory:
+
+.. code:: python
+
+    sep = Pysep(overwrite_event_tag='', sac_subdir='', write_files='sac_rtz')
 
 
 Output Filename Control
@@ -233,10 +293,9 @@ Or with scripting
     sep = Pysep(overwrite_event_tag="event_abc",
                 config_fid="event_abc.yaml", ...)
 
-
 .. note::
 
-    The output SAC file names are hardcoded and cannot be changed
+    The output SAC file names are hardcoded as trace IDs and cannot be changed
     by the user. If this is a required feature, please open up a GitHub issue,
     and the developers will address this need.
 
