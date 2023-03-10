@@ -4,13 +4,14 @@ client: LLNL
 client_debug: false
 timeout: 600
 taup_model: ak135
+use_mass_download: false
 event_selection: default
-origin_time: "1988-02-15T18:10:00.09"
+origin_time: '1988-02-15T18:10:00.09'
 seconds_before_event: 20
 seconds_after_event: 20
 event_latitude: 60.175
 event_longitude: -141.187
-event_depth_km: 0.
+event_depth_km: 0.0
 event_magnitude: 4.9
 networks: '*'
 stations: '*'
@@ -19,7 +20,9 @@ locations: '*'
 reference_time: null
 seconds_before_ref: 100
 seconds_after_ref: 600
-phase_list: null
+phase_list:
+- ttall
+llnl_db_path: /store/raw/LLNL/UCRL-MI-222502/westernus.wfdisc
 mindistance_km: 0
 maxdistance_km: 1200.0
 minazimuth: 0
@@ -31,7 +34,7 @@ maxlongitude: null
 demean: true
 detrend: true
 taper_percentage: 0.05
-rotate:
+rotate: null
 remove_response: true
 output_unit: VEL
 water_level: 60
@@ -39,4 +42,8 @@ pre_filt: default
 scale_factor: 1
 resample_freq: 50
 remove_clipped: false
+remove_insufficient_length: true
+remove_masked_data: true
+fill_data_gaps: false
+gap_fraction: 1.0
 log_level: DEBUG

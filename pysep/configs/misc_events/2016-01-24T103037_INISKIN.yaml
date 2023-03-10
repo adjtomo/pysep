@@ -4,22 +4,24 @@ client: IRIS
 client_debug: false
 timeout: 600
 taup_model: ak135
+use_mass_download: false
 event_selection: default
-origin_time: "2016-01-24T10:30:37.400"
+origin_time: '2016-01-24T10:30:37.400'
 seconds_before_event: 100
 seconds_after_event: 600
 event_latitude: 59.75
 event_longitude: -153.27
 event_depth_km: 110.7
 event_magnitude: 7.1
-networks: 'AV,CN,ZE,AT,TA,AK,XV,II,IU,IS'
+networks: AV,CN,ZE,AT,TA,AK,XV,II,IU,IS
 stations: '*'
-channels: 'BH?,HH?'
+channels: BH?,HH?
 locations: '*'
 reference_time: null
 seconds_before_ref: 100
 seconds_after_ref: 300
-phase_list: null
+phase_list:
+- ttall
 mindistance_km: 0
 maxdistance_km: 800.0
 minazimuth: 0
@@ -41,4 +43,8 @@ pre_filt: default
 scale_factor: 1
 resample_freq: 50
 remove_clipped: false
+remove_insufficient_length: true
+remove_masked_data: true
+fill_data_gaps: false
+gap_fraction: 1.0
 log_level: DEBUG
