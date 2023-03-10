@@ -39,7 +39,7 @@ from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  remove_traces_w_masked_data
                                  )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
-from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
+from pysep.utils.io import read_yaml, read_event_file, write_pysep_station_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
 from pysep.utils.process import (merge_gapped_data, trim_start_end_times,
                                  resample_data, format_streams_for_rotation,
@@ -1413,7 +1413,7 @@ class Pysep:
         return st_out
 
     def write(self, write_files=None, _return_filenames=False,
-              config_fid=None, stations_fid=None, inv_fid=None, event_fid=None,
+              config_fid=None, station_fid=None, inv_fid=None, event_fid=None,
               stream_fid=None, **kwargs):
         """
         Write out various files specifying information about the collected
@@ -1444,8 +1444,8 @@ class Pysep:
         :type config_fid: str
         :param config_fid: optional name for the configuration file name
             defaults to 'pysep_config.yaml'
-        :type stations_fid: str
-        :param stations_fid: optional name for the stations list file name
+        :type station_fid: str
+        :param station_fid: optional name for the stations list file name
             defaults to 'station_list.txt'
         :type inv_fid: str
         :param inv_fid: optional name for saved ObsPy inventory object,
@@ -1492,10 +1492,10 @@ class Pysep:
 
         if "station_list" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir,
-                               stations_fid or "station_list.txt")
+                               station_fid or "station_list.txt")
             logger.info("writing stations file")
             logger.debug(fid)
-            write_pysep_stations_file(
+            write_pysep_station_file(
                     self.inv, self.event, fid, 
                     order_station_list_by=order_station_list_by
                     )
