@@ -11,6 +11,8 @@ for dir_ in glob("*"):
     for fid in glob(os.path.join(dir_, "*.yaml")):
         sep = Pysep(config_file=fid)
         sep.load()
+        sep.phase_list = ('ttall',)
+        del sep.kwargs
         sep.write_config(f"{fid}")
 
 

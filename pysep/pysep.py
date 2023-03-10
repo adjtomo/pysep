@@ -202,7 +202,8 @@ class Pysep:
             Station removal and curtailing parameters
 
         :type mindistance_km: float
-        :param mindistance_km: Used for removing stations and mass download option
+        :param mindistance_km: Used for removing stations and mass download
+            option
 
             - Removing stations: Remove any stations who are closer than the
             given minimum distance away from event (units: km). Always applied
@@ -210,7 +211,8 @@ class Pysep:
             `domain_type`=='circular', defines the minimum radius around the
             event hypocenter to gather waveform data and station metadata
         :type maxdistance_km: float
-        :param maxdistance_km: Used for removing stations and mass download option
+        :param maxdistance_km: Used for removing stations and mass download
+            option
 
             - Removing stations: Remove any stations who are farther than the
             given maximum distance away from event (units: km). Always applied
