@@ -302,7 +302,7 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
     with open(path_to_cmtsolution, "r") as f:
         lines = f.readlines()
 
-    # First line contains meta informatino about event
+    # First line contains meta information about event
     _, year, month, day, hour, minute, sec, lat, lon, depth, mb, ms, _ = \
         lines[0].strip().split()
 

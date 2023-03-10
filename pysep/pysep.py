@@ -142,6 +142,20 @@ class Pysep:
         :param event_longitude: longitude of the event in units of degrees.
             used for defining the event hypocenter and for removing stations
             based on distance from the event.
+        :type event_depth_km: float
+        :param event_depth_km: depth of event in units of kilometers. postive
+            values for deeper depths. Used for:
+
+            1) `event_selection`=='search'
+            2) estimating phase arrivals with TauP
+            3) plotting events and title on source receiver maps
+
+            If set to None, (2) and (3) will fail. Best-guesses are acceptable.
+        :type event_magnitude: float
+        :param event_magnitude: event magnitude in Mw used for:
+
+            1) `event_selection`=='search'
+            2)
         :type seconds_before_event: float
         :param seconds_before_event: For event selection only, only used if
             `event_selection`=='search'. Time [s] before given `origin_time` to
@@ -380,7 +394,7 @@ class Pysep:
             - weights_az: write out CAP weight file sorted by azimuth
             - weights_dist: write out CAP weight file sorted by distance
             - weights_code: write out CAP weight file sorted by station code
-            - station_list: write out a text file with station informatino
+            - station_list: write out a text file with station information
             - inv: save a StationXML (.xml) file (ObsPy inventory)
             - event: save a QuakeML (.xml) file (ObsPy Catalog)
             - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
