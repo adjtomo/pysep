@@ -69,7 +69,8 @@ class Pysep:
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
                  user=None, password=None, client_debug=False,
-                 log_level="DEBUG", timeout=600, write_files="all",
+                 log_level="DEBUG", timeout=600,
+                 write_files="inv,event,stream,config_file,sac",
                  plot_files="all", llnl_db_path=None, output_dir=None,
                  overwrite=False, legacy_naming=False, overwrite_event_tag=None,
                  **kwargs):
@@ -388,22 +389,25 @@ class Pysep:
 
         :type write_files: str or NoneType
         :param write_files: Which files to write out after data gathering.
-            Should be a comma-separated list of the following
 
-            - weights_az: write out CAP weight file sorted by azimuth
-            - weights_dist: write out CAP weight file sorted by distance
-            - weights_code: write out CAP weight file sorted by station code
-            - station_list: write out a text file with station information
-            - inv: save a StationXML (.xml) file (ObsPy inventory)
-            - event: save a QuakeML (.xml) file (ObsPy Catalog)
-            - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
-            - config_file: save YAML config file containing all input parameters
-            - sac: save all waveforms as SAC (.sac) files separated by component
-            - sac_raw: save the raw (pre-rotation) SAC files
+            1) User-defined comma-separated list of the following
 
-            By default, writes all files listed above
+                - weights_az: write out CAP weight file sorted by azimuth
+                - weights_dist: write out CAP weight file sorted by distance
+                - weights_code: write out CAP weight file sorted by station code
+                - station_list: write out a text file with station information
+                - inv: save a StationXML (.xml) file (ObsPy inventory)
+                - event: save a QuakeML (.xml) file (ObsPy Catalog)
+                - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
+                - config_file: save YAML config file w/ all input parameters
+                - sac_zne: save all waveforms as SAC (.sac) files for ZNE comp
+                - sac_rtz: save all waveforms as SAC (.sac) files for RTZ comp
+                - sac_raw: save the raw (pre-rotation) SAC files
+
             Example input: `write_files`=='inv,event,stream,sac'
-            If NoneType or an empty string, no files will be written.
+            By default, only write: 'inv,event,stream,config_file,sac'
+            2) If NoneType or an empty string, no files will be written.
+            3) If 'all', write all files listed in (1)
         :type plot_files: str or NoneType
         :param write_files: What to plot after data gathering.
             Should be a comma-separated list of the following:
@@ -525,6 +529,9 @@ class Pysep:
         self.inv = None
         self.event = None
         self.st_raw = None
+        self.st_zne = None
+        self.st_rtz = None
+        self.st_uvw = None
 
         # Allow the user to manipulate the logger during __init__
         if log_level is not None:
@@ -1309,11 +1316,10 @@ class Pysep:
     def rotate_streams(self):
         """
         Rotate arbitrary three-component seismograms to desired orientation
-
-        TODO Original code had a really complicated method for rotating,
-            was that necesssary? Why was st.rotate() not acceptable?
+        'ZNE', 'RTZ' or 'UVW'.
 
         .. warning::
+
             This function combines all traces, both rotated and non-rotated
             components (ZNE, RTZ, UVW, but not raw, e.g., 12Z), into a single
             stream. This is deemed okay because we don't do any
@@ -1329,8 +1335,8 @@ class Pysep:
 
         st_raw = format_streams_for_rotation(st_raw)
 
-        # For writing RAW seismograms (prior to ANY rotation). Must be 
-        # specifically requested by User by explicitely adding 'raw' to 
+        # For writing RAW seismograms (prior to ANY rotation). Must be
+        # specifically requested by User by explicitely adding 'raw' to
         # `write_files` list
         if "sac_raw" in self.write_files:
             self.st_raw = st_raw.copy()
@@ -1359,7 +1365,7 @@ class Pysep:
                             meta = metadata_getter(_tr.id, _tr.stats.starttime)
                             az = meta["azimuth"]
                             dip = meta["dip"]
-                        except Exception:
+                        except Exception:  # NOQA
                             logger.warning(f"no matching metadata for {_tr.id}")
                             channel_okay = False
                             break
@@ -1397,13 +1403,13 @@ class Pysep:
             # Rotate to radial transverse coordinate system
             if "RTZ" in self.rotate:
                 logger.info("rotating to components RTZ")
-                # If we rotate the ENTIRE stream at once, ObsPy only uses the 
+                # If we rotate the ENTIRE stream at once, ObsPy only uses the
                 # first backazimuth value which will create incorrect outputs
                 # https://github.com/obspy/obspy/issues/2623
                 st_rtz = st_out.copy()  # contains ZNE rotated components
                 stations = set([tr.stats.station for tr in st_rtz])
                 for sta in stations:
-                    _st = st_rtz.select(station=sta, channel=cha)
+                    _st = st_rtz.select(station=sta)
                     if _st and hasattr(_st[0].stats, "back_azimuth"):
                         _st.rotate(method="NE->RT")  # in place rot.
                         st_out += _st
@@ -1416,7 +1422,7 @@ class Pysep:
             logger.info("rotating to components UVW")
             st_uvw = rotate_to_uvw(st_raw)
             st_out += st_uvw
-        
+
         try:
             st_out = format_sac_headers_post_rotation(st_out)
         except AttributeError as e:
@@ -1439,14 +1445,16 @@ class Pysep:
             * inv: write the inventory as a StationXML file
             * event: write the event as a QuakeML file
             * stream: write the stream as a single MSEED file
-            * sac: write the stream as individual (per-channel) SAC files with
-                the appropriate SAC header
+            * sac_zne: write the stream as individual (per-channel) SAC files
+                for ZNE components with the appropriate SAC header
+            * sac_rtz: write out per-channel SAC files for RTZ components
+            * sac_uvw: write out per-channel SAC files for UVW components
             * config_file: write the current configuration as a YAML file
 
         :type write_files: list of str
         :param write_files: list of files that should be written out, must
             match the acceptable list defined in the function or here in the
-            docstring
+            docstring. If not given, defaults to internal list of files
         :type _return_filenames: bool
         :param _return_filenames: internal flag to not actually write anything
             but just return a list of acceptable filenames. This keeps all the
@@ -1486,12 +1494,13 @@ class Pysep:
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "sac_raw"}
+                             "stream_raw" "config_file", "sac_zne", "sac_rtz",
+                             "sac_uvw", "sac_raw"}
         if _return_filenames:
             return _acceptable_files
 
         # Allow the user to call write() with their own set of filenames if this
-        # wasn't defined by the config or this is being scripted and they only
+        # wasn't defined by the Config or this is being scripted and they only
         # want certain files out at intermediate steps
         if write_files is None:
             write_files = self.write_files
@@ -1502,11 +1511,10 @@ class Pysep:
                 f"{_acceptable_files}"
             )
 
-        # Allow for intermediate file saving validated against user-defined list
-        # Skip over subset assertion because Users don't have access to this
+        # Allow for internal intermediate file saving validated against
+        # user-defined list
         if _subset:
             write_files = write_files.intersection(set(_subset))
-        import pdb;pdb.set_trace()
 
         for weights_fid in ["weights_dist", "weights_az", "weights_code"]:
             if weights_fid in write_files:
@@ -1543,28 +1551,51 @@ class Pysep:
             fid = os.path.join(self.output_dir, stream_fid)
             logger.info("writing waveform stream in MiniSEED")
             logger.debug(fid)
+            st = self.st_zne + self.st_rtz + self.st_uvw
             with warnings.catch_warnings():
                 # ignore the encoding warning that comes from ObsPy
                 warnings.simplefilter("ignore")
-                self.st.write(fid, format="MSEED")
+                st.write(fid, format="MSEED")
 
-        if "sac" in write_files:
-            logger.info("writing each waveform trace in SAC format")
-            # Old PySEP dumped all files into output dir. New PySEP makes subdir
-            if self._legacy_naming:
-                _output_dir = self.output_dir
-            else:
-                _output_dir = os.path.join(self.output_dir, "SAC")
-            self._write_sac(st=self.st, output_dir=_output_dir)
+        if "stream_raw" in write_files:
+            fid = os.path.join(self.output_dir, f"raw_{stream_fid}")
+            logger.info("writing raw waveform stream in MiniSEED")
+            logger.debug(fid)
+            with warnings.catch_warnings():
+                # ignore the encoding warning that comes from ObsPy
+                warnings.simplefilter("ignore")
+                self.st_raw.write(fid, format="MSEED")
+
+        # Used for determining where to save SAC files
+        if self._legacy_naming:
+            _output_dir = self.output_dir
+        else:
+            _output_dir = os.path.join(self.output_dir, "SAC")
 
         if "sac_raw" in write_files:
-            if self._legacy_naming:
-                _output_dir = self.output_dir
+            self._write_sac(st=self.st_raw,
+                            output_dir=os.path.join(_output_dir, "RAW"))
+
+        if "sac_zne" in write_files:
+            if self.st_zne:
+                logger.info("writing ZNE waveforms trace in SAC format")
+                self._write_sac(st=self.st_zne, output_dir=_output_dir)
             else:
-                _output_dir = os.path.join(self.output_dir, "SAC", "RAW")
-            # Write RAW sac files
-            if self.st_raw is not None:
-                self._write_sac(st=self.st_raw, output_dir=_output_dir)
+                logger.warning("cant write `sac_zne`, no ZNE traces in stream")
+
+        if "sac_rtz" in write_files:
+            if self.st_rtz:
+                logger.info("writing RTZ waveforms trace in SAC format")
+                self._write_sac(st=self.st_rtz, output_dir=_output_dir)
+            else:
+                logger.warning("cant write `sac_rtz`, no ZNE traces in stream")
+
+        if "sac_uvw" in write_files:
+            if self.st_uvw:
+                logger.info("writing ZNE waveforms trace in SAC format")
+                self._write_sac(st=self.st_uvw, output_dir=_output_dir)
+            else:
+                logger.warning("cant write `sac_rtz`, no ZNE traces in stream")
 
     def _write_sac(self, st, output_dir=os.getcwd()):
         """
@@ -1608,7 +1639,7 @@ class Pysep:
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
         attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
-                            "plot_files", "output_dir", "station_ids"]
+                            "plot_files", "output_dir", "station_ids", "kwargs"]
 
         if self.client.upper() != "LLNL":
             attr_remove_list.append("llnl_db_path")  # not important unless LLNL
@@ -1733,15 +1764,20 @@ class Pysep:
 
             # Get waveforms, format and assess waveform quality
             if st is None:
-                self.st = self.get_waveforms()
+                self.st_raw = self.get_waveforms()
             else:
-                self.st = st
+                self.st_raw = st
         # Use ObsPy's mass download option to gather all available data
         else:
-            self.st, self.inv = self.mass_download()
+            self.st_raw, self.inv = self.mass_download()
 
+        # Intermediate write of StationXML and raw waveforms
+        self.write(_subset=["st_raw", "inv"], **kwargs)
+
+        # Quality check and process the raw waveforms. `st` is an intermediate
+        # attribute and will NOT be written
         self.st = quality_check_waveforms_before_processing(
-            self.st, remove_clipped=self.remove_clipped
+            self.st_raw, remove_clipped=self.remove_clipped
         )
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
@@ -1755,7 +1791,8 @@ class Pysep:
         # Rotation to various orientations. The output stream will have ALL
         # components, both rotated and non-rotated
         if self.rotate is not None:
-            self.st = self.rotate_streams()
+            self.st, self.st_zne, self.st_rtz, self.st_uvw = \
+                self.rotate_streams()
 
         # Final quality checks on ALL waveforms before we write them out
         self.st = quality_check_waveforms_after_processing(
