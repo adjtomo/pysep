@@ -18,7 +18,7 @@ project = 'PySEP'
 copyright = '2023, adjTomo Dev Team'
 author = 'adjTomo Dev Team'
 release = ''
-version = '0.3.2'
+version = '0.3.3'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
