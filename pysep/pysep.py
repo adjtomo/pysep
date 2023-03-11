@@ -527,7 +527,8 @@ class Pysep:
         self.gap_fraction = gap_fraction
 
         # Program related parameters
-        self.output_dir = output_dir or os.getcwd()
+        self._output_dir = output_dir or os.getcwd()
+        self.output_dir = None  # is overwritten w `_event_tag_and_output_dir`
         self.write_files = write_files
         self.plot_files = plot_files
         self.log_level = log_level
@@ -1733,7 +1734,7 @@ class Pysep:
         else:
             event_tag = self._overwrite_event_tag
 
-        full_output_dir = os.path.join(self.output_dir, event_tag)
+        full_output_dir = os.path.join(self._output_dir, event_tag)
         logger.info(f"full output directory is: {full_output_dir}")
 
         if not os.path.exists(full_output_dir):
@@ -1745,15 +1746,32 @@ class Pysep:
 
         return event_tag, full_output_dir
 
-    def _set_log_file(self):
+    def _set_log_file(self, mode):
         """
         Write logger to file as well as stdout, with the same format as the
-        stdout logger
+        stdout logger. Need mode==1 to move the log file after everything is
+        done because we don't know the event tag prior to starting the logs
+
+        :type mode: int
+        :param mode: Two options for using this function
+            0: set the logger to a temporary file 'pysep.log',
+            1: move the logger from the temporary file into final output dir
         """
+        save_log = self.kwargs.get("save_log", True)
         log_file = self.kwargs.get("log_file", "pysep.log")
-        fh = logging.FileHandler(os.path.join(self.output_dir, log_file))
-        fh.setFormatter(logger.handlers[0].formatter)
-        logger.addHandler(fh)
+        initial_log_path = os.path.join(self._output_dir, log_file)
+
+        if not save_log:
+            return
+
+        if mode == 0:
+            fh = logging.FileHandler(initial_log_path)
+            fh.setFormatter(logger.handlers[0].formatter)
+            logger.addHandler(fh)
+        elif mode == 1:
+            # Should have been set by `_event_tag_and_output_dir()`
+            final_log_path = os.path.join(self.output_dir, log_file)
+            os.rename(src=initial_log_path, dst=final_log_path)
 
     def run(self, event=None, inv=None, st=None, **kwargs):
         """
@@ -1778,7 +1796,7 @@ class Pysep:
         :param st: optional user-provided strean object which will force a
             skip over waveform searching
         """
-        self._set_log_file()
+        self._set_log_file(mode=0)
         logger.debug(f"running PySEP version {__version__}")
 
         # Overload default parameters with event input file and check validity
@@ -1849,6 +1867,9 @@ class Pysep:
                             "weights_dist", "weights_az", "weights_code"],
                    **kwargs)
         self.plot()
+
+        # Last minute move the log file into the output directory
+        self._set_log_file(mode=1)
 
 
 def parse_args():
