@@ -50,17 +50,17 @@ example of how PySEP operates:
     pysep -l  # or pysep --list
 
     -p/--preset -e/--event
-    -p MTUQ2022_workshop -e 2009-04-07T201255_ANCHORAGE.yaml
-    -p MTUQ2022_workshop -e 2014-08-25T161903_ICELAND.yaml
-    -p MTUQ2022_workshop -e 2017-09-03T033001_NORTH_KOREA.yaml
-    -p MTUQ2022_workshop -e 2020-04-04T015318_SOUTHERN_CALIFORNIA.yaml
+    -p mtuq_workshop_2022 -e 2009-04-07T201255_ANCHORAGE.yaml
+    -p mtuq_workshop_2022 -e 2014-08-25T161903_ICELAND.yaml
+    -p mtuq_workshop_2022 -e 2017-09-03T033001_NORTH_KOREA.yaml
+    -p mtuq_workshop_2022 -e 2020-04-04T015318_SOUTHERN_CALIFORNIA.yaml
     ...
 
 To run one of the pre-defined configuration files to gather and process data:
 
 .. code:: bash
 
-    pysep -p MTUQ2022_workshop -e 2017-09-03T033001_NORTH_KOREA.yaml
+    pysep -p mtuq_workshop_2022 -e 2017-09-03T033001_NORTH_KOREA.yaml
 
 
 When performing your own data collection, you can create an empty configuration
