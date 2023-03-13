@@ -1544,7 +1544,8 @@ class Pysep:
 
         if "config_file" in write_files:
             logger.info("writing config YAML file")
-            self.write_config(fid=os.path.join(self.output_dir, config_fid))
+            self.write_config(fid=os.path.join(self.output_dir, config_fid),
+                              overwrite=True)
 
         if "station_list" in write_files or "all" in write_files:
             fid = os.path.join(self.output_dir, station_fid)
@@ -1647,7 +1648,7 @@ class Pysep:
             logger.debug(os.path.basename(fid))
             tr.write(fid, format="SAC")
 
-    def write_config(self, fid=None):
+    def write_config(self, fid=None, overwrite=False):
         """
         Write a YAML config file based on the internal `Pysep` attributes.
         Remove a few internal attributes (those containing data) before writing
@@ -1656,10 +1657,19 @@ class Pysep:
 
         :type fid: str
         :param fid: name of the file to write. defaults to config.yaml
-        :param fid: name of the file to write. defaults to config.yaml
+        :type overwrite: bool
+        :param overwrite: if True and `fid` already exists, save a new config 
+            file with the same name, overwriting the old file. if False 
+            (default), throws a warning if encountering existing `fid` and does
+            not write config file
         """
         if fid is None:
             fid = f"pysep_config.yaml"
+        if not overwrite and os.path.exists(fid):
+            logger.warning(f"config '{fid}' already exists. use "
+                           f"`-o/--overwrite` to write anyway.")
+            return
+
         logger.debug(fid)
         dict_out = vars(self)
 
@@ -2062,8 +2072,7 @@ def main():
     args = parser.parse_args()
     # Write out a blank configuration file to use as a template
     if args.write:
-        sep = Pysep()
-        sep.write_config()
+        Pysep().write_config(overwrite=args.overwrite)
         return
     # List out available configurations inside the repo
     elif args.list:
