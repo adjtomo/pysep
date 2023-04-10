@@ -1,6 +1,6 @@
 import logging
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 logger = logging.getLogger("pysep")
 logger.setLevel("INFO")
