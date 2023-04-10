@@ -1939,6 +1939,8 @@ def parse_args():
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing directory which matches "
                              "the unique event tag")
+    parser.add_argument("-v", "--version", default=False, action="store_true",
+                        help="print current PySEP version number")
 
     # Keyword arguments can be passed directly to the argparser in the same
     # format as the above kwargs (e.g., --linewidth 2), but they will not have
@@ -2075,6 +2077,9 @@ def main():
         sys.exit(0)
     # Grab arguments from parser and continue
     args = parser.parse_args()
+    if args.version:
+        print(__version__)
+        return
     # Write out a blank configuration file to use as a template
     if args.write:
         Pysep().write_config(overwrite=args.overwrite)
