@@ -1774,7 +1774,6 @@ class Pysep:
         if not save_log:
             return
     
-        import pdb;pdb.set_trace()
         # Make the output directory that the log file will be saved in
         if not os.path.exists(self._output_dir):
             os.makedirs(self._output_dir)
