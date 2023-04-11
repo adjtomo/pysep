@@ -2248,7 +2248,7 @@ def plotw_rs(*args, **kwargs):
         # Iterate backwards through the range so that the order of pages is
         # more natural, i.e., plotting the record section from the top down,
         # rather than the bottom up
-        rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
+        rnge = np.arange(len(rs.sorted_idx), 0, -1 * rs.max_traces_per_rs)
 
         # When `max_traces_per_rs` is not an integer divisor of the number of
         # streams, the range will not hit zero, so we need to ensure it does
