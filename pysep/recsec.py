@@ -399,10 +399,16 @@ class RecordSection:
         # Set the logger level before running anything
         logger.setLevel(log_level)
 
+        # Check file path existence before we do any reading 
+        if pysep_path is not None:
+            assert(os.path.exists(pysep_path)), \
+                    f"`pysep_path` given but does not exist: '{pysep_path}'"
+        if syn_path is not None: 
+            assert(os.path.exists(syn_path)), \
+                    f"`syn_path` given but does not exist: '{syn_path}'"
+
         # Read files from path if provided
         if pysep_path is not None:
-            assert(os.path.exists(pysep_path), \
-                    f"`pysep_path` given but does not exist: {pysep_path}"
             if not synsyn:
                 # Expecting to find SAC files labelled as such
                 fids = glob(os.path.join(pysep_path, "*.sac"))
@@ -428,8 +434,8 @@ class RecordSection:
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
         if syn_path is not None: 
-            assert(os.path.exists(syn_path), \
-                    f"`syn_path` given but does not exist: {syn_path}"
+            assert(os.path.exists(syn_path)), \
+                    f"`syn_path` given but does not exist: '{syn_path}'"
             st_syn = self._generate_synthetic_stream(syn_path=syn_path,
                                                      source=cmtsolution,
                                                      stations=stations,
@@ -506,7 +512,9 @@ class RecordSection:
         self.idx = []
         self.station_ids = []
         self.max_amplitudes = []
+        self.max_amplitudes_syn = []
         self.amplitude_scaling = []
+        self.amplitude_scaling_syn = []
         self.y_axis = []
         self.xlim = []  # unit: samples
         self.xlim_syn = []
@@ -798,6 +806,14 @@ class RecordSection:
                                             max(abs(tr.data[start:stop])))
         self.max_amplitudes = np.array(self.max_amplitudes)
 
+        # Max amplitudes will be DIFFERENT for synthetics, which affects 
+        # normalizations and thus requires its own array
+        if self.st_syn is not None:
+            for tr, xlim in zip(self.st_syn, self.xlim):
+                start, stop = xlim
+                self.max_amplitudes = np.append(self.max_amplitudes_syn,
+                                                max(abs(tr.data[start:stop])))
+
         # Figure out which indices we'll be plotting
         sorted_idx = self.get_sorted_idx()
         skip_idx = self.get_skip_idx()
@@ -806,7 +822,10 @@ class RecordSection:
 
         # Figure out how to manipulate each of the traces in the Stream
         self.y_axis = self.get_y_axis_positions()
-        self.amplitude_scaling = self.get_amplitude_scaling()
+        self.amplitude_scaling = self.get_amplitude_scaling(_choice="st")
+        if self.st_syn:
+            self.amplitude_scaling_syn = \
+                    self.get_amplitude_scaling(_choice="st_syn")
 
     def get_xlims(self, st=None):
         """
@@ -1089,7 +1108,7 @@ class RecordSection:
 
         return dist, az, baz
 
-    def get_amplitude_scaling(self):
+    def get_amplitude_scaling(self, _choice="st"):
         """
         Scale the amplitudes of all the waveforms by producing a Stream
         dependent scale factor based on user choice. It is expected that the
@@ -1101,18 +1120,26 @@ class RecordSection:
             Needs to be run AFTER preprocessing because filtering etc. will
             affect the final amplitudes of the waveforms
 
+        :type _choice: str
+        :param _choice: Internal choice only required for 'normalize' scaling. 
+            `st` for amplitude scaling w.r.t data array, `st_syn` 
+            for amplitude scaling w.r.t synthetics
         :rtype: np.array
         :return: an array corresponding to the Stream indexes which provides
             a per-trace scaling coefficient
         """
-        logger.info(f"determining amplitude scaling with: '{self.scale_by}'")
+        logger.info(f"determining amplitude scaling w.r.t {choice} with: "
+                    f"'{self.scale_by}'")
 
         # Don't scale by anything
         if self.scale_by is None:
             amp_scaling = np.ones(len(self.st))
         # Scale by the max amplitude of each trace
         elif self.scale_by == "normalize":
-            amp_scaling = self.max_amplitudes
+            if choice == "st":
+                amp_scaling = self.max_amplitudes
+            elif choice == "st_syn":
+                amp_scaling = self.max_amplitude_syn
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
@@ -1130,7 +1157,9 @@ class RecordSection:
                 amp_scaling /= scale
         # Scale by the largest amplitude shown
         elif self.scale_by == "global_norm":
-            global_max = self.max_amplitudes[self.sorted_idx].max()
+            global_max = max(self.max_amplitudes[self.sorted_idx].max(),
+                             self.max_amplitudes_syn[self.sorted_idx].max()
+                             )
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
@@ -1571,6 +1600,7 @@ class RecordSection:
         assert (choice in choices)
         c = choices.index(choice)
         tr = getattr(self, choice)[idx]  # i.e., tr = self.st[idx]
+        
 
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         tshift = self.time_shift_s[idx]
@@ -1597,7 +1627,14 @@ class RecordSection:
         else:
             sign = 1
 
-        y = sign * tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
+        # Ampplitude scaling may change between observed and synthetic if e.g.,
+        # we are doing trace-wise normalization
+        if choice == "st":
+            amplitude_scaling = self.amplitude_scaling
+        elif choice == "st_syn":
+            amplitude_scaling = self.amplitude_scaling_syn
+
+        y = sign * tr.data / amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. Make the distinction
         # between data and synthetics which may have different start and end 
