@@ -400,7 +400,9 @@ class RecordSection:
         logger.setLevel(log_level)
 
         # Read files from path if provided
-        if pysep_path is not None and os.path.exists(pysep_path):
+        if pysep_path is not None:
+            assert(os.path.exists(pysep_path), \
+                    f"`pysep_path` given but does not exist: {pysep_path}"
             if not synsyn:
                 # Expecting to find SAC files labelled as such
                 fids = glob(os.path.join(pysep_path, "*.sac"))
@@ -425,7 +427,9 @@ class RecordSection:
                                                      cartesian=cartesian)
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
-        if syn_path is not None and os.path.exists(syn_path):
+        if syn_path is not None: 
+            assert(os.path.exists(syn_path), \
+                    f"`syn_path` given but does not exist: {syn_path}"
             st_syn = self._generate_synthetic_stream(syn_path=syn_path,
                                                      source=cmtsolution,
                                                      stations=stations,
