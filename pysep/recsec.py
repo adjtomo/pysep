@@ -1141,7 +1141,7 @@ class RecordSection:
             if _choice == "st":
                 amp_scaling = self.max_amplitudes
             elif _choice == "st_syn":
-                amp_scaling = self.max_amplitude_syn
+                amp_scaling = self.max_amplitudes_syn
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
