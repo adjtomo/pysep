@@ -255,8 +255,7 @@ def read_sem_cartesian(fid, source, stations, location="", precision=4):
 
         # Calculate Cartesian distance and azimuth/backazimuth
         dist_m = np.sqrt(((stlo - evlo) ** 2) + ((stla - evla) ** 2))
-
-        azimuth = np.rad2deg(np.arctan((stla - evla) / (stlo - evlo))) % 360
+        azimuth = np.degrees(np.arctan2((stlo - evlo), (stla - evla))) % 360
         backazimuth = (azimuth - 180) % 360
         otime = event.preferred_origin().time
         # Only values required by RecSec
