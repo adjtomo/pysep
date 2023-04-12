@@ -811,8 +811,10 @@ class RecordSection:
         if self.st_syn is not None:
             for tr, xlim in zip(self.st_syn, self.xlim):
                 start, stop = xlim
-                self.max_amplitudes = np.append(self.max_amplitudes_syn,
-                                                max(abs(tr.data[start:stop])))
+                self.max_amplitudes_syn = np.append(
+                        self.max_amplitudes_syn, max(abs(tr.data[start:stop]))
+                        )
+        self.max_amplitudes_syn = np.array(self.max_amplitudes_syn)
 
         # Figure out which indices we'll be plotting
         sorted_idx = self.get_sorted_idx()
@@ -1128,7 +1130,7 @@ class RecordSection:
         :return: an array corresponding to the Stream indexes which provides
             a per-trace scaling coefficient
         """
-        logger.info(f"determining amplitude scaling w.r.t {choice} with: "
+        logger.info(f"determining amplitude scaling w.r.t {_choice} with: "
                     f"'{self.scale_by}'")
 
         # Don't scale by anything
@@ -1136,9 +1138,9 @@ class RecordSection:
             amp_scaling = np.ones(len(self.st))
         # Scale by the max amplitude of each trace
         elif self.scale_by == "normalize":
-            if choice == "st":
+            if _choice == "st":
                 amp_scaling = self.max_amplitudes
-            elif choice == "st_syn":
+            elif _choice == "st_syn":
                 amp_scaling = self.max_amplitude_syn
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
@@ -1157,9 +1159,11 @@ class RecordSection:
                 amp_scaling /= scale
         # Scale by the largest amplitude shown
         elif self.scale_by == "global_norm":
-            global_max = max(self.max_amplitudes[self.sorted_idx].max(),
-                             self.max_amplitudes_syn[self.sorted_idx].max()
-                             )
+            global_max = self.max_amplitudes[self.sorted_idx].max()
+            if self.max_amplitudes_syn:
+                global_max = max(global_max, 
+                                 self.max_amplitudes_syn[self.sorted_idx].max()
+                                 )
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
@@ -1631,8 +1635,10 @@ class RecordSection:
         # we are doing trace-wise normalization
         if choice == "st":
             amplitude_scaling = self.amplitude_scaling
+            max_amplitudes = self.max_amplitudes
         elif choice == "st_syn":
             amplitude_scaling = self.amplitude_scaling_syn
+            max_amplitudes = self.max_amplitudes_syn
 
         y = sign * tr.data / amplitude_scaling[idx] + self.y_axis[y_index]
 
@@ -1657,7 +1663,7 @@ class RecordSection:
                    f"\t{self.backazimuths[idx]:6.2f}"
                    f"\t{self.time_shift_s[idx]:4.2f}"
                    f"\t{toffset_str}"
-                   f"\t{self.max_amplitudes[idx]:.2E}\n"
+                   f"\t{max_amplitudes[idx]:.2E}\n"
                    )
 
         # Retain some stats for global plot args
