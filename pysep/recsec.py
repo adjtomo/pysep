@@ -1160,7 +1160,7 @@ class RecordSection:
         # Scale by the largest amplitude shown
         elif self.scale_by == "global_norm":
             global_max = self.max_amplitudes[self.sorted_idx].max()
-            if self.max_amplitudes_syn:
+            if self.max_amplitudes_syn.any():
                 global_max = max(global_max, 
                                  self.max_amplitudes_syn[self.sorted_idx].max()
                                  )
