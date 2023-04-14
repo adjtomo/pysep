@@ -2016,6 +2016,11 @@ class RecordSection:
         :param nwav: if using subset, the title needs to know how many waveforms
             it's showing on the page. self.plot() should tell it
         """
+        title = self.kwargs.get("title", None)
+        if title is not None:
+            self.ax.set_title(title)
+            return
+
         # Defines the number of waveforms plotted on a single page, allowing
         # for subsets per page
         if nwav is None:
