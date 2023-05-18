@@ -159,7 +159,7 @@ class RecordSection:
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
         :type cmtsolution: str
-        :type cmtsolution: required for synthetics, full path to SPECFEM source
+        :param cmtsolution: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
         :type cartesian: bool
