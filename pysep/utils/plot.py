@@ -155,13 +155,15 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
     """
     # Subset the Inventory to only plot certain stations (optional)
     if subset:
-        stas = []
+        netstas = []
         inv_subset = Inventory()
         for sta_id in subset:
             net, sta, *_ = sta_id.split(".")
-            if sta not in stas:
+            # Assuming NN.SSS should be unique across all networks
+            netsta = f"{net}.{sta}"
+            if netsta not in netstas:
                 inv_subset += inv.select(network=net, station=sta)
-                stas.append(sta)
+                netstas.append(netsta)
         inv = inv_subset
 
     # Calculate the maximum source receiver distance to determine what 
