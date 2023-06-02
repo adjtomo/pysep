@@ -367,7 +367,7 @@ class RecordSection:
                 y-axis. This option won't work with absolute sorting
             - 'x_min': Place labels on top of the waveforms at the global min
                 x-value on the figure
-            - 'x_min': Place labels on top of the waveforms at the global max
+            - 'x_max': Place labels on top of the waveforms at the global max
                 x-value on the figure
             - None: Don't plot any text labels
         :type tmarks: list of float
