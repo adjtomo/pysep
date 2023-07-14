@@ -762,6 +762,8 @@ class Pysep:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
                 else:
+                    logger.warning(f"config parameter '{key}' not explicitely "
+                                   f"used by PySEP. adding to kwargs")
                     self.kwargs[key] = val
 
         # Reset log level based on the config file
