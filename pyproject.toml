@@ -24,7 +24,7 @@ dev = ["pytest", "ipython", "ipdb"]
 
 [project.urls]
 homepage = "https://github.com/adjtomo/"
-documentation = "https://adjtomo.github.io"
+documentation = "https://pysep.readthedocs.io/"
 repository = "https://github.com/adjtomo/pysep"
 
 [project.scripts]
