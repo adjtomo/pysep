@@ -37,7 +37,7 @@
 - Introduce new parameter `remove_masked_data` which is a toggle flag to remove
   data which has been merged with no fill value. 
 
-## Version 0.3.3 (Devel)
+## Version 0.3.3 
 
 - Fixed failing test which was not removing masked data after a trim function
 - Improved source receiver map plotting functionality (#91)
@@ -45,4 +45,19 @@
 - RecSec `time_shift_s` now allows shifting by phase arrivals in SAC headers (#94)
 - Remove hard no-NoneType restriction on PySEP parameters `water_level` and `output_unit`
 
+## Version 0.4.0 (Master/Devel)
+- Migrates docs from GitHub pages to ReadTheDocs (#102)
+- Adds version number to init to allow User to import version
+- General Bugfixes (#97, #100, #105)
+- **API change** PySEP input Parameters `mindistance` -> `mindistance_km` and 
+  `maxdistance` -> `maxdistance_km` (#105)
+- File writing occurs throughout PySEP data download and not only at the end,
+  and reduced number of default files written. Writes log file (#106)
+- Bugfixes not associated with PRs:
+  - Fixes multi-page record sections
+  - Corrects azimuth definitions for cartesian domains
+  - Source-receiver map now handles repeat station names from different networks
+- Features not associated with PRs:
+  - RecSec kwarg `title` allows overwriting title
+  - PySEP warns when config parameters are not used by the program
 
