@@ -99,7 +99,7 @@ from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
-from pysep.utils.cap_sac import origin_time_from_sac_header
+from pysep.utils.cap_sac import origin_time_from_sac_header, SACDICT
 from pysep.utils.io import read_sem, read_sem_cartesian
 from pysep.utils.curtail import subset_streams
 from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
@@ -159,7 +159,7 @@ class RecordSection:
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
         :type cmtsolution: str
-        :type cmtsolution: required for synthetics, full path to SPECFEM source
+        :param cmtsolution: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
         :type cartesian: bool
@@ -198,9 +198,11 @@ class RecordSection:
             - 'backazimuth': sort by source-receiver backazimuth (deg) with
                 constant vertical spacing. Requires `azimuth_start_deg`
             - 'distance': sort by source-receiver distance (km) with constant
-                vertical spacing. Requires `distance_units`
+                vertical spacing. Smallest distances at the top of the figure.
+                 Requires `distance_units`
             - 'abs_distance': absolute vertical spacing of waveforms defined by
-                source-receiver distance. Requires `distance_units`
+                source-receiver distance. Smallest distance at the top of the
+                figure. Requires `distance_units`
             - 'abs_azimuth': absolute vertical spacing of waveforms defined
                 by source-receiver azimuth (deg).
             - 'abs_backazimuth': absolute vertical spacing of waveforms by
@@ -231,7 +233,7 @@ class RecordSection:
                 distnace, d. 'k' is the `geometric_spreading_k_val` and 'f' is
                 the `geometric_spreading_factor`.
                 'k' is calculated automatically if not given.
-        :type time_shift_s: float OR list of float
+        :type time_shift_s: float OR list of float OR str
         :param time_shift_s: apply static time shift to waveforms, two options:
 
             1. float (e.g., -10.2), will shift ALL waveforms by
@@ -239,6 +241,15 @@ class RecordSection:
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
                 match the number of traces in your input stream.
+            3. str: apply time shift based on a theoretical TauP phase arrival
+                if available in the SAC header. These should have been appended
+                by PySEP during data download. If no value is available in the
+                SAC header, defaults to 0. This may have unintended consequences
+                so you should manually check that all values are okay.
+                Available options are:
+                - 'first_arrival_time': shift based on earliest phase arrival
+                - 'p_arrival_time': shift based on earliest P phase arrival
+                - 's_arrival_time': shift based on earliest S phase arrival
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
@@ -346,11 +357,17 @@ class RecordSection:
             - 'y_axis': Replace tick labels on the y-axis (left side of figure),
                 This won't work if using absolute sorting and will be over-
                 written by 'default'
+            - 'y_axis_abs': For absolute y-axis only. waveform labels plotted
+               on the left side outside border, with y-axis labels overlapping
+               (showing distance or azimuth)
+            - 'y_axis_abs_right': For absolute y-axis only. waveform labels
+               plotted on the right side outside border, with y-axis labels
+               on the left side of the figure (showing distance or azimuth)
             - 'y_axis_right': Replace tick labels on the right side of the
                 y-axis. This option won't work with absolute sorting
             - 'x_min': Place labels on top of the waveforms at the global min
                 x-value on the figure
-            - 'x_min': Place labels on top of the waveforms at the global max
+            - 'x_max': Place labels on top of the waveforms at the global max
                 x-value on the figure
             - None: Don't plot any text labels
         :type tmarks: list of float
@@ -365,7 +382,7 @@ class RecordSection:
         :param show: show the figure as a graphical output
         :type save: str
         :param save: path to save output figure, will create the parent
-            directory if it doesn't exist. If None, will not save.
+            directory if it doesn't exist. If None, will not save (default).
 
         .. note::
             Internal RecSec parameters
@@ -382,8 +399,16 @@ class RecordSection:
         # Set the logger level before running anything
         logger.setLevel(log_level)
 
+        # Check file path existence before we do any reading 
+        if pysep_path is not None:
+            assert(os.path.exists(pysep_path)), \
+                    f"`pysep_path` given but does not exist: '{pysep_path}'"
+        if syn_path is not None: 
+            assert(os.path.exists(syn_path)), \
+                    f"`syn_path` given but does not exist: '{syn_path}'"
+
         # Read files from path if provided
-        if pysep_path is not None and os.path.exists(pysep_path):
+        if pysep_path is not None:
             if not synsyn:
                 # Expecting to find SAC files labelled as such
                 fids = glob(os.path.join(pysep_path, "*.sac"))
@@ -408,7 +433,9 @@ class RecordSection:
                                                      cartesian=cartesian)
 
         # Read in SPECFEM generated synthetics and generate SAC headed streams
-        if syn_path is not None and os.path.exists(syn_path):
+        if syn_path is not None: 
+            assert(os.path.exists(syn_path)), \
+                    f"`syn_path` given but does not exist: '{syn_path}'"
             st_syn = self._generate_synthetic_stream(syn_path=syn_path,
                                                      source=cmtsolution,
                                                      stations=stations,
@@ -445,7 +472,12 @@ class RecordSection:
 
         # Time shift parameters
         self.move_out = move_out
-        self.time_shift_s = time_shift_s
+        # float check incase command line input provides as a string, and also
+        # to ensure int -> float
+        try:
+            self.time_shift_s = float(time_shift_s)
+        except (TypeError, ValueError):
+            self.time_shift_s = time_shift_s
         self.zero_pad_s = zero_pad_s
 
         # Filtering parameters
@@ -480,7 +512,9 @@ class RecordSection:
         self.idx = []
         self.station_ids = []
         self.max_amplitudes = []
+        self.max_amplitudes_syn = []
         self.amplitude_scaling = []
+        self.amplitude_scaling_syn = []
         self.y_axis = []
         self.xlim = []  # unit: samples
         self.xlim_syn = []
@@ -579,7 +613,7 @@ class RecordSection:
         # Check the `sort_by` sorting parameter options
         acceptable_sort_by = ["default", "azimuth", "backazimuth",
                               "distance", "alphabetical", "abs_azimuth",
-                              "abs_distance"]
+                              "abs_distance", "abs_backazimuth"]
         # Allow reverse sorts
         acceptable_sort_by += [f"{_}_r" for _ in acceptable_sort_by]
         if self.sort_by not in acceptable_sort_by:
@@ -602,12 +636,15 @@ class RecordSection:
                 err.scale_by = f"must be in {acceptable_scale_by}"
 
         if self.time_shift_s is not None:
-            acceptable_time_shift_s = [int, float, list]
+            acceptable_time_shift_s = [float, list, str]
             if type(self.time_shift_s) not in acceptable_time_shift_s:
                 err.time_shift_s = f"must be in {acceptable_time_shift_s}"
             if isinstance(self.time_shift_s, list) and \
                     len(self.time_shift_s) != len(self.st):
                 err.time_shift_s = f"must be list of length {len(self.st)}"
+            elif isinstance(self.time_shift_s, str):
+                if self.time_shift_s not in SACDICT:
+                    err.time_shift_s = f"must be {SACDICT} ending w/ '_time'"
 
         if self.zero_pad_s is not None:
             assert(isinstance(self.zero_pad_s, list)), (
@@ -660,7 +697,8 @@ class RecordSection:
                 err.xlim_s = f"start time must be less than stop time"
 
         acceptable_y_label_loc = ["default", "y_axis", "y_axis_right", "x_min",
-                                  "x_max", None]
+                                  "x_max", "y_axis_abs", "y_axis_abs_right",
+                                  None]
         if self.y_label_loc not in acceptable_y_label_loc:
             err.y_label_loc = f"must be in {acceptable_y_label_loc}"
         if "abs" in self.sort_by and "y_axis" in self.sort_by:
@@ -670,15 +708,16 @@ class RecordSection:
         if len(self.figsize) != 2:
             err.figsize = "must be tuple defining (horizontal, vertical) extent"
 
-        if os.path.exists(self.save) and not self.overwrite:
-            err.save = (f"path {self.save} already exists. Use '--overwrite' " 
-                        f"flag to save over existing figures.")
-
         if self.save:
-            _dirname = os.path.abspath(os.path.dirname(self.save))
-            if not os.path.exists(_dirname):
-                logger.info(f"creating output directory {_dirname}")
-                os.makedirs(_dirname)
+            if os.path.exists(self.save) and not self.overwrite:
+                err.save = (f"path {self.save} already exists. Use "
+                            f"'--overwrite' flag to save over existing figures"
+                            )
+            else:
+                _dirname = os.path.abspath(os.path.dirname(self.save))
+                if not os.path.exists(_dirname):
+                    logger.info(f"creating output directory {_dirname}")
+                    os.makedirs(_dirname)
 
         if err:
             out = "ERROR - Parameter errors, please make following changes:\n"
@@ -767,6 +806,16 @@ class RecordSection:
                                             max(abs(tr.data[start:stop])))
         self.max_amplitudes = np.array(self.max_amplitudes)
 
+        # Max amplitudes will be DIFFERENT for synthetics, which affects 
+        # normalizations and thus requires its own array
+        if self.st_syn is not None:
+            for tr, xlim in zip(self.st_syn, self.xlim):
+                start, stop = xlim
+                self.max_amplitudes_syn = np.append(
+                        self.max_amplitudes_syn, max(abs(tr.data[start:stop]))
+                        )
+        self.max_amplitudes_syn = np.array(self.max_amplitudes_syn)
+
         # Figure out which indices we'll be plotting
         sorted_idx = self.get_sorted_idx()
         skip_idx = self.get_skip_idx()
@@ -775,7 +824,10 @@ class RecordSection:
 
         # Figure out how to manipulate each of the traces in the Stream
         self.y_axis = self.get_y_axis_positions()
-        self.amplitude_scaling = self.get_amplitude_scaling()
+        self.amplitude_scaling = self.get_amplitude_scaling(_choice="st")
+        if self.st_syn:
+            self.amplitude_scaling_syn = \
+                    self.get_amplitude_scaling(_choice="st_syn")
 
     def get_xlims(self, st=None):
         """
@@ -947,11 +999,18 @@ class RecordSection:
         time_shift_arr = np.zeros(len(self.st))
         if self.time_shift_s is not None:
             # User inputs a static time shift
-            if isinstance(self.time_shift_s, (int, float)):
+            if isinstance(self.time_shift_s, float):
+                logger.info(f"apply constant time shift {self.time_shift_s}s")
                 time_shift_arr += self.time_shift_s
             # User input an array which should have already been checked for len
-            else:
+            elif isinstance(self.time_shift_s, list):
+                logger.info(f"apply user-defined array time shift values")
                 time_shift_arr = self.time_shift_s
+            # Allow shifting by a given phase arrival in the SAC header
+            elif isinstance(self.time_shift_s, str):
+                sac_key = SACDICT[self.time_shift_s]
+                logger.info(f"apply time shift by {self.time_shift_s}")
+                time_shift_arr = [-1 * tr.stats.sac[sac_key] for tr in self.st]
         time_shift_arr = np.array(time_shift_arr)
 
         # Further change the time shift if we have move out input
@@ -1051,7 +1110,7 @@ class RecordSection:
 
         return dist, az, baz
 
-    def get_amplitude_scaling(self):
+    def get_amplitude_scaling(self, _choice="st"):
         """
         Scale the amplitudes of all the waveforms by producing a Stream
         dependent scale factor based on user choice. It is expected that the
@@ -1063,18 +1122,26 @@ class RecordSection:
             Needs to be run AFTER preprocessing because filtering etc. will
             affect the final amplitudes of the waveforms
 
+        :type _choice: str
+        :param _choice: Internal choice only required for 'normalize' scaling. 
+            `st` for amplitude scaling w.r.t data array, `st_syn` 
+            for amplitude scaling w.r.t synthetics
         :rtype: np.array
         :return: an array corresponding to the Stream indexes which provides
             a per-trace scaling coefficient
         """
-        logger.info(f"determining amplitude scaling with: '{self.scale_by}'")
+        logger.info(f"determining amplitude scaling w.r.t {_choice} with: "
+                    f"'{self.scale_by}'")
 
         # Don't scale by anything
         if self.scale_by is None:
             amp_scaling = np.ones(len(self.st))
         # Scale by the max amplitude of each trace
         elif self.scale_by == "normalize":
-            amp_scaling = self.max_amplitudes
+            if _choice == "st":
+                amp_scaling = self.max_amplitudes
+            elif _choice == "st_syn":
+                amp_scaling = self.max_amplitudes_syn
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
@@ -1093,6 +1160,10 @@ class RecordSection:
         # Scale by the largest amplitude shown
         elif self.scale_by == "global_norm":
             global_max = self.max_amplitudes[self.sorted_idx].max()
+            if self.max_amplitudes_syn.any():
+                global_max = max(global_max, 
+                                 self.max_amplitudes_syn[self.sorted_idx].max()
+                                 )
             amp_scaling = np.ones(len(self.st)) * global_max
         # Scale by the theoretical geometrical spreading factor
         elif self.scale_by == "geometric_spreading":
@@ -1326,6 +1397,26 @@ class RecordSection:
 
         return y_axis
 
+    def get_x_axis_tick_values(self):
+        """
+        Determine, based on the length of the plotted traces, how often tick
+        marks should be applied so that they are spaced as aesthetically
+        pleasing values.
+        """
+        # Get a rough estimate for total length of time of the trace in seconds
+        if self.xlim_s:
+            rs_len = self.xlim_s[1] - self.xlim_s[0]
+        else:
+            # Assuming that all waveforms are trimmed to the same length
+            rs_len = self.st[0].stats.endtime - self.st[0].stats.starttime
+
+        # Find order of magnitude of the length to give a rough estimate
+        oom = np.floor(np.log10(rs_len))
+        xtick_major = 10 ** oom
+        xtick_minor = xtick_major / 2
+
+        return xtick_minor, xtick_major
+
     def process_st(self):
         """
         Preprocess the Stream with optional filtering in place.
@@ -1459,11 +1550,19 @@ class RecordSection:
 
         # Change the aesthetic look of the figure, should be run before other
         # set functions as they may overwrite what is done here
+        _xtick_minor, _xtick_major = self.get_x_axis_tick_values()
+        # Use kwarg values to avoid double inputs of the same parameter
+        for name, val in zip(["xtick_minor", "xtick_major"],
+                             [_xtick_minor, _xtick_major]):
+            if name not in self.kwargs:
+                self.kwargs[name] = val
         self.ax = set_plot_aesthetic(ax=self.ax, **self.kwargs)
 
-        # Partition the figure by user-specified azimuth bins 
-        if self.sort_by and "azimuth" in self.sort_by:
-            self._plot_azimuth_bins()
+        # Partition the figure by user-specified azimuth bins for relative
+        # (back)azimuth sorting only (not absolute)
+        if self.sort_by and ("azimuth" in self.sort_by) and \
+                ("abs_" not in self.sort_by):
+            self._plot_azimuth_bins(start=start, stop=stop)
 
         # Finalize the figure accoutrements
         self._plot_title(nwav=nwav)
@@ -1505,6 +1604,7 @@ class RecordSection:
         assert (choice in choices)
         c = choices.index(choice)
         tr = getattr(self, choice)[idx]  # i.e., tr = self.st[idx]
+        
 
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         tshift = self.time_shift_s[idx]
@@ -1524,7 +1624,23 @@ class RecordSection:
         else:
             toffset_str = "  None"
 
-        y = tr.data / self.amplitude_scaling[idx] + self.y_axis[y_index]
+        # Flip the sign of the y-axis if we are doing normal absolute
+        # sorting because we are flipping the y-axis in _plot_axes()
+        if "abs_" in self.sort_by and "_r" not in self.sort_by:
+            sign = -1
+        else:
+            sign = 1
+
+        # Ampplitude scaling may change between observed and synthetic if e.g.,
+        # we are doing trace-wise normalization
+        if choice == "st":
+            amplitude_scaling = self.amplitude_scaling
+            max_amplitudes = self.max_amplitudes
+        elif choice == "st_syn":
+            amplitude_scaling = self.amplitude_scaling_syn
+            max_amplitudes = self.max_amplitudes_syn
+
+        y = sign * tr.data / amplitude_scaling[idx] + self.y_axis[y_index]
 
         # Truncate waveforms to get figure scaling correct. Make the distinction
         # between data and synthetics which may have different start and end 
@@ -1547,7 +1663,7 @@ class RecordSection:
                    f"\t{self.backazimuths[idx]:6.2f}"
                    f"\t{self.time_shift_s[idx]:4.2f}"
                    f"\t{toffset_str}"
-                   f"\t{self.max_amplitudes[idx]:.2E}\n"
+                   f"\t{max_amplitudes[idx]:.2E}\n"
                    )
 
         # Retain some stats for global plot args
@@ -1572,10 +1688,17 @@ class RecordSection:
             plt.axvline(x=tmark, c=c, linewidth=lw, linestyle=ls, zorder=z,
                         alpha=alpha)
 
-    def _plot_azimuth_bins(self):
+    def _plot_azimuth_bins(self, start=None, stop=None):
         """
         If plotting by azimuth, create visual bin separators so the user has
         a visual understanding of radiation patterns etc.
+
+        :type start: int
+        :param start: optional starting index to determine the bounds of
+            the azimuth bins
+        :type stop: int
+        :param stop: optional stop index to determine the bounds of
+            the azimuth bins
         """
         azimuth_binsize = self.kwargs.get("azimuth_binsize", 45)
 
@@ -1590,6 +1713,16 @@ class RecordSection:
                                  azimuth_binsize)
         # Make sure that the bins go from 0 <= azimuth_bins <= 360
         azimuth_bins = azimuth_bins % 360
+
+        # Cut down the azimuth bins to the closest values if we are doing
+        # multi-page record sections so that we don't end up plotting too many
+        if start is not None and stop is not None:
+            min_az = self.azimuths[self.sorted_idx[start:stop]].min()
+            max_az = self.azimuths[self.sorted_idx[start:stop]].max()
+            # Find the closest azimuth bins
+            idx_start = np.argmin(np.abs(azimuth_bins - min_az))
+            idx_end = np.argmin(np.abs(azimuth_bins - max_az))
+            azimuth_bins = azimuth_bins[idx_start:idx_end]
 
         # In an absolute plot, the y values are simply the azimuth bins
         if "abs" in self.sort_by:
@@ -1661,9 +1794,9 @@ class RecordSection:
         if "abs_" in self.sort_by:
             self._set_y_axis_absolute()
             if self.y_label_loc is not None:
-                # By default, place absolute sorted labels at xmin
+                # By default, place absolute sorted labels on y-axis
                 if self.y_label_loc == "default":
-                    loc = "x_min"
+                    loc = "y_axis_abs_right"
                 else:
                     loc = self.y_label_loc
                 self._set_y_axis_text_labels(start=start, stop=stop, loc=loc)
@@ -1688,11 +1821,15 @@ class RecordSection:
             logger.info("turning off y-axis as it contains no information")
             self.ax.get_yaxis().set_visible(False)
 
-        # Reverse the y-axis if we are doing absolute y-axis and reversing
-        if "abs_" in self.sort_by and "_r" in self.sort_by:
+        # Reverse the y-axis if we are doing absolute y-axis so that smaller
+        # values appear at the top, which is opposite of how the y-axis works.
+        # !!! This also requires flipping the sign of the plotted data in
+        # !!! _plot_trace() to deal with the axis flip.
+        if "abs_" in self.sort_by and "_r" not in self.sort_by:
+            self.ax.invert_yaxis()
+        else:
             logger.info("user requests inverting y-axis with absolute "
                         "reverse sort")
-            self.ax.invert_yaxis()
 
         # X-axis label is different if we time shift
         if self.time_shift_s.sum() == 0:
@@ -1718,12 +1855,15 @@ class RecordSection:
         self.ax.tick_params(axis="y", labelsize=ytick_fontsize)
 
         if "distance" in self.sort_by:
-            if "km" in self.distance_units:
-                ytick_minor = self.kwargs.get("ytick_minor", 25)
-                ytick_major = self.kwargs.get("ytick_major", 100)
-            elif "deg" in self.distance_units:
-                ytick_minor = self.kwargs.get("ytick_minor", 0.25)
-                ytick_major = self.kwargs.get("ytick_major", 1.0)
+            # Dynamically determine y-axis ticks based on the the total span
+            # of the y-axis
+            ymin, ymax = self.ax.get_ylim()
+            dist_span = ymax - ymin
+            oom = np.floor(np.log10(dist_span))
+            _ytick_major = 10 ** oom
+            _ytick_minor = _ytick_major / 2
+            ytick_minor = self.kwargs.get("ytick_minor", _ytick_minor)
+            ytick_major = self.kwargs.get("ytick_major", _ytick_major)
             ylabel = f"Distance [{self.distance_units}]"
         elif "azimuth" in self.sort_by:
             ytick_minor = self.kwargs.get("ytick_minor", 45)
@@ -1755,6 +1895,9 @@ class RecordSection:
             - y_axis: Place labels along the y-axis (left side of the figure)
                 Will replace the actual y-tick labels so not applicable for
                 absolute sorting which requries the y-axis labels
+            - y_axis_abs: for absolute plotting, place waveform labels to the
+                left side of the figure (outside border), co-existing with
+                y-axis labels
             - y_axis_right: same as `y_axis` but set on the right side of figure
             - x_min: Place labels on the waveforms at the minimum x value
             - x_max: Place labels on the waveforms at the maximum x value
@@ -1798,9 +1941,10 @@ class RecordSection:
         if self.time_shift_s.sum() != 0:
             y_fmt += "|TSHIFT"
 
+        # Option 1: Replacing y-axis tick labels with waveform labels
         # Set the y-axis labels to the left side of the left figure border
         if loc == "y_axis":
-            # For relative plotting (not abs_), replace y_tick labels with
+            # For relative plotting (not abs_), replace y_tyick labels with
             # station information
             self.ax.set_yticks(self.y_axis[start:stop])
             self.ax.set_yticklabels(y_tick_labels)
@@ -1814,33 +1958,54 @@ class RecordSection:
             self.ax.yaxis.set_label_position("right")
             plt.text(1.01, .99, y_fmt, ha="left", va="top",
                      transform=self.ax.transAxes, fontsize=fontsize)
-        # Set the y-axis labels inside the figure border, at xmin or xmax
+        # Option 2: Plotting labels as text objects, separate from y-axis labels
         else:
+            # 2a: Set the y-axis labels inside the figure border (xmin or xmax)
             # Trying to figure out where the min or max X value is on the plot
             if loc == "x_min":
                 ha = "left"
+                va = "top"
                 func = min
                 x_val = func(self.stats.xmin)
-                plt.text(.01, .99, y_fmt, ha="left", va="top",
+                plt.text(.01, .99, y_fmt, ha=ha, va=va,
                          transform=self.ax.transAxes, fontsize=fontsize)
             elif loc == "x_max":
                 ha = "right"
+                va = "top"
                 func = max
                 x_val = func(self.stats.xmax)
-                plt.text(.99, .99, y_fmt, ha="right", va="top",
+                plt.text(.99, .99, y_fmt, ha=ha, va=va,
                          transform=self.ax.transAxes, fontsize=fontsize)
+            # 2b: Set the y-axis labels outside figure border, co-existing with
+            # y-labels showing distance or azimuth
+            elif loc == "y_axis_abs":
+                ha = "right"
+                va = "center"
+                func = min
+                x_val = func(self.stats.xmin)
+                plt.text(0, .99, y_fmt, ha=ha, va=va,
+                         transform=self.ax.transAxes, fontsize=fontsize)
+            elif loc == "y_axis_abs_right":
+                ha = "left"
+                va = "center"
+                func = max
+                x_val = func(self.stats.xmax)
+                plt.text(1., .99, y_fmt, ha=ha, va=va,
+                         transform=self.ax.transAxes, fontsize=fontsize)
+
             if self.xlim_s is not None:
                 x_val = func([func(self.xlim_s), x_val])
 
             # Plotting y-axis labels for absolute scales
             if len(self.y_axis) == len(self.st):
                 for idx, s in zip(self.sorted_idx[start:stop], y_tick_labels):
-                    plt.text(x=x_val, y=self.y_axis[idx], s=s, ha=ha, c=c,
-                             fontsize=fontsize)
+                    plt.text(x=x_val, y=self.y_axis[idx], s=s, ha=ha, va=va,
+                             c=c, fontsize=fontsize)
             # Plotting y-axis labels for relative scales
             elif len(self.y_axis) == len(y_tick_labels):
                 for y, s in zip(self.y_axis, y_tick_labels):
-                    plt.text(x=x_val, y=y, s=s, ha=ha, c=c, fontsize=fontsize)
+                    plt.text(x=x_val, y=y, s=s, ha=ha, va=va, c=c,
+                             fontsize=fontsize)
 
     def _plot_title(self, nwav=None):
         """
@@ -1851,6 +2016,11 @@ class RecordSection:
         :param nwav: if using subset, the title needs to know how many waveforms
             it's showing on the page. self.plot() should tell it
         """
+        title = self.kwargs.get("title", None)
+        if title is not None:
+            self.ax.set_title(title)
+            return
+
         # Defines the number of waveforms plotted on a single page, allowing
         # for subsets per page
         if nwav is None:
@@ -1982,10 +2152,11 @@ def parse_args():
             - 'backazimuth': sort by source-receiver backazimuth (deg) with
                 constant vertical spacing. Requires `azimuth_start_deg`
             - 'distance': sort by source-receiver distance (km) with constant
-                vertical spacing. Requires `azimuth_start_deg` AND
-                `distance_units`
+                vertical spacing. Smallest distances at top of figure. 
+                Requires `distance_units`
             - 'abs_distance': absolute vertical spacing of waveforms defined by
-                source-receiver distance (km). Requires `distance_units`
+                source-receiver distance (km). Smallest distances at top of 
+                figure. Requires `distance_units`
             - 'abs_azimuth': absolute vertical spacing of waveforms defined
                 by source-receiver azimuth (deg). Requires
                 `azimuth_start_deg`
@@ -2021,8 +2192,9 @@ def parse_args():
                         nargs="?", type=float,
                         help="Controls the y-max value on the geometric "
                              "spreading plot.")
-    parser.add_argument("--time_shift_s", default=None, type=float, nargs="?",
-                        help="Set a constant time shift in unit: seconds")
+    parser.add_argument("--time_shift_s", default=None, nargs="?",
+                        help="Set a constant time shift in unit: seconds OR "
+                             "shift by a given phase arrival in SAC header")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
                         help="Set a constant velocity-based move out in units:"
                              "`distance_units`/s")
@@ -2103,14 +2275,16 @@ def parse_args():
 
 def plotw_rs(*args, **kwargs):
     """
-    Main call function for command line use of RecordSection.
+    Plot Waveform Record Section (main call function for RecordSection)
 
-    Runs the record section plotting functions in order. Contains the logic for
-    breaking up figure into multiple pages.
+    Instantiates the RecordSection class, runs processing and parameter getting,
+    and then plots record section. Contains additional logic for breaking up
+    figures into multiple pages if requested by the user, while keeping sort
+    order and waveform spacing consistent across multiple reord sections.
 
     .. note::
-        All arguments should be parsed into the argparser, *args and **kwargs
-        are just there to keep the IDE happy
+
+        See RecordSection.__init__() for acceptable args and kwargs
     """
     _start = datetime.now()
     logger.info(f"starting record section plotter")
@@ -2126,7 +2300,7 @@ def plotw_rs(*args, **kwargs):
         # Iterate backwards through the range so that the order of pages is
         # more natural, i.e., plotting the record section from the top down,
         # rather than the bottom up
-        rnge = np.arange(len(rs.st), 0, -1 * rs.max_traces_per_rs)
+        rnge = np.arange(len(rs.sorted_idx), 0, -1 * rs.max_traces_per_rs)
 
         # When `max_traces_per_rs` is not an integer divisor of the number of
         # streams, the range will not hit zero, so we need to ensure it does

@@ -8,11 +8,12 @@ Test the preprocessing functions which include standardization and rotation
 import pytest
 import random
 import numpy as np
-from obspy import read, read_events, read_inventory
+from obspy import read, read_events, read_inventory, Stream
 
 from pysep import logger, Pysep
 from pysep.utils.cap_sac import append_sac_headers
-from pysep.utils.process import (merge_and_trim_start_end_times,
+from pysep.utils.curtail import remove_traces_w_masked_data
+from pysep.utils.process import (merge_gapped_data, trim_start_end_times,
                                  resample_data, format_streams_for_rotation,
                                  rotate_to_uvw, append_back_azimuth_to_stats)
 
@@ -45,13 +46,43 @@ def test_st(test_event, test_inv):
     return st
 
 
-def test_merge_and_trim_start_end_times(test_st):
+def test_trim_start_end_times(test_st):
     """
     Make sure we can trim per-station waveforms to their shortest component
     and also merge existing waveforms, dropping those with data gaps
     """
-    st = merge_and_trim_start_end_times(test_st)
+    st = trim_start_end_times(test_st)
+    st = remove_traces_w_masked_data(st)
     assert(len(test_st) - len(st) == 4)
+
+
+def test_merge_data_gaps(test_st):
+    """
+    Make sure merging data gaps works for a few different options. Does not
+    check values, just runs through the function
+    """
+    # ATKA already has gappy data on components E and N
+    st_gap = test_st.select(station="ATKA")
+    assert(len(st_gap) == 5)
+
+    for fill_value in [None, "mean", "interpolate", "latest", 0, 5.5]:
+        st = merge_gapped_data(st_gap, fill_value=fill_value)
+        st = remove_traces_w_masked_data(st)
+        if fill_value in [None, 5.5]:
+            assert(len(st) == 1)  # removed E and N from stations
+        else:
+            assert(len(st) == 3)  # successful merge
+
+
+def test_merge_data_gap_fraction(test_st):
+    """Try out the fraction percentage function"""
+    # ATKA already has gappy data on components E and N
+    st_gap = test_st.select(station="ATKA")
+    assert(len(st_gap) == 5)
+
+    st = merge_gapped_data(st_gap, fill_value=0, gap_fraction=0.01)
+    st = remove_traces_w_masked_data(st)
+    assert(len(st) == 1)
 
 
 def test_resample_data(test_st):
@@ -152,7 +183,7 @@ def test_rotate_streams(test_st, test_inv, test_event):
     """
     Ensure that stream rotation works as expected after we format SAC headers
     """
-    sep = Pysep(log_level="CRITICAL", rotate=["ZNE", "RTZ"])
+    sep = Pysep(log_level="DEBUG", rotate=["ZNE", "RTZ"])
     for tr in test_st:
         del tr.stats.back_azimuth
     assert("back_azimuth" not in test_st[0].stats)

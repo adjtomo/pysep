@@ -77,7 +77,7 @@ def test_format_sac_headers_w_taup_traveltimes(test_st, test_inv, test_event):
     """
     st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
     st = format_sac_header_w_taup_traveltimes(st=st, model="ak135")
-    assert(pytest.approx(st[0].stats.sac["user4"], .01) == 57.66)
+    assert(pytest.approx(st[0].stats.sac["a"], .01) == 224.535)
 
 
 def test_sac_header_correct_origin_time(tmpdir, test_st, test_inv, test_event):
@@ -219,7 +219,6 @@ def test_get_usgs_moment_tensor():
     """
     event = test_get_gcmt_moment_tensor()
     del event.focal_mechanisms
-
     cat = get_usgs_moment_tensor(event=event)
     assert(len(cat) == 1)
     event = cat[0]

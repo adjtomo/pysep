@@ -9,7 +9,7 @@ Python Seismogram Extraction and Processing
 The package also contains core classes `RecSec` a **rec**ord **sec**tion plotter for rapid visualization of
 waveform data, and `Declust`, for earthquake catalog declustering and geographical source-receiver weighting for waveform inversions.
 
-- Documentation can found on GitHub pages: https://adjtomo.github.io/pysep/
+- Documentation can found ReadTheDocs: https://pysep.readthedocs.io/en/latest
 - Found a bug, requesting a new feature, or wanting to know how to use`PySEP`? [Feel free to open a GitHub issue](https://github.com/adjtomo/pysep/issues).
 - As part of the [SCOPED toolkit](https://github.com/SeisSCOPED), `PySEP` has been 
 [containerized](https://github.com/SeisSCOPED/pysep/pkgs/container/pysep) 

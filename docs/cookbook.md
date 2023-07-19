@@ -4,6 +4,33 @@ Here we provide some code snippets using PySEP routines or utilities to perform
 tasks useful for manipulating or preparing data for moment tensor and waveform 
 inversion software.
 
+## Generating Source Receiver Maps
+
+PySEP generates QuakeML and StationXML files during data gathering, which can 
+be used to plot source receiver maps. By default, these files are saved to the
+main output directory under the names `event.xml` and `inv.xml`.
+
+```python
+from obspy import read_events, read_inventory
+from pysep.utils.plot import plot_source_receiver_map
+
+event = read_events("event.xml")[0]
+inv = read_inventory("inv.xml")
+
+plot_source_receiver_map(inv=inv, event=event)
+```
+
+Stations can also be subset, e.g., when plotting subsetted record sections. The
+`subset` argument takes a list of trace IDs which can be retrieved from each
+trace.
+
+```python
+st_new = st.select(network="II")  
+subset = [tr.get_id() for tr in st_new]
+
+plot_source_receiver_map(inv=inv, event=event, subset=subset)
+```
+
 ## Create STATIONS file for SPECFEM
 
 SPECFEM requires a STATIONS file that defines geographical coordinates of stations that
@@ -28,7 +55,7 @@ inv = c.get_stations(network="*", station="*",
                      )
 
 # Write 'STATIONS' file, ordered alphabetically by station name
-write_specfem_stations_file(inv, fid="STATIONS", order_by="station")
+write_stations_file(inv, fid="STATIONS", order_by="station")
 ```
 
 ```

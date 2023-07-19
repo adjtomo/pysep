@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from obspy.core.event import Catalog
+from obspy.core.inventory import Inventory
 from obspy.geodetics import gps2dist_azimuth, degrees2kilometers
 
 from pysep import logger
@@ -130,7 +131,7 @@ def plot_geometric_spreading(distances, max_amplitudes,
         plt.show()
 
 
-def plot_source_receiver_map(inv, event, save="./station_map.png",
+def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
                              projection=None, show=False):
     """
     Simple utility to plot station and event on a single map with Cartopy
@@ -139,6 +140,11 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
     :param event: event to get location from
     :type inv: obspy.core.inventory.Inventory
     :param inv: inventory to get locatiosn from
+    :type subset: list of str
+    :param subset: allow subsetting stations in the Inventory. Station IDs 
+        should match the format output by function `obspy.trace.Trace.get_id()`,
+        that is, NN.SSS.LL.CCC (Network, Station, Location, Channel). Location
+        and channel information are not used during subsetting.
     :type save: str
     :param save: filename to save station map, defaults: ./station_map.png
     :type projection: str
@@ -147,9 +153,22 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
     :type show: bool
     :param show: show the figure in the GUI
     """
+    # Subset the Inventory to only plot certain stations (optional)
+    if subset:
+        netstas = []
+        inv_subset = Inventory()
+        for sta_id in subset:
+            net, sta, *_ = sta_id.split(".")
+            # Assuming NN.SSS should be unique across all networks
+            netsta = f"{net}.{sta}"
+            if netsta not in netstas:
+                inv_subset += inv.select(network=net, station=sta)
+                netstas.append(netsta)
+        inv = inv_subset
+
+    # Calculate the maximum source receiver distance to determine what 
+    # projection we should be in
     if projection is None:
-        # Calculate the maximum source receiver distance to determine what
-        # projection we should be in
         dists = []
         event_latitude = event.preferred_origin().latitude
         event_longitude = event.preferred_origin().longitude
@@ -163,23 +182,81 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
                 dists.append(dist_m * 1E-3)
         if max(dists) < 5000:  # km
             projection = "local"
-        else:
+        elif max(dists) < 10000:  # ~ < circumference of Earth / 4
             projection = "ortho"
+        else:
+            projection = "global"
         logger.debug(f"setting projection {projection} due to max src-rcv "
                      f"distance of {max(dists)}km")
 
-    # Temp change the size of all text objects to get text labels small
+    # Use ObsPy's internal Cartopy calls to plot event and stations
+    # temporarily change the size of all text objects to get text labels small
     # and make the event size a bit smaller
     with plt.rc_context({"font.size": 6, "lines.markersize": 4}):
-        inv.plot(projection=projection, resolution="i", label=True, show=False,
-                 size=12, color="g", method="cartopy")
-        # !!! fig=plt.gca() kwarg is a workaround for bug in
-        # !!! ObsPy==1.3.0 (obspy.imaging.maps._plot_cartopy_into_axes)
-        Catalog(events=[event]).plot(method="cartopy", label=None,
-                                     fig=plt.gca(), show=False)
+        Catalog(events=[event]).plot(projection=projection, resolution="i", 
+                                     method="cartopy", label=None, show=False,
+                                     title="")
+        inv.plot(label=True, show=False, size=12, color="g", method="cartopy", 
+                 fig=plt.gcf())
+
+    # Do some post-plot editing of the figure
+    ax = plt.gca()
+
+    # Get the extent all points plotted to resize the figure in local
+    # since the original bounds will be confined to a small reigon around the
+    # event
+    if projection == "local":
+        lats, lons = [], []
+        for net in inv:
+            for sta in net:
+                lats.append(sta.latitude)
+                lons.append(sta.longitude)
+        lats.append(event.preferred_origin().latitude)
+        lons.append(event.preferred_origin().longitude)
+        lats = np.array(lats)
+        lons = np.array(lons)
+
+        # Copied verbatim from obspy.imaging.maps.plot_map(), find aspect ratio
+        # based on the points plotted. Need to re-do this operation since we
+        # have both event and stations
+        if min(lons) < -150 and max(lons) > 150:
+            max_lons = max(np.array(lons) % 360)
+            min_lons = min(np.array(lons) % 360)
+        else:
+            max_lons = max(lons)
+            min_lons = min(lons)
+        lat_0 = max(lats) / 2. + min(lats) / 2.
+        lon_0 = max_lons / 2. + min_lons / 2.
+        if lon_0 > 180:
+            lon_0 -= 360
+        deg2m_lat = 2 * np.pi * 6371 * 1000 / 360
+        deg2m_lon = deg2m_lat * np.cos(lat_0 / 180 * np.pi)
+        if len(lats) > 1:
+            height = (max(lats) - min(lats)) * deg2m_lat
+            width = (max_lons - min_lons) * deg2m_lon
+            margin = 0.2 * (width + height)
+            height += margin
+            width += margin
+        else:
+            height = 2.0 * deg2m_lat
+            width = 5.0 * deg2m_lon
+        # Do intelligent aspect calculation for local projection to adjust to
+        # figure dimensions
+        w, h = plt.gcf().get_size_inches()
+        aspect = w / h
+
+        if width / height < aspect:
+            width = height * aspect
+        else:
+            height = width / aspect
+
+        # We are ASSUMING that the event is located at the center of the figure
+        # (0, 0), which it should be since we plotted it first
+        x0, y0 = 0, 0  # modified from ObsPy function
+        ax.set_xlim(x0 - width / 2, x0 + width / 2)
+        ax.set_ylim(y0 - height / 2, y0 + height / 2)
 
     # Hijack the ObsPy plot and make some adjustments to make it look nicer
-    ax = plt.gca()
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False,
                       y_inline=False, linewidth=.25, alpha=.25, color="k")
     gl.top_labels = False
@@ -188,44 +265,88 @@ def plot_source_receiver_map(inv, event, save="./station_map.png",
     ax.spines["geo"].set_linewidth(1.5)
 
     title = (f"{format_event_tag(event)}\n"
-             f"NSTA: {len(inv.get_contents()['stations'])} // "
-             f"DEPTH: {event.preferred_origin().depth * 1E-3}km // "
-             f"{event.preferred_magnitude().magnitude_type} "
-             f"{event.preferred_magnitude().mag}"
-             )
+             f"NSTA: {len(inv.get_contents()['stations'])} // ")
+
+    # Event may not have have depth or magnitude information, don't let that
+    # break the plotting function
+    if hasattr(event.preferred_origin(), "depth"):
+        title += f"DEPTH: {event.preferred_origin().depth * 1E-3}km // "
+    if hasattr(event.preferred_magnitude(), "mag"):
+        title += (f"{event.preferred_magnitude().magnitude_type} "
+                  f"{event.preferred_magnitude().mag}")
 
     ax.set_title(title)
     if save:
         plt.savefig(save)
     if show:
         plt.show()
+    else:
+        plt.close()
 
 
-def set_plot_aesthetic(ax, **kwargs):
+def set_plot_aesthetic(
+        ax, ytick_fontsize=8., xtick_fontsize=12., tick_linewidth=1.5,
+        tick_length=5., tick_direction="in", xlabel_fontsize=10.,
+        ylabel_fontsize=10., axis_linewidth=2., spine_zorder=8, spine_top=True,
+        spine_bot=True, spine_left=True, spine_right=True, title_fontsize=10.,
+        xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
+        xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
+        **kwargs):
     """
     Give a nice look to the output figure by creating thick borders on the
     axis, adjusting fontsize etc. All plot aesthetics should be placed here
     so it's easiest to find.
-    """
-    ytick_fontsize = kwargs.get("ytick_fontsize", 8)
-    xtick_fontsize = kwargs.get("xtick_fontsize", 12)
-    tick_linewidth = kwargs.get("tick_linewidth", 1.5)
-    tick_length = kwargs.get("tick_length", 5)
-    tick_direction = kwargs.get("tick_direction", "in")
-    xlabel_fontsize = kwargs.get("xlabel_fontsize", 10)
-    ylabel_fontsize = kwargs.get("ylabel_fontsize", 10)
-    axis_linewidth = kwargs.get("axis_linewidth", 2.)
-    title_fontsize = kwargs.get("title_fontsize", 10)
-    xtick_minor = kwargs.get("xtick_minor", 25)
-    xtick_major = kwargs.get("xtick_major", 100)
-    ytick_minor = kwargs.get("ytick_minor", None)
-    ytick_major = kwargs.get("ytick_major", None)
-    xgrid_major = kwargs.get("xgrid_major", True)
-    xgrid_minor = kwargs.get("xgrid_minor", True)
-    ygrid_major = kwargs.get("ygrid_major", True)
-    ygrid_minor = kwargs.get("ygrid_minor", True)
-    spine_zorder = kwargs.get("spine_zorder", 8)
 
+    :type ax: matplotlib.axes._subplots.AxesSubplot
+    :param ax: matplotlib axis figure to set plot aesthetic for
+    :type ytick_fontsize: float
+    :param ytick_fontsize: fontsize for labels next to Y-axis ticks
+    :type xtick_fontsize: float
+    :param xtick_fontsize: fontsize for labels next to X-axis ticks
+    :type tick_linewidth: float
+    :param tick_linewidth: thickness of tick marks for both X and Y axes
+    :type tick_length: float
+    :param tick_length: length of tick marks for both X and Y axes
+    :type tick_direction: str
+    :param tick_direction: 'in' for ticks pointing inwards, 'out' for ticks
+        pointing outwards
+    :type xlabel_fontsize: float
+    :param xlabel_fontsize: font size for the X-axis main label (e.g., Time)
+    :type ylabel_fontsize: float
+    :param ylabel_fontsize: font size for the Y-axis main label (e.g., Ampli)
+    :type axis_linewidth: float
+    :param axis_linewidth: line thickness for the borders of the figure
+    :type spine_zorder: int
+    :param spine_zorder: Z order (visibility) of the axis borders (spines)
+    :type spine_top: bool
+    :param spine_top: toggle on/off the top axis border
+    :type spine_bot: bool
+    :param spine_bot: toggle on/off the bottom axis border
+    :type spine_left: bool
+    :param spine_left: toggle on/off the left axis border
+    :type spine_right: bool
+    :param spine_right: toggle on/off the right axis border
+    :type title_fontsize: float
+    :param title_fontsize: font size of the main title at the top of the figure
+    :type xtick_minor: float
+    :param xtick_minor: how often minor tick marks are drawn on X axis
+    :type xtick_major: float
+    :param xtick_major: how often major tick marks are drawn on X axis
+    :type ytick_minor: float
+    :param xtick_minor: how often minor tick marks are drawn on Y axis
+    :type ytick_major: float
+    :param ytick_major: how often major tick marks are drawn on Y axis
+    :type xgrid_minor: bool
+    :param xgrid_minor: turn on grid lines for each minor X tick
+    :type xgrid_major: bool
+    :param xgrid_major: turn on grid lines for each major X tick
+    :type ygrid_minor: bool
+    :param ygrid_minor: turn on grid lines for each minor Y tick
+    :type ygrid_major: bool
+    :param ygrid_major: turn on grid lines for each minor Y tick
+    :rtype: matplotlib.axes._subplots.AxesSubplot
+    :return: input axis with aesthetic changed
+    """
     ax.title.set_fontsize(title_fontsize)
     ax.tick_params(axis="both", which="both", width=tick_linewidth,
                         direction=tick_direction, length=tick_length)
@@ -235,7 +356,12 @@ def set_plot_aesthetic(ax, **kwargs):
     ax.yaxis.label.set_size(ylabel_fontsize)
 
     # Thicken up the bounding axis lines
-    for axis in ["top", "bottom", "left", "right"]:
+    for axis, flag in zip(["top", "bottom", "left", "right"],
+                          [spine_top, spine_bot, spine_left, spine_right]):
+        # Deal with the case where command line users are inputting strings
+        if isinstance(flag, str):
+            flag = bool(flag.capitalize() == "True")
+        ax.spines[axis].set_visible(flag)
         ax.spines[axis].set_linewidth(axis_linewidth)
 
     # Set spines above azimuth bins
@@ -243,8 +369,10 @@ def set_plot_aesthetic(ax, **kwargs):
         spine.set_zorder(spine_zorder)
 
     # Set xtick label major and minor which is assumed to be a time series
-    ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
-    ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
+    if xtick_major:
+        ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
+    if xtick_minor:
+        ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
     if ytick_minor:
         ax.yaxis.set_major_locator(MultipleLocator(float(ytick_major)))
     if ytick_major:

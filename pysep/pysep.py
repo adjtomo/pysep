@@ -7,6 +7,7 @@ metadata. Save waveforms as SAC files for use in moment tensor inversion and
 adjoint tomography codes.
 """
 import argparse
+import logging
 import os
 import shutil
 import sys
@@ -29,20 +30,21 @@ from obspy.clients.fdsn.mass_downloader import (RectangularDomain, Restrictions,
 from obspy.core.event import Event, Origin, Magnitude
 from obspy.geodetics import kilometer2degrees
 
-from pysep import logger
+from pysep import logger, __version__
 from pysep.utils.cap_sac import (append_sac_headers, write_cap_weights_files,
                                  format_sac_header_w_taup_traveltimes,
                                  format_sac_headers_post_rotation)
 from pysep.utils.curtail import (curtail_by_station_distance_azimuth,
                                  quality_check_waveforms_before_processing,
                                  quality_check_waveforms_after_processing,
+                                 remove_traces_w_masked_data
                                  )
 from pysep.utils.fmt import format_event_tag, format_event_tag_legacy, get_codes
-from pysep.utils.io import read_yaml, read_event_file, write_pysep_stations_file
+from pysep.utils.io import read_yaml, read_event_file, write_pysep_station_file
 from pysep.utils.llnl import scale_llnl_waveform_amplitudes
-from pysep.utils.process import (merge_and_trim_start_end_times, resample_data,
-                                 format_streams_for_rotation, rotate_to_uvw,
-                                 estimate_prefilter_corners)
+from pysep.utils.process import (merge_gapped_data, trim_start_end_times,
+                                 resample_data, format_streams_for_rotation,
+                                 rotate_to_uvw, estimate_prefilter_corners)
 from pysep.utils.plot import plot_source_receiver_map
 from pysep.recsec import RecordSection
 
@@ -52,22 +54,27 @@ class Pysep:
     def __init__(self, config_file=None, event_selection="default",
                  client="IRIS", origin_time=None, reference_time=None,
                  networks="*", stations="*", locations="*", channels="*",
+                 station_ids=None, use_mass_download=False,
+                 extra_download_pct=0.005,
                  event_latitude=None, event_longitude=None, event_depth_km=None,
-                 event_magnitude=None, remove_response=True,
-                 remove_clipped=False, remove_insufficient_length=True,
-                 water_level=60, detrend=True, demean=True, taper_percentage=0,
-                 rotate=None, pre_filt="default",
-                 mindistance=0, maxdistance=20E3, minazimuth=0, maxazimuth=360,
-                 minlatitude=None, minlongitude=None, maxlatitude=None,
-                 maxlongitude=None, resample_freq=None, scale_factor=1,
-                 phase_list=None, seconds_before_event=20,
+                 event_magnitude=None,
+                 remove_response=True, remove_clipped=True,
+                 remove_insufficient_length=True, remove_masked_data=True,
+                 water_level=60, detrend=True, demean=True, taper_percentage=0.,
+                 rotate=None, pre_filt="default", fill_data_gaps=False,
+                 gap_fraction=1.,
+                 mindistance_km=0, maxdistance_km=20E3, minazimuth=0,
+                 maxazimuth=360, minlatitude=None, minlongitude=None,
+                 maxlatitude=None, maxlongitude=None, resample_freq=None,
+                 scale_factor=1, phase_list=None, seconds_before_event=20,
                  seconds_after_event=20, seconds_before_ref=100,
                  seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
                  user=None, password=None, client_debug=False,
-                 log_level="DEBUG", timeout=600, write_files="all",
+                 log_level="DEBUG", timeout=600,
+                 write_files="inv,event,stream,sac,config_file,station_list",
                  plot_files="all", llnl_db_path=None, output_dir=None,
-                 overwrite=False, legacy_naming=False, overwrite_event_tag=None,
-                 use_mass_download=False,
+                 overwrite=False, legacy_naming=False,
+                 overwrite_event_tag=None,
                  **kwargs):
         """
         .. note::
@@ -138,6 +145,19 @@ class Pysep:
         :param event_longitude: longitude of the event in units of degrees.
             used for defining the event hypocenter and for removing stations
             based on distance from the event.
+        :type event_depth_km: float or NoneType
+        :param event_depth_km: depth of event in units of kilometers. postive
+            values for deeper depths. Used for:
+
+            1) `event_selection`=='search'
+            2) estimating phase arrivals with TauP
+            3) plotting events and title on source receiver maps
+
+            If set to None, (2) and (3) will fail. Best-guesses are acceptable.
+        :type event_magnitude: float or NoneType
+        :param event_magnitude: event magnitude in Mw used for
+            `event_selection`=='search' and source receiver map plotting. If
+            provided as None, map plotting will fail.
         :type seconds_before_event: float
         :param seconds_before_event: For event selection only, only used if
             `event_selection`=='search'. Time [s] before given `origin_time` to
@@ -161,10 +181,18 @@ class Pysep:
         :type seconds_after_ref: float
         :param seconds_after_ref: For waveform fetching. Defines the time
             after `reference_time` to fetch waveform data. Units [s]
+        :type extra_download_pct: float
+        :param extra_download_pct: extra download percentage. Adds a buffer
+            around `origin_time` + `seconds_before_ref` + `extra_download_pct`
+            (also -`seconds_after_ref`), which gathers a bit of extra data which
+            will be trimmed away. Used because gathering data directly at the
+            requested time limits may lead to shorter expected waveforms after
+            resampling or preprocessing procedures. Given as a percent [0,1],
+            defaults to .5%.
         :type networks: str
-        :param networks: name or names of networks to query for, if names plural,
-            must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards okay,
-            defaults to '*'.
+        :param networks: name or names of networks to query for, if names
+            plural, must be a comma-separated list, i.e., 'AK,AT,AV'. Wildcards
+            okay, defaults to '*'.
         :type stations: str
         :param stations: station name or names to query for. If multiple
             stations, input as a list of comma-separated values, e.g.,
@@ -178,20 +206,29 @@ class Pysep:
         :param channels: channel name or names to query for, wildcard okay. If
             multiple stations, input as a list of comma-separated values, e.g.,
             'HH?,BH?'. Wildcards acceptable. Defaults to '*'.
+        :type station_ids: list of str
+        :param station_ids: an alternative to gathering based on individual
+            codes, allow the user to input a direct list of trace IDs which
+            will be broken up and used to gather waveforms and metadata.
+            NOTE: OVERRIDES `network`, `stations`, `locations`, and `channels`,
+            these parameters will NOT be used.
+            Station ids should be provided as: ['NN.SSS.LL.CCC', ...]
 
         .. note::
             Station removal and curtailing parameters
 
-        :type mindistance: float
-        :param mindistance: Used for removing stations and mass download option
+        :type mindistance_km: float
+        :param mindistance_km: Used for removing stations and mass download
+            option
 
             - Removing stations: Remove any stations who are closer than the
             given minimum distance away from event (units: km). Always applied
             - Mass Download: If `use_mass_download` is True and
             `domain_type`=='circular', defines the minimum radius around the
             event hypocenter to gather waveform data and station metadata
-        :type maxdistance: float
-        :param maxdistance: Used for removing stations and mass download option
+        :type maxdistance_km: float
+        :param maxdistance_km: Used for removing stations and mass download
+            option
 
             - Removing stations: Remove any stations who are farther than the
             given maximum distance away from event (units: km). Always applied
@@ -215,20 +252,55 @@ class Pysep:
         :param remove_insufficient_length: remove waveforms whose trace length
             does not match the average (mode) trace length in the stream.
             Defaults to True
+        :type remove_masked_data: bool
+        :param remove_masked_data: If `fill_data_gaps` is False or None, data
+            with gaps that go through the merge process will contain masked
+            arrays (essentially retaining gaps). By default, PySEP will remove
+            these data during processing. To keep this data, set
+            `remove_masked_data` == True.
+        :type fill_data_gaps: str or int or float or bool
+        :param fill_data_gaps: How to deal with data gaps (missing sections of
+            waveform over a continuous time span). False by default, which
+            means data with gaps are removed completely. Users who want access
+            to data with gaps must choose how gaps are filled. See API for
+            ObsPy.core.stream.Stream.merge() for how merge is handled:
+
+            Options include:
+
+            - 'mean': fill with the mean of all data values in the gappy data
+            - <int or float>: fill with a constant, user-defined value, e.g.,
+            0 or 1.23 or 9.999
+            - 'interpolate': linearly interpolate from the last value pre-gap
+            to the first value post-gap
+            - 'latest': fill with the last value of pre-gap data
+            - False: do not fill data gaps, which will lead to stations w/
+            data gaps being removed.
+
+            NOTE: Be careful about data types, as there are no checks that the
+            fill value matches the internal data types. This may cause
+            unexpected errors.
+        :type gap_fraction: float
+        :param gap_fraction: if `fill_data_gaps` is not None, determines the
+            maximum allowable fraction (percentage) of data that gaps can
+            comprise. For example, a value of 0.3 means that 30% of the data
+            (in samples) can be gaps that will be filled by `fill_data_gaps`.
+            Traces with gap fractions that exceed this value will be removed.
+            Defaults to 1. (100%) of data can be gaps.
 
         .. note::
             Data processing parameters
 
         :type detrend: bool
-        :param detrend: apply simple linear detrend to data during prior to
-            removing instrument response (if `remove_response`==True)
+        :param detrend: apply simple linear detrend as the first preprocessing
+            step
         :type demean: bool
         :param demean: apply demeaning to data during instrument reseponse
             removal. Only applied if `remove_response` == True.
-        :type taper: float
-        :param taper: apply a taper to the waveform with ObsPy taper, fraction
-            between 0 and 1 as the percentage of the waveform to be tapered
-            Applied generally used when data is noisy, e.g., HutchisonGhosh2016
+        :type taper_percentage: float
+        :param taper_percentage: apply a taper to the waveform with ObsPy taper,
+            fraction between 0 and 1 as the percentage of the waveform to be
+            tapered Applied generally used when data is noisy, e.g.,
+            HutchisonGhosh2016
             Note: To get the same results as the default taper in SAC,
             use max_percentage=0.05 and leave type as hann.
             Tapering also happens while resampling (see util_write_cap.py).
@@ -239,7 +311,7 @@ class Pysep:
             (order insensitive):
 
             * ZNE: Rotate from arbitrary components to North, East, Up
-            * RTZ: Rotate from ZNE to Radial, Transverse, Up (requires ZNE)
+            * RTZ: Rotate from ZNE to Radial, Transverse, Up
             * UVW: Rotate from ZNE to orthogonal UVW orientation
             If set to None, no rotation processing will take place.
         :type resample_freq: float
@@ -262,11 +334,11 @@ class Pysep:
             `remove_response`==True. See ObsPy.core.trace.Trace.remove_response
             for acceptable values. Typical values are: 'DISP', 'VEL', 'ACC'
             (displacement [m], velocity [m/s], acceleration [m/s^2]).
-        :type water_level: float
+        :type water_level: float or None
         :param water_level: a water level threshold to apply during filtering
             for small values. Passed to Obspy.core.trace.Trace.remove_response
-        :type prefilt: str, tuple or NoneType
-        :param prefilt: apply a pre-filter to the waveforms before deconvolving
+        :type pre_filt: str, tuple or NoneType
+        :param pre_filt: apply a pre-filter to the waveforms before deconvolving
             instrument response. Options are:
 
             * 'default': automatically calculate (f0, f1, f2, f3) based on the
@@ -282,9 +354,11 @@ class Pysep:
 
         :type phase_list: list of str
         :param phase_list: phase names to get ray information from TauP with.
-            Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
-            by TauP (see ObsPy TauP documentation for acceptable phases). Phase
-            information will be added to SAC headers.
+            Defaults to 'ttall', which is ObsPy's default for getting all phase
+            arrivals. Must match Phases expected by TauP (see ObsPy TauP
+            documentation for acceptable phases). Earliest P and S phase
+            arrivals will be added to SAC headers, the remainder will be
+            discarded.
         :type taup_model: str
         :param taup_model: name of TauP model to use to calculate phase arrivals
             See also `phase_list` which defines phases to grab arrival data
@@ -308,30 +382,44 @@ class Pysep:
             SAC files. Legacy filenames look something like
             '20000101000000.NN.SSS.LL.CC.c' (event origin time, network,
             station, location, channel, component). Default to False
-        :type overwrite_event_tag: str
+        :type overwrite_event_tag: str or bool
         :param overwrite_event_tag: option to allow the user to set their own
-            event tag, rather than the automatically generated one
+            event tag, rather than the automatically generated one.
+
+            - NoneType (default): use automatically generated event tag which
+                consists of event origin time and Flinn-Engdahl region
+            - '': empty string will dump ALL files into `output_dir`, no new
+                directories will be made
+            - str: User-defined event tag which will be created in `output_dir`,
+                all files will be stored in {output_dir}/{overwrite_event_tag}/*
 
         .. note::
             Output file and figure control
 
         :type write_files: str or NoneType
         :param write_files: Which files to write out after data gathering.
-            Should be a comma-separated list of the following
 
-            - weights_az: write out CAP weight file sorted by azimuth
-            - weights_dist: write out CAP weight file sorted by distance
-            - weights_code: write out CAP weight file sorted by station code
-            - station_list: write out a text file with station informatino
-            - inv: save a StationXML (.xml) file (ObsPy inventory)
-            - event: save a QuakeML (.xml) file (ObsPy Catalog)
-            - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
-            - config_file: save YAML config file containing all input parameters
-            - sac: save all waveforms as SAC (.sac) files separated by component
-            - sac_raw: save the raw (pre-rotation) SAC files
-            - all: write all of the above (default value)
+            1) User-defined comma-separated list of the following
+
+                - weights_az: write out CAP weight file sorted by azimuth
+                - weights_dist: write out CAP weight file sorted by distance
+                - weights_code: write out CAP weight file sorted by station code
+                - station_list: write out a text file with station information
+                - inv: save a StationXML (.xml) file (ObsPy inventory)
+                - event: save a QuakeML (.xml) file (ObsPy Catalog)
+                - stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
+                - config_file: save YAML config file w/ all input parameters
+                - sac: save all waveforms as SAC (.sac) files w/ correct headers
+                - sac_raw: save raw waveforms. these are straight from the
+                    data center with no quality check and no SAC headers
+                - sac_zne: save only ZNE channel SAC files
+                - sac_rtz: save only RTZ channel SAC files
+                - sac_uvw: save only UVW channel SAC files
+
             Example input: `write_files`=='inv,event,stream,sac'
-            If None, no files will be written. This is generally not advised.
+            By Default: 'inv,event,stream,sac,config_file,station_list'
+            2) If NoneType or an empty string, no files will be written.
+            3) If 'all', write all files listed in (1)
         :type plot_files: str or NoneType
         :param write_files: What to plot after data gathering.
             Should be a comma-separated list of the following:
@@ -361,6 +449,7 @@ class Pysep:
         self._password = password
         self.taup_model = taup_model
         self.use_mass_download = use_mass_download
+        self._extra_download_pct = extra_download_pct
 
         # Check for LLNL requirement
         if self.client == "LLNL" and not _has_llnl:
@@ -375,6 +464,8 @@ class Pysep:
             self.origin_time = UTCDateTime(origin_time)
         except TypeError:
             self.origin_time = None
+
+        # Force float type to avoid rounding errors
         self.seconds_before_event = seconds_before_event
         self.seconds_after_event = seconds_after_event
 
@@ -390,12 +481,16 @@ class Pysep:
         self.stations = stations
         self.channels = channels
         self.locations = locations
+        self.station_ids = station_ids
 
         # Waveform collection parameters
         self.reference_time = reference_time or self.origin_time
         self.seconds_before_ref = seconds_before_ref
         self.seconds_after_ref = seconds_after_ref
-        self.phase_list = phase_list
+        if phase_list is None:
+            self.phase_list = ["ttall"]  # default ObsPy value gather ALL phase
+        else:
+            self.phase_list = phase_list
 
         # NOTE: This default is a UAF LUNGS system-specific database path.
         # If you are not on LUNGS, you will need to set this path manually
@@ -405,8 +500,8 @@ class Pysep:
         )
 
         # Event and station search and curtailing criteria
-        self.mindistance = mindistance
-        self.maxdistance = maxdistance
+        self.mindistance_km = mindistance_km
+        self.maxdistance_km = maxdistance_km
         self.minazimuth = minazimuth
         self.maxazimuth = maxazimuth
         self.minlatitude = minlatitude
@@ -427,9 +522,13 @@ class Pysep:
         self.resample_freq = resample_freq
         self.remove_clipped = bool(remove_clipped)
         self.remove_insufficient_length = remove_insufficient_length
+        self.remove_masked_data = remove_masked_data
+        self.fill_data_gaps = fill_data_gaps
+        self.gap_fraction = gap_fraction
 
         # Program related parameters
-        self.output_dir = output_dir or os.getcwd()
+        self._output_dir = output_dir or os.getcwd()
+        self.output_dir = None  # is overwritten w `_event_tag_and_output_dir`
         self.write_files = write_files
         self.plot_files = plot_files
         self.log_level = log_level
@@ -499,13 +598,17 @@ class Pysep:
                            "may take a long time depending on data availability"
                            )
 
-        # Check preprocessing flags
-        if self.remove_response:
-            for par in [self.output_unit, self.water_level]:
-                assert (par is not None), (
-                    "`remove_response` requires parameters:"
-                    "`output_unit`, `water_level` "
+        if self.station_ids is not None:
+            logger.debug("`station_ids` provided, ignoring parameters "
+                         "`networks`, `stations`, `locations` and `channels`")
+            for id_ in self.station_ids:
+                assert(len(id_.split(".")) == 4), (
+                    f"`station_id` entries must have format NN.SSS.LL.CC; {id_}"
                 )
+
+        if self.use_mass_download is True:
+            logger.info("will use option `mass_download`, ignoring `client` "
+                        "and downloading data from all available data centers")
 
         if not (0 <= self.minazimuth <= 360):
             _old_val = self.minazimuth
@@ -542,38 +645,58 @@ class Pysep:
                 f"corner frequencies for a bandpass filter (f1, f2, f3, f4)"
             )
 
-        # Enforce that `write_files` and `plot_files` are sets
-        if self.write_files is None:
+        acceptable_fill_vals = ["mean", "interpolate", "latest"]
+        if self.fill_data_gaps is not False:
+            if isinstance(self.fill_data_gaps, str):
+                assert(self.fill_data_gaps in acceptable_fill_vals), \
+                    f"`fill_data_gaps` must be one of {acceptable_fill_vals}"
+
+        # Enforce acceptable writing options
+        acceptable_write_files = self.write(_return_filenames=True)
+        # Empty string or NoneType translates to 'dont write anything'
+        if not self.write_files:
             self.write_files = {}
+        # Default behavior, write everything under the sun
+        elif self.write_files == "all":
+            self.write_files = acceptable_write_files
+        # User-defined, comma-separated list of values which must match
+        # against acceptable types
         else:
             try:
                 self.write_files = set(self.write_files.split(","))
             # TypeError thrown if we're trying to do {{*}}
             except TypeError:
                 pass
-
-            acceptable_write_files = self.write(_return_filenames=True)
             assert(self.write_files.issubset(acceptable_write_files)), (
                 f"`write_files` must be a list of some or all of: "
                 f"{acceptable_write_files}"
             )
 
-        if self.plot_files is None:
+        # Enforce acceptable plotting options
+        acceptable_plot_files = {"map", "record_section"}
+        # Empty string or NoneType translate to do not plot
+        if not self.plot_files:
             self.plot_files = {}
+        # Default behavior, plot everything under the sun
+        elif self.plot_files == "all":
+            self.plot_files = acceptable_plot_files
+        # User-defined, comma-separated list of values which must match
+        # against acceptable types
         else:
             try:
                 self.plot_files = set(self.plot_files.split(","))
             except TypeError:
                 pass
-            acceptable_plot_files = {"map", "record_section", "all"}
             assert(self.plot_files.issubset(acceptable_plot_files)), (
                 f"`plot_files` must be a list of some or all of: "
                 f"{acceptable_plot_files}"
             )
 
-        if self.use_mass_download is True:
-            logger.info("will use option `mass_download`, ignoring `client` "
-                        "and downloading data from all available data centers")
+        # Force all time boundaries to be floats to avoid rounding errors
+        self.seconds_before_ref = float(self.seconds_before_ref)
+        self.seconds_after_ref = float(self.seconds_after_ref)
+        self.seconds_before_event = float(self.seconds_before_event)
+        self.seconds_after_event = float(self.seconds_after_event)
 
     def get_client(self):
         """
@@ -638,6 +761,10 @@ class Pysep:
                     if val != old_val:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
+                else:
+                    logger.warning(f"config parameter '{key}' not explicitely "
+                                   f"used by PySEP. adding to kwargs")
+                    self.kwargs[key] = val
 
         # Reset log level based on the config file
         if self.log_level is not None:
@@ -837,6 +964,19 @@ class Pysep:
                     minlongitude=self.minlongitude,
                     maxlongitude=self.maxlongitude
                     )
+        elif self.station_ids is not None:
+            inv = Inventory()
+            # Gather data based on individual station IDs, one at a time
+            for id_ in self.station_ids:
+                net, sta, loc, cha = id_.split(".")
+                inv += self.c.get_stations(
+                    network=net, location=loc,  station=sta, channel=cha,
+                    starttime=self.origin_time - self.seconds_before_ref,
+                    endtime=self.origin_time + self.seconds_after_ref,
+                    minlatitude=self.minlatitude, maxlatitude=self.maxlatitude,
+                    minlongitude=self.minlongitude,
+                    maxlongitude=self.maxlongitude, level="response"
+                )
         else:
             # Standard behavior is to simply wrap get_stations()
             inv = self.c.get_stations(
@@ -886,6 +1026,7 @@ class Pysep:
         elif self.client.upper() == "LLNL":
             event_id = int(self.event.event_descriptions[0].text)
             st = self.c.get_waveforms_for_event(event_id)  # looks for integers
+        # Default behavior, gather data from client
         else:
             st = self._bulk_query_waveforms_from_client()
 
@@ -898,19 +1039,31 @@ class Pysep:
         Make a bulk request query to the Client based on the internal `inv`
         attribute defining the available station metadata.
 
-        TODO removed 'make_bulk_list_from_stalist' which used TauP to gather
-            data between P and S arrivals. Do we need this?
-
         :rtype: obspy.core.stream.Stream
         :return: Stream of channel-separated waveforms
         """
         bulk = []
-        t1 = self.reference_time - self.seconds_before_ref
-        t2 = self.reference_time + self.seconds_after_ref
-        for net in self.inv:
-            for sta in net:
-                # net sta loc cha t1 t2
-                bulk.append((net.code, sta.code, "*", self.channels, t1, t2))
+        # Gather x% more on either side of the requested data incase
+        # resampling changes the start and end times. These will get trimmed.
+        t1 = self.reference_time - self.seconds_before_ref * (
+                1 + self._extra_download_pct)
+        t2 = self.reference_time + self.seconds_after_ref * (
+                1 + self._extra_download_pct)
+        # Option to gather data for specific trace ids
+        if self.station_ids:
+            for net in self.inv:
+                for sta in net:
+                    for cha in sta:
+                        # net sta loc cha t1 t2
+                        bulk.append((net.code, sta.code, cha._location_code,
+                                     cha.code, t1, t2))
+        # Or, default option is to gather data for ALL available combinations
+        else:
+            for net in self.inv:
+                for sta in net:
+                    # net sta loc cha t1 t2
+                    bulk.append((net.code, sta.code, self.locations,
+                                 self.channels, t1, t2))
 
         # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
         assert bulk, (
@@ -941,8 +1094,8 @@ class Pysep:
                 - rectangular: rectangular bounding box defined by min/max
                   latitude/longitude
                 - circular: circular bounding circle defined by the events
-                  latitude and longitude, with radii defined by `mindistance`
-                  and `maxdistance`
+                  latitude and longitude, with radii defined by `mindistance_km`
+                  and `maxdistance_km`
             bool delete_tmpdir:
                 Remove the temporary directories that store the MSEED and
                 StationXML files which were downloaded by the mass downloader.
@@ -970,8 +1123,8 @@ class Pysep:
             logger.info("using a circular domain for mass downloader")
             domain = CircularDomain(
                 latitude=self.event_latitude, longitude=self.event_longitude,
-                minradius=kilometer2degrees(self.mindistance),
-                maxradius=kilometer2degrees(self.maxdistance)
+                minradius=kilometer2degrees(self.mindistance_km),
+                maxradius=kilometer2degrees(self.maxdistance_km)
             )
         else:
             raise NotImplementedError(f"`domain_type` must be 'rectangular' or"
@@ -988,9 +1141,13 @@ class Pysep:
                        if "-" in net]
 
         # Set restrictions on the search criteria for data
+        # Gather x% more on either side of the requested data incase
+        # resampling changes the start and end times. These will get trimmed.
         restrictions = Restrictions(
-            starttime=self.reference_time - self.seconds_before_ref,
-            endtime=self.reference_time + self.seconds_after_ref,
+            starttime=self.reference_time - self.seconds_before_ref * (
+                1 + self._extra_download_pct),
+            endtime=self.reference_time + self.seconds_after_ref * (
+                1 + self._extra_download_pct),
             reject_channels_with_gaps=False, minimum_length=0.,
             network=networks, station=stations, location=self.locations,
             channel=self.channels, exclude_networks=net_exclude,
@@ -1040,8 +1197,8 @@ class Pysep:
         inv = self.inv.copy()
 
         inv = curtail_by_station_distance_azimuth(
-            event=self.event, inv=inv, mindistance=self.mindistance,
-            maxdistance=self.maxdistance, minazimuth=self.minazimuth,
+            event=self.event, inv=inv, mindistance_km=self.mindistance_km,
+            maxdistance_km=self.maxdistance_km, minazimuth=self.minazimuth,
             maxazimuth=self.maxazimuth
         )
 
@@ -1104,9 +1261,28 @@ class Pysep:
             st_out = scale_llnl_waveform_amplitudes(st_out)
 
         # Apply pre-resample lowpass, resample waveforms, make contiguous
-        st_out = merge_and_trim_start_end_times(st_out)
         if self.resample_freq is not None:
             st_out = resample_data(st_out, resample_freq=self.resample_freq)
+
+        # Remove or fill data gaps
+        st_out = merge_gapped_data(st_out, fill_value=self.fill_data_gaps,
+                                   gap_fraction=self.gap_fraction)
+
+        # Ensure that all traces have the same start and end
+        if self.origin_time:
+            st_out = trim_start_end_times(
+                st_out,  starttime=self.origin_time - self.seconds_before_ref,
+                endtime=self.origin_time + self.seconds_after_ref,
+                fill_value=self.fill_data_gaps
+            )
+        # Merging or trimming may introduce masked data, may remove from Stream
+        if self.remove_masked_data:
+            st_out = remove_traces_w_masked_data(st_out)
+
+        if not st_out:
+            logger.critical("preprocessing removed all traces from Stream, "
+                            "cannot proceed")
+            sys.exit(-1)
 
         return st_out
 
@@ -1152,11 +1328,10 @@ class Pysep:
     def rotate_streams(self):
         """
         Rotate arbitrary three-component seismograms to desired orientation
-
-        TODO Original code had a really complicated method for rotating,
-            was that necesssary? Why was st.rotate() not acceptable?
+        'ZNE', 'RTZ' or 'UVW'.
 
         .. warning::
+
             This function combines all traces, both rotated and non-rotated
             components (ZNE, RTZ, UVW, but not raw, e.g., 12Z), into a single
             stream. This is deemed okay because we don't do any
@@ -1172,8 +1347,8 @@ class Pysep:
 
         st_raw = format_streams_for_rotation(st_raw)
 
-        # For writing RAW seismograms (prior to ANY rotation). Must be 
-        # specifically requested by User by explicitely adding 'raw' to 
+        # For writing RAW seismograms (prior to ANY rotation). Must be
+        # specifically requested by User by explicitely adding 'raw' to
         # `write_files` list
         if "sac_raw" in self.write_files:
             self.st_raw = st_raw.copy()
@@ -1202,7 +1377,7 @@ class Pysep:
                             meta = metadata_getter(_tr.id, _tr.stats.starttime)
                             az = meta["azimuth"]
                             dip = meta["dip"]
-                        except Exception:
+                        except Exception:  # NOQA
                             logger.warning(f"no matching metadata for {_tr.id}")
                             channel_okay = False
                             break
@@ -1240,13 +1415,13 @@ class Pysep:
             # Rotate to radial transverse coordinate system
             if "RTZ" in self.rotate:
                 logger.info("rotating to components RTZ")
-                # If we rotate the ENTIRE stream at once, ObsPy only uses the 
+                # If we rotate the ENTIRE stream at once, ObsPy only uses the
                 # first backazimuth value which will create incorrect outputs
                 # https://github.com/obspy/obspy/issues/2623
                 st_rtz = st_out.copy()  # contains ZNE rotated components
                 stations = set([tr.stats.station for tr in st_rtz])
                 for sta in stations:
-                    _st = st_rtz.select(station=sta, channel=cha)
+                    _st = st_rtz.select(station=sta)
                     if _st and hasattr(_st[0].stats, "back_azimuth"):
                         _st.rotate(method="NE->RT")  # in place rot.
                         st_out += _st
@@ -1259,7 +1434,7 @@ class Pysep:
             logger.info("rotating to components UVW")
             st_uvw = rotate_to_uvw(st_raw)
             st_out += st_uvw
-        
+
         try:
             st_out = format_sac_headers_post_rotation(st_out)
         except AttributeError as e:
@@ -1267,62 +1442,87 @@ class Pysep:
 
         return st_out
 
-    def write(self, write_files=None, _return_filenames=False,
-              config_fid=None, stations_fid=None, inv_fid=None, event_fid=None,
-              stream_fid=None, **kwargs):
+    def write(self, write_files=None, _return_filenames=False, _subset=None,
+              **kwargs):
         """
         Write out various files specifying information about the collected
         stations and waveforms.
 
         Options are:
-            * weights_dist: write out 'weights.dat' file sorted by distance
-            * weights_az: write out 'weights.dat' file sorted by azimuth
-            * weights_code: write out 'weights.dat' file sorted by sta code
+
+            * config_file: write the current configuration as a YAML file
             * station_list: write a text file with station information
             * inv: write the inventory as a StationXML file
             * event: write the event as a QuakeML file
             * stream: write the stream as a single MSEED file
-            * sac: write the stream as individual (per-channel) SAC files with
-                the appropriate SAC header
-            * config_file: write the current configuration as a YAML file
-            * all: ignores all other options, writes everything listed above
+            * sac_zne: write the stream as individual (per-channel) SAC files
+                for ZNE components with the appropriate SAC header
+            * sac_rtz: write out per-channel SAC files for RTZ components
+            * sac_uvw: write out per-channel SAC files for UVW components
+            * weights_dist: write out CAP 'weights.dat' file sorted by distance
+            * weights_az: write out CAP 'weights.dat' file sorted by azimuth
+            * weights_code: write out CAP 'weights.dat' file sorted by sta code
 
         :type write_files: list of str
         :param write_files: list of files that should be written out, must
             match the acceptable list defined in the function or here in the
-            docstring
+            docstring. If not given, defaults to internal list of files
         :type _return_filenames: bool
         :param _return_filenames: internal flag to not actually write anything
             but just return a list of acceptable filenames. This keeps all the
             file naming definitions in one function. This is only required by
             the check() function.
-        :type config_fid: str
-        :param config_fid: optional name for the configuration file name
-            defaults to 'pysep_config.yaml'
-        :type stations_fid: str
-        :param stations_fid: optional name for the stations list file name
-            defaults to 'station_list.txt'
-        :type inv_fid: str
-        :param inv_fid: optional name for saved ObsPy inventory object,
-            defaults to 'inv.xml'
-        :type event_fid: optional name for saved ObsPy Event object, defaults to
-            'event.xml'
-        :type stream_fid: optional name for saved ObsPy Stream miniseed object,
-            defaults to 'stream.ms'
+        :type _subset: list
+        :param _subset: internal parameter used for intermediate file saving.
+            PySEP will attempt to save files once they have been collected
+            however if the files it tries to save do not match against the
+            User-defined file list, they will be ignored.
+
+        Keyword Arguments
+        ::
+            str order_station_list_by:
+                how to order the station list available options are:
+                network, station, latitude, longitude, elevation, burial.
+            str config_fid:
+                optional name for the configuration file name defaults to
+                'pysep_config.yaml'
+            str station_fid:
+                optional name for the stations list file name defaults to
+                'station_list.txt'
+            str inv_fid:
+                optional name for saved ObsPy inventory object, defaults to
+                'inv.xml'
+            str event_fid:
+                optional name for saved ObsPy Event object, defaults to
+                'event.xml'
+            str stream_fid:
+                optional name for saved ObsPy Stream miniseed object,
+                defaults to 'stream.ms'
+            str sac_subdir:
+                sub-directory within output directory and event directory to
+                save SAC files. Defaults to SAC/. Use an empty string to dump
+                files directly into the event directory
         """
-        # Collect kwargs for writing
-        order_stations_list_by = kwargs.get("order_stations_list_by", None)
+        # Set some default values that can be overridden with kwargs
+        order_station_list_by = self.kwargs.get("order_station_list_by", None)
+        config_fid = self.kwargs.get("config_fid", "pysep_config.yaml")
+        station_fid = self.kwargs.get("station_fid", "station_file.txt")
+        inv_fid = self.kwargs.get("inv_fid", "inv.xml")
+        event_fid = self.kwargs.get("event_fid", "event.xml")
+        stream_fid = self.kwargs.get("stream_fid", "stream.ms")
+        sac_subdir = self.kwargs.get("sac_subdir", "SAC")
 
         # This is defined here so that all these filenames are in one place,
         # but really this set is just required by check(), not by write()
         _acceptable_files = {"weights_az", "weights_dist", "weights_code",
                              "station_list", "inv", "event", "stream",
-                             "config_file", "sac", "sac_raw", "all"}
+                             "config_file", "sac", "sac_raw", "sac_zne",
+                             "sac_rtz", "sac_uvw"}
         if _return_filenames:
             return _acceptable_files
 
         # Allow the user to call write() with their own set of filenames if this
-        # wasn't defined by the config or this is being scripted and they only
+        # wasn't defined by the Config or this is being scripted and they only
         # want certain files out at intermediate steps
         if write_files is None:
             write_files = self.write_files
@@ -1333,42 +1533,45 @@ class Pysep:
                 f"{_acceptable_files}"
             )
 
+        # Allow for internal intermediate file saving validated against
+        # user-defined list
+        if _subset:
+            write_files = write_files.intersection(set(_subset))
+
         for weights_fid in ["weights_dist", "weights_az", "weights_code"]:
-            if weights_fid in write_files or "all" in write_files:
+            if weights_fid in write_files:
                 order_by = weights_fid.split("_")[1]
                 write_cap_weights_files(st=self.st, order_by=order_by,
                                         path_out=self.output_dir)
 
-        if "config_file" in write_files or "all" in write_files:
+        if "config_file" in write_files:
             logger.info("writing config YAML file")
-            fid = os.path.join(self.output_dir,
-                               config_fid or f"pysep_config.yaml")
-            self.write_config(fid=fid)
+            self.write_config(fid=os.path.join(self.output_dir, config_fid),
+                              overwrite=True)
 
         if "station_list" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir,
-                               stations_fid or "stations_list.txt")
+            fid = os.path.join(self.output_dir, station_fid)
             logger.info("writing stations file")
             logger.debug(fid)
-            write_pysep_stations_file(
+            write_pysep_station_file(
                     self.inv, self.event, fid, 
-                    order_stations_list_by=order_stations_list_by
+                    order_station_list_by=order_station_list_by
                     )
 
-        if "inv" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, inv_fid or f"inv.xml")
+        if "inv" in write_files:
+            fid = os.path.join(self.output_dir, inv_fid)
             logger.info("writing inventory as StationXML")
             logger.debug(fid)
             self.inv.write(fid, format="STATIONXML")
 
-        if "event" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, event_fid or f"event.xml")
+        if "event" in write_files:
+            fid = os.path.join(self.output_dir, event_fid)
             logger.info("writing event as QuakeML")
             logger.debug(fid)
             self.event.write(fid, format="QuakeML")
 
-        if "stream" in write_files or "all" in write_files:
-            fid = os.path.join(self.output_dir, stream_fid or f"stream.ms")
+        if "stream" in write_files:
+            fid = os.path.join(self.output_dir, stream_fid)
             logger.info("writing waveform stream in MiniSEED")
             logger.debug(fid)
             with warnings.catch_warnings():
@@ -1376,42 +1579,78 @@ class Pysep:
                 warnings.simplefilter("ignore")
                 self.st.write(fid, format="MSEED")
 
-        if "sac" in write_files or "all" in write_files:
-            logger.info("writing each waveform trace in SAC format")
-            # Old PySEP dumped all files into output dir. New PySEP makes subdir
-            if self._legacy_naming:
-                _output_dir = self.output_dir
-            else:
-                _output_dir = os.path.join(self.output_dir, "SAC")
+        # Used for determining where to save SAC files
+        if self._legacy_naming:
+            _output_dir = self.output_dir
+        else:
+            _output_dir = os.path.join(self.output_dir, sac_subdir)
+
+        if "sac_raw" in write_files:
+            logger.info("writing RAW waveforms traces in SAC format")
+            self._write_sac(st=self.st_raw,
+                            output_dir=os.path.join(_output_dir, "RAW"))
+
+        if "sac" in write_files:
+            logger.info("writing all waveforms traces in SAC format")
             self._write_sac(st=self.st, output_dir=_output_dir)
 
-            # Write RAW sac files
-            if self.st_raw is not None:
-                self._write_sac(st=self.st_raw,
-                                output_dir=os.path.join(_output_dir, "RAW"))
+        # Allow outputting only certain components. If used together with 'sac',
+        # probably these will overwrite already written files
+        if "sac_zne" in write_files:
+            logger.info("writing ZNE waveforms traces in SAC format")
+            self._write_sac(st=self.st, output_dir=_output_dir,
+                            components="ZNE")
 
-    def _write_sac(self, st, output_dir=os.getcwd()):
+        if "sac_rtz" in write_files:
+            logger.info("writing RTZ waveforms traces in SAC format")
+            self._write_sac(st=self.st, output_dir=_output_dir,
+                            components="RTZ")
+
+        if "sac_uvw" in write_files:
+            logger.info("writing UVW waveforms traces in SAC format")
+            self._write_sac(st=self.st, output_dir=_output_dir,
+                            components="UVW")
+
+    def _write_sac(self, st, output_dir=os.getcwd(), components=None):
         """
         Write SAC files with a specific naming schema, which allows for both
         legacy (old PySEP) or non-legacy (new PySEP) naming.
+
+        :type st: obspy.core.stream.Stream
+        :param st: Stream to be written
+        :type output_dir: str
+        :param output_dir: where to save the SAC files, defaults to the
+            current working directory
+        :type components: str
+        :param components: acceptable component values for saving files,
+            allows only saving subsets of the Stream. Example 'RTZNE' or
+            just 'R'. Must match against Trace.stats.component
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         for tr in st:
+            if components and tr.stats.component not in components:
+                continue
             if self._legacy_naming:
                 # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
                 _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
-                tag = f"{self.event_tag}.{_trace_id}"
+                if self.event_tag:
+                    tag = f"{self.event_tag}.{_trace_id}"
+                else:
+                    tag = _trace_id
             else:
                 # New style: e.g., 2000-01-01T000000.NN.SSS.LL.CCC.sac
-                tag = f"{self.event_tag}.{tr.get_id()}.sac"
+                if self.event_tag:
+                    tag = f"{self.event_tag}.{tr.get_id()}.sac"
+                else:
+                    tag = f"{tr.get_id()}.sac"
 
             fid = os.path.join(output_dir, tag)
             logger.debug(os.path.basename(fid))
             tr.write(fid, format="SAC")
 
-    def write_config(self, fid=None):
+    def write_config(self, fid=None, overwrite=False):
         """
         Write a YAML config file based on the internal `Pysep` attributes.
         Remove a few internal attributes (those containing data) before writing
@@ -1420,9 +1659,19 @@ class Pysep:
 
         :type fid: str
         :param fid: name of the file to write. defaults to config.yaml
+        :type overwrite: bool
+        :param overwrite: if True and `fid` already exists, save a new config 
+            file with the same name, overwriting the old file. if False 
+            (default), throws a warning if encountering existing `fid` and does
+            not write config file
         """
         if fid is None:
             fid = f"pysep_config.yaml"
+        if not overwrite and os.path.exists(fid):
+            logger.warning(f"config '{fid}' already exists. use "
+                           f"`-o/--overwrite` to write anyway.")
+            return
+
         logger.debug(fid)
         dict_out = vars(self)
 
@@ -1431,7 +1680,7 @@ class Pysep:
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
         attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
-                            "plot_files", "output_dir"]
+                            "plot_files", "output_dir", "station_ids", "kwargs"]
 
         if self.client.upper() != "LLNL":
             attr_remove_list.append("llnl_db_path")  # not important unless LLNL
@@ -1448,20 +1697,33 @@ class Pysep:
 
     def plot(self):
         """
-        Plot map and record section if requested
+        Plot map and record section if requested. Allow general error catching
+        for mapping and record section plotting because we don't want these
+        auxiliary steps to crash the entire workflow since they are not
+        critical.
         """
+        show_map = self.kwargs.get("show_map", False)
+        show_rs = self.kwargs.get("show_rs", False)
+
         if "map" in self.plot_files or "all" in self.plot_files:
             logger.info("plotting source receiver map")
             fid = os.path.join(self.output_dir, f"station_map.png")
-            plot_source_receiver_map(self.inv, self.event, save=fid)
+            try:
+                plot_source_receiver_map(self.inv, self.event, save=fid,
+                                         show=show_map)
+            except Exception as e:  # NOQA
+                logger.warning(f"could not plot source receiver map: {e}")
 
         if "record_section" in self.plot_files or "all" in self.plot_files:
             fid = os.path.join(self.output_dir, f"record_section.png")
-            # Default settings to create a general record section
-            rs = RecordSection(st=self.st, sort_by="distance",
-                               scale_by="normalize", overwrite=True, show=False,
-                               save=fid)
-            rs.run()
+            try:
+                # Default settings to create a general record section
+                rs = RecordSection(st=self.st, sort_by="distance",
+                                   scale_by="normalize", overwrite=True,
+                                   show=show_rs, save=fid)
+                rs.run()
+            except Exception as e:  # NOQA
+                logger.warning("could not plot record section: {e}")
 
     def _event_tag_and_output_dir(self):
         """
@@ -1471,26 +1733,61 @@ class Pysep:
         :rtype: tuple of str
         :return: (unique event tag, path to output directory)
         """
-        # Options for choosing how to name things. Legacy, manual or new-style
-        if self._legacy_naming:
-            logger.debug("reverting to legacy style file naming")
-            event_tag = format_event_tag_legacy(self.event)
+        # Default behavior, auto-generate event tag
+        if self._overwrite_event_tag is None:
+            # Options for choosing how to name things. Legacy or new-style
+            if self._legacy_naming:
+                logger.debug("reverting to legacy style file naming")
+                event_tag = format_event_tag_legacy(self.event)
+            else:
+                event_tag = format_event_tag(self.event)
+        # Either User turns off event tag so dump files directly to `output_dir`
+        # or User defines their own `event_tag`
         else:
-            event_tag = format_event_tag(self.event)
-
-        if self._overwrite_event_tag:
-            logger.debug("overwriting automatically generated event tag")
             event_tag = self._overwrite_event_tag
 
-        logger.info(f"event tag is: {event_tag}")
-        full_output_dir = os.path.join(self.output_dir, event_tag)
+        full_output_dir = os.path.join(self._output_dir, event_tag)
+        logger.info(f"full output directory is: {full_output_dir}")
+
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
         elif not self._overwrite:
             logger.warning(f"output directory '{full_output_dir}' exists and "
                            f"overwrite flag (-o/--overwrite) not set, exiting")
             sys.exit(0)
+
         return event_tag, full_output_dir
+
+    def _set_log_file(self, mode):
+        """
+        Write logger to file as well as stdout, with the same format as the
+        stdout logger. Need mode==1 to move the log file after everything is
+        done because we don't know the event tag prior to starting the logs
+
+        :type mode: int
+        :param mode: Two options for using this function
+            0: set the logger to a temporary file 'pysep.log',
+            1: move the logger from the temporary file into final output dir
+        """
+        save_log = self.kwargs.get("save_log", True)
+        log_file = self.kwargs.get("log_file", "pysep.log")
+        initial_log_path = os.path.join(self._output_dir, log_file)
+
+        if not save_log:
+            return
+    
+        # Make the output directory that the log file will be saved in
+        if not os.path.exists(self._output_dir):
+            os.makedirs(self._output_dir)
+
+        if mode == 0:
+            fh = logging.FileHandler(initial_log_path)
+            fh.setFormatter(logger.handlers[0].formatter)
+            logger.addHandler(fh)
+        elif mode == 1:
+            # Should have been set by `_event_tag_and_output_dir()`
+            final_log_path = os.path.join(self.output_dir, log_file)
+            os.rename(src=initial_log_path, dst=final_log_path)
 
     def run(self, event=None, inv=None, st=None, **kwargs):
         """
@@ -1515,45 +1812,59 @@ class Pysep:
         :param st: optional user-provided strean object which will force a
             skip over waveform searching
         """
+        self._set_log_file(mode=0)
+        logger.debug(f"running PySEP version {__version__}")
+
         # Overload default parameters with event input file and check validity
         self.load(**kwargs)
         self.check()
         self.c = self.get_client()
 
-        # Get metadata (QuakeML, StationXML)
+        # Get QuakeML (event) metadata
         if event is None:
             self.event = self.get_event()
         else:
             self.event = event
-
         self.event_tag, self.output_dir = self._event_tag_and_output_dir()
 
-        # Standard method of retrieving waveforms from data center
+        # Intermediate write of Config file and QuakeML
+        self.write(_subset=["config_file", "event"], **kwargs)
+
+        # Default method of retrieving waveforms/metadata from data center
         if self.use_mass_download is False:
             if inv is None:
                 self.inv = self.get_stations()
             else:
                 self.inv = inv
             self.inv = self.curtail_stations()
+            self.write(_subset=["inv"], **kwargs)  # write out inventory
 
             # Get waveforms, format and assess waveform quality
             if st is None:
-                self.st = self.get_waveforms()
+                self.st_raw = self.get_waveforms()
             else:
-                self.st = st
+                self.st_raw = st
         # Use ObsPy's mass download option to gather all available data
         else:
-            self.st, self.inv = self.mass_download()
+            self.st_raw, self.inv = self.mass_download()
 
+        # Intermediate write of StationXML and raw waveforms
+        self.write(_subset=["sac_raw", "inv", "station_list"], **kwargs)
+
+        # Quality check and process the raw waveforms. `st` is an intermediate
+        # attribute and will NOT be written
         self.st = quality_check_waveforms_before_processing(
-            self.st, remove_clipped=self.remove_clipped
+            self.st_raw, remove_clipped=self.remove_clipped
         )
+        # Mark `st_raw` for deletion because we no longer need raw data. If the
+        # user wants it, it should have been written out
+        del self.st_raw
+
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
             self.st = format_sac_header_w_taup_traveltimes(self.st, 
                                                            self.taup_model,
                                                            self.phase_list)
-
         # Waveform preprocessing and standardization
         self.st = self.preprocess()
 
@@ -1567,9 +1878,14 @@ class Pysep:
             self.st, remove_insufficient_length=self.remove_insufficient_length
         )
 
-        # Generate outputs for user consumption
-        self.write(**{**kwargs, **self.kwargs})
+        # Write out the remainder files and make figures for user consumption
+        self.write(_subset=["stream", "sac", "sac_zne", "sac_rtz", "sac_uvw",
+                            "weights_dist", "weights_az", "weights_code"],
+                   **kwargs)
         self.plot()
+
+        # Last minute move the log file into the output directory
+        self._set_log_file(mode=1)
 
 
 def parse_args():
@@ -1614,7 +1930,7 @@ def parse_args():
     parser.add_argument("--legacy_naming", default=False, action="store_true",
                         help="use the file naming schema and directory "
                              "structure of the legacy version of PySEP.")
-    parser.add_argument("--overwrite_event_tag", default="", type=str,
+    parser.add_argument("--overwrite_event_tag", default=None, type=str,
                         nargs="?",
                         help="Manually set the event tag used to name the "
                              "output directory and SAC files. If None, will "
@@ -1624,6 +1940,8 @@ def parse_args():
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing directory which matches "
                              "the unique event tag")
+    parser.add_argument("-v", "--version", default=False, action="store_true",
+                        help="print current PySEP version number")
 
     # Keyword arguments can be passed directly to the argparser in the same
     # format as the above kwargs (e.g., --linewidth 2), but they will not have
@@ -1760,10 +2078,12 @@ def main():
         sys.exit(0)
     # Grab arguments from parser and continue
     args = parser.parse_args()
+    if args.version:
+        print(__version__)
+        return
     # Write out a blank configuration file to use as a template
     if args.write:
-        sep = Pysep()
-        sep.write_config()
+        Pysep().write_config(overwrite=args.overwrite)
         return
     # List out available configurations inside the repo
     elif args.list:

@@ -12,10 +12,11 @@ from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
 from pysep import logger
 from pysep.utils.fmt import format_event_tag_legacy
-from pysep.utils.fetch import get_taup_arrivals_with_sac_headers
+from pysep.utils.fetch import get_taup_arrivals
 
 # SAC HEADER CONSTANTS DEFINING NON-INTUITIVE QUANTITIES
 SACDICT = {
+    "first_arrival_time": "a",
     "p_arrival_time": "t5",
     "p_incident_angle": "user1",
     "p_takeoff_angle": "user3",
@@ -31,7 +32,6 @@ def write_cap_weights_files(st, path_out="./", order_by="dist"):
     assuming that SAC headers are already present.
 
     TODO re-add Ptime setting with event.picks
-
 
     Replaces `write_cap_weights`
 
@@ -233,7 +233,8 @@ def _append_sac_headers_trace(tr, event, inv):
     return tr
 
 
-def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
+def format_sac_header_w_taup_traveltimes(st, model="ak135",
+                                         phase_list=("ttall",)):
     """
     Add TauP travel times to the SAC headers using information in the SAC header
     Also get some information from TauP regarding incident angle, takeoff angle
@@ -256,60 +257,66 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135", phase_list=None):
         defaults to 'ak135'
     :type phase_list: list of str
     :param phase_list: phase names to get ray information from TauP with.
-        Defaults to direct arrivals 'P' and 'S'. Must match Phases expected
-        by TauP (see ObsPy TauP documentation for acceptable phases).
+        Defaults to 'ttall', which is ObsPy's default for getting all phase
+        arrivals. Must match Phases expected by TauP (see ObsPy TauP
+        documentation for acceptable phases).
     """
     st_out = st.copy()
+    phase_dict = get_taup_arrivals(st=st, model=model, phase_list=phase_list)
 
-    # Call TauP with a specific model to retrieve travel times etc.
-    if not phase_list:
-        phase_list = ["p", "P", "s", "S"]
-
-    phase_dict = get_taup_arrivals_with_sac_headers(st=st, model=model,
-                                                    phase_list=phase_list)
     # Arrivals may return multiple entires for each phase, pick earliest
     for tr in st_out[:]:
+        net_sta = ".".join(tr.get_id().split(".")[:2])  # NN.SSS
+
         # Missing SAC header values may cause certain or all stations to not 
         # be present in the `phase_dict`
-        if tr.get_id() not in phase_dict:
-            continue
-        arrivals = phase_dict[tr.get_id()]
-        # If the TauP arrival calculation fails, `arrivals` will be empty
-        if not arrivals:
-            logger.warning(f"{tr.get_id()} has no TauP phase arrivals, cannot "
+        if net_sta not in phase_dict:
+            logger.warning(f"{tr.get_id()} not present in TauP arrivals, cant "
                            f"append arrival time SAC headers")
             continue
-        # Find earliest arriving P-wave (P or p)
-        idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
-                     a.name.upper() == "P"]
+        arrivals = phase_dict[net_sta]
+        # If the TauP arrival calculation fails, `arrivals` will be empty
+        if not arrivals:
+            logger.warning(f"{tr.get_id()} has no TauP phase arrivals, cant "
+                           f"append arrival time SAC headers")
+            continue
+
+        # Find earliest arriving phase (likely same as P phase but maybe not)
+        idx_times = [(i, a.time) for i, a in enumerate(arrivals)]
         idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
-        p = arrivals[idx]  # Earliest P-wave Arrival object
 
-        tr.stats.sac["a"] = p.time  # relative time sec: float
-        tr.stats.sac["ka"] = f"{p.name}_{model}"  # name: str
+        phase = arrivals[idx]  # Earliest Arrival object
+        tr.stats.sac[SACDICT["first_arrival_time"]] = phase.time  # 'a'
+        tr.stats.sac[f"k{SACDICT['first_arrival_time']}"] = f"{phase.name}" #ka
 
-        tr.stats.sac[SACDICT["p_arrival_time"]] = p.time
-        tr.stats.sac[f"k{SACDICT['p_arrival_time']}"] = f"{p.name}_{model}"
-
-        # P-wave incident angle (ia) and takeoff angle (ta)
-        tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ia_{model}"
-        tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
-        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"{p.name}_ta_{model}"
-
-        # Find earliest arriving S-wave (S or s)
+        # Find earliest arriving P phase (must start with letter 'P')
         idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
-                     a.name.upper() == "S"]
+                     a.name.upper().startswith("P")]
+        idx, _ = min(idx_times, key=lambda x: x[1])  # find index of min time
+
+        p = arrivals[idx]  # Earliest P-wave Arrival object
+        tr.stats.sac[SACDICT["p_arrival_time"]] = p.time
+        tr.stats.sac[f"k{SACDICT['p_arrival_time']}"] = f"{p.name}"
+
+        # P phase incident angle (ia) and takeoff angle (ta)
+        tr.stats.sac[SACDICT["p_incident_angle"]] = p.incident_angle
+        tr.stats.sac[f"k{SACDICT['p_incident_angle']}"] = f"p_IncAng"
+        tr.stats.sac[SACDICT["p_takeoff_angle"]] = arrivals[idx].takeoff_angle
+        tr.stats.sac[f"k{SACDICT['p_takeoff_angle']}"] = f"p_TkfAng"
+
+        # Find earliest arriving S phase (must start with letter 'S')
+        idx_times = [(i, a.time) for i, a in enumerate(arrivals) if
+                     a.name.upper().startswith("S")]
         idx, _ = min(idx_times, key=lambda x: x[1])
         s = arrivals[idx]  # Earliest S-wave Arrival object
 
         tr.stats.sac[SACDICT["s_arrival_time"]] = s.time
-        tr.stats.sac[f"k{SACDICT['s_arrival_time']}"] = f"{s.name}_{model}"
+        tr.stats.sac[f"k{SACDICT['s_arrival_time']}"] = f"{s.name}"
 
         tr.stats.sac[SACDICT["s_incident_angle"]] = s.incident_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ia_{model}"
+        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"s_IncAng"
         tr.stats.sac[SACDICT["s_takeoff_angle"]] = s.takeoff_angle
-        tr.stats.sac[f"k{SACDICT['s_incident_angle']}"] = f"{s.name}_ta_{model}"
+        tr.stats.sac[f"k{SACDICT['s_takeoff_angle']}"] = f"s_TkfAng"
 
     return st_out
 

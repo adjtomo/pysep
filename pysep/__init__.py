@@ -1,5 +1,7 @@
 import logging
 
+__version__ = "0.4.0"
+
 logger = logging.getLogger("pysep")
 logger.setLevel("INFO")
 logger.propagate = 0
@@ -11,5 +13,5 @@ logger.addHandler(ch)
 
 # from pysep.pysep import Pysep, get_data  # NOQA
 from pysep.pysep import Pysep, get_data  # NOQA
-from pysep.recsec import RecordSection  # NOQA
+from pysep.recsec import RecordSection, plotw_rs  # NOQA
 from pysep.declust import Declust  # NOQA

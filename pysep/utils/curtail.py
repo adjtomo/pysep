@@ -10,8 +10,8 @@ from pysep import logger
 from pysep.utils.fmt import get_codes
 
 
-def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
-                                        maxdistance=1E6, minazimuth=0.,
+def curtail_by_station_distance_azimuth(event, inv, mindistance_km=0.,
+                                        maxdistance_km=1E6, minazimuth=0.,
                                         maxazimuth=360.):
     """
     Remove stations that are greater than a certain distance from event
@@ -21,10 +21,10 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
     :param event: Event object to get location from
     :type inv: obspy.core.inventory.Inventory
     :param inv: inventory object to get locations from
-    :type mindistance: float
-    :param mindistance: minimum acceptable source-receiver distance in km
-    :type maxdistance: float
-    :param maxdistance: maximum acceptable source-receiver distance in km
+    :type mindistance_km: float
+    :param mindistance_km: minimum acceptable source-receiver distance in km
+    :type maxdistance_km: float
+    :param maxdistance_km: maximum acceptable source-receiver distance in km
     :type minazimuth: float
     :param minazimuth: minimum acceptable azimuth in deg
     :type maxazimuth: float
@@ -48,7 +48,7 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
                                                lon2=sta.longitude
                                                )
             dist_km = dist_m / 1E3
-            if not (mindistance <= dist_km <= maxdistance):
+            if not (mindistance_km <= dist_km <= maxdistance_km):
                 remove_for_distance.append(netsta_code)
             elif not (minazimuth <= az <= maxazimuth):
                 remove_for_azimuth.append(netsta_code)
@@ -57,7 +57,7 @@ def curtail_by_station_distance_azimuth(event, inv, mindistance=0.,
                 azimuths[netsta_code] = az
 
     logger.info(f"{len(remove_for_distance)} traces outside distance "
-                f"bounds [{mindistance}, {maxdistance}]km"
+                f"bounds [{mindistance_km}, {maxdistance_km}]km"
                 )
     if remove_for_distance:
         for remove in remove_for_distance:
@@ -139,6 +139,19 @@ def remove_traces_for_bad_data_types(st):
                 break
         else:
             logger.warning(f"{tr.get_id()} bad data type: {tr.data.dtype}")
+            st_out.remove(tr)
+    return st_out
+
+
+def remove_traces_w_masked_data(st):
+    """
+    Merge operations may produce masked arrays which are data streams with
+    gaps in them. Remove these from the stream
+    """
+    st_out = st.copy()
+    for tr in st_out:
+        if np.ma.is_masked(tr.data):
+            logger.warning(f"{tr.get_id()} has data gaps, removing")
             st_out.remove(tr)
     return st_out
 
@@ -252,10 +265,9 @@ def remove_stations_for_insufficient_length(st):
     expected_length = vals[np.argmax(counts)]
     logger.debug(f"assuming that the expected stream length is: "
                  f"{expected_length}s")
-
     for tr, length in zip(st_out[:], stream_lengths):
-        if length != expected_length:
-            logger.debug(f"{tr.get_id()} has insufficient time length of "
+        if length < expected_length:
+            logger.debug(f"{tr.get_id()} has unexpected time length of "
                          f"{length}s, removing")
             st_out.remove(tr)
 
@@ -308,7 +320,6 @@ def subset_streams(st_a, st_b):
                  f"{len(sta_ids_a) - len(common_ids)} traces from `st_a`")
     logger.debug(f"stream subset removes "
                  f"{len(sta_ids_b) - len(common_ids)} traces from `st_b`")
-
 
     for station_id in common_ids:
         net, sta, loc, comp = station_id.split(".")
