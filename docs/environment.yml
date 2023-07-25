@@ -3,6 +3,7 @@ channels:
     - conda-forge
 dependencies:
     - sphinx
+    - IPython
     - myst-parser
     - pip
     - pip:

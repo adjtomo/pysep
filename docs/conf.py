@@ -32,7 +32,8 @@ extensions = [
         'sphinx.ext.napoleon',
         'sphinx.ext.autosummary',
         "autoapi.extension",
-        "myst_parser"
+        "myst_parser",
+        "IPython.sphinxext.ipython_console_highlighting",
         ]
 
 templates_path = ['_templates']
