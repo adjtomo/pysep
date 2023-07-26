@@ -103,6 +103,8 @@ If you have installed the Development version of PySEP, you can run tests with:
    pysep
    recsec
    declust
+   tutorials
+   lab_record_section
    cookbook
    usage
 
