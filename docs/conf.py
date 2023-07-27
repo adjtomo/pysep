@@ -18,7 +18,7 @@ project = 'PySEP'
 copyright = '2023, adjTomo Dev Team'
 author = 'adjTomo Dev Team'
 release = ''
-version = '0.4.0'
+version = '0.4.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -32,7 +32,8 @@ extensions = [
         'sphinx.ext.napoleon',
         'sphinx.ext.autosummary',
         "autoapi.extension",
-        "myst_parser"
+        "myst_parser",
+        "IPython.sphinxext.ipython_console_highlighting",
         ]
 
 templates_path = ['_templates']
