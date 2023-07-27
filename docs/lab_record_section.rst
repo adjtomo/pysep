@@ -2,18 +2,16 @@ Lab: Analyzing Seismic Data in Record Sections
 ----------------------------------------------
 
 The following lab exercises were created by Aakash Gupta and Carl Tape as a part 
-of *Applied Seismology* (GEOS 626/426) course at University of Alaska Fairbanks. 
-The Jupyter Notebook for this class assignment can be found on GitHub.
-
-.. https://github.com/uafgeoteach/GEOS626_seis/blob/main/lab_record_section.ipynb
-
-The exercises provide a real-world application of fetching and analyzing 
-seismic data using ``PySEP`` and ``RecSec``.
+of the *Applied Seismology* (GEOS 626/426) course at 
+University of Alaska Fairbanks. The Jupyter Notebook for this class assignment 
+can be found on 
+`GitHub <https://github.com/uafgeoteach/GEOS626_seis/blob/main/lab_record_section.ipynb>`__
 
 .. note::
 
-    This page has been reformatted with respect to the course notebook for
-    optimized readability on ReadTheDocs
+    This lab has been reformatted with respect to the course notebook for
+    optimized readability on `ReadTheDocs`, but the material is otherwise
+    the same as what is presented in the course.
 
 Instructions
 ~~~~~~~~~~~~
@@ -51,27 +49,6 @@ Instructions
       waveforms, especially ones that are “odd,” which, here, we are
       interested in.
 
-.. code:: ipython3
-
-    %matplotlib widget
-    
-    import matplotlib.pyplot as plt
-    import matplotlib.image as img
-    import numpy as np
-    import os
-    import warnings
-    
-    from copy import copy
-    from obspy.core import UTCDateTime
-    from pysep import Pysep
-    from pysep.recsec import plotw_rs
-
-.. code:: ipython3
-
-    # script settings
-    
-    warnings.filterwarnings("ignore")
-    plt.rcParams['figure.figsize'] = 9, 6
 
 Table of Contents
 `````````````````
@@ -114,13 +91,34 @@ Table of Contents
 -  Spend some time to understand the two key parts of each example - -
    waveform extraction - plotting a record section
 
-Code Preamble
-`````````````
-
-..
+Notebook Preamble
+``````````````````
 
    **NOTE:** The notebook is designed such that data for a given example
    is downloaded only once and stored for subsequent use.
+
+.. code:: ipython3
+
+    %matplotlib widget
+    
+    import matplotlib.pyplot as plt
+    import matplotlib.image as img
+    import numpy as np
+    import os
+    import warnings
+    
+    from copy import copy
+    from obspy.core import UTCDateTime
+    from pysep import Pysep
+    from pysep.recsec import plotw_rs
+
+.. code:: ipython3
+
+    # script settings
+    
+    warnings.filterwarnings("ignore")
+    plt.rcParams['figure.figsize'] = 9, 6
+..
 
 .. code:: ipython3
 
@@ -175,7 +173,8 @@ Code Preamble
     
     # list of networks to retrieve data from
     # providing an explicit list of networks is safer than using the wildcard (*)
-    networks            = 'AK,AT,AU,AV,BK,CI,CN,CU,GT,IC,II,IM,IU,MS,TA,TS,US,XE,XM,XR,YM,YV,XF,XP,XZ'
+    networks            = ('AK,AT,AU,AV,BK,CI,CN,CU,GT,IC,II,IM,IU,MS,TA,TS,US,'
+                           'XE,XM,XR,YM,YV,XF,XP,XZ')
     # \networks            = '*'
     
     download_defaults   = dict( networks                     = networks,
@@ -336,7 +335,8 @@ Example 1: Yahtse glacier calving event
 Example 2: Mw 7.5 earthquake in southeastern Alaska, near-source recordings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Event information**  
+**Event information**:  
+
 https://earthquake.usgs.gov/earthquakes/eventpage/ak0138esnzr
 
 **Exercise**
@@ -538,14 +538,14 @@ Example 5: Landslide near Lituya Bay
 
 
 
-Example 6: Mw 8.6 Indian Ocean (offshorer Sumatra) earthquake triggering earthquakes in Alaska
+Example 6: Mw 8.6 Indian Ocean (offshore Sumatra) earthquake triggering earthquakes in Alaska
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Event information** 
 
 - 6. Indian Ocean: https://earthquake.usgs.gov/earthquakes/eventpage/official20120411083836720_20  
 - 6.1. Andreanof: https://earthquake.usgs.gov/earthquakes/eventpage/usp000jhh4  
-- 6.2. Nenana: https://earthquake.usgs.gov/earthquakes/eventpage/ak0124ouaxa8   
+- 6.2. Nenana: https://earthquake.usgs.gov/earthquakes/eventpage/ak024ouaxa8   
 - 6.3. Iliamna: https://earthquake.usgs.gov/earthquakes/eventpage/ak0124ouezxl  
 
 .. code:: ipython3
@@ -631,12 +631,13 @@ Example 6: Mw 8.6 Indian Ocean (offshorer Sumatra) earthquake triggering earthqu
 -  *You are given the source parameters for three earthquakes that
    occurred in Alaska during the ground motion of the main wavetrain
    from the Mw 8.6 Indian Ocean (offshore Sumatra) earthquake. For each
-   possibly triggered event, tabulate the following information:* 
-   - the closest station (and the distance in km) 
-   - the suspicious stations 
+   possibly triggered event, tabulate the following information:*   
+
+   - the closest station (and the distance in km)  
+   - the suspicious stations   
    - the widest period range over which the signal is clearly visible. 
      This can be achieved by varying min_period_s and max_period_s provided as 
-     an input for plotting the record sections.
+     an input for plotting the record sections.  
 
 .. code:: ipython3
 

@@ -97,14 +97,13 @@ If you have installed the Development version of PySEP, you can run tests with:
 ---------------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
 
    pysep
    recsec
    declust
    tutorials
-   lab_record_section
    cookbook
    usage
 
