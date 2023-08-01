@@ -16,5 +16,4 @@ patch), or provide reason in PR for why certain points are not checked.
 ## Following PR merge:
 - [ ] Create GitHub version release
 - [ ] Publish latest version on PyPi
-- [ ] Update PyPi badge in `README.md`
 - [ ] Post on adjTomo Discussion for major and minor version releases
