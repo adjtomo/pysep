@@ -576,7 +576,7 @@ Example 6: Mw 8.6 Indian Ocean (offshore Sumatra) earthquake triggering earthqua
 
 .. code:: ipython3
 
-    # 6. Mw 8.6 Indian Ocean (offshorer Sumatra) earthquake
+    # 6. Mw 8.6 Indian Ocean (offshore Sumatra) earthquake
     
     download   = copy(download_defaults)
     plotting   = copy(plotting_defaults)
