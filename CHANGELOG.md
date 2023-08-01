@@ -45,7 +45,7 @@
 - RecSec `time_shift_s` now allows shifting by phase arrivals in SAC headers (#94)
 - Remove hard no-NoneType restriction on PySEP parameters `water_level` and `output_unit`
 
-## Version 0.4.0 (Master/Devel)
+## Version 0.4.0 
 - Migrates docs from GitHub pages to ReadTheDocs (#102)
 - Adds version number to init to allow User to import version
 - General Bugfixes (#97, #100, #105)
@@ -61,3 +61,7 @@
   - RecSec kwarg `title` allows overwriting title
   - PySEP warns when config parameters are not used by the program
 
+## Version 0.4.1 (Master/Devel)
+- Adds Tutorial documentation following GEOS626 lab (thanks, Aakash!)
+- Adds version release documentation
+- Slightly modifies pysep-docs conda environment to accomodate converted nbooks
