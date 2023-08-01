@@ -23,7 +23,7 @@ dependencies = [
 dev = ["pytest", "ipython", "ipdb"]
 
 [project.urls]
-homepage = "https://github.com/adjtomo/"
+homepage = "https://github.com/adjtomo"
 documentation = "https://pysep.readthedocs.io"
 repository = "https://github.com/adjtomo/pysep"
 

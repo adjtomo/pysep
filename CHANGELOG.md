@@ -27,7 +27,7 @@
 
 ## Version 0.3.2 
 
-- #81, #84
+- \#81, \#84
 	- Introduce parameters `fill_data_gaps` and `gap_fraction` to address data gaps
 	- New hidden parameter `extra_download_pct` handles waveform start and end time 
 	- Resampling now occurs before trace start and end time trimming
@@ -45,7 +45,9 @@
 - RecSec `time_shift_s` now allows shifting by phase arrivals in SAC headers (#94)
 - Remove hard no-NoneType restriction on PySEP parameters `water_level` and `output_unit`
 
+
 ## Version 0.4.0 
+
 - Migrates docs from GitHub pages to ReadTheDocs (#102)
 - Adds version number to init to allow User to import version
 - General Bugfixes (#97, #100, #105)
@@ -60,6 +62,7 @@
 - Features not associated with PRs:
   - RecSec kwarg `title` allows overwriting title
   - PySEP warns when config parameters are not used by the program
+
 
 ## Version 0.4.1 (Master/Devel)
 - Adds Tutorial documentation following GEOS626 lab (thanks, Aakash!)
