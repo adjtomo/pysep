@@ -421,8 +421,29 @@ def read_specfem2d_source(path_to_source, origin_time=None):
 
 def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
     """
-    Create a barebones Pyatoa Source object from a FORCESOLUTION Source file,
-    which mimics the behavior of the more complex ObsPy Event object
+    Create a barebones Source object from a FORCESOLUTION Source file,
+    which mimics the behavior of the more complex ObsPy Event object and can
+    be used in the same way as an Event object. 
+
+    .. note::
+        
+        Designed to read FORCESOLUTION files from SPECFEM3D/3D_GLOBE, which
+        all have slightly different formats/keys
+
+    :type path_to_source: str
+    :param path_to_source: path to the FORCESOLUTION file
+    :type default_time: str
+    :param default_time: FORCESOLUTION files do not natively contain any 
+        information on origin time, which is required by ObsPy Event objects.
+        The User can provide this information if it is important, or a default
+        value of 2000-01-01T00:00:00 will be provided as a dummy variable to 
+        keep ObsPy happy
+    :rtype: pysep.utils.mt.Source
+    :return: PySEP Source object which mimics an ObsPy event object and contains 
+        hypocentral location of FORCE, and the origin time defined by 
+        `default_time`
+    :raises KeyError: if the minimum required keys are not found in the file
+        defined by `path_to_source`
     """
     with open(path_to_source, "r") as f:
         lines = f.readlines()
@@ -433,16 +454,39 @@ def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
         if ":" not in line:
             continue
         key, val = line.strip().split(":")
+        val = val.split("!")[0].strip()  # remove trailing comments
         source_dict[key] = val
 
-    # First line has the source name
+    # First line contains the name of the source
     source_dict["source_id"] = lines[0].strip().split()[-1]
 
-    event = Source(
-        resource_id=f"pysep:source/{source_dict['source_id']}",
-        origin_time=default_time, latitude=source_dict["latorUTM"],
-        longitude=source_dict["longorUTM"], depth=source_dict["depth"]
-    )
+    # Latitude/Y value differs for 3D/3D_GLOBE
+    for key in ["latitude", "latorUTM"]:
+        try:
+            latitude = source_dict[key]
+            break
+        except KeyError:
+            continue
+    else:
+        raise KeyError("cannot find matching key for `latitude` in file")
+
+    # Longitude/X value differs for 3D/3D_GLOBE
+    for key in ["longitude", "longorUTM"]:
+        try:
+            longitude = source_dict[key]
+            break
+        except KeyError:
+            continue
+    else:
+        raise KeyError("cannot find matching key for `longitude` in file")
+
+    if "depth" not in source_dict:
+        raise KeyErorr("cannot find matching key for `depth` in file")
+
+    # Make the barebones Source object which mimics ObsPy Event object
+    event = Source(resource_id=f"pysep:source/{source_dict['source_id']}",
+                   origin_time=default_time, latitude=latitude,
+                   longitude=longitude, depth=source_dict["depth"])
 
     return event
 
