@@ -13,7 +13,7 @@ from obspy.geodetics import gps2dist_azimuth
 from obspy.core.event import Event, Origin, Magnitude
 
 from pysep import logger
-from pysep.utils.mt import moment_magnitude, seismic_moment, Source
+from pysep.utils.mt import moment_magnitude, seismic_moment
 from pysep.utils.fmt import format_event_tag_legacy, channel_code
 from pysep.utils.cap_sac import append_sac_headers
 
@@ -287,15 +287,6 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
     throw a ValueError when CMTSOLUTIONS do not have geographically defined
     coordinates.
     """
-    def _get_resource_id(name, res_type, tag=None):
-        """
-        Helper function to create consistent resource ids. From ObsPy
-        """
-        res_id = f"smi:local/source/{name:s}/{res_type:s}"
-        if tag is not None:
-            res_id += "#" + tag
-        return res_id
-
     with open(path_to_cmtsolution, "r") as f:
         lines = f.readlines()
 
@@ -356,14 +347,6 @@ def read_specfem2d_source(path_to_source, origin_time=None):
         Source files do not provide origin times so we just provide an
         arbitrary value but allow user to set time
     """
-
-    def _get_resource_id(name, res_type, tag=None):
-        """Helper function to create consistent resource ids. From ObsPy"""
-        res_id = f"smi:local/source/{name:s}/{res_type:s}"
-        if tag is not None:
-            res_id += "#" + tag
-        return res_id
-
     # First set dummy origin time
     if origin_time is None:
         origin_time = "1970-01-01T00:00:00"
@@ -419,7 +402,8 @@ def read_specfem2d_source(path_to_source, origin_time=None):
     return event
 
 
-def read_forcesolution(path_to_source, origin_time="2000-01-01T00:00:00"):
+def read_forcesolution(path_to_forcesolution, 
+                       origin_time="2000-01-01T00:00:00"):
     """
     Create a barebones Source object from a FORCESOLUTION Source file,
     which mimics the behavior of the more complex ObsPy Event object and can
@@ -430,8 +414,8 @@ def read_forcesolution(path_to_source, origin_time="2000-01-01T00:00:00"):
         Designed to read FORCESOLUTION files from SPECFEM3D/3D_GLOBE, which
         all have slightly different formats/keys
 
-    :type path_to_source: str
-    :param path_to_source: path to the FORCESOLUTION file
+    :type path_to_forcesolution: str
+    :param path_to_forcesolution: path to the FORCESOLUTION file
     :type origin_time: str
     :param origin_time: FORCESOLUTION files do not natively contain any 
         information on origin time, which is required by ObsPy Event objects.
@@ -445,10 +429,12 @@ def read_forcesolution(path_to_source, origin_time="2000-01-01T00:00:00"):
     :raises KeyError: if the minimum required keys are not found in the file
         defined by `path_to_source`
     """
-    with open(path_to_source, "r") as f:
+    with open(path_to_forcesolution, "r") as f:
         lines = f.readlines()
 
-    # Place values from file into dict
+    origin_time = UTCDateTime(origin_time)
+
+    # Grab information from the file
     source_dict = {}
     for line in lines[:]:
         if ":" not in line:
@@ -458,7 +444,7 @@ def read_forcesolution(path_to_source, origin_time="2000-01-01T00:00:00"):
         source_dict[key] = val
 
     # First line contains the name of the source
-    source_dict["source_id"] = lines[0].strip().split()[-1]
+    source_dict["event name"] = lines[0].strip().split()[-1]
 
     # Latitude/Y value differs for 3D/3D_GLOBE
     for key in ["latitude", "latorUTM"]:
@@ -483,12 +469,30 @@ def read_forcesolution(path_to_source, origin_time="2000-01-01T00:00:00"):
     if "depth" not in source_dict:
         raise KeyErorr("cannot find matching key for `depth` in file")
 
-    # Make the barebones Source object which mimics ObsPy Event object
-    event = Source(resource_id=f"pysep:source/{source_dict['source_id']}",
-                   origin_time=origin_time, latitude=latitude,
-                   longitude=longitude, depth=source_dict["depth"])
+    origin = Origin(
+        resource_id=_get_resource_id(source_dict["event name"],
+                                     "origin", tag="source"),
+        time=origin_time, longitude=longitude, latitude=latitude,
+        depth=abs(float(source_dict["depth"]) * 1E3)  # units: m
+    )
+
+    event = Event(resource_id=_get_resource_id(name=source_dict["event name"],
+                                               res_type="event"))
+    event.origins.append(origin)
+    event.preferred_origin_id = origin.resource_id.id
 
     return event
+
+
+def _get_resource_id(name, res_type, tag=None):
+    """
+    Helper function to create consistent resource ids, from ObsPy. Used to 
+    create resource ID's when generating Event objects
+    """
+    res_id = f"smi:local/source/{name:s}/{res_type:s}"
+    if tag is not None:
+        res_id += "#" + tag
+    return res_id
 
 
 def read_stations(path_to_stations):
