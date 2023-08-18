@@ -419,7 +419,7 @@ def read_specfem2d_source(path_to_source, origin_time=None):
     return event
 
 
-def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
+def read_forcesolution(path_to_source, origin_time="2000-01-01T00:00:00"):
     """
     Create a barebones Source object from a FORCESOLUTION Source file,
     which mimics the behavior of the more complex ObsPy Event object and can
@@ -432,8 +432,8 @@ def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
 
     :type path_to_source: str
     :param path_to_source: path to the FORCESOLUTION file
-    :type default_time: str
-    :param default_time: FORCESOLUTION files do not natively contain any 
+    :type origin_time: str
+    :param origin_time: FORCESOLUTION files do not natively contain any 
         information on origin time, which is required by ObsPy Event objects.
         The User can provide this information if it is important, or a default
         value of 2000-01-01T00:00:00 will be provided as a dummy variable to 
@@ -441,7 +441,7 @@ def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
     :rtype: pysep.utils.mt.Source
     :return: PySEP Source object which mimics an ObsPy event object and contains 
         hypocentral location of FORCE, and the origin time defined by 
-        `default_time`
+        `origin_time`
     :raises KeyError: if the minimum required keys are not found in the file
         defined by `path_to_source`
     """
@@ -485,7 +485,7 @@ def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
 
     # Make the barebones Source object which mimics ObsPy Event object
     event = Source(resource_id=f"pysep:source/{source_dict['source_id']}",
-                   origin_time=default_time, latitude=latitude,
+                   origin_time=origin_time, latitude=latitude,
                    longitude=longitude, depth=source_dict["depth"])
 
     return event
