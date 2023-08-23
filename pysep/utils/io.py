@@ -6,7 +6,7 @@ import re
 import yaml
 import numpy as np
 
-from obspy import UTCDateTime, Stream, Trace, read_events, Inventory
+from obspy import UTCDateTime, Stream, Trace, read_events, Inventory, Catalog
 from obspy.core.inventory.network import Network
 from obspy.core.inventory.station import Station
 from obspy.geodetics import gps2dist_azimuth
@@ -53,14 +53,12 @@ def read_yaml(fid):
 
 
 def read_sem(fid, origintime=None, source=None, stations=None, location="",
-             precision=4):
+             precision=4, source_format="CMTSOLUTION"):
     """
     Specfem3D outputs seismograms to ASCII (.sem? or .sem.ascii) files.
-    Converts SPECFEM synthetics into ObsPy Stream objects with the correct header
-    information.
-
-    .. note ::
-        Tested up to Specfem3D Cartesian git version 6895e2f7
+    Converts SPECFEM synthetics into ObsPy Stream objects with the correct
+    header information. If `source` and `stations` files are also provided,
+    PySEP will write appropriate SAC headers to the underlying data.
 
     :type fid: str
     :param fid: path of the given ascii file
@@ -112,17 +110,17 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
     delta = round(times[1] - times[0], precision)
 
     # Get metadata information from CMTSOLUTION and STATIONS files
+    event = None
     if origintime is None and source is None:
         logger.warning("no `origintime` or `event` given, setting dummy "
                        "starttime: 1970-01-01T00:00:00")
         origintime = UTCDateTime("1970-01-01T00:00:00")
     elif source:
-        # !!! Add logic here to try different read options
-        event = read_events(source, format="CMTSOLUTION")[0]
+        event = read_events_plus(source, format=source_format)[0]
         origintime = event.preferred_origin().time
         logger.info(f"reading origintime from event: {origintime}")
 
-    # Honor that Specfem doesn't start exactly on 0
+    # Honor that Specfem doesn't start exactly on 0 due to USER_T0
     origintime += times[0]
 
     # Write out the header information
@@ -139,7 +137,7 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
              }
     st = Stream([Trace(data=data, header=stats)])
 
-    if source and stations:
+    if event and stations:
         try:
             inv = read_stations(stations)
             st = append_sac_headers(st, event, inv)
@@ -164,6 +162,7 @@ def read_sem_cartesian(fid, source, stations, location="", precision=4):
         and should use cap_sac?
 
     .. note::
+
         RecSec requires SAC header values `kevnm`, `dist`, `az`, `baz`,
         `stlo`, `stla`, `evlo`, `evla`
 
@@ -258,6 +257,7 @@ def read_sem_cartesian(fid, source, stations, location="", precision=4):
         azimuth = np.degrees(np.arctan2((stlo - evlo), (stla - evla))) % 360
         backazimuth = (azimuth - 180) % 360
         otime = event.preferred_origin().time
+
         # Only values required by RecSec
         sac_header = {
             "stla": stations[net_sta]["stla"],
@@ -278,6 +278,48 @@ def read_sem_cartesian(fid, source, stations, location="", precision=4):
         tr.stats.sac = sac_header
 
     return st
+
+
+def read_events_plus(fid, format, **kwargs):
+    """
+    Addition to the base ObsPy.read_events() function that, in addition to the
+    acceptable formats read by ObsPy, can also read the following:
+    * SPECFEM2D SOURCE
+    * SPECFEM3D/3D_GLOBE FORCESOLUTION
+    * SPECFEM3D/3D_GLOBE CMTSOLUTION (both geographic and non-geographic)
+
+    See the following link for acceptable ObsPy formats:
+    See the following link for acceptable ObsPy formats:
+    https://docs.obspy.org/packages/autogen/obspy.core.event.read_events.html
+
+    :type fid: str
+    :param fid: full path to the event file to be read
+    :type format: str
+    :param format: Expected format of the file (case-insensitive), available are
+        - SOURCE
+        - FORCESOLUTION
+        - CMTSOLUTION
+        - any of ObsPy's accepted arguments for ObsPy.read_events()
+    :rtype: obspy.core.catalog.Catalog
+    :return: Catalog which should only contain one event, read from the `fid`
+        for the given `fmt` (format)
+    """
+    format = format.upper()
+
+    # Allow input of various types of source files not allowed in ObsPy
+    if format == "SOURCE":
+        cat = Catalog(events=[read_specfem2d_source(fid)])
+    elif format == "FORCESOLUTION":
+        cat = Catalog(events=[read_forcesolution(fid)])
+    # ObsPy can handle QuakeML, CMTSOLUTION, etc.
+    else:
+        try:
+            cat = read_events(fid, format=format, **kwargs)
+        except ValueError:
+            # ObsPy throws an error when trying to read CMTSOLUTION files that
+            # are not defined on geographic coordinates (i.e., Cartesian)
+            cat = read_specfem3d_cmtsolution_cartesian(fid)
+    return cat
 
 
 def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
@@ -467,7 +509,7 @@ def read_forcesolution(path_to_forcesolution,
         raise KeyError("cannot find matching key for `longitude` in file")
 
     if "depth" not in source_dict:
-        raise KeyErorr("cannot find matching key for `depth` in file")
+        raise KeyError("cannot find matching key for `depth` in file")
 
     origin = Origin(
         resource_id=_get_resource_id(source_dict["event name"],
@@ -733,6 +775,9 @@ def write_cat_to_event_list(cat, fid_out="event_input.txt"):
 
     :type cat: obspy.core.catalog.Catalog
     :param cat: Catalog of events to write out
+    :type fid_out: str
+    :param fid_out: name of the output text file to be written. Defaults to
+        'event_input.txt'
     """
     with open(fid_out, "w") as f:
         for event in cat:

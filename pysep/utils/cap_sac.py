@@ -152,6 +152,7 @@ def _append_sac_headers_trace(tr, event, inv):
         * Add sensor type somewhere, previously stored in KT? (used for picks)
 
     .. note::
+
         We explicitely set 'iztype, 'b' and 'e' in the SAC header to tell ObsPy
         that the trace start is NOT the origin time. Otherwise all the relative
         timing (e.g., picks) will be wrong.
