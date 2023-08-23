@@ -464,10 +464,9 @@ def read_forcesolution(path_to_forcesolution,
         The User can provide this information if it is important, or a default
         value of 2000-01-01T00:00:00 will be provided as a dummy variable to 
         keep ObsPy happy
-    :rtype: pysep.utils.mt.Source
-    :return: PySEP Source object which mimics an ObsPy event object and contains 
-        hypocentral location of FORCE, and the origin time defined by 
-        `origin_time`
+    :rtype: obspy.core.event.Event
+    :return: Barebones ObsPy Event object which contains hypocentral location 
+        of FORCE, and the origin time defined by `origin_time`
     :raises KeyError: if the minimum required keys are not found in the file
         defined by `path_to_source`
     """
