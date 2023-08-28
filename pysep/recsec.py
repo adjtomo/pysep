@@ -1522,7 +1522,9 @@ class RecordSection:
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
         logger.debug("plotting line check starting from bottom (y=0)")
-        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX")
+        logger.debug(
+            "\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX"
+        )
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
         log_str = "\n"
@@ -1541,8 +1543,11 @@ class RecordSection:
                     y_index = y_idx + start
                 log_str += self._plot_trace(idx=idx, y_index=y_index,
                                             choice=choice, **kwargs)
-
         logger.debug(log_str)
+
+        # If plotting both observed AND synthetic, log some relative information
+        if self.st is not None and self.st_syn is not None:
+            self._log_relative_information()
 
         # Plot vertical bars at given reference times
         if self.tmarks:
@@ -1581,6 +1586,33 @@ class RecordSection:
         if self.show:
             plt.show()
 
+    def _log_relative_information(self, start=0, stop=None):
+        """
+        If both `st` and `st_syn` are being plotted, then write some relative
+        information about their amplitudes to the main logger.
+
+        Related to #116
+        """
+        log_str = (
+            "relative amplitude information"
+            f"\nIDX{'[O]BS':>13}{'[S]YN':>15}{'O_MAX':>12}{'S_MAX':>12}  "
+            f"{'O_MAX/S_MAX':>12} {'LN(O_MAX/S_MAX)':>15}\n"
+        )
+        for idx in self.sorted_idx[start:stop]:
+            tr = self.st[idx]
+            tr_syn = self.st_syn[idx]
+
+            log_str += (
+                f"{idx:>3}"
+                f"{tr.get_id():>15}"
+                f"{tr_syn.get_id():>15}"
+                f"{tr.data.max():12.2E}"
+                f"{tr_syn.data.max():12.2E}"
+                f"{tr.data.max() / tr_syn.data.max():12.2E}"
+                f"{np.log(tr.data.max() / tr_syn.data.max()):12.2E}\n"
+            )
+        logger.debug(log_str)
+
     def _plot_trace(self, idx, y_index, choice="st"):
         """
         Plot a single trace on the record section, with amplitude scaling,
@@ -1604,7 +1636,6 @@ class RecordSection:
         assert (choice in choices)
         c = choices.index(choice)
         tr = getattr(self, choice)[idx]  # i.e., tr = self.st[idx]
-        
 
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         tshift = self.time_shift_s[idx]
