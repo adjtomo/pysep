@@ -22,8 +22,8 @@ release = ''
 with open("../pyproject.toml", "r") as f:
     _lines = f.readlines()
 for _line in _lines:
-    if line.startswith("version"):
-        version = line.split('"')[1].strip()
+    if _line.startswith("version"):
+        version = _line.split('"')[1].strip()
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

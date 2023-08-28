@@ -8,8 +8,6 @@ patch), or provide reason in PR for why certain points are not checked.
 ## Prior to PR merge:
 - [ ] Merge `devel` -> `master`
 - [ ] Bump version number `pyproject.toml`
-- [ ] Bump version number `docs/conf.py`
-- [ ] Bump version number `pysep/__init__.py`
 - [ ] Ensure all tests still pass, fix broken tests
 - [ ] Update `CHANGELOG` to include all major changes since last version
 
