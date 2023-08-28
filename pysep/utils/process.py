@@ -489,7 +489,7 @@ def estimate_prefilter_corners(tr):
     # filtering constants
     fcut1_par = 4.0
     fcut2_par = 0.5
-
+    
     f1 = fcut1_par / (tr.stats.endtime - tr.stats.starttime)
     nyquist_freq = tr.stats.sampling_rate / 2
     f2 = nyquist_freq * fcut2_par
