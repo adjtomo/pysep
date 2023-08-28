@@ -1595,21 +1595,26 @@ class RecordSection:
         """
         log_str = (
             "relative amplitude information"
-            f"\nIDX{'[O]BS':>13}{'[S]YN':>15}{'O_MAX':>12}{'S_MAX':>12}  "
-            f"{'O_MAX/S_MAX':>12} {'LN(O_MAX/S_MAX)':>15}\n"
+            f"\nIDX{'[O]BS':>13}{'[S]YN':>15}"
+            f"{'[O_A]BSMAX':>15}{'[S_A]BSMAX':>12}  "
+            f"{'O_A/S_A':>8}{'LN(O_A/S_A)':>14}\n"
         )
         for idx in self.sorted_idx[start:stop]:
             tr = self.st[idx]
             tr_syn = self.st_syn[idx]
 
+            # Get absolute maximum value of both obs and syn traces
+            tr_max = np.abs(tr.max())
+            tr_syn_max = np.abs(tr_syn.max())
+
             log_str += (
-                f"{idx:>3}"
+                f"{idx:<3}"
                 f"{tr.get_id():>15}"
                 f"{tr_syn.get_id():>15}"
-                f"{tr.data.max():12.2E}"
-                f"{tr_syn.data.max():12.2E}"
-                f"{tr.data.max() / tr_syn.data.max():12.2E}"
-                f"{np.log(tr.data.max() / tr_syn.data.max()):12.2E}\n"
+                f"{tr_max:12.2E}"
+                f"{tr_syn_max:12.2E}"
+                f"{tr_max / tr_syn_max:12.2E}"
+                f"{np.log(tr_max / tr_syn_max):12.2E}\n"
             )
         logger.debug(log_str)
 
