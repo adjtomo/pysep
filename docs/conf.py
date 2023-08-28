@@ -18,7 +18,12 @@ project = 'PySEP'
 copyright = '2023, adjTomo Dev Team'
 author = 'adjTomo Dev Team'
 release = ''
-version = '0.4.1'
+# Grab version number from 'pyproject.toml'
+with open("../pyproject.toml", "r") as f:
+    _lines = f.readlines()
+for _line in _lines:
+    if _line.startswith("version"):
+        version = _line.split('"')[1].strip()
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

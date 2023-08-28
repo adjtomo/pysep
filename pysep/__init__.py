@@ -1,6 +1,8 @@
 import logging
+from importlib.metadata import version
 
-__version__ = "0.4.1"
+# Defines version number from 'pyproject.toml'
+__version__ = version("pysep-adjtomo")
 
 logger = logging.getLogger("pysep")
 logger.setLevel("INFO")
