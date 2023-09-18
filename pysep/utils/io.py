@@ -52,8 +52,8 @@ def read_yaml(fid):
     return config
 
 
-def read_sem(fid, origintime=None, source=None, stations=None, location="",
-             precision=4, source_format="CMTSOLUTION"):
+def read_sem(fid, origintime="1970-01-01T00:00:00", source=None, stations=None, 
+             location="", precision=4, source_format="CMTSOLUTION"):
     """
     Specfem3D outputs seismograms to ASCII (.sem? or .sem.ascii) files.
     Converts SPECFEM synthetics into ObsPy Stream objects with the correct
@@ -63,7 +63,8 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
     :type fid: str
     :param fid: path of the given ascii file
     :type origintime: obspy.UTCDateTime
-    :param origintime: UTCDatetime object for the origintime of the event
+    :param origintime: UTCDatetime object for the origintime of the event. If
+        None given, defaults to dummy value of '1970-01-01T00:00:00'
     :type source: str
     :param source: optional SPECFEM source file (e.g., CMTSOLUTION, SOURCE)
         defining the event which generated the synthetics. Used to grab event
@@ -111,11 +112,9 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
 
     # Get metadata information from CMTSOLUTION and STATIONS files
     event = None
-    if origintime is None and source is None:
-        logger.warning("no `origintime` or `event` given, setting dummy "
-                       "starttime: 1970-01-01T00:00:00")
-        origintime = UTCDateTime("1970-01-01T00:00:00")
-    elif source:
+    if source is None:
+        origintime = UTCDateTime(origintime)
+    else:
         event = read_events_plus(source, format=source_format)[0]
         origintime = event.preferred_origin().time
         logger.info(f"reading origintime from event: {origintime}")
