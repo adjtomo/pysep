@@ -802,8 +802,10 @@ class RecordSection:
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
         for tr, xlim in zip(self.st, self.xlim):
             start, stop = xlim
-            start = int(start * tr.stats.sampling_rate)
-            stop = int(stop * tr.stats.sampling_rate)
+            if start:
+                start = int(start * tr.stats.sampling_rate)
+            if stop:
+                stop = int(stop * tr.stats.sampling_rate)
             self.max_amplitudes = np.append(self.max_amplitudes,
                                             max(abs(tr.data[start:stop])))
         self.max_amplitudes = np.array(self.max_amplitudes)
@@ -813,8 +815,10 @@ class RecordSection:
         if self.st_syn is not None:
             for tr, xlim in zip(self.st_syn, self.xlim):
                 start, stop = xlim
-                start = int(start * tr.stats.sampling_rate)
-                stop = int(stop * tr.stats.sampling_rate)
+                if start:
+                    start = int(start * tr.stats.sampling_rate)
+                if stop:
+                    stop = int(stop * tr.stats.sampling_rate)
                 self.max_amplitudes_syn = np.append(
                         self.max_amplitudes_syn, max(abs(tr.data[start:stop]))
                         )
