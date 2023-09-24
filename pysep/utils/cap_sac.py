@@ -278,6 +278,7 @@ def append_sac_headers_cartesian(st, event, stations):
             )
         except Exception as e:
             logger.warning(f"{tr.get_id()} can't write SAC headers: {e}")
+
     return st_out
 
 def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
@@ -327,7 +328,7 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
 
     tr.stats.sac = sac_header
 
-    return st
+    return tr
 
 
 def format_sac_header_w_taup_traveltimes(st, model="ak135",

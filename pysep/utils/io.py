@@ -15,7 +15,7 @@ from obspy.core.event import Event, Origin, Magnitude
 from pysep import logger
 from pysep.utils.mt import moment_magnitude, seismic_moment
 from pysep.utils.fmt import format_event_tag_legacy, channel_code
-from pysep.utils.cap_sac import append_sac_headers
+from pysep.utils.cap_sac import append_sac_headers, append_sac_headers_cartesian
 
 
 def read_yaml(fid):

@@ -165,9 +165,24 @@ def test_read_sem():
     for test_synthetic in test_synthetics:
         st += read_sem(fid=test_synthetic, source=test_cmtsolution,
                        stations=test_stations)
-
+    assert(st)
     assert(st[0].stats.sac.evla == -40.5405)
 
+
+def test_read_sem_cartesian():
+    """
+    Test reading SPECFEM-generated synthetics in Cartesian coordinates
+    """
+    test_synthetics = glob("./test_data/test_synthetics_cartesian/*")
+    test_stations = "./test_data/test_STATIONS_cartesian"
+    test_cmtsolution = "./test_data/test_CMTSOLUTION_cartesian"
+
+    st = Stream()
+    for test_synthetic in test_synthetics:
+        st += read_sem(fid=test_synthetic, source=test_cmtsolution,
+                       stations=test_stations)
+    assert(st)
+    assert(st[0].stats.sac.stla == 67000.0)
 
 def test_estimate_prefilter_corners(test_st):
     """
