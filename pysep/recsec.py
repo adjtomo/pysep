@@ -126,7 +126,7 @@ class RecordSection:
     3) produces record section waveform figures.
     """
     def __init__(self, pysep_path=None, syn_path=None, stations=None,
-                 cmtsolution=None, st=None, st_syn=None, sort_by="default",
+                 source=None, st=None, st_syn=None, sort_by="default",
                  scale_by=None, time_shift_s=None, zero_pad_s=None,
                  move_out=None, min_period_s=None, max_period_s=None,
                  preprocess=None, max_traces_per_rs=None, integrate=0,
@@ -158,8 +158,8 @@ class RecordSection:
         :type stations: str
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
-        :type cmtsolution: str
-        :param cmtsolution: required for synthetics, full path to SPECFEM source
+        :type source: str
+        :param source: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
         :type cartesian: bool
@@ -172,7 +172,7 @@ class RecordSection:
         :param synsyn: flag to let RecSec know that we are plotting two sets
             of synthetic seismograms. Such that both `pysep_path` and `syn_path`
             will be both attempt to read in synthetic data. Both sets of
-            synthetics MUST share the same `cmtsolution` and `stations` metadata
+            synthetics MUST share the same `source` and `stations` metadata
 
         .. note::
             Used for defining user-input waveforms data
@@ -409,30 +409,27 @@ class RecordSection:
 
         # Determine what data types will be expected
         _syn_data_type = "syn"
-        _obs_data_type = "data"
-        if synsyn:
-            _obs_data_type = "syn"
 
         # Read files from path if provided
         if pysep_path is not None:
+            _obs_data_type = ["data", "syn"][bool(synsyn)]  # 'syn' if syssyn
             st = self.read_data(path=pysep_path, data_type=_obs_data_type,
-                                source=cmtsolution, stations=stations)
+                                source=source, stations=stations)
         if syn_path is not None:
-            st_syn = self.read_data(path=syn_path, data_type=_syn_data_type,
-                                    source=cmtsolution, stations=stations)
+            st_syn = self.read_data(path=syn_path, data_type="syn",
+                                    source=source, stations=stations)
 
-        # Allow plotting ONLY synthetics and no data
+        # Allow plotting ONLY synthetics and no data, which means the synthetic
+        # Stream occupies the main `st` variable
         if st is None:
             st = st_syn.copy()
             st_syn = None
-        assert st, ("Stream object not found, please check inputs `st` "
-                    "and `pysep_path`")
 
-        # User defined parameters, do some type-setting
+        # User is allowed to provide their own Streams for `st` and `st_syn`
         self.st = st.copy()
-        try:
+        if st_syn is not None:
             self.st_syn = st_syn.copy()
-        except AttributeError:
+        else:
             self.st_syn = None
 
         # Last minute check to see if we actually have any data. Otherwise quit
@@ -517,11 +514,33 @@ class RecordSection:
 
         This function expects that the files in the directory `path` are ONLY of
         type `data_type`. Files that fail on read will be ignored.
+
+        :type path: str
+        :param path: full path to directory containing data in question
+        :type data_type: str
+        :param data_type: expected format of the data, 'obs' or 'syn'.
+            Determines the read approach this function will take for addressing
+            the data.
+        :type wildcard: str
+        :param wildcard: wildcard fed to glob to determine files inside `path`
+            that the function will attempt to read. Defaults to '*', read ALL
+            files inside the directory.
+        :type source: str
+        :param source: required iff `data_type`==syn. Path to source file which
+            defined the source that generated the synthetics. Acceptable values
+            are CMTSOLUTION (from SPECFEM3D/GLOBE), and SOURCE (from SPECFEM2D)
+        :type stations: str
+        :param stations: required iff `data_type`==syn. full path to STATIONS
+            file used to define the station coordinates. Format is dictated by
+            SPECFEM
+        :rtype: obspy.core.stream.Stream
+        :return: Stream object with synthetic waveforms
         """
         # Empty data stream to fill and return
         st = Stream()
         fids = glob(os.path.join(path, wildcard))
-        logger.info(f"attempting to read {len(fids)} files from: {path}")
+        logger.info(f"attempting to read {len(fids)} '{data_type}' files from: "
+                    f"{path}")
 
         if data_type == "data":
             # DATA is expected to be SAC files generated by PySEP
@@ -539,11 +558,14 @@ class RecordSection:
                         st += read(fid)
                         logger.debug(fid)
                     except Exception as e:
-                        logger.warning(f"unexpected read error {fid}: {e}")
+                        logger.warning(f"unexpected 'syn' read error '{fid}', "
+                                       f"excepting SAC file. Provide `source` "
+                                       f"and `stations` if your synthetics are"
+                                       f"ASCII files.")
             # OR synthetics may be two-column ASCII files generated by SPECFEM
             else:
                 assert (source is not None and os.path.exists(source)), (
-                    f"If `syn_path` is given, RecSec requires `cmtsolution`"
+                    f"If `syn_path` is given, RecSec requires `source`"
                 )
                 assert (stations is not None and os.path.exists(stations)), (
                     f"If `syn_path` is given, RecSec requires `stations`"
@@ -2173,10 +2195,11 @@ def parse_args():
                              "be read")
     parser.add_argument("--syn_path", default=None, type=str, nargs="?",
                         help="path to SPECFEM generated synthetics. Also "
-                             "requires --cmtsolution_file and --stations_file")
-    parser.add_argument("--cmtsolution", default=None, type=str, nargs="?",
-                        help="required for synthetics, path to the CMTSOLUTION "
-                             "file used to generate SPECFEM synthetics")
+                             "requires --source and --stations")
+    parser.add_argument("--source", default=None, type=str, nargs="?",
+                        help="required for synthetics, path to the source "
+                             "file used to generate SPECFEM synthetics. Can be "
+                             "CMTSOLUTION, FORCESOLUTION or SOURCE")
     parser.add_argument("--stations", default=None, type=str, nargs="?",
                         help="required for synthetics, path to the STATIONS "
                              "file used to generate SPECFEM synthetics")
