@@ -15,7 +15,7 @@ from obspy.core.event import Event, Origin, Magnitude
 from pysep import logger
 from pysep.utils.mt import moment_magnitude, seismic_moment
 from pysep.utils.fmt import format_event_tag_legacy, channel_code
-from pysep.utils.cap_sac import append_sac_headers
+from pysep.utils.cap_sac import append_sac_headers, append_sac_headers_cartesian
 
 
 def read_yaml(fid):
@@ -122,14 +122,9 @@ def read_sem(fid, origintime="1970-01-01T00:00:00", source=None, stations=None,
     # Honor that Specfem doesn't start exactly on 0 due to USER_T0
     origintime += times[0]
 
-    # Write out the header information
-    try:
-        # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd
-        net, sta, cha, fmt = os.path.basename(fid).split(".")
-    except ValueError:
-        # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
-        net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
-
+    # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd OR
+    # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
+    net, sta, cha, fmt, *_ = os.path.basename(fid).split(".")
     stats = {"network": net, "station": sta, "location": location,
              "channel": cha, "starttime": origintime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
@@ -138,143 +133,16 @@ def read_sem(fid, origintime="1970-01-01T00:00:00", source=None, stations=None,
 
     if event and stations:
         try:
+            # `read_stations` will throw a ValueError for Cartesian coordinates
             inv = read_stations(stations)
             st = append_sac_headers(st, event, inv)
+        except ValueError as e:
+            # If Cartesian coordinate system, slightly different header approach
+            st = append_sac_headers_cartesian(st, event, stations)
         # Broad catch here as this is an optional step that might not always
         # work or be possible
         except Exception as e:
             logger.warning(f"could not append SAC header to trace because {e}")
-
-    return st
-
-
-def read_sem_cartesian(fid, source, stations, location="", precision=4):
-    """
-    Specfem2D and Specfem3D may have domains defined in a Cartesian coordinate
-    system. Because of this, the read_sem() function will fail because
-    the intermediate ObsPy objects and functions expect geographic coordinates.
-    This function bypasses these checks with some barebones objects which
-    mimic their behavior. Only used for RecSec to plot record sections.
-
-    TODO can we combine this with cap_sac.append_sac_headers()? Currently the
-        code block at the bottom (manually appending header) is redundant 
-        and should use cap_sac?
-
-    .. note::
-
-        RecSec requires SAC header values `kevnm`, `dist`, `az`, `baz`,
-        `stlo`, `stla`, `evlo`, `evla`
-
-    :type fid: str
-    :param fid: path of the given ascii file
-    :type source: str
-    :param source: SOURCE or CMTSOLUTION file defining the event which
-        generated the synthetics. Used to grab event information.
-    :type stations: str
-    :param stations: STATIONS file defining the station locations for the
-        SPECFEM generated synthetics
-    :type location: str
-    :param location: location value for a given station/component
-    :rtype st: obspy.Stream.stream
-    :return st: stream containing header and data info taken from ascii file
-    """
-    # This was tested up to SPECFEM3D Cartesian git version 6895e2f7
-    try:
-        times = np.loadtxt(fname=fid, usecols=0)
-        data = np.loadtxt(fname=fid, usecols=1)
-
-    # At some point in 2018, the Specfem developers changed how the ascii files
-    # were formatted from two columns to comma separated values, and repeat
-    # values represented as 2*value_float where value_float represents the data
-    # value as a float
-    except ValueError:
-        times, data = [], []
-        with open(fid, 'r') as f:
-            lines = f.readlines()
-        for line in lines:
-            try:
-                time_, data_ = line.strip().split(',')
-            except ValueError:
-                if "*" in line:
-                    time_ = data_ = line.split('*')[-1]
-                else:
-                    raise ValueError
-            times.append(float(time_))
-            data.append(float(data_))
-
-        times = np.array(times)
-        data = np.array(data)
-
-    # We assume that dt is constant after 'precision' decimal points
-    delta = round(times[1] - times[0], precision)
-
-    # Get metadata information from CMTSOLUTION and STATIONS files
-    try:
-        event = read_specfem3d_cmtsolution_cartesian(source)
-    # Specfem2D and 3D source/cmtsolution files have different formats
-    except ValueError:
-        event = read_specfem2d_source(source)
-
-    # Generate a dictionary object to store station information
-    station_list = np.loadtxt(stations, dtype="str", ndmin=2)
-    stations = {}
-    for sta in station_list:
-        # NN.SSS = {latitude, longitude}
-        stations[f"{sta[1]}.{sta[0]}"] = {"stla": float(sta[2]),
-                                          "stlo": float(sta[3])
-                                          }
-
-    starttime = event.preferred_origin().time
-
-    # Honor that Specfem doesn't start exactly on 0
-    starttime += times[0]
-
-    # Write out the header information
-    try:
-        # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd
-        net, sta, cha, fmt = os.path.basename(fid).split(".")
-    except ValueError:
-        # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
-        net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
-
-    stats = {"network": net, "station": sta, "location": location,
-             "channel": cha, "starttime": starttime, "npts": len(data),
-             "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
-             }
-    st = Stream([Trace(data=data, header=stats)])
-
-    # Manually append SAC header values here
-    for tr in st:
-        net_sta = f"{tr.stats.network}.{tr.stats.station}"
-        stla = stations[net_sta]["stla"]
-        stlo = stations[net_sta]["stlo"]
-        evla = event.preferred_origin().latitude
-        evlo = event.preferred_origin().longitude
-
-        # Calculate Cartesian distance and azimuth/backazimuth
-        dist_m = np.sqrt(((stlo - evlo) ** 2) + ((stla - evla) ** 2))
-        azimuth = np.degrees(np.arctan2((stlo - evlo), (stla - evla))) % 360
-        backazimuth = (azimuth - 180) % 360
-        otime = event.preferred_origin().time
-
-        # Only values required by RecSec
-        sac_header = {
-            "stla": stations[net_sta]["stla"],
-            "stlo": stations[net_sta]["stlo"],
-            "evla": event.preferred_origin().latitude,
-            "evlo": event.preferred_origin().longitude,
-            "dist": dist_m * 1E-3,
-            "az": azimuth,
-            "baz": backazimuth,
-            "kevnm": format_event_tag_legacy(event),  # only take date code
-            "nzyear": otime.year,
-            "nzjday": otime.julday,
-            "nzhour": otime.hour,
-            "nzmin": otime.minute,
-            "nzsec": otime.second,
-            "nzmsec": otime.microsecond,
-            }
-        tr.stats.sac = sac_header
 
     return st
 
@@ -317,7 +185,13 @@ def read_events_plus(fid, format, **kwargs):
         except ValueError:
             # ObsPy throws an error when trying to read CMTSOLUTION files that
             # are not defined on geographic coordinates (i.e., Cartesian)
-            cat = read_specfem3d_cmtsolution_cartesian(fid)
+            try:
+                cat = Catalog(
+                    events=[read_specfem3d_cmtsolution_cartesian(fid)]
+                )
+            except Exception as e:
+                raise ValueError(f"unexpected source format {format} for {fid}")
+
     return cat
 
 
