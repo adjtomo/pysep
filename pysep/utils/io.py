@@ -317,7 +317,7 @@ def read_events_plus(fid, format, **kwargs):
         except ValueError:
             # ObsPy throws an error when trying to read CMTSOLUTION files that
             # are not defined on geographic coordinates (i.e., Cartesian)
-            cat = read_specfem3d_cmtsolution_cartesian(fid)
+            cat = Catalog(events=[read_specfem3d_cmtsolution_cartesian(fid)])
     return cat
 
 
