@@ -86,3 +86,13 @@
   `st` and `st_syn` are provided
 - #120: Version number is now only sourced from `pyproject.toml`, other 
   locations now reference this file to determine version number
+- #124:
+  - API Change: RecordSection parameter `cmtsolution` has been **renamed** to 
+	`source`. 
+  - RecordSection now only expects readable files in  --pysep_path or 
+	--syn_path.
+	- New `RecordSection.read_data()`function which handles data reading logic 
+	and can read both obs data (.SAC from PySEP) and syn data 
+	(SPECFEM ASCII files or SAC files)
+	- Bugfix: Added an exit catch in RecordSection to stop the workflow if no 
+	data is available
