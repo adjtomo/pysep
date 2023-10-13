@@ -99,3 +99,6 @@
 - Bugfix: RecSec unable to read different `source` file formats. New parameter
   'srcfmt' allows User to set this manually. If not given, RecSec will attempt
   to guess the file format based on the name of the file.
+- Bugfix: `read_specfem3d_cmtsolution_cartesian` was unable to handle 
+	Flinn-Engdahl regions that had spaces in them. Also it was unable to 
+	handle extra lines in the file. 

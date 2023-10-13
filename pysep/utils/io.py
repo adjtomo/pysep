@@ -206,7 +206,7 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
         lines = f.readlines()
 
     # First line contains meta information about event
-    _, year, month, day, hour, minute, sec, lat, lon, depth, mb, ms, _ = \
+    _, year, month, day, hour, minute, sec, lat, lon, depth, mb, ms, *_ = \
         lines[0].strip().split()
 
     origin_time = UTCDateTime(f"{year}-{month}-{day}T{hour}:{minute}:{sec}")
@@ -217,7 +217,11 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
         # Skip comments and newlines
         if line.startswith("#") or line == "\n":
             continue
-        key, val = line.strip().split(":")
+        try:
+            key, val = line.strip().split(":")
+        # Lines that do not conform to 'key: val' will be ignored
+        except ValueError:
+            continue
         # Strip trailing comments from values
         source_dict[key.strip()] = val.strip()
 
