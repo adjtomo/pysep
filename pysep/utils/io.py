@@ -343,6 +343,7 @@ def read_forcesolution(path_to_forcesolution,
     :raises KeyError: if the minimum required keys are not found in the file
         defined by `path_to_source`
     """
+    import pdb;pdb.set_trace()
     with open(path_to_forcesolution, "r") as f:
         lines = f.readlines()
 

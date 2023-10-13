@@ -138,7 +138,7 @@ class RecordSection:
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
                  overwrite=False, log_level="DEBUG", cartesian=False,
-                 synsyn=False, **kwargs):
+                 synsyn=False, srcfmt=None, **kwargs):
         """
          .. note::
             Used for reading in Pysep-generated waveforms
@@ -173,6 +173,11 @@ class RecordSection:
             of synthetic seismograms. Such that both `pysep_path` and `syn_path`
             will be both attempt to read in synthetic data. Both sets of
             synthetics MUST share the same `source` and `stations` metadata
+        :type srcfmt: str
+        :param srcfmt: source format, optional, allow User to dictate the file
+            format for `source`. Passed to argument `format` of 
+            `pysep.utils.io.read_events_plus`. If not given, tries to guess the
+            file format based on the name of the file.
 
         .. note::
             Used for defining user-input waveforms data
@@ -414,10 +419,12 @@ class RecordSection:
         if pysep_path is not None:
             _obs_data_type = ["data", "syn"][bool(synsyn)]  # 'syn' if syssyn
             st = self.read_data(path=pysep_path, data_type=_obs_data_type,
-                                source=source, stations=stations)
+                                source=source, stations=stations,
+                                srcfmt=srcfmt)
         if syn_path is not None:
             st_syn = self.read_data(path=syn_path, data_type="syn",
-                                    source=source, stations=stations)
+                                    source=source, stations=stations,
+                                    srcfmt=srcfmt)
 
         # Allow plotting ONLY synthetics and no data, which means the synthetic
         # Stream occupies the main `st` variable
@@ -506,7 +513,7 @@ class RecordSection:
         self.sorted_idx = []
 
     def read_data(self, path, data_type, wildcard="*", source=None,
-                  stations=None):
+                  stations=None, srcfmt=None):
         """
         General function that attempts to read in observed and synthetic data
         in User-provided format that can either be SAC files or SPECFEM format
@@ -533,6 +540,12 @@ class RecordSection:
         :param stations: required iff `data_type`==syn. full path to STATIONS
             file used to define the station coordinates. Format is dictated by
             SPECFEM
+        :type srcfmt: str
+        :param srcfmt: source format, optional, allow User to dictate the file
+            format for `source`. Passed to argument `format` of 
+            `pysep.utils.io.read_events_plus`. If not given, tries to guess the
+            file format based on the name of the file.
+                                                              
         :rtype: obspy.core.stream.Stream
         :return: Stream object with synthetic waveforms
         """
@@ -570,10 +583,21 @@ class RecordSection:
                 assert (stations is not None and os.path.exists(stations)), (
                     f"If `syn_path` is given, RecSec requires `stations`"
                 )
+                # Try to guess the source format if not given
+                if srcfmt is None:
+                    for guess in ["CMTSOLUTION", "FORCESOLUTION", "SOURCE"]:
+                        if guess in source.upper():
+                            srcfmt = guess
+                            break
+                    else:
+                        logger.critical("Could not guess the format of the "
+                                        "`source` file. Please set format with "
+                                        "'--srcfmt'")
+                        sys.exit(-1)
                 for fid in fids:
                     try:
                         st += read_sem(fid=fid, source=source,
-                                       stations=stations)
+                                       stations=stations, source_format=srcfmt)
                         logger.debug(fid)
                     except Exception as e:
                         logger.warning(f"unexpected read error {fid}: {e}")
@@ -2320,6 +2344,9 @@ def parse_args():
                         help="Let RecSec know that both `pysep_path` and "
                              "`syn_path` should be read in as SPECFEM-"
                              "generated synthetics.")
+    parser.add_argument("--srcfmt", default=None, type=str,
+                        help="Optional source format for reading the `source` "
+                             "file that defines the synthetics metadata")
     parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         help="verbosity of logger: 'WARNING', 'INFO', 'DEBUG'")
 

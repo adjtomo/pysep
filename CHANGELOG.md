@@ -96,3 +96,6 @@
 	(SPECFEM ASCII files or SAC files)
 	- Bugfix: Added an exit catch in RecordSection to stop the workflow if no 
 	data is available
+- Bugfix: RecSec unable to read different `source` file formats. New parameter
+  'srcfmt' allows User to set this manually. If not given, RecSec will attempt
+  to guess the file format based on the name of the file.
