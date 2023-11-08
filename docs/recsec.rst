@@ -158,13 +158,13 @@ structure:
 
 .. code:: bash
 
-    recsec --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS
+    recsec --syn_path OUTPUT_FILES/ --source DATA/CMTSOLUTION --stations DATA/STATIONS
 
 Or when scripting,
 
 .. code:: python
 
-    plotw_rs(syn_path="OUTPUT_FILES", cmtsolution="DATA/CMTSOLUTION",
+    plotw_rs(syn_path="OUTPUT_FILES", source="DATA/CMTSOLUTION",
              stations="DATA/STATIONS")
 
 You can also directly feed in an ObsPy stream containing your synthetic data
@@ -188,7 +188,7 @@ and tell RecSec to preprocess both data streams identically
 
 .. code:: bash
 
-    recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
+    recsec --pysep_path ./SAC --syn_path OUTPUT_FILES/ --source DATA/CMTSOLUTION --stations DATA/STATIONS --preprocess both
 
 Preprocessing flags can be applied to the observed data only (`st`), synthetic
 data only (`st_syn`) or both (`both`). See the `preprocess` parameter in the
@@ -220,7 +220,7 @@ For SPECFEM3D_Cartesian this would look like
 
 .. code:: bash
 
-    recsec --syn_path OUTPUT_FILES --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --cartesian
+    recsec --syn_path OUTPUT_FILES --source DATA/CMTSOLUTION --stations DATA/STATIONS --cartesian
 
 
 For SPECFEM2D, the source file may not be a CMTSOLUTION. Additionally, the 
@@ -228,7 +228,7 @@ default seismogram components may not be defined in ZNE
 
 .. code:: bash
 
-    recsec --syn_path OUTPUT_FILES --cmtsolution DATA/SOURCE --stations DATA/STATIONS --components Y --cartesian
+    recsec --syn_path OUTPUT_FILES --source DATA/SOURCE --stations DATA/STATIONS --components Y --cartesian
 
 
 While scripting, the input parameter `cartesian` can be used:
@@ -252,14 +252,14 @@ and provide paths to both `--pysep_path` and `--syn_path`.
 .. note::
 
     RecSec makes the assumption that both sets of synthetics share the
-    same metadata provided in the `--cmtsolution` and `--stations` flags.
+    same metadata provided in the `--source` and `--stations` flags.
 
 Let's say you've stored your 'data' in a directory called 'observed/' and your
 synthetics in a directory called 'synthetic/'
 
 .. code:: bash
 
-    recsec --pysep_path observed/ --syn_path synthetic/ --cmtsolution DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
+    recsec --pysep_path observed/ --syn_path synthetic/ --source DATA/CMTSOLUTION --stations DATA/STATIONS --synsyn
 
 
 
