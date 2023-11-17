@@ -139,7 +139,7 @@ class RecordSection:
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
                  overwrite=False, log_level="DEBUG", synsyn=False, srcfmt=None, 
-                 obs_wildcard="*", syn_wildcard="*", **kwargs):
+                 wildcard="*", syn_wildcard=None, **kwargs):
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -147,9 +147,9 @@ class RecordSection:
         :type pysep_path: str
         :param pysep_path: path to Pysep output, which is expected to contain
             trace-wise SAC waveform files which will be read in. See 
-            `obs_wildcard` for how to find files
-        :type obs_wildcard: str
-        :param obs_wildcard: wildcard fed to glob to determine which files to 
+            `wildcard` for how to find files
+        :type wildcard: str
+        :param wildcard: wildcard fed to glob to determine which files to 
             read from `pysep_path`. Defaults to '*', read ALL files inside the
             directory.
 
@@ -162,8 +162,8 @@ class RecordSection:
             for how to find files
         :type syn_wildcard: str
         :param syn_wildcard: wildcard fed to glob to determine which files to 
-            read from `syn_path`. Defaults to '*', read ALL files inside the
-            directory.
+            read from `syn_path`. Defaults to `wildcard` unless explicitely
+            provided.
         :type stations: str
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
@@ -426,11 +426,12 @@ class RecordSection:
             _obs_data_type = ["data", "syn"][bool(synsyn)]  # 'syn' if syssyn
             st = self.read_data(path=pysep_path, data_type=_obs_data_type,
                                 source=source, stations=stations,
-                                srcfmt=srcfmt, wildcard=obs_wildcard)
+                                srcfmt=srcfmt, wildcard=wildcard)
         if syn_path is not None:
             st_syn = self.read_data(path=syn_path, data_type="syn",
                                     source=source, stations=stations,
-                                    srcfmt=srcfmt, wildcard=syn_wildcard)
+                                    srcfmt=srcfmt, 
+                                    wildcard=syn_wildcard or wildcard)
 
         # Allow plotting ONLY synthetics and no data, which means the synthetic
         # Stream occupies the main `st` variable
