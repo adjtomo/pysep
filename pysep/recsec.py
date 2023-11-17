@@ -125,10 +125,11 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(self, pysep_path=None, syn_path=None, stations=None,
-                 source=None, st=None, st_syn=None, sort_by="default",
-                 scale_by=None, time_shift_s=None, zero_pad_s=None,
-                 move_out=None, min_period_s=None, max_period_s=None,
+    def __init__(self, pysep_path=None, syn_path=None, 
+                 stations=None, source=None, st=None, st_syn=None, 
+                 sort_by="default", scale_by=None, time_shift_s=None, 
+                 zero_pad_s=None, move_out=None, 
+                 min_period_s=None, max_period_s=None,
                  preprocess=None, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
@@ -137,24 +138,32 @@ class RecordSection:
                  geometric_spreading_exclude=None,
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
-                 overwrite=False, log_level="DEBUG", cartesian=False,
-                 synsyn=False, srcfmt=None, **kwargs):
+                 overwrite=False, log_level="DEBUG", synsyn=False, srcfmt=None, 
+                 obs_wildcard="*", syn_wildcard="*", **kwargs):
         """
-         .. note::
+        .. note::
             Used for reading in Pysep-generated waveforms
 
         :type pysep_path: str
         :param pysep_path: path to Pysep output, which is expected to contain
-            trace-wise SAC waveform files which will be read in.
+            trace-wise SAC waveform files which will be read in. See 
+            `obs_wildcard` for how to find files
+        :type obs_wildcard: str
+        :param obs_wildcard: wildcard fed to glob to determine which files to 
+            read from `pysep_path`. Defaults to '*', read ALL files inside the
+            directory.
 
         .. note::
             Used for reading in SPECFEM-generated synthetic waveforms
 
         :type syn_path: str
         :param syn_path: full path to directory containing synthetic
-            seismograms that have been outputted by SPECFEM. The synthetics
-            are expected in the format: '*??.*.*.sem?*', which generally matches
-            SPECFEM files like 'NZ.BFZ.BXE.semd'
+            seismograms that have been outputted by SPECFEM. See `syn_wildcard`
+            for how to find files
+        :type syn_wildcard: str
+        :param syn_wildcard: wildcard fed to glob to determine which files to 
+            read from `syn_path`. Defaults to '*', read ALL files inside the
+            directory.
         :type stations: str
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
@@ -412,19 +421,16 @@ class RecordSection:
             assert(os.path.exists(syn_path)), \
                     f"`syn_path` given but does not exist: '{syn_path}'"
 
-        # Determine what data types will be expected
-        _syn_data_type = "syn"
-
         # Read files from path if provided
         if pysep_path is not None:
             _obs_data_type = ["data", "syn"][bool(synsyn)]  # 'syn' if syssyn
             st = self.read_data(path=pysep_path, data_type=_obs_data_type,
                                 source=source, stations=stations,
-                                srcfmt=srcfmt)
+                                srcfmt=srcfmt, wildcard=obs_wildcard)
         if syn_path is not None:
             st_syn = self.read_data(path=syn_path, data_type="syn",
                                     source=source, stations=stations,
-                                    srcfmt=srcfmt)
+                                    srcfmt=srcfmt, wildcard=syn_wildcard)
 
         # Allow plotting ONLY synthetics and no data, which means the synthetic
         # Stream occupies the main `st` variable
@@ -2329,10 +2335,6 @@ def parse_args():
                         help="Path to save the resulting record section fig")
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing figure if path exists")
-    parser.add_argument("--cartesian", default=False, action="store_true",
-                        help="Let RecSec know that your domain is defined in"
-                             "Cartesian coordinates. Used for SPECFEM2D "
-                             "and SPECFEM3D_Cartesian domains defined in XYZ.")
     parser.add_argument("--synsyn", default=False, action="store_true",
                         help="Let RecSec know that both `pysep_path` and "
                              "`syn_path` should be read in as SPECFEM-"
