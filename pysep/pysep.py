@@ -762,7 +762,6 @@ class Pysep:
                         logger.debug(f"{key}: {old_val} -> {val}")
                         setattr(self, key, val)
                 else:
-                    import pdb;pdb.set_trace()
                     logger.warning(f"config parameter '{key}' not explicitely "
                                    f"used by PySEP. adding to kwargs")
                     self.kwargs[key] = val
@@ -1681,10 +1680,9 @@ class Pysep:
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
         attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
-                            "plot_files", "output_dir", "station_ids", "kwargs"]
+                            "plot_files", "output_dir", "station_ids", "kwargs",
+                            "llnl_db_path", "log_level", "legacy_naming"]
 
-        if self.client.upper() != "LLNL":
-            attr_remove_list.append("llnl_db_path")  # not important unless LLNL
         for key in attr_remove_list:
             del(dict_out[key])
         # Write times in as strings not UTCDateTime

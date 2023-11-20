@@ -46,4 +46,3 @@ remove_insufficient_length: true
 remove_masked_data: true
 fill_data_gaps: false
 gap_fraction: 1.0
-log_level: DEBUG
