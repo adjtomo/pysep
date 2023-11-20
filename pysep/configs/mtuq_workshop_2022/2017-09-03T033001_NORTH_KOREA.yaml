@@ -19,7 +19,7 @@ channels: BH?
 locations: '00'
 reference_time: '2017-09-03T03:30:01.760000Z'
 seconds_before_ref: 100
-seconds_after_ref: 300
+seconds_after_ref: 1000
 phase_list:
 - ttall
 mindistance_km: 0

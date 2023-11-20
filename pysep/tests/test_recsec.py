@@ -26,7 +26,7 @@ def recsec_w_synthetics(tmpdir):
     """Initiate a RecordSection instance"""
     return RecordSection(pysep_path="./test_data/test_SAC",
                          syn_path="./test_data/test_synthetics",
-                         cmtsolution="./test_data/test_CMTSOLUTION_2014p715167",
+                         source="./test_data/test_CMTSOLUTION_2014p715167",
                          stations="./test_data/test_STATIONS",
                          show=False, save=os.path.join(tmpdir, "recsec.png"))
 

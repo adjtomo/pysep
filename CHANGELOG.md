@@ -64,7 +64,47 @@
   - PySEP warns when config parameters are not used by the program
 
 
-## Version 0.4.1 (Master/Devel)
+## Version 0.4.1 
 - Adds Tutorial documentation following GEOS626 lab (thanks, Aakash!)
 - Adds version release documentation
 - Slightly modifies pysep-docs conda environment to accomodate converted nbooks
+
+## Version 0.5.0 (Master)
+- Improves functions 'read_forcesolution' and 'read_source', which now return
+  `obspy.core.event.Event` objects, rather than the makeshift Source objects 
+- 'read_forcesolution' can now handle FORCESOLUTION files from both SPECFEM3D
+  and SPECFEM3D_GLOBE
+- Added function `read_events_plus` that provides additional support to 
+  Obspys `read_events` function by allowing for support of FORCESOLUTION and
+  SOURCE files from SPECFEM2D/3D/3D_GLOBE
+- Remove the `Source` class from `Pysep.utils.io.mt`. This was a remnant of the
+  old Pyatoa approach to building an Obspy Event-like object to mimic certain
+  behaviors. This has been replaced by read functions which simply return Events
+- #117: New quality control function that removes Traces with array length <= 1,
+  which would cause preprocessing to fail
+- #116: RecSec now logs absmax amplitudes and absmax amplitude ratios IFF both
+  `st` and `st_syn` are provided
+- #120: Version number is now only sourced from `pyproject.toml`, other 
+  locations now reference this file to determine version number
+- #124:
+  - API Change: RecordSection parameter `cmtsolution` has been **renamed** to 
+	`source`. 
+  - RecordSection now only expects readable files in  --pysep_path or 
+	--syn_path.
+	- New `RecordSection.read_data()`function which handles data reading logic 
+	and can read both obs data (.SAC from PySEP) and syn data 
+	(SPECFEM ASCII files or SAC files)
+	- Bugfix: Added an exit catch in RecordSection to stop the workflow if no 
+	data is available
+- Bugfix: RecSec unable to read different `source` file formats. New parameter
+  'srcfmt' allows User to set this manually. If not given, RecSec will attempt
+  to guess the file format based on the name of the file.
+- Bugfix: `read_specfem3d_cmtsolution_cartesian` was unable to handle 
+	Flinn-Engdahl regions that had spaces in them. Also it was unable to 
+	handle extra lines in the file. 
+- Bugfix #126: Fixed some incorrect parameters in example config files
+- PySEP variable namechange: `_legacy_naming` -> 'legacy_naming`
+- New RecSec Parameters `wildcard` and `syn_wildcard` to specify how to 
+	search for data to plot with RecSec
+- Removed unnused parameters 'legacy_naming' and 'log_level' from 
+	`Pysep.write_config`

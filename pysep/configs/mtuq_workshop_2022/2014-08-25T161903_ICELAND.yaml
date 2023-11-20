@@ -11,7 +11,7 @@ seconds_before_event: 20
 seconds_after_event: 20
 event_latitude: 64.612
 event_longitude: -17.472
-event_depth_km: 50.0
+event_depth_km: 5.0
 event_magnitude: 4.6
 networks: Z7
 stations: RODG,DYSA,LIND,LOKT,LAUF,KALF,HELI,FAG,SVIN,K250

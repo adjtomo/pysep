@@ -6,16 +6,16 @@ import re
 import yaml
 import numpy as np
 
-from obspy import UTCDateTime, Stream, Trace, read_events, Inventory
+from obspy import UTCDateTime, Stream, Trace, read_events, Inventory, Catalog
 from obspy.core.inventory.network import Network
 from obspy.core.inventory.station import Station
 from obspy.geodetics import gps2dist_azimuth
 from obspy.core.event import Event, Origin, Magnitude
 
 from pysep import logger
-from pysep.utils.mt import moment_magnitude, seismic_moment, Source
+from pysep.utils.mt import moment_magnitude, seismic_moment
 from pysep.utils.fmt import format_event_tag_legacy, channel_code
-from pysep.utils.cap_sac import append_sac_headers
+from pysep.utils.cap_sac import append_sac_headers, append_sac_headers_cartesian
 
 
 def read_yaml(fid):
@@ -52,20 +52,19 @@ def read_yaml(fid):
     return config
 
 
-def read_sem(fid, origintime=None, source=None, stations=None, location="",
-             precision=4):
+def read_sem(fid, origintime="1970-01-01T00:00:00", source=None, stations=None, 
+             location="", precision=4, source_format="CMTSOLUTION"):
     """
     Specfem3D outputs seismograms to ASCII (.sem? or .sem.ascii) files.
-    Converts SPECFEM synthetics into ObsPy Stream objects with the correct header
-    information.
-
-    .. note ::
-        Tested up to Specfem3D Cartesian git version 6895e2f7
+    Converts SPECFEM synthetics into ObsPy Stream objects with the correct
+    header information. If `source` and `stations` files are also provided,
+    PySEP will write appropriate SAC headers to the underlying data.
 
     :type fid: str
     :param fid: path of the given ascii file
     :type origintime: obspy.UTCDateTime
-    :param origintime: UTCDatetime object for the origintime of the event
+    :param origintime: UTCDatetime object for the origintime of the event. If
+        None given, defaults to dummy value of '1970-01-01T00:00:00'
     :type source: str
     :param source: optional SPECFEM source file (e.g., CMTSOLUTION, SOURCE)
         defining the event which generated the synthetics. Used to grab event
@@ -112,37 +111,34 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
     delta = round(times[1] - times[0], precision)
 
     # Get metadata information from CMTSOLUTION and STATIONS files
-    if origintime is None and source is None:
-        logger.warning("no `origintime` or `event` given, setting dummy "
-                       "starttime: 1970-01-01T00:00:00")
-        origintime = UTCDateTime("1970-01-01T00:00:00")
-    elif source:
-        # !!! Add logic here to try different read options
-        event = read_events(source, format="CMTSOLUTION")[0]
+    event = None
+    if source is None:
+        origintime = UTCDateTime(origintime)
+    else:
+        event = read_events_plus(source, format=source_format)[0]
         origintime = event.preferred_origin().time
         logger.info(f"reading origintime from event: {origintime}")
 
-    # Honor that Specfem doesn't start exactly on 0
+    # Honor that Specfem doesn't start exactly on 0 due to USER_T0
     origintime += times[0]
 
-    # Write out the header information
-    try:
-        # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd
-        net, sta, cha, fmt = os.path.basename(fid).split(".")
-    except ValueError:
-        # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
-        net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
-
+    # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd OR
+    # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
+    net, sta, cha, fmt, *_ = os.path.basename(fid).split(".")
     stats = {"network": net, "station": sta, "location": location,
              "channel": cha, "starttime": origintime, "npts": len(data),
              "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
              }
     st = Stream([Trace(data=data, header=stats)])
 
-    if source and stations:
+    if event and stations:
         try:
+            # `read_stations` will throw a ValueError for Cartesian coordinates
             inv = read_stations(stations)
             st = append_sac_headers(st, event, inv)
+        except ValueError as e:
+            # If Cartesian coordinate system, slightly different header approach
+            st = append_sac_headers_cartesian(st, event, stations)
         # Broad catch here as this is an optional step that might not always
         # work or be possible
         except Exception as e:
@@ -151,133 +147,52 @@ def read_sem(fid, origintime=None, source=None, stations=None, location="",
     return st
 
 
-def read_sem_cartesian(fid, source, stations, location="", precision=4):
+def read_events_plus(fid, format, **kwargs):
     """
-    Specfem2D and Specfem3D may have domains defined in a Cartesian coordinate
-    system. Because of this, the read_sem() function will fail because
-    the intermediate ObsPy objects and functions expect geographic coordinates.
-    This function bypasses these checks with some barebones objects which
-    mimic their behavior. Only used for RecSec to plot record sections.
+    Addition to the base ObsPy.read_events() function that, in addition to the
+    acceptable formats read by ObsPy, can also read the following:
+    * SPECFEM2D SOURCE
+    * SPECFEM3D/3D_GLOBE FORCESOLUTION
+    * SPECFEM3D/3D_GLOBE CMTSOLUTION (both geographic and non-geographic)
 
-    TODO can we combine this with cap_sac.append_sac_headers()? Currently the
-        code block at the bottom (manually appending header) is redundant 
-        and should use cap_sac?
-
-    .. note::
-        RecSec requires SAC header values `kevnm`, `dist`, `az`, `baz`,
-        `stlo`, `stla`, `evlo`, `evla`
+    See the following link for acceptable ObsPy formats:
+    See the following link for acceptable ObsPy formats:
+    https://docs.obspy.org/packages/autogen/obspy.core.event.read_events.html
 
     :type fid: str
-    :param fid: path of the given ascii file
-    :type source: str
-    :param source: SOURCE or CMTSOLUTION file defining the event which
-        generated the synthetics. Used to grab event information.
-    :type stations: str
-    :param stations: STATIONS file defining the station locations for the
-        SPECFEM generated synthetics
-    :type location: str
-    :param location: location value for a given station/component
-    :rtype st: obspy.Stream.stream
-    :return st: stream containing header and data info taken from ascii file
+    :param fid: full path to the event file to be read
+    :type format: str
+    :param format: Expected format of the file (case-insensitive), available are
+        - SOURCE
+        - FORCESOLUTION
+        - CMTSOLUTION
+        - any of ObsPy's accepted arguments for ObsPy.read_events()
+    :rtype: obspy.core.catalog.Catalog
+    :return: Catalog which should only contain one event, read from the `fid`
+        for the given `fmt` (format)
     """
-    # This was tested up to SPECFEM3D Cartesian git version 6895e2f7
-    try:
-        times = np.loadtxt(fname=fid, usecols=0)
-        data = np.loadtxt(fname=fid, usecols=1)
+    format = format.upper()
 
-    # At some point in 2018, the Specfem developers changed how the ascii files
-    # were formatted from two columns to comma separated values, and repeat
-    # values represented as 2*value_float where value_float represents the data
-    # value as a float
-    except ValueError:
-        times, data = [], []
-        with open(fid, 'r') as f:
-            lines = f.readlines()
-        for line in lines:
+    # Allow input of various types of source files not allowed in ObsPy
+    if format == "SOURCE":
+        cat = Catalog(events=[read_specfem2d_source(fid)])
+    elif format == "FORCESOLUTION":
+        cat = Catalog(events=[read_forcesolution(fid)])
+    # ObsPy can handle QuakeML, CMTSOLUTION, etc.
+    else:
+        try:
+            cat = read_events(fid, format=format, **kwargs)
+        except ValueError:
+            # ObsPy throws an error when trying to read CMTSOLUTION files that
+            # are not defined on geographic coordinates (i.e., Cartesian)
             try:
-                time_, data_ = line.strip().split(',')
-            except ValueError:
-                if "*" in line:
-                    time_ = data_ = line.split('*')[-1]
-                else:
-                    raise ValueError
-            times.append(float(time_))
-            data.append(float(data_))
+                cat = Catalog(
+                    events=[read_specfem3d_cmtsolution_cartesian(fid)]
+                )
+            except Exception as e:
+                raise ValueError(f"unexpected source format {format} for {fid}")
 
-        times = np.array(times)
-        data = np.array(data)
-
-    # We assume that dt is constant after 'precision' decimal points
-    delta = round(times[1] - times[0], precision)
-
-    # Get metadata information from CMTSOLUTION and STATIONS files
-    try:
-        event = read_specfem3d_cmtsolution_cartesian(source)
-    # Specfem2D and 3D source/cmtsolution files have different formats
-    except ValueError:
-        event = read_specfem2d_source(source)
-
-    # Generate a dictionary object to store station information
-    station_list = np.loadtxt(stations, dtype="str", ndmin=2)
-    stations = {}
-    for sta in station_list:
-        # NN.SSS = {latitude, longitude}
-        stations[f"{sta[1]}.{sta[0]}"] = {"stla": float(sta[2]),
-                                          "stlo": float(sta[3])
-                                          }
-
-    starttime = event.preferred_origin().time
-
-    # Honor that Specfem doesn't start exactly on 0
-    starttime += times[0]
-
-    # Write out the header information
-    try:
-        # SPECFEM2D/SPECFEM3D_Cartesian style name format, e.g., NZ.BFZ.BXE.semd
-        net, sta, cha, fmt = os.path.basename(fid).split(".")
-    except ValueError:
-        # SPECFEM3D_Globe style name format, e.g., TA.O20K.BXR.sem.ascii
-        net, sta, cha, fmt, suffix = os.path.basename(fid).split(".")
-
-    stats = {"network": net, "station": sta, "location": location,
-             "channel": cha, "starttime": starttime, "npts": len(data),
-             "delta": delta, "mseed": {"dataquality": 'D'}, "format": fmt
-             }
-    st = Stream([Trace(data=data, header=stats)])
-
-    # Manually append SAC header values here
-    for tr in st:
-        net_sta = f"{tr.stats.network}.{tr.stats.station}"
-        stla = stations[net_sta]["stla"]
-        stlo = stations[net_sta]["stlo"]
-        evla = event.preferred_origin().latitude
-        evlo = event.preferred_origin().longitude
-
-        # Calculate Cartesian distance and azimuth/backazimuth
-        dist_m = np.sqrt(((stlo - evlo) ** 2) + ((stla - evla) ** 2))
-        azimuth = np.degrees(np.arctan2((stlo - evlo), (stla - evla))) % 360
-        backazimuth = (azimuth - 180) % 360
-        otime = event.preferred_origin().time
-        # Only values required by RecSec
-        sac_header = {
-            "stla": stations[net_sta]["stla"],
-            "stlo": stations[net_sta]["stlo"],
-            "evla": event.preferred_origin().latitude,
-            "evlo": event.preferred_origin().longitude,
-            "dist": dist_m * 1E-3,
-            "az": azimuth,
-            "baz": backazimuth,
-            "kevnm": format_event_tag_legacy(event),  # only take date code
-            "nzyear": otime.year,
-            "nzjday": otime.julday,
-            "nzhour": otime.hour,
-            "nzmin": otime.minute,
-            "nzsec": otime.second,
-            "nzmsec": otime.microsecond,
-            }
-        tr.stats.sac = sac_header
-
-    return st
+    return cat
 
 
 def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
@@ -287,20 +202,11 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
     throw a ValueError when CMTSOLUTIONS do not have geographically defined
     coordinates.
     """
-    def _get_resource_id(name, res_type, tag=None):
-        """
-        Helper function to create consistent resource ids. From ObsPy
-        """
-        res_id = f"smi:local/source/{name:s}/{res_type:s}"
-        if tag is not None:
-            res_id += "#" + tag
-        return res_id
-
     with open(path_to_cmtsolution, "r") as f:
         lines = f.readlines()
 
     # First line contains meta information about event
-    _, year, month, day, hour, minute, sec, lat, lon, depth, mb, ms, _ = \
+    _, year, month, day, hour, minute, sec, lat, lon, depth, mb, ms, *_ = \
         lines[0].strip().split()
 
     origin_time = UTCDateTime(f"{year}-{month}-{day}T{hour}:{minute}:{sec}")
@@ -311,7 +217,11 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
         # Skip comments and newlines
         if line.startswith("#") or line == "\n":
             continue
-        key, val = line.strip().split(":")
+        try:
+            key, val = line.strip().split(":")
+        # Lines that do not conform to 'key: val' will be ignored
+        except ValueError:
+            continue
         # Strip trailing comments from values
         source_dict[key.strip()] = val.strip()
 
@@ -356,14 +266,6 @@ def read_specfem2d_source(path_to_source, origin_time=None):
         Source files do not provide origin times so we just provide an
         arbitrary value but allow user to set time
     """
-
-    def _get_resource_id(name, res_type, tag=None):
-        """Helper function to create consistent resource ids. From ObsPy"""
-        res_id = f"smi:local/source/{name:s}/{res_type:s}"
-        if tag is not None:
-            res_id += "#" + tag
-        return res_id
-
     # First set dummy origin time
     if origin_time is None:
         origin_time = "1970-01-01T00:00:00"
@@ -419,32 +321,96 @@ def read_specfem2d_source(path_to_source, origin_time=None):
     return event
 
 
-def read_forcesolution(path_to_source, default_time="2000-01-01T00:00:00"):
+def read_forcesolution(path_to_forcesolution, 
+                       origin_time="2000-01-01T00:00:00"):
     """
-    Create a barebones Pyatoa Source object from a FORCESOLUTION Source file,
-    which mimics the behavior of the more complex ObsPy Event object
+    Create a barebones Source object from a FORCESOLUTION Source file,
+    which mimics the behavior of the more complex ObsPy Event object and can
+    be used in the same way as an Event object. 
+
+    .. note::
+        
+        Designed to read FORCESOLUTION files from SPECFEM3D/3D_GLOBE, which
+        all have slightly different formats/keys
+
+    :type path_to_forcesolution: str
+    :param path_to_forcesolution: path to the FORCESOLUTION file
+    :type origin_time: str
+    :param origin_time: FORCESOLUTION files do not natively contain any 
+        information on origin time, which is required by ObsPy Event objects.
+        The User can provide this information if it is important, or a default
+        value of 2000-01-01T00:00:00 will be provided as a dummy variable to 
+        keep ObsPy happy
+    :rtype: obspy.core.event.Event
+    :return: Barebones ObsPy Event object which contains hypocentral location 
+        of FORCE, and the origin time defined by `origin_time`
+    :raises KeyError: if the minimum required keys are not found in the file
+        defined by `path_to_source`
     """
-    with open(path_to_source, "r") as f:
+    with open(path_to_forcesolution, "r") as f:
         lines = f.readlines()
 
-    # Place values from file into dict
+    origin_time = UTCDateTime(origin_time)
+
+    # Grab information from the file
     source_dict = {}
     for line in lines[:]:
         if ":" not in line:
             continue
         key, val = line.strip().split(":")
+        val = val.split("!")[0].strip()  # remove trailing comments
         source_dict[key] = val
 
-    # First line has the source name
-    source_dict["source_id"] = lines[0].strip().split()[-1]
+    # First line contains the name of the source
+    source_dict["event name"] = lines[0].strip().split()[-1]
 
-    event = Source(
-        resource_id=f"pysep:source/{source_dict['source_id']}",
-        origin_time=default_time, latitude=source_dict["latorUTM"],
-        longitude=source_dict["longorUTM"], depth=source_dict["depth"]
+    # Latitude/Y value differs for 3D/3D_GLOBE
+    for key in ["latitude", "latorUTM"]:
+        try:
+            latitude = source_dict[key]
+            break
+        except KeyError:
+            continue
+    else:
+        raise KeyError("cannot find matching key for `latitude` in file")
+
+    # Longitude/X value differs for 3D/3D_GLOBE
+    for key in ["longitude", "longorUTM"]:
+        try:
+            longitude = source_dict[key]
+            break
+        except KeyError:
+            continue
+    else:
+        raise KeyError("cannot find matching key for `longitude` in file")
+
+    if "depth" not in source_dict:
+        raise KeyError("cannot find matching key for `depth` in file")
+
+    origin = Origin(
+        resource_id=_get_resource_id(source_dict["event name"],
+                                     "origin", tag="source"),
+        time=origin_time, longitude=longitude, latitude=latitude,
+        depth=abs(float(source_dict["depth"]) * 1E3)  # units: m
     )
 
+    event = Event(resource_id=_get_resource_id(name=source_dict["event name"],
+                                               res_type="event"))
+    event.origins.append(origin)
+    event.preferred_origin_id = origin.resource_id.id
+
     return event
+
+
+def _get_resource_id(name, res_type, tag=None):
+    """
+    Helper function to create consistent resource ids, from ObsPy. Used to 
+    create resource ID's when generating Event objects
+    """
+    res_id = f"smi:local/source/{name:s}/{res_type:s}"
+    if tag is not None:
+        res_id += "#" + tag
+    return res_id
 
 
 def read_stations(path_to_stations):
@@ -685,6 +651,9 @@ def write_cat_to_event_list(cat, fid_out="event_input.txt"):
 
     :type cat: obspy.core.catalog.Catalog
     :param cat: Catalog of events to write out
+    :type fid_out: str
+    :param fid_out: name of the output text file to be written. Defaults to
+        'event_input.txt'
     """
     with open(fid_out, "w") as f:
         for event in cat:

@@ -532,7 +532,7 @@ class Pysep:
         self.write_files = write_files
         self.plot_files = plot_files
         self.log_level = log_level
-        self._legacy_naming = legacy_naming
+        self.legacy_naming = legacy_naming
         self._overwrite = overwrite
         self._overwrite_event_tag = overwrite_event_tag
 
@@ -1580,7 +1580,7 @@ class Pysep:
                 self.st.write(fid, format="MSEED")
 
         # Used for determining where to save SAC files
-        if self._legacy_naming:
+        if self.legacy_naming:
             _output_dir = self.output_dir
         else:
             _output_dir = os.path.join(self.output_dir, sac_subdir)
@@ -1632,7 +1632,7 @@ class Pysep:
         for tr in st:
             if components and tr.stats.component not in components:
                 continue
-            if self._legacy_naming:
+            if self.legacy_naming:
                 # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
                 _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
                 if self.event_tag:
@@ -1680,10 +1680,9 @@ class Pysep:
                     if not key.startswith("_")}
         # Internal attributes that don't need to go into the written config
         attr_remove_list = ["st", "st_raw", "event", "inv", "c", "write_files",
-                            "plot_files", "output_dir", "station_ids", "kwargs"]
+                            "plot_files", "output_dir", "station_ids", "kwargs",
+                            "llnl_db_path", "log_level", "legacy_naming"]
 
-        if self.client.upper() != "LLNL":
-            attr_remove_list.append("llnl_db_path")  # not important unless LLNL
         for key in attr_remove_list:
             del(dict_out[key])
         # Write times in as strings not UTCDateTime
@@ -1736,7 +1735,7 @@ class Pysep:
         # Default behavior, auto-generate event tag
         if self._overwrite_event_tag is None:
             # Options for choosing how to name things. Legacy or new-style
-            if self._legacy_naming:
+            if self.legacy_naming:
                 logger.debug("reverting to legacy style file naming")
                 event_tag = format_event_tag_legacy(self.event)
             else:

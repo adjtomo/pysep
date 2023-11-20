@@ -92,6 +92,7 @@ def quality_check_waveforms_before_processing(st, remove_clipped=True):
     st_out = rename_channels(st_out)
     st_out = remove_stations_for_missing_channels(st_out)  # LL network ONLY!
     st_out = remove_traces_for_bad_data_types(st_out)
+    st_out = remove_traces_for_zero_trace_length(st_out)
     if remove_clipped:
         st_out = remove_for_clipped_amplitudes(st_out)
 
@@ -115,6 +116,34 @@ def quality_check_waveforms_after_processing(st,
 
     if remove_insufficient_length:
         st_out = remove_stations_for_insufficient_length(st_out)
+
+    return st_out
+
+
+def remove_traces_for_zero_trace_length(st):
+    """
+    Related to Issue #117, traces can be returned from the data center that only
+    have data arrays of length 1, causing their total length in time to be 0s.
+    This will cause preprocessing to break during `estimate_prefilter_corners`,
+    which requires `endtime` - `starttime` > 0.
+
+    This function will cut out any traces that exhibit this unique behavior, and
+    is complementary to `remove_stations_for_insufficient_length` which is run
+    AFTER preprocessing.
+
+    This is also run by default as it's assumed the User does NOT want a
+    waveform with only one data point.
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream object to pass through QA procedures
+    :rtype st: obspy.core.stream.Stream
+    :return st: curtailed stream with zero-length traces removed
+    """
+    st_out = st.copy()
+    for tr in st_out[:]:
+        if (tr.stats.endtime - tr.stats.starttime) == 0:
+            logger.warning(f"{tr.get_id()} insufficient trace length, removing")
+            st_out.remove(tr)
 
     return st_out
 

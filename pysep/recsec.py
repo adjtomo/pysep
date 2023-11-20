@@ -100,7 +100,7 @@ from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
 from pysep import logger
 from pysep.utils.cap_sac import origin_time_from_sac_header, SACDICT
-from pysep.utils.io import read_sem, read_sem_cartesian
+from pysep.utils.io import read_sem
 from pysep.utils.curtail import subset_streams
 from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 
@@ -125,10 +125,11 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(self, pysep_path=None, syn_path=None, stations=None,
-                 cmtsolution=None, st=None, st_syn=None, sort_by="default",
-                 scale_by=None, time_shift_s=None, zero_pad_s=None,
-                 move_out=None, min_period_s=None, max_period_s=None,
+    def __init__(self, pysep_path=None, syn_path=None, 
+                 stations=None, source=None, st=None, st_syn=None, 
+                 sort_by="default", scale_by=None, time_shift_s=None, 
+                 zero_pad_s=None, move_out=None, 
+                 min_period_s=None, max_period_s=None,
                  preprocess=None, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
@@ -137,29 +138,37 @@ class RecordSection:
                  geometric_spreading_exclude=None,
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
-                 overwrite=False, log_level="DEBUG", cartesian=False,
-                 synsyn=False, **kwargs):
+                 overwrite=False, log_level="DEBUG", synsyn=False, srcfmt=None, 
+                 wildcard="*", syn_wildcard=None, **kwargs):
         """
-         .. note::
+        .. note::
             Used for reading in Pysep-generated waveforms
 
         :type pysep_path: str
         :param pysep_path: path to Pysep output, which is expected to contain
-            trace-wise SAC waveform files which will be read in.
+            trace-wise SAC waveform files which will be read in. See 
+            `wildcard` for how to find files
+        :type wildcard: str
+        :param wildcard: wildcard fed to glob to determine which files to 
+            read from `pysep_path`. Defaults to '*', read ALL files inside the
+            directory.
 
         .. note::
             Used for reading in SPECFEM-generated synthetic waveforms
 
         :type syn_path: str
         :param syn_path: full path to directory containing synthetic
-            seismograms that have been outputted by SPECFEM. The synthetics
-            are expected in the format: '*??.*.*.sem?*', which generally matches
-            SPECFEM files like 'NZ.BFZ.BXE.semd'
+            seismograms that have been outputted by SPECFEM. See `syn_wildcard`
+            for how to find files
+        :type syn_wildcard: str
+        :param syn_wildcard: wildcard fed to glob to determine which files to 
+            read from `syn_path`. Defaults to `wildcard` unless explicitely
+            provided.
         :type stations: str
         :param stations: full path to STATIONS file used to define the station
             coordinates. Format is dictated by SPECFEM
-        :type cmtsolution: str
-        :param cmtsolution: required for synthetics, full path to SPECFEM source
+        :type source: str
+        :param source: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
         :type cartesian: bool
@@ -172,7 +181,12 @@ class RecordSection:
         :param synsyn: flag to let RecSec know that we are plotting two sets
             of synthetic seismograms. Such that both `pysep_path` and `syn_path`
             will be both attempt to read in synthetic data. Both sets of
-            synthetics MUST share the same `cmtsolution` and `stations` metadata
+            synthetics MUST share the same `source` and `stations` metadata
+        :type srcfmt: str
+        :param srcfmt: source format, optional, allow User to dictate the file
+            format for `source`. Passed to argument `format` of 
+            `pysep.utils.io.read_events_plus`. If not given, tries to guess the
+            file format based on the name of the file.
 
         .. note::
             Used for defining user-input waveforms data
@@ -409,51 +423,36 @@ class RecordSection:
 
         # Read files from path if provided
         if pysep_path is not None:
-            if not synsyn:
-                # Expecting to find SAC files labelled as such
-                fids = glob(os.path.join(pysep_path, "*.sac"))
-                if not fids:
-                    # Or if legacy naming schema, assume that the sac files have
-                    # a given file format: event_tag.NN.SSS..LL.CC.c
-                    fids = glob(os.path.join(pysep_path, "*.*.*.*.*.?"))
-                if fids:
-                    logger.info(f"Reading {len(fids)} files from: {pysep_path}")
-                    # Overwrite stream, so reading takes precedence
-                    st = Stream()
-                    for fid in fids:
-                        st += read(fid)
-            else:
-                # User has told us that we want to read 'data' as synthetics,
-                # useful for comparing e.g., a synthetic-synthetic inversion
-                logger.debug("reading `pysep_path` expecting SPECFEM-generated "
-                             "synthetic data")
-                st = self._generate_synthetic_stream(syn_path=pysep_path,
-                                                     source=cmtsolution,
-                                                     stations=stations,
-                                                     cartesian=cartesian)
+            _obs_data_type = ["data", "syn"][bool(synsyn)]  # 'syn' if syssyn
+            st = self.read_data(path=pysep_path, data_type=_obs_data_type,
+                                source=source, stations=stations,
+                                srcfmt=srcfmt, wildcard=wildcard)
+        if syn_path is not None:
+            st_syn = self.read_data(path=syn_path, data_type="syn",
+                                    source=source, stations=stations,
+                                    srcfmt=srcfmt, 
+                                    wildcard=syn_wildcard or wildcard)
 
-        # Read in SPECFEM generated synthetics and generate SAC headed streams
-        if syn_path is not None: 
-            assert(os.path.exists(syn_path)), \
-                    f"`syn_path` given but does not exist: '{syn_path}'"
-            st_syn = self._generate_synthetic_stream(syn_path=syn_path,
-                                                     source=cmtsolution,
-                                                     stations=stations,
-                                                     cartesian=cartesian)
-
-        # Allow plotting ONLY synthetics and no data
+        # Allow plotting ONLY synthetics and no data, which means the synthetic
+        # Stream occupies the main `st` variable
         if st is None:
             st = st_syn.copy()
             st_syn = None
-        assert st, ("Stream object not found, please check inputs `st` "
-                    "and `pysep_path")
 
-        # User defined parameters, do some type-setting
+        # User is allowed to provide their own Streams for `st` and `st_syn`
         self.st = st.copy()
-        try:
+        if st_syn is not None:
             self.st_syn = st_syn.copy()
-        except AttributeError:
+        else:
             self.st_syn = None
+
+        # Last minute check to see if we actually have any data. Otherwise quit
+        if self.st is not None and not self.st:
+            logger.warning("no data found for record section, exiting")
+            sys.exit(-1)
+        if self.st_syn is not None and not self.st_syn:
+            logger.warning("no data found for record section, exiting")
+            sys.exit(-1)
 
         # Y-Axis sorting parameters
         self.sort_by = sort_by.lower()
@@ -520,51 +519,99 @@ class RecordSection:
         self.xlim_syn = []
         self.sorted_idx = []
 
-    def _generate_synthetic_stream(self, syn_path, source, stations,
-                                   cartesian=False, fmt="*.*.*.sem?*"):
+    def read_data(self, path, data_type, wildcard="*", source=None,
+                  stations=None, srcfmt=None):
         """
-        Convenience fucntion to read in synthetic seismograms from SPECFEM2D,
-        SPECFEM3D or SPECFEM3D_GLOBE. Can be used to read in both `st` and
-        `st_syn`
+        General function that attempts to read in observed and synthetic data
+        in User-provided format that can either be SAC files or SPECFEM format
+        two-column ASCII files.
 
-        :type syn_path: str
-        :param syn_path: full path to directory containing synthetic
-            seismograms
+        This function expects that the files in the directory `path` are ONLY of
+        type `data_type`. Files that fail on read will be ignored.
+
+        :type path: str
+        :param path: full path to directory containing data in question
+        :type data_type: str
+        :param data_type: expected format of the data, 'obs' or 'syn'.
+            Determines the read approach this function will take for addressing
+            the data.
+        :type wildcard: str
+        :param wildcard: wildcard fed to glob to determine files inside `path`
+            that the function will attempt to read. Defaults to '*', read ALL
+            files inside the directory.
         :type source: str
-        :param source: path to source file which defined the source that
-            generated the synthetics. Acceptable values are CMTSOLUTION (from
-            SPECFEM3D/GLOBE), and SOURCE (from SPECFEM2D)
+        :param source: required iff `data_type`==syn. Path to source file which
+            defined the source that generated the synthetics. Acceptable values
+            are CMTSOLUTION (from SPECFEM3D/GLOBE), and SOURCE (from SPECFEM2D)
         :type stations: str
-        :param stations: full path to STATIONS file used to define the station
-            coordinates. Format is dictated by SPECFEM
-        :type fmt: str
-        :param fmt: the expected filename format of the sythetics. Based on
-            ASCII style files generated by SPECFEM. Defaults to '*??.*.*.sem?*'.
-            Expected filename looks something like: 'NN.SSS.BXC.semd'
+        :param stations: required iff `data_type`==syn. full path to STATIONS
+            file used to define the station coordinates. Format is dictated by
+            SPECFEM
+        :type srcfmt: str
+        :param srcfmt: source format, optional, allow User to dictate the file
+            format for `source`. Passed to argument `format` of 
+            `pysep.utils.io.read_events_plus`. If not given, tries to guess the
+            file format based on the name of the file.
+                                                              
         :rtype: obspy.core.stream.Stream
         :return: Stream object with synthetic waveforms
         """
-        assert(source is not None and os.path.exists(source)), (
-            f"If `syn_path` is given, RecSec also requires `cmtsolution`"
-        )
-        assert(stations is not None and os.path.exists(stations)), (
-            f"If `syn_path` is given, RecSec also requires `stations`"
-        )
-        fids = glob(os.path.join(syn_path, fmt))
-        if fids:
-            logger.info(f"Reading {len(fids)} synthetics from: {syn_path}")
-            st_syn = Stream()
+        # Empty data stream to fill and return
+        st = Stream()
+        fids = glob(os.path.join(path, wildcard))
+        logger.info(f"attempting to read {len(fids)} '{data_type}' files from: "
+                    f"{path}")
+
+        if data_type == "data":
+            # DATA is expected to be SAC files generated by PySEP
             for fid in fids:
-                logger.debug(fid)
-                if not cartesian:
-                    st_syn += read_sem(fid=fid, source=source,
-                                       stations=stations)
-                else:
-                    # If we are using SPECFEM2D synthetics, trying to read
-                    # the SOURCE file will
-                    st_syn += read_sem_cartesian(fid=fid, source=source,
-                                                 stations=stations)
-        return st_syn
+                try:
+                    st += read(fid)
+                    logger.debug(fid)
+                except Exception as e:
+                    logger.warning(f"unexpected read error {fid}: {e}")
+        elif data_type == "syn":
+            # Synthetics may be SAC files generated by SPECFEM3D_GLOBE
+            if source is None and stations is None:
+                for fid in fids:
+                    try:
+                        st += read(fid)
+                        logger.debug(fid)
+                    except Exception as e:
+                        logger.warning(f"unexpected 'syn' read error '{fid}'. "
+                                       f"Expected SAC file. Provide `source` "
+                                       f"and `stations` if your synthetics are "
+                                       f"ASCII files.")
+            # OR synthetics may be two-column ASCII files generated by SPECFEM
+            else:
+                assert (source is not None and os.path.exists(source)), (
+                    f"If `syn_path` is given, RecSec requires `source`"
+                )
+                assert (stations is not None and os.path.exists(stations)), (
+                    f"If `syn_path` is given, RecSec requires `stations`"
+                )
+                # Try to guess the source format if not given
+                if srcfmt is None:
+                    for guess in ["CMTSOLUTION", "FORCESOLUTION", "SOURCE"]:
+                        if guess in source.upper():
+                            srcfmt = guess
+                            break
+                    else:
+                        logger.critical("Could not guess the format of the "
+                                        "`source` file. Please set format with "
+                                        "'--srcfmt'")
+                        sys.exit(-1)
+                for fid in fids:
+                    try:
+                        st += read_sem(fid=fid, source=source,
+                                       stations=stations, source_format=srcfmt)
+                        logger.debug(fid)
+                    except Exception as e:
+                        logger.warning(f"unexpected read error {fid}: {e}")
+        else:
+            raise NotImplementedError("`data_type` must be 'data' or 'syn'")
+
+        return st
 
     def check_parameters(self):
         """
@@ -801,16 +848,17 @@ class RecordSection:
         # Max amplitudes should be RELATIVE to what were showing (e.g., if
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
         for tr, xlim in zip(self.st, self.xlim):
-            start, stop = xlim
+            start, stop = xlim  # units: samples
             self.max_amplitudes = np.append(self.max_amplitudes,
                                             max(abs(tr.data[start:stop])))
+
         self.max_amplitudes = np.array(self.max_amplitudes)
 
         # Max amplitudes will be DIFFERENT for synthetics, which affects 
         # normalizations and thus requires its own array
         if self.st_syn is not None:
             for tr, xlim in zip(self.st_syn, self.xlim):
-                start, stop = xlim
+                start, stop = xlim  # units: samples
                 self.max_amplitudes_syn = np.append(
                         self.max_amplitudes_syn, max(abs(tr.data[start:stop]))
                         )
@@ -891,7 +939,7 @@ class RecordSection:
                                    f"length of data trace")
                     end_index = len(tr.data)
 
-                xlim.append((start_index, end_index))
+                xlim.append((int(start_index), int(end_index)))
 
         xlim = np.array(xlim)
         return xlim
@@ -1522,7 +1570,9 @@ class RecordSection:
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
         logger.debug("plotting line check starting from bottom (y=0)")
-        logger.debug("\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX")
+        logger.debug(
+            "\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX"
+        )
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
         log_str = "\n"
@@ -1541,8 +1591,11 @@ class RecordSection:
                     y_index = y_idx + start
                 log_str += self._plot_trace(idx=idx, y_index=y_index,
                                             choice=choice, **kwargs)
-
         logger.debug(log_str)
+
+        # If plotting both observed AND synthetic, log some relative information
+        if self.st is not None and self.st_syn is not None:
+            self._log_relative_information()
 
         # Plot vertical bars at given reference times
         if self.tmarks:
@@ -1581,6 +1634,38 @@ class RecordSection:
         if self.show:
             plt.show()
 
+    def _log_relative_information(self, start=0, stop=None):
+        """
+        If both `st` and `st_syn` are being plotted, then write some relative
+        information about their amplitudes to the main logger.
+
+        Related to #116
+        """
+        log_str = (
+            "relative amplitude information"
+            f"\nIDX{'[O]BS':>13}{'[S]YN':>15}"
+            f"{'[O_A]BSMAX':>15}{'[S_A]BSMAX':>12}  "
+            f"{'O_A/S_A':>8}{'LN(O_A/S_A)':>14}\n"
+        )
+        for idx in self.sorted_idx[start:stop]:
+            tr = self.st[idx]
+            tr_syn = self.st_syn[idx]
+
+            # Get absolute maximum value of both obs and syn traces
+            tr_max = np.abs(tr.max())
+            tr_syn_max = np.abs(tr_syn.max())
+
+            log_str += (
+                f"{idx:<3}"
+                f"{tr.get_id():>15}"
+                f"{tr_syn.get_id():>15}"
+                f"{tr_max:12.2E}"
+                f"{tr_syn_max:12.2E}"
+                f"{tr_max / tr_syn_max:12.2E}"
+                f"{np.log(tr_max / tr_syn_max):12.2E}\n"
+            )
+        logger.debug(log_str)
+
     def _plot_trace(self, idx, y_index, choice="st"):
         """
         Plot a single trace on the record section, with amplitude scaling,
@@ -1604,7 +1689,6 @@ class RecordSection:
         assert (choice in choices)
         c = choices.index(choice)
         tr = getattr(self, choice)[idx]  # i.e., tr = self.st[idx]
-        
 
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         tshift = self.time_shift_s[idx]
@@ -2129,16 +2213,17 @@ def parse_args():
         # formatter_class=argparse.RawTextHelpFormatter,
                                      )
 
-    parser.add_argument("-p", "--pysep_path", default="./", type=str, nargs="?",
+    parser.add_argument("-p", "--pysep_path", default=None, type=str, nargs="?",
                         help="path to Pysep output, which is expected to "
                              "contain trace-wise SAC waveform files which will "
                              "be read")
     parser.add_argument("--syn_path", default=None, type=str, nargs="?",
                         help="path to SPECFEM generated synthetics. Also "
-                             "requires --cmtsolution_file and --stations_file")
-    parser.add_argument("--cmtsolution", default=None, type=str, nargs="?",
-                        help="required for synthetics, path to the CMTSOLUTION "
-                             "file used to generate SPECFEM synthetics")
+                             "requires --source and --stations")
+    parser.add_argument("--source", default=None, type=str, nargs="?",
+                        help="required for synthetics, path to the source "
+                             "file used to generate SPECFEM synthetics. Can be "
+                             "CMTSOLUTION, FORCESOLUTION or SOURCE")
     parser.add_argument("--stations", default=None, type=str, nargs="?",
                         help="required for synthetics, path to the STATIONS "
                              "file used to generate SPECFEM synthetics")
@@ -2251,14 +2336,13 @@ def parse_args():
                         help="Path to save the resulting record section fig")
     parser.add_argument("-o", "--overwrite", default=False, action="store_true",
                         help="overwrite existing figure if path exists")
-    parser.add_argument("--cartesian", default=False, action="store_true",
-                        help="Let RecSec know that your domain is defined in"
-                             "Cartesian coordinates. Used for SPECFEM2D "
-                             "and SPECFEM3D_Cartesian domains defined in XYZ.")
     parser.add_argument("--synsyn", default=False, action="store_true",
                         help="Let RecSec know that both `pysep_path` and "
                              "`syn_path` should be read in as SPECFEM-"
                              "generated synthetics.")
+    parser.add_argument("--srcfmt", default=None, type=str,
+                        help="Optional source format for reading the `source` "
+                             "file that defines the synthetics metadata")
     parser.add_argument("-L", "--log_level", default="DEBUG", type=str,
                         help="verbosity of logger: 'WARNING', 'INFO', 'DEBUG'")
 

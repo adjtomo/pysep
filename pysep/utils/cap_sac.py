@@ -152,6 +152,7 @@ def _append_sac_headers_trace(tr, event, inv):
         * Add sensor type somewhere, previously stored in KT? (used for picks)
 
     .. note::
+
         We explicitely set 'iztype, 'b' and 'e' in the SAC header to tell ObsPy
         that the trace start is NOT the origin time. Otherwise all the relative
         timing (e.g., picks) will be wrong.
@@ -161,7 +162,7 @@ def _append_sac_headers_trace(tr, event, inv):
     :type event: obspy.core.event.Event
     :param event: Event with metadata for SAC header
     :type inv: obspy.core.inventory.Inventory
-    :param event: StationXML with metadata for SAC header
+    :param inv: StationXML with metadata for SAC header
     :rtype: obspy.core.trace.Trace
     :return: Trace with appended SAC header
     """
@@ -229,6 +230,103 @@ def _append_sac_headers_trace(tr, event, inv):
     # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
+
+    return tr
+
+def append_sac_headers_cartesian(st, event, stations):
+    """
+    Specfem2D and Specfem3D may have domains defined in a Cartesian coordinate
+    system that do not conform to the geographic coordinate systems that are are
+    baked into ObsPy objects used by PySEP.
+
+    Because of this, we cannot generate the required intermediate ObsPy
+    objects to use `append_sac_headers`. This function creates a barebones SAC
+    header with the available information and also takes into account the
+    cartesian coordinate system for calculating things like azimuth and distance
+
+    This is only meant to be used for RecSec to plot record sections.
+
+    .. note::
+
+        RecSec requires SAC header values `kevnm`, `dist`, `az`, `baz`,
+        `stlo`, `stla`, `evlo`, `evla`
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream to append SAC header to
+    :type event: obspy.core.event.Event
+    :param event: Event with metadata for SAC header
+    :type inv: obspy.core.inventory.Inventory
+    :param event: StationXML with metadata for SAC header
+    :rtype: obspy.core.stream.Stream
+    :return: Stream with barebones SAC headers to be used for Record Section
+    """
+    st_out = Stream()
+
+    # Generate a dictionary object to store station information
+    station_list = np.loadtxt(stations, dtype="str", ndmin=2)
+    stations = {}
+    for sta in station_list:
+        # NN.SSS = (latitude_or_y, longitude_or_x)
+        stations[f"{sta[1]}.{sta[0]}"] = (float(sta[2]), float(sta[3]))
+
+    # Append barebones SAC header to the traces in the Stream
+    for tr in st.copy()[:]:
+        try:
+            rcv_y, rcv_x = stations[f"{tr.stats.network}.{tr.stats.station}"]
+            st_out.append(_append_sac_headers_cartesian_trace(
+                tr, event, rcv_x, rcv_y)
+            )
+        except Exception as e:
+            logger.warning(f"{tr.get_id()} can't write SAC headers: {e}")
+
+    return st_out
+
+def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
+    """
+    Append a barebones SAC header to a trace for Cartesian files which do not
+    fit into the ObsPy framework of geographical coordinates.
+
+    :type tr: obspy.core.trace.Trace
+    :param tr: Trace to append SAC header to
+    :type event: obspy.core.event.Event
+    :param event: Event with location metadata for SAC header
+    :type rcv_x: float
+    :param rcv_x: X coordinate of the receiver in units meters
+    :type rcv_y: float
+    :param rcv_y: Y coordinate of the receiver in units meters
+    :rtype: obspy.core.trace.Trace
+    :return: Trace with appended SAC header
+    """
+    net_sta = f"{tr.stats.network}.{tr.stats.station}"
+
+    src_y = event.preferred_origin().latitude
+    src_x = event.preferred_origin().longitude
+
+    # Calculate Cartesian distance and azimuth/backazimuth
+    dist_m = np.sqrt(((rcv_x - src_x) ** 2) + ((rcv_y - src_y) ** 2))
+    azimuth = np.degrees(np.arctan2((rcv_x - src_x), (rcv_y - src_y))) % 360
+    backazimuth = (azimuth - 180) % 360
+    otime = event.preferred_origin().time
+
+    # Barebones SAC header, we only append values required by RecSec
+    sac_header = {
+        "stla": rcv_y,
+        "stlo": rcv_x,
+        "evla": src_y,
+        "evlo": src_x,
+        "dist": dist_m * 1E-3,  # units: km
+        "az": azimuth,
+        "baz": backazimuth,
+        "kevnm": format_event_tag_legacy(event),  # only take date code
+        "nzyear": otime.year,
+        "nzjday": otime.julday,
+        "nzhour": otime.hour,
+        "nzmin": otime.minute,
+        "nzsec": otime.second,
+        "nzmsec": otime.microsecond,
+        }
+
+    tr.stats.sac = sac_header
 
     return tr
 
