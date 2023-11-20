@@ -64,12 +64,12 @@
   - PySEP warns when config parameters are not used by the program
 
 
-## Version 0.4.1 (Master)
+## Version 0.4.1 
 - Adds Tutorial documentation following GEOS626 lab (thanks, Aakash!)
 - Adds version release documentation
 - Slightly modifies pysep-docs conda environment to accomodate converted nbooks
 
-## Version 0.5.0 (Devel)
+## Version 0.5.0 (Master)
 - Improves functions 'read_forcesolution' and 'read_source', which now return
   `obspy.core.event.Event` objects, rather than the makeshift Source objects 
 - 'read_forcesolution' can now handle FORCESOLUTION files from both SPECFEM3D
@@ -102,3 +102,9 @@
 - Bugfix: `read_specfem3d_cmtsolution_cartesian` was unable to handle 
 	Flinn-Engdahl regions that had spaces in them. Also it was unable to 
 	handle extra lines in the file. 
+- Bugfix #126: Fixed some incorrect parameters in example config files
+- PySEP variable namechange: `_legacy_naming` -> 'legacy_naming`
+- New RecSec Parameters `wildcard` and `syn_wildcard` to specify how to 
+	search for data to plot with RecSec
+- Removed unnused parameters 'legacy_naming' and 'log_level' from 
+	`Pysep.write_config`
