@@ -69,7 +69,7 @@
 - Adds version release documentation
 - Slightly modifies pysep-docs conda environment to accomodate converted nbooks
 
-## Version 0.5.0 (Master)
+## Version 0.5.0 
 - Improves functions 'read_forcesolution' and 'read_source', which now return
   `obspy.core.event.Event` objects, rather than the makeshift Source objects 
 - 'read_forcesolution' can now handle FORCESOLUTION files from both SPECFEM3D
@@ -108,3 +108,7 @@
 	search for data to plot with RecSec
 - Removed unnused parameters 'legacy_naming' and 'log_level' from 
 	`Pysep.write_config`
+
+## Version 0.5.1
+
+- Bugfix: RecSec subset streams, which checked that 'st' and 'st_syn' had the same stations, would not run for streams of the same length, leading to edge case where same length streams would plot out of order because they had not been sorted. removed the criteria and now subset streams runs at all times
