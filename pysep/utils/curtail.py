@@ -334,8 +334,6 @@ def subset_streams(st_a, st_b):
     if len(st_a) != len(st_b):
         logger.warning(f"stream lengths don't match {len(st_a)} != {len(st_b)} "
                        f"will subset to the shorter length")
-    else:
-        return st_a, st_b
 
     st_a_out = Stream()
     st_b_out = Stream()
