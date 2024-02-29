@@ -126,21 +126,29 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(self, pysep_path=None, syn_path=None, 
-                 stations=None, source=None, st=None, st_syn=None, windows=None,
-                 sort_by="default", scale_by=None, time_shift_s=None, 
-                 zero_pad_s=None, move_out=None, 
-                 min_period_s=None, max_period_s=None,
-                 preprocess=None, max_traces_per_rs=None, integrate=0,
-                 xlim_s=None, components="ZRTNE12", y_label_loc="default",
-                 y_axis_spacing=1, amplitude_scale_factor=1,
-                 azimuth_start_deg=0., distance_units="km", tmarks=None,
-                 geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
-                 geometric_spreading_exclude=None,
-                 geometric_spreading_ymax=None, geometric_spreading_save=None,
-                 figsize=(9, 11), show=True, save="./record_section.png",
-                 overwrite=False, log_level="DEBUG", synsyn=False, srcfmt=None, 
-                 wildcard="*", syn_wildcard=None, **kwargs):
+    def __init__(
+            # Data input parameters
+            self, pysep_path=None, syn_path=None, stations=None, source=None, 
+            st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
+            wildcard="*", syn_wildcard=None, 
+            # Data organization parameters
+            sort_by="default", scale_by=None, time_shift_s=None, 
+            zero_pad_s=None, move_out=None, 
+            # Data processing parameters
+            preprocess=True, min_period_s=None, max_period_s=None, integrate=0, 
+            trim=True, taper=True,
+            # Plotting aesthetic 
+            xlim_s=None, components="ZRTNE12", y_label_loc="default",
+            y_axis_spacing=1, amplitude_scale_factor=1, azimuth_start_deg=0., 
+            distance_units="km", tmarks=None,
+            # Geometric Spreading
+            geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
+            geometric_spreading_exclude=None,
+            geometric_spreading_ymax=None, geometric_spreading_save=None,
+            # Figure generation control parameters
+            figsize=(9, 11), show=True, save="./record_section.png",
+            overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+            **kwargs):
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -305,27 +313,33 @@ class RecordSection:
             'km': kilometers on the sphere
             'deg': degrees on the sphere
             'km_utm': kilometers on flat plane, UTM coordinate system
-
-        .. note::
-            Data processing parameters
-
-        :type preprocess: str
-        :param preprocess: choose which data to preprocess, options are:
-
-            - None: do not run preprocessing step, including filter (Default)
-            - 'st': process waveforms in `st`
-            - 'st_syn': process waveforms in `st_syn`. st still must be given
-            - 'both': process waveforms in both `st` and `st_syn`
-        :type min_period_s: float
-        :param min_period_s: minimum filter period in seconds
-        :type max_period_s: float
-        :param max_period_s: maximum filter period in seconds
         :type components: str
         :param components: a sequence of strings representing acceptable
             components from the data. Also determines the order these are shown
             EVEN when sorted by other variables. For example, components=='ZR'
             would only display Z and R components, and Z components would be
             should BEFORE R components for the SAME station.
+
+        .. note::
+            Data processing parameters
+
+        :type preprocess: str
+        :param preprocess: choose whether preprocessing steps listed below are 
+            applied to waveform data, and if so, which data are procesed:
+
+            - True: process waveforms in both `st` and `st_syn` (Default)
+            - False: do not run any processing on waveforms
+            - 'st': only process waveforms in `st`
+            - 'st_syn': only process waveforms in `st_syn`. st still required
+        :type min_period_s: float
+        :param min_period_s: minimum filter period in seconds, if not given 
+            and `max_period_s` also not given, then no filtering is applied
+        :type max_period_s: float
+        :param max_period_s: maximum filter period in seconds, if not given
+            and `min_period_s` also not given, then no filtering is applied
+        :type trim: bool
+        :param trim: trim waveforms to the same length, and if any data gaps
+            are present, fill with mean values by default
         :type integrate: int
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
@@ -489,12 +503,14 @@ class RecordSection:
             self.time_shift_s = time_shift_s
         self.zero_pad_s = zero_pad_s
 
-        # Filtering parameters
+        # Processing parameters
+        self.preprocess = preprocess
         self.min_period_s = min_period_s
         self.max_period_s = max_period_s
-        self.preprocess = preprocess
         self.max_traces_per_rs = max_traces_per_rs
         self.integrate = int(integrate)
+        self.trim = bool(trim)
+        self.taper = bool(taper)
 
         # Plotting parameters
         self.xlim_s = xlim_s
@@ -726,23 +742,30 @@ class RecordSection:
                 len(self.amplitude_scale_factor) != len(self.st):
             err.amplitude_scale_factor = f"must be list length {len(self.st)}"
 
+        acceptable_preprocess = [True, False, "st", "st_syn"]
+        if self.preprocess not in acceptable_preprocess:
+            err.preprocess = f"must be in {acceptable_preprocess}"
+
+        if self.preprocess == "st_syn":
+            assert(self.st is not None and self.st_syn is not None), (
+                f"`preprocess` choice requires both `st` & `st_syn` to exist."
+                f"If you only have one or the other, set: `preprocess`=='st'"
+            )
+
         if self.min_period_s is not None and self.max_period_s is not None:
             if self.min_period_s >= self.max_period_s:
                 err.min_period_s = "must be less than `max_period_s`"
 
         if self.min_period_s is not None or self.max_period_s is not None:
-            assert(self.preprocess is not None), \
+            assert(self.preprocess is not False), \
                 f"Setting filter bounds requires `preprocess` flag to be set"
-
-        if self.preprocess is not None:
-            acceptable_preprocess = ["both", "st", "st_syn"]
-            if self.preprocess not in acceptable_preprocess:
-                err.preprocess = f"must be in {acceptable_preprocess}"
-        if self.preprocess in ["st_syn", "both"]:
-            assert(self.st is not None and self.st_syn is not None), (
-                f"`preprocess` choice requires both `st` & `st_syn` to exist."
-                f"If you only have one or the other, set: `preprocess`=='st'"
-            )
+            
+        # Do not allow for 0 period filter because that's wrong and will also
+        # trip up later logic checks
+        if self.min_period_s:
+            assert(self.min_period_s != 0) 
+        if self.max_period_s:
+            assert(self.max_period_s != 0) 
 
         # Overwrite the max traces per record section, enforce type int
         if self.max_traces_per_rs is None:
@@ -1478,79 +1501,126 @@ class RecordSection:
 
         return xtick_minor, xtick_major
 
-    def process_st(self):
+    def process_st(self, **kwargs):
         """
         Preprocess the Stream with optional filtering in place.
 
         .. note::
+
             Data in memory will be irretrievably altered by running preprocess.
+
+        .. warning::
+
+            if `trim` is False but `zero_pad_s` is True we may run into the
+            issue of filling data gaps with zeros
 
         TODO Add feature to allow list-like periods to individually filter
             seismograms. At the moment we just apply a blanket filter.
+
+        KWARGS
+        :type max_percentage: float
+        :param max_percentage: percentage of the trace to taper at both ends
+        :type zerophase: bool
+        :param zerophase: whether to apply zero-phase filtering or not,
+            defaults to True
+        :type taper_type: str
+        :param taper_type: type of taper to apply to the waveforms
+        :type fill_value: str or float
+        :param fill_value: value to fill gaps in the data after trimming, 
+            defaults to mean of the trace
         """
-        if self.preprocess is None:
-            logger.info("no preprocessing (including filtering) applied")
+        max_percentage = float(self.kwargs.get("max_percentage", 0.05))
+        zerophase = bool(self.kwargs.get("zerophase", True))
+        taper_type = self.kwargs.get("taper_type", "cosine")
+        fill_value = self.kwargs.get("fill_value", "mean")
+
+        # Determine which traces we are running through preprocessing
+        if self.preprocess == False:
+            logger.info("no preprocessing will be applied to waveforms")
             return
+        elif self.preprocess == True:
+            preprocess_list = [self.st]
+            if self.st_syn is not None:
+                preprocess_list.append(self.st_syn)
+            n = sum([len(_) for _ in preprocess_list])
+            logger.info(f"preprocessing {n} waveforms")
         elif self.preprocess == "st":
             logger.info(f"preprocessing {len(self.st)} `st` waveforms")
             preprocess_list = [self.st]
         elif self.preprocess == "st_syn":
             logger.info(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
             preprocess_list = [self.st_syn]
-        elif self.preprocess == "both":
-            logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
-                        f"`st` and `st_syn` waveforms")
-            preprocess_list = [self.st, self.st_syn]
 
         for st in preprocess_list:
-            # Fill any data gaps with mean of the data, do it on a trace by 
-            # trace basis to get individual mean values
-            for tr in st:
-                tr.trim(starttime=tr.stats.starttime, endtime=tr.stats.endtime,
-                        pad=True, fill_value=tr.data.mean())
-            st.detrend("demean")
-            st.taper(max_percentage=0.05, type="cosine")
+            if self.trim:
+                logger.debug("trimming start and end times and filling any "
+                             f"gaps with {fill_value}")
+                for tr in st:
+                    if fill_value == "mean":
+                        fill_value = tr.data.mean()
+                    tr.trim(starttime=tr.stats.starttime, 
+                            endtime=tr.stats.endtime, pad=True, 
+                            fill_value=fill_value)
+            
+            # Taper prior to zero pad so that the taper actually hits signal
+            if self.taper:
+                # If we don't demean, then tapering may hit a static offset
+                logger.debug("demean waveform in preparation for tapering")
+                st.detrend("demean")
+
+                logger.debug(f"tapering waveforms with {max_percentage} taper")
+                st.taper(max_percentage=max_percentage, type=taper_type)
 
             # Zero pad start and end of data if requested by user
             if self.zero_pad_s:
+                if not self.taper:
+                    # If we don't demean, zero pad may introduce static offset
+                    logger.debug("demean waveform in preparation for zero pad")
+                    st.detrend("demean")
+
                 _start, _end = self.zero_pad_s
-                logger.info(f"padding zeros to traces with {_start}s before "
+                logger.debug(f"padding zeros to traces with {_start}s before "
                             f"and {_end}s after")
-                for idx, tr in enumerate(st):
+                for tr in st:
                     tr.trim(starttime=tr.stats.starttime - _start,
                             endtime=tr.stats.endtime + _end,
                             pad=True, fill_value=0)
 
-            # Allow multiple filter options based on user input
-            # Max period only == high-pass
-            if self.max_period_s is not None and self.min_period_s is None:
-                logger.info(f"apply highpass filter w/ cutoff "
-                            f"{1/self.max_period_s}")
-                st.filter("highpass", freq=1/self.max_period_s, zerophase=True)
-            # Min period only == low-pass
-            elif self.min_period_s is not None and self.max_period_s is None:
-                logger.info(f"apply lowpass filter w/ cutoff "
-                            f"{1/self.min_period_s}")
-                st.filter("lowpass", freq=1/self.min_period_s, zerophase=True)
-            # Both min and max period == band-pass
-            elif self.min_period_s is not None and \
-                    self.max_period_s is not None:
-                logger.info(f"applying bandpass filter w/ "
-                            f"[{1/self.max_period_s}, {self.min_period_s}]")
-                st.filter("bandpass", freqmin=1/self.max_period_s,
-                          freqmax=1/self.min_period_s, zerophase=True)
-            else:
-                logger.info("no filtering applied")
+            # Apply filtering 
+            if self.min_period_s or self.max_period_s:
+                # Max period only == high-pass filter
+                if self.max_period_s and self.min_period_s is None:
+                    logger.debug(f"apply highpass filter w/ cutoff "
+                                f"{1/self.max_period_s}")
+                    st.filter("highpass", freq=1/self.max_period_s, 
+                              zerophase=zerophase)
+                    
+                # Min period only == low-pass filter
+                elif self.min_period_s and self.max_period_s is None:
+                    logger.debug(f"apply lowpass filter w/ cutoff "
+                                f"{1/self.min_period_s}")
+                    st.filter("lowpass", freq=1/self.min_period_s, 
+                              zerophase=zerophase)
+                    
+                # Both min and max period == band-pass filter
+                elif self.min_period_s and self.max_period_s:
+                    logger.debug(
+                        f"applying bandpass filter w/ "
+                        f"[{1/self.max_period_s}, {self.min_period_s}]"
+                        )
+                    st.filter("bandpass", freqmin=1/self.max_period_s,
+                            freqmax=1/self.min_period_s, zerophase=zerophase)
 
-            # Integrate and differentiate N number of times specified by user
-            st.detrend("simple")
+            # Integrate or differentiate N number of times specified by user
             if self.integrate != 0:
+                st.detrend("simple")
                 if self.integrate < 0:
                     func = "differentiate"
                 elif self.integrate > 0:
                     func = "integrate"
-            for i in range(np.abs(self.integrate)):
-                logger.info(f"{func} all waveform data x{abs(self.integrate)}")
+                for _ in range(np.abs(self.integrate)):
+                    logger.info(f"{func} all waveform data "
+                                f"x{abs(self.integrate)}")
                 getattr(st, func)()
 
     def plot(self, subset=None, page_num=None, **kwargs):
@@ -2368,7 +2438,7 @@ def parse_args():
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
-    parser.add_argument("-o", "--overwrite", default=False, action="store_true",
+    parser.add_argument("-o", "--overwrite", default=True, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--synsyn", default=False, action="store_true",
                         help="Let RecSec know that both `pysep_path` and "
