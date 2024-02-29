@@ -1501,8 +1501,7 @@ class RecordSection:
 
         return xtick_minor, xtick_major
 
-    def process_st(self, max_percentage=0.05, zerophase=True, 
-                   taper_type="cosine", fill_value="mean"):
+    def process_st(self, **kwargs):
         """
         Preprocess the Stream with optional filtering in place.
 
@@ -1518,6 +1517,7 @@ class RecordSection:
         TODO Add feature to allow list-like periods to individually filter
             seismograms. At the moment we just apply a blanket filter.
 
+        KWARGS
         :type max_percentage: float
         :param max_percentage: percentage of the trace to taper at both ends
         :type zerophase: bool
@@ -1529,6 +1529,11 @@ class RecordSection:
         :param fill_value: value to fill gaps in the data after trimming, 
             defaults to mean of the trace
         """
+        max_percentage = float(self.kwargs.get("max_percentage", 0.05))
+        zerophase = bool(self.kwargs.get("zerophase", True))
+        taper_type = self.kwargs.get("taper_type", "cosine")
+        fill_value = self.kwargs.get("fill_value", "mean")
+
         # Determine which traces we are running through preprocessing
         if self.preprocess == False:
             logger.info("no preprocessing will be applied to waveforms")
@@ -1548,8 +1553,8 @@ class RecordSection:
 
         for st in preprocess_list:
             if self.trim:
-                logger.debug("trimming start and end times and filling gaps "
-                            f"with {fill_value}")
+                logger.debug("trimming start and end times and filling any "
+                             f"gaps with {fill_value}")
                 for tr in st:
                     if fill_value == "mean":
                         fill_value = tr.data.mean()
