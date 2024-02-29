@@ -131,7 +131,7 @@ class RecordSection:
                  sort_by="default", scale_by=None, time_shift_s=None, 
                  zero_pad_s=None, move_out=None, 
                  min_period_s=None, max_period_s=None,
-                 preprocess=None, max_traces_per_rs=None, integrate=0,
+                 preprocess=True, max_traces_per_rs=None, integrate=0,
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", tmarks=None,
@@ -139,7 +139,7 @@ class RecordSection:
                  geometric_spreading_exclude=None,
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
-                 overwrite=False, log_level="DEBUG", synsyn=False, srcfmt=None, 
+                 overwrite=True, log_level="DEBUG", synsyn=False, srcfmt=None, 
                  wildcard="*", syn_wildcard=None, **kwargs):
         """
         .. note::
@@ -305,6 +305,12 @@ class RecordSection:
             'km': kilometers on the sphere
             'deg': degrees on the sphere
             'km_utm': kilometers on flat plane, UTM coordinate system
+        :type components: str
+        :param components: a sequence of strings representing acceptable
+            components from the data. Also determines the order these are shown
+            EVEN when sorted by other variables. For example, components=='ZR'
+            would only display Z and R components, and Z components would be
+            should BEFORE R components for the SAME station.
 
         .. note::
             Data processing parameters
@@ -312,20 +318,15 @@ class RecordSection:
         :type preprocess: str
         :param preprocess: choose which data to preprocess, options are:
 
-            - None: do not run preprocessing step, including filter (Default)
+            - True: process waveforms in both `st` and `st_syn` (Default)
+            - False: do not run any processing on waveforms
             - 'st': process waveforms in `st`
             - 'st_syn': process waveforms in `st_syn`. st still must be given
-            - 'both': process waveforms in both `st` and `st_syn`
         :type min_period_s: float
         :param min_period_s: minimum filter period in seconds
         :type max_period_s: float
         :param max_period_s: maximum filter period in seconds
-        :type components: str
-        :param components: a sequence of strings representing acceptable
-            components from the data. Also determines the order these are shown
-            EVEN when sorted by other variables. For example, components=='ZR'
-            would only display Z and R components, and Z components would be
-            should BEFORE R components for the SAME station.
+
         :type integrate: int
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
@@ -1488,19 +1489,20 @@ class RecordSection:
         TODO Add feature to allow list-like periods to individually filter
             seismograms. At the moment we just apply a blanket filter.
         """
-        if self.preprocess is None:
+        if self.preprocess == False:
             logger.info("no preprocessing (including filtering) applied")
             return
+        elif self.preprocess == True:
+            logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
+                        f"`st` and `st_syn` waveforms")
+            preprocess_list = [self.st, self.st_syn]
         elif self.preprocess == "st":
             logger.info(f"preprocessing {len(self.st)} `st` waveforms")
             preprocess_list = [self.st]
         elif self.preprocess == "st_syn":
             logger.info(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
             preprocess_list = [self.st_syn]
-        elif self.preprocess == "both":
-            logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
-                        f"`st` and `st_syn` waveforms")
-            preprocess_list = [self.st, self.st_syn]
+
 
         for st in preprocess_list:
             # Fill any data gaps with mean of the data, do it on a trace by 
@@ -2368,7 +2370,7 @@ def parse_args():
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
-    parser.add_argument("-o", "--overwrite", default=False, action="store_true",
+    parser.add_argument("-o", "--overwrite", default=True, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--synsyn", default=False, action="store_true",
                         help="Let RecSec know that both `pysep_path` and "
