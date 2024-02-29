@@ -137,3 +137,24 @@ def test_recsec_calc_time_offset(recsec_w_synthetics):
     recsec_w_synthetics.get_parameters()
     for tr in recsec_w_synthetics.st:
         assert(tr.stats.time_offset == -100)
+
+def test_recsec_zero_amplitude(recsec):
+    """
+    waveforms that have zero amplitude and are normalized should be able 
+    to bypass normalizations which lead to weird plotting (see #131).
+
+    .. note::
+
+        This does not really test that the method is working correctly because
+        dividing a NumPy array by zero leads to NaNs in the array which just
+        won't plot. This is more of a visual test to make sure that the 
+        zero amplitude is plotting correctly, look for green lines
+    """
+    recsec.kwargs.scale_by = "normalize"
+    recsec.kwargs.obs_color = "green"
+    recsec.linewidth = 30
+    for tr in recsec.st:
+        tr.data *= 0
+    recsec.process_st()
+    recsec.get_parameters()
+    recsec.plot()

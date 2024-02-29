@@ -1698,6 +1698,8 @@ class RecordSection:
         linewidth = self.kwargs.get("linewidth", .25)
         window_alpha = self.kwargs.get("window_alpha", .1)
         window_color = self.kwargs.get("window_color", "orange")
+        obs_color = self.kwargs.get("obs_color", "k")
+        syn_color = self.kwargs.get("syn_color", "r")
 
         # Used to differentiate the two types of streams for plotting diffs
         choices = ["st", "st_syn"]
@@ -1739,7 +1741,14 @@ class RecordSection:
             amplitude_scaling = self.amplitude_scaling_syn
             max_amplitudes = self.max_amplitudes_syn
 
-        y = sign * tr.data / amplitude_scaling[idx] + self.y_axis[y_index]
+        # Avoid ZeroDivisionError if the amplitude scaling value is 0 (#131)
+        scale = amplitude_scaling[idx]
+        if scale == 0:
+            logger.warning("amplitude scaling value is 0, setting to 1, "
+                           "amplitude scaling may not behave as expected")
+            scale = 1
+
+        y = sign * tr.data / scale + self.y_axis[y_index]
 
         # Experimental: Plot windows over the record section if provided by User
         if self.windows and tr.id in self.windows:
@@ -1760,8 +1769,9 @@ class RecordSection:
 
         x = x[start:stop]
         y = y[start:stop]
-        self.ax.plot(x, y, c=["k", "r"][c], linewidth=linewidth, zorder=10)
-
+        self.ax.plot(x, y, c=[obs_color, syn_color][c], linewidth=linewidth, 
+                     zorder=10)
+        
         # Sanity check print station information to check against plot
         log_str = (f"{idx}"
                    f"\t{int(self.y_axis[y_index])}"
