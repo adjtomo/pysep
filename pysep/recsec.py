@@ -326,7 +326,6 @@ class RecordSection:
         :param min_period_s: minimum filter period in seconds
         :type max_period_s: float
         :param max_period_s: maximum filter period in seconds
-
         :type integrate: int
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
@@ -727,23 +726,23 @@ class RecordSection:
                 len(self.amplitude_scale_factor) != len(self.st):
             err.amplitude_scale_factor = f"must be list length {len(self.st)}"
 
+        acceptable_preprocess = [True, False, "st", "st_syn"]
+        if self.preprocess not in acceptable_preprocess:
+            err.preprocess = f"must be in {acceptable_preprocess}"
+
+        if self.preprocess in ["st_syn", True]:
+            assert(self.st is not None and self.st_syn is not None), (
+                f"`preprocess` choice requires both `st` & `st_syn` to exist."
+                f"If you only have one or the other, set: `preprocess`=='st'"
+            )
+
         if self.min_period_s is not None and self.max_period_s is not None:
             if self.min_period_s >= self.max_period_s:
                 err.min_period_s = "must be less than `max_period_s`"
 
         if self.min_period_s is not None or self.max_period_s is not None:
-            assert(self.preprocess is not None), \
+            assert(self.preprocess is not False), \
                 f"Setting filter bounds requires `preprocess` flag to be set"
-
-        if self.preprocess is not None:
-            acceptable_preprocess = ["both", "st", "st_syn"]
-            if self.preprocess not in acceptable_preprocess:
-                err.preprocess = f"must be in {acceptable_preprocess}"
-        if self.preprocess in ["st_syn", "both"]:
-            assert(self.st is not None and self.st_syn is not None), (
-                f"`preprocess` choice requires both `st` & `st_syn` to exist."
-                f"If you only have one or the other, set: `preprocess`=='st'"
-            )
 
         # Overwrite the max traces per record section, enforce type int
         if self.max_traces_per_rs is None:
