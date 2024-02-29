@@ -1515,55 +1515,60 @@ class RecordSection:
 
 
         for st in preprocess_list:
-            # Fill any data gaps with mean of the data, do it on a trace by 
-            # trace basis to get individual mean values
             if self.trim:
-                logger.info("trimming start and end times and filling gaps "
+                logger.debug("trimming start and end times and filling gaps "
                             "with mean trace value")
                 for tr in st:
                     tr.trim(starttime=tr.stats.starttime, 
                             endtime=tr.stats.endtime, pad=True, 
                             fill_value=tr.data.mean())
             
+            # Taper prior to zero pad so that the taper actually hits signal
             if self.taper:
-                logger.info(f"tapering waveforms with {max_percentage} taper")
+                # If we don't demean, then tapering may hit a static offset
+                logger.debug("demean waveform in preparation for tapering")
+                st.detrend("demean")
+
+                logger.debug(f"tapering waveforms with {max_percentage} taper")
                 st.taper(max_percentage=max_percentage, type="cosine")
 
             # Zero pad start and end of data if requested by user
             if self.zero_pad_s:
+                if not self.taper:
+                    # If we don't demean,  zero pad may introduce static offset
+                    logger.debug("demean waveform in preparation for zero pad")
+                    st.detrend("demean")
+
                 _start, _end = self.zero_pad_s
-                logger.info(f"padding zeros to traces with {_start}s before "
+                logger.debug(f"padding zeros to traces with {_start}s before "
                             f"and {_end}s after")
-                for idx, tr in enumerate(st):
+                for tr in st:
                     tr.trim(starttime=tr.stats.starttime - _start,
                             endtime=tr.stats.endtime + _end,
                             pad=True, fill_value=0)
 
-            # Max period only == high-pass filter
+            # Apply filtering 
             if self.min_period_s or self.max_period_s:
-                logger.info("demean waveform in preparation for filtering")
-                st.detrend("demean")
+                # Max period only == high-pass filter
                 if self.max_period_s and self.min_period_s is None:
-                    logger.info(f"apply highpass filter w/ cutoff "
+                    logger.debug(f"apply highpass filter w/ cutoff "
                                 f"{1/self.max_period_s}")
                     st.filter("highpass", freq=1/self.max_period_s, 
                               zerophase=zerophase)
                     
                 # Min period only == low-pass filter
                 elif self.min_period_s and self.max_period_s is None:
-                    logger.info(f"apply lowpass filter w/ cutoff "
+                    logger.debug(f"apply lowpass filter w/ cutoff "
                                 f"{1/self.min_period_s}")
                     st.filter("lowpass", freq=1/self.min_period_s, 
                               zerophase=zerophase)
                     
                 # Both min and max period == band-pass filter
                 elif self.min_period_s and self.max_period_s:
-                    logger.info(f"applying bandpass filter w/ "
+                    logger.debug(f"applying bandpass filter w/ "
                                 f"[{1/self.max_period_s}, {self.min_period_s}]")
                     st.filter("bandpass", freqmin=1/self.max_period_s,
                             freqmax=1/self.min_period_s, zerophase=zerophase)
-            else:
-                logger.info("no filtering applied")
 
             # Integrate or differentiate N number of times specified by user
             if self.integrate != 0:
