@@ -14,7 +14,7 @@ from obspy.core.event import Event, Origin, Magnitude
 
 from pysep import logger
 from pysep.utils.mt import moment_magnitude, seismic_moment
-from pysep.utils.fmt import format_event_tag_legacy, channel_code
+from pysep.utils.fmt import channel_code
 from pysep.utils.cap_sac import append_sac_headers, append_sac_headers_cartesian
 
 
@@ -496,6 +496,67 @@ def read_event_file(fid):
         list_out.append(dict_out)
 
     return list_out
+
+
+def read_asdfdataset(path, evaluation):
+    """
+    Read an ASDFDataSet created by a SeisFlows Pyaflowa inversion run. 
+    The dataset should contain observed and synthetic waveforms, and 
+    optionally contains misfit windows. Will return Streams with SAC headers
+
+    .. note::
+
+        This function makes assumptions about the PyASDF data structure which
+        is defined by the external package Pyatoa. If Pyatoa changes that
+        structure, this function will break.
+
+    :type path: str
+    :param path: Path to the ASDF dataset to be read
+    :type evaluation: str
+    :param evaluation: evaluation to take synthetics from. These are saved
+        following a format specified by Pyatoa, but usually follow the form
+        iteration/step_count, e.g., i01s00 gives iteration 1, step count 0.
+        Take a look at the waveform tags in `ASDFDataSet.waveforms[<station>]`
+        for tags following the 'synthetic_' prefix
+    """
+    # PySEP, by default will not require PyASDF to be installed
+    try:
+        from pyasdf import ASDFDataSet  # NOQA
+    except ImportError:
+        logger.critical("pyasdf is not installed. Please install pyasdf "
+                        "to read ASDF datasets")
+        return None, None
+
+    with ASDFDataSet(path) as ds:
+        event = ds.events[0]
+        st_out = Stream()
+        st_syn_out = Stream()
+        for station in ds.waveforms.list():
+            inv = ds.waveforms[station].StationXML
+            st = ds.waveforms[station].observed
+            st_syn = ds.waveforms[station][f"synthetic_{evaluation}"]
+
+            st_out += append_sac_headers(st, event, inv)
+            st_syn_out += append_sac_headers(st_syn, event, inv)
+
+        # Read windows from the dataset
+        windows = {}
+        if hasattr(ds.auxiliary_data, "MisfitWindows"):
+            iter_ = evaluation[:3]  # 'i01s00' -> 'i01'
+            step = evaluation[3:]
+            for station in ds.auxiliary_data.MisfitWindows[iter_][step].list():
+                parameters = ds.auxiliary_data.MisfitWindows[iter_][step][
+                    station].parameters
+                trace_id = parameters["channel_id"]
+                starttime = parameters["relative_starttime"]
+                endtime = parameters["relative_endtime"]    
+                # initialize empty window array
+                if trace_id not in windows:
+                    windows[trace_id] = []
+                
+                windows[trace_id].append((starttime, endtime))
+
+    return st_out, st_syn_out, windows
 
 
 def write_sem(st, unit, path="./", time_offset=0):

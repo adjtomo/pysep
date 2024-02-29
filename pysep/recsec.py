@@ -95,6 +95,7 @@ import matplotlib.pyplot as plt
 from glob import glob
 from datetime import datetime
 from matplotlib.ticker import MultipleLocator
+from matplotlib.patches import Rectangle
 from obspy import read, Stream
 from obspy.geodetics import (kilometers2degrees, gps2dist_azimuth)
 
@@ -126,7 +127,7 @@ class RecordSection:
     3) produces record section waveform figures.
     """
     def __init__(self, pysep_path=None, syn_path=None, 
-                 stations=None, source=None, st=None, st_syn=None, 
+                 stations=None, source=None, st=None, st_syn=None, windows=None,
                  sort_by="default", scale_by=None, time_shift_s=None, 
                  zero_pad_s=None, move_out=None, 
                  min_period_s=None, max_period_s=None,
@@ -197,6 +198,15 @@ class RecordSection:
         :type st_syn: obspy.core.stream.Stream
         :param st_syn: Stream objects containing synthetic time series to be
             plotted on the record section. Must be same length as `st`
+        :type windows: dict of lists of tuples
+        :param windows: EXPERIMENTAL FEATURE -- plot misfit windows collected
+            by windowing algorithm like Pyflex. Essentially these are provided
+            as start and end times for each trace in the Stream. The dictionary
+            should be formated where keys are the Trace IDs of observed
+            waveforms, and values are lists of tuples, where each tuple 
+            represents a window start and end time in seconds. See 
+            `pysep.utils.io.read_asdfdataset` for code on how windows are 
+            structured
 
         .. note::
             Waveform plotting organization parameters
@@ -519,6 +529,9 @@ class RecordSection:
         self.xlim_syn = []
         self.sorted_idx = []
 
+        # Experimental Feature
+        self.windows = windows
+
     def read_data(self, path, data_type, wildcard="*", source=None,
                   stations=None, srcfmt=None):
         """
@@ -611,7 +624,7 @@ class RecordSection:
         else:
             raise NotImplementedError("`data_type` must be 'data' or 'syn'")
 
-        return st
+        return st                
 
     def check_parameters(self):
         """
@@ -1683,6 +1696,8 @@ class RecordSection:
             to plot the observed or synthetic waveforms
         """
         linewidth = self.kwargs.get("linewidth", .25)
+        window_alpha = self.kwargs.get("window_alpha", .1)
+        window_color = self.kwargs.get("window_color", "orange")
 
         # Used to differentiate the two types of streams for plotting diffs
         choices = ["st", "st_syn"]
@@ -1715,7 +1730,7 @@ class RecordSection:
         else:
             sign = 1
 
-        # Ampplitude scaling may change between observed and synthetic if e.g.,
+        # Amplitude scaling may change between observed and synthetic if e.g.,
         # we are doing trace-wise normalization
         if choice == "st":
             amplitude_scaling = self.amplitude_scaling
@@ -1726,6 +1741,15 @@ class RecordSection:
 
         y = sign * tr.data / amplitude_scaling[idx] + self.y_axis[y_index]
 
+        # Experimental: Plot windows over the record section if provided by User
+        if self.windows and tr.id in self.windows:
+            for window in self.windows[tr.id]:
+                rc = Rectangle(xy=(window[0] + tshift, y.min()), 
+                               width=window[1] - window[0], 
+                               height=y.max() - y.min(), alpha=window_alpha, 
+                               color=window_color, zorder=2)
+                self.ax.add_patch(rc)
+                
         # Truncate waveforms to get figure scaling correct. Make the distinction
         # between data and synthetics which may have different start and end 
         # times natively
