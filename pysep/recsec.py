@@ -339,7 +339,7 @@ class RecordSection:
             and `min_period_s` also not given, then no filtering is applied
         :type trim: bool
         :param trim: trim waveforms to the same length, and if any data gaps
-            are present, fill with 
+            are present, fill with mean values by default
         :type integrate: int
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
@@ -746,7 +746,7 @@ class RecordSection:
         if self.preprocess not in acceptable_preprocess:
             err.preprocess = f"must be in {acceptable_preprocess}"
 
-        if self.preprocess in ["st_syn", True]:
+        if self.preprocess == "st_syn":
             assert(self.st is not None and self.st_syn is not None), (
                 f"`preprocess` choice requires both `st` & `st_syn` to exist."
                 f"If you only have one or the other, set: `preprocess`=='st'"
@@ -1507,7 +1507,7 @@ class RecordSection:
         Preprocess the Stream with optional filtering in place.
 
         .. note::
-        
+
             Data in memory will be irretrievably altered by running preprocess.
 
         .. warning::
@@ -1534,9 +1534,11 @@ class RecordSection:
             logger.info("no preprocessing will be applied to waveforms")
             return
         elif self.preprocess == True:
-            logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
-                        f"`st` and `st_syn` waveforms")
-            preprocess_list = [self.st, self.st_syn]
+            preprocess_list = [self.st]
+            if self.st_syn is not None:
+                preprocess_list.append(self.st_syn)
+            n = sum([len(_) for _ in preprocess_list])
+            logger.info(f"preprocessing {n} waveforms")
         elif self.preprocess == "st":
             logger.info(f"preprocessing {len(self.st)} `st` waveforms")
             preprocess_list = [self.st]
@@ -1548,9 +1550,9 @@ class RecordSection:
             if self.trim:
                 logger.debug("trimming start and end times and filling gaps "
                             f"with {fill_value}")
-                if fill_value == "mean":
-                    fill_value = tr.data.mean()
                 for tr in st:
+                    if fill_value == "mean":
+                        fill_value = tr.data.mean()
                     tr.trim(starttime=tr.stats.starttime, 
                             endtime=tr.stats.endtime, pad=True, 
                             fill_value=fill_value)
@@ -1597,8 +1599,10 @@ class RecordSection:
                     
                 # Both min and max period == band-pass filter
                 elif self.min_period_s and self.max_period_s:
-                    logger.debug(f"applying bandpass filter w/ "
-                                f"[{1/self.max_period_s}, {self.min_period_s}]")
+                    logger.debug(
+                        f"applying bandpass filter w/ "
+                        f"[{1/self.max_period_s}, {self.min_period_s}]"
+                        )
                     st.filter("bandpass", freqmin=1/self.max_period_s,
                             freqmax=1/self.min_period_s, zerophase=zerophase)
 
@@ -1610,8 +1614,8 @@ class RecordSection:
                 elif self.integrate > 0:
                     func = "integrate"
                 for _ in range(np.abs(self.integrate)):
-                    logger.info(f"{func} all waveform data 
-                                x{abs(self.integrate)}")
+                    logger.info(f"{func} all waveform data "
+                                f"x{abs(self.integrate)}")
                 getattr(st, func)()
 
     def plot(self, subset=None, page_num=None, **kwargs):
