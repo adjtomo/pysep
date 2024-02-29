@@ -131,7 +131,7 @@ class RecordSection:
                  sort_by="default", scale_by=None, time_shift_s=None, 
                  zero_pad_s=None, move_out=None, 
                  min_period_s=None, max_period_s=None,
-                 preprocess=True, max_traces_per_rs=None, integrate=0,
+                 preprocess=True, integrate=0, trim=True, taper=True, detrend=True
                  xlim_s=None, components="ZRTNE12", y_label_loc="default",
                  y_axis_spacing=1, amplitude_scale_factor=1,
                  azimuth_start_deg=0., distance_units="km", tmarks=None,
@@ -139,8 +139,9 @@ class RecordSection:
                  geometric_spreading_exclude=None,
                  geometric_spreading_ymax=None, geometric_spreading_save=None,
                  figsize=(9, 11), show=True, save="./record_section.png",
-                 overwrite=True, log_level="DEBUG", synsyn=False, srcfmt=None, 
-                 wildcard="*", syn_wildcard=None, **kwargs):
+                 overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+                 synsyn=False, srcfmt=None, wildcard="*", syn_wildcard=None, 
+                 **kwargs):
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -743,6 +744,13 @@ class RecordSection:
         if self.min_period_s is not None or self.max_period_s is not None:
             assert(self.preprocess is not False), \
                 f"Setting filter bounds requires `preprocess` flag to be set"
+            
+        # Do not allow for 0 period filter because that's wrong and will also
+        # trip up later logic checks
+        if self.min_period_s:
+            assert(self.min_period_s != 0) 
+        if self.max_period_s:
+            assert(self.max_period_s != 0) 
 
         # Overwrite the max traces per record section, enforce type int
         if self.max_traces_per_rs is None:
@@ -1488,8 +1496,11 @@ class RecordSection:
         TODO Add feature to allow list-like periods to individually filter
             seismograms. At the moment we just apply a blanket filter.
         """
+        max_percentage = self.kwargs.get("max_percentage", 0.05)
+        zerophase = self.kwargs.get("zerophase", True)
+
         if self.preprocess == False:
-            logger.info("no preprocessing (including filtering) applied")
+            logger.info("no preprocessing will be applied to waveforms")
             return
         elif self.preprocess == True:
             logger.info(f"preprocessing {len(self.st) + len(self.st_syn)} "
@@ -1506,11 +1517,17 @@ class RecordSection:
         for st in preprocess_list:
             # Fill any data gaps with mean of the data, do it on a trace by 
             # trace basis to get individual mean values
-            for tr in st:
-                tr.trim(starttime=tr.stats.starttime, endtime=tr.stats.endtime,
-                        pad=True, fill_value=tr.data.mean())
-            st.detrend("demean")
-            st.taper(max_percentage=0.05, type="cosine")
+            if self.trim:
+                logger.info("trimming start and end times and filling gaps "
+                            "with mean trace value")
+                for tr in st:
+                    tr.trim(starttime=tr.stats.starttime, 
+                            endtime=tr.stats.endtime, pad=True, 
+                            fill_value=tr.data.mean())
+            
+            if self.taper:
+                logger.info(f"tapering waveforms with {max_percentage} taper")
+                st.taper(max_percentage=max_percentage, type="cosine")
 
             # Zero pad start and end of data if requested by user
             if self.zero_pad_s:
@@ -1522,36 +1539,42 @@ class RecordSection:
                             endtime=tr.stats.endtime + _end,
                             pad=True, fill_value=0)
 
-            # Allow multiple filter options based on user input
-            # Max period only == high-pass
-            if self.max_period_s is not None and self.min_period_s is None:
-                logger.info(f"apply highpass filter w/ cutoff "
-                            f"{1/self.max_period_s}")
-                st.filter("highpass", freq=1/self.max_period_s, zerophase=True)
-            # Min period only == low-pass
-            elif self.min_period_s is not None and self.max_period_s is None:
-                logger.info(f"apply lowpass filter w/ cutoff "
-                            f"{1/self.min_period_s}")
-                st.filter("lowpass", freq=1/self.min_period_s, zerophase=True)
-            # Both min and max period == band-pass
-            elif self.min_period_s is not None and \
-                    self.max_period_s is not None:
-                logger.info(f"applying bandpass filter w/ "
-                            f"[{1/self.max_period_s}, {self.min_period_s}]")
-                st.filter("bandpass", freqmin=1/self.max_period_s,
-                          freqmax=1/self.min_period_s, zerophase=True)
+            # Max period only == high-pass filter
+            if self.min_period_s or self.max_period_s:
+                logger.info("demean waveform in preparation for filtering")
+                st.detrend("demean")
+                if self.max_period_s and self.min_period_s is None:
+                    logger.info(f"apply highpass filter w/ cutoff "
+                                f"{1/self.max_period_s}")
+                    st.filter("highpass", freq=1/self.max_period_s, 
+                              zerophase=zerophase)
+                    
+                # Min period only == low-pass filter
+                elif self.min_period_s and self.max_period_s is None:
+                    logger.info(f"apply lowpass filter w/ cutoff "
+                                f"{1/self.min_period_s}")
+                    st.filter("lowpass", freq=1/self.min_period_s, 
+                              zerophase=zerophase)
+                    
+                # Both min and max period == band-pass filter
+                elif self.min_period_s and self.max_period_s:
+                    logger.info(f"applying bandpass filter w/ "
+                                f"[{1/self.max_period_s}, {self.min_period_s}]")
+                    st.filter("bandpass", freqmin=1/self.max_period_s,
+                            freqmax=1/self.min_period_s, zerophase=zerophase)
             else:
                 logger.info("no filtering applied")
 
-            # Integrate and differentiate N number of times specified by user
-            st.detrend("simple")
+            # Integrate or differentiate N number of times specified by user
             if self.integrate != 0:
+                st.detrend("simple")
                 if self.integrate < 0:
                     func = "differentiate"
                 elif self.integrate > 0:
                     func = "integrate"
-            for i in range(np.abs(self.integrate)):
-                logger.info(f"{func} all waveform data x{abs(self.integrate)}")
+                for _ in range(np.abs(self.integrate)):
+                    logger.info(f"{func} all waveform data 
+                                x{abs(self.integrate)}")
                 getattr(st, func)()
 
     def plot(self, subset=None, page_num=None, **kwargs):
