@@ -126,22 +126,29 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(self, pysep_path=None, syn_path=None, 
-                 stations=None, source=None, st=None, st_syn=None, windows=None,
-                 sort_by="default", scale_by=None, time_shift_s=None, 
-                 zero_pad_s=None, move_out=None, 
-                 min_period_s=None, max_period_s=None,
-                 preprocess=True, integrate=0, trim=True, taper=True, detrend=True
-                 xlim_s=None, components="ZRTNE12", y_label_loc="default",
-                 y_axis_spacing=1, amplitude_scale_factor=1,
-                 azimuth_start_deg=0., distance_units="km", tmarks=None,
-                 geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
-                 geometric_spreading_exclude=None,
-                 geometric_spreading_ymax=None, geometric_spreading_save=None,
-                 figsize=(9, 11), show=True, save="./record_section.png",
-                 overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
-                 synsyn=False, srcfmt=None, wildcard="*", syn_wildcard=None, 
-                 **kwargs):
+    def __init__(
+            # Data input parameters
+            self, pysep_path=None, syn_path=None, stations=None, source=None, 
+            st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
+            wildcard="*", syn_wildcard=None, 
+            # Data organization parameters
+            sort_by="default", scale_by=None, time_shift_s=None, 
+            zero_pad_s=None, move_out=None, 
+            # Data processing parameters
+            preprocess=True, min_period_s=None, max_period_s=None, integrate=0, 
+            trim=True, taper=True,
+            # Plotting aesthetic 
+            xlim_s=None, components="ZRTNE12", y_label_loc="default",
+            y_axis_spacing=1, amplitude_scale_factor=1, azimuth_start_deg=0., 
+            distance_units="km", tmarks=None,
+            # Geometric Spreading
+            geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
+            geometric_spreading_exclude=None,
+            geometric_spreading_ymax=None, geometric_spreading_save=None,
+            # Figure generation control parameters
+            figsize=(9, 11), show=True, save="./record_section.png",
+            overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+            **kwargs):
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -317,16 +324,22 @@ class RecordSection:
             Data processing parameters
 
         :type preprocess: str
-        :param preprocess: choose which data to preprocess, options are:
+        :param preprocess: choose whether preprocessing steps listed below are 
+            applied to waveform data, and if so, which data are procesed:
 
             - True: process waveforms in both `st` and `st_syn` (Default)
             - False: do not run any processing on waveforms
-            - 'st': process waveforms in `st`
-            - 'st_syn': process waveforms in `st_syn`. st still must be given
+            - 'st': only process waveforms in `st`
+            - 'st_syn': only process waveforms in `st_syn`. st still required
         :type min_period_s: float
-        :param min_period_s: minimum filter period in seconds
+        :param min_period_s: minimum filter period in seconds, if not given 
+            and `max_period_s` also not given, then no filtering is applied
         :type max_period_s: float
-        :param max_period_s: maximum filter period in seconds
+        :param max_period_s: maximum filter period in seconds, if not given
+            and `min_period_s` also not given, then no filtering is applied
+        :type trim: bool
+        :param trim: trim waveforms to the same length, and if any data gaps
+            are present, fill with 
         :type integrate: int
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
@@ -490,12 +503,14 @@ class RecordSection:
             self.time_shift_s = time_shift_s
         self.zero_pad_s = zero_pad_s
 
-        # Filtering parameters
+        # Processing parameters
+        self.preprocess = preprocess
         self.min_period_s = min_period_s
         self.max_period_s = max_period_s
-        self.preprocess = preprocess
         self.max_traces_per_rs = max_traces_per_rs
         self.integrate = int(integrate)
+        self.trim = bool(trim)
+        self.taper = bool(taper)
 
         # Plotting parameters
         self.xlim_s = xlim_s
@@ -1486,19 +1501,35 @@ class RecordSection:
 
         return xtick_minor, xtick_major
 
-    def process_st(self):
+    def process_st(self, max_percentage=0.05, zerophase=True, 
+                   taper_type="cosine", fill_value="mean"):
         """
         Preprocess the Stream with optional filtering in place.
 
         .. note::
+        
             Data in memory will be irretrievably altered by running preprocess.
+
+        .. warning::
+
+            if `trim` is False but `zero_pad_s` is True we may run into the
+            issue of filling data gaps with zeros
 
         TODO Add feature to allow list-like periods to individually filter
             seismograms. At the moment we just apply a blanket filter.
-        """
-        max_percentage = self.kwargs.get("max_percentage", 0.05)
-        zerophase = self.kwargs.get("zerophase", True)
 
+        :type max_percentage: float
+        :param max_percentage: percentage of the trace to taper at both ends
+        :type zerophase: bool
+        :param zerophase: whether to apply zero-phase filtering or not,
+            defaults to True
+        :type taper_type: str
+        :param taper_type: type of taper to apply to the waveforms
+        :type fill_value: str or float
+        :param fill_value: value to fill gaps in the data after trimming, 
+            defaults to mean of the trace
+        """
+        # Determine which traces we are running through preprocessing
         if self.preprocess == False:
             logger.info("no preprocessing will be applied to waveforms")
             return
@@ -1513,15 +1544,16 @@ class RecordSection:
             logger.info(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
             preprocess_list = [self.st_syn]
 
-
         for st in preprocess_list:
             if self.trim:
                 logger.debug("trimming start and end times and filling gaps "
-                            "with mean trace value")
+                            f"with {fill_value}")
+                if fill_value == "mean":
+                    fill_value = tr.data.mean()
                 for tr in st:
                     tr.trim(starttime=tr.stats.starttime, 
                             endtime=tr.stats.endtime, pad=True, 
-                            fill_value=tr.data.mean())
+                            fill_value=fill_value)
             
             # Taper prior to zero pad so that the taper actually hits signal
             if self.taper:
@@ -1530,12 +1562,12 @@ class RecordSection:
                 st.detrend("demean")
 
                 logger.debug(f"tapering waveforms with {max_percentage} taper")
-                st.taper(max_percentage=max_percentage, type="cosine")
+                st.taper(max_percentage=max_percentage, type=taper_type)
 
             # Zero pad start and end of data if requested by user
             if self.zero_pad_s:
                 if not self.taper:
-                    # If we don't demean,  zero pad may introduce static offset
+                    # If we don't demean, zero pad may introduce static offset
                     logger.debug("demean waveform in preparation for zero pad")
                     st.detrend("demean")
 
