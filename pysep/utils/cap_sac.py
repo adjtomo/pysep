@@ -219,12 +219,14 @@ def _append_sac_headers_trace(tr, event, inv):
         evdp = event.preferred_origin().depth / 1E3  # units: km
         sac_header["evdp"] = evdp
     except Exception:  # NOQA
+        logger.warning("no event depth available for SAC header")
         pass
 
     try:
         mag = event.preferred_magnitude().mag
         sac_header["mag"] = mag
     except Exception:  # NOQA
+        logger.warning("no event magnitude available for SAC header")
         pass
 
     # Append SAC header and include back azimuth for rotation

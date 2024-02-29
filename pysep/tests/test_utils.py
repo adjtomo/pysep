@@ -59,6 +59,16 @@ def test_append_sac_headers(test_st, test_inv, test_event):
     assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
 
 
+def test_append_sac_headers_cartesian(test_st, test_inv, test_event):
+    """
+    Make sure we can write SAC headers correctly
+    """
+    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
+    assert(not hasattr(test_st[0].stats, "sac"))
+    assert(hasattr(st[0].stats, "sac"))
+    assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
+
+
 def test_event_tag_and_event_tag_legacy(test_event):
     """
     Check that event tagging works as expected
@@ -183,6 +193,7 @@ def test_read_sem_cartesian():
                        stations=test_stations)
     assert(st)
     assert(st[0].stats.sac.stla == 67000.0)
+    assert("evdp" in st[0].stats.sac)
 
 def test_estimate_prefilter_corners(test_st):
     """
