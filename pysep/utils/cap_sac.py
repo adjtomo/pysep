@@ -155,7 +155,7 @@ def _append_sac_headers_trace(tr, event, inv):
 
         We explicitely set 'iztype, 'b' and 'e' in the SAC header to tell ObsPy
         that the trace start is NOT the origin time. Otherwise all the relative
-        timing (e.g., picks) will be wrong.
+        timing (e.g., picks) in SAC will be wrong.
 
     :type tr: obspy.core.trace.Trace
     :param tr: Trace to append SAC header to
@@ -206,6 +206,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
+
     # Some Inventory objects will not go all the way to channel, only to station
     try:
         cha = sta[0]
@@ -219,16 +220,21 @@ def _append_sac_headers_trace(tr, event, inv):
         evdp = event.preferred_origin().depth / 1E3  # units: km
         sac_header["evdp"] = evdp
     except Exception:  # NOQA
-        logger.warning("no event depth available for SAC header")
         pass
 
     try:
         mag = event.preferred_magnitude().mag
         sac_header["mag"] = mag
     except Exception:  # NOQA
-        logger.warning("no event magnitude available for SAC header")
         pass
 
+    # Warn User that the following SAC headers could not be found
+    _warn_about = []
+    for key in ["cmpinc", "cmpaz", "evdp", "mag"]:
+        if key not in sac_header:
+            _warn_about.append(key)
+    logger.warning(f"no SAC header values found for: {_warn_about}")
+    
     # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
@@ -299,24 +305,29 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
     :rtype: obspy.core.trace.Trace
     :return: Trace with appended SAC header
     """
-    net_sta = f"{tr.stats.network}.{tr.stats.station}"
-
     src_y = event.preferred_origin().latitude
     src_x = event.preferred_origin().longitude
+    otime = event.preferred_origin().time
+    evdepth_km = event.preferred_origin().depth / 1E3  # units: m -> km
 
     # Calculate Cartesian distance and azimuth/backazimuth
     dist_m = np.sqrt(((rcv_x - src_x) ** 2) + ((rcv_y - src_y) ** 2))
+    dist_km = dist_m * 1E-3  # units: m -> km
+    dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
     azimuth = np.degrees(np.arctan2((rcv_x - src_x), (rcv_y - src_y))) % 360
     backazimuth = (azimuth - 180) % 360
-    otime = event.preferred_origin().time
-
-    # Barebones SAC header, we only append values required by RecSec
+    
     sac_header = {
+        "iztype": 9,  # Ref time equivalence, IB (9): Begin time
+        "b": tr.stats.starttime - otime,  # begin time
+        "e": tr.stats.npts * tr.stats.delta,  # end time
         "stla": rcv_y,
         "stlo": rcv_x,
         "evla": src_y,
         "evlo": src_x,
-        "dist": dist_m * 1E-3,  # units: km
+        "evdp": evdepth_km,
+        "dist": dist_km,
+        "gcarc": dist_deg,  # degrees
         "az": azimuth,
         "baz": backazimuth,
         "kevnm": format_event_tag_legacy(event),  # only take date code
@@ -326,7 +337,9 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
         "nzmin": otime.minute,
         "nzsec": otime.second,
         "nzmsec": otime.microsecond,
-        }
+        "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
+        "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
+    }
 
     tr.stats.sac = sac_header
 

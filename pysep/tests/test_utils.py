@@ -176,6 +176,14 @@ def test_read_sem():
         st += read_sem(fid=test_synthetic, source=test_cmtsolution,
                        stations=test_stations)
     assert(st)
+
+    expected_headers = ["iztype", "b", "e", "evla", "evlo", "stla", "stlo", 
+                        "stel", "kevnm", "nzyear", "nzjday", "nzhour", "nzmin", 
+                        "nzsec", "nzmsec", "dist", "az", "baz", "gcarc", 
+                        "lpspol", "lcalda", "evdp", "mag"]
+    for expected_header in expected_headers:
+        assert(expected_header in st[0].stats.sac)
+
     assert(st[0].stats.sac.evla == -40.5405)
 
 
@@ -192,8 +200,17 @@ def test_read_sem_cartesian():
         st += read_sem(fid=test_synthetic, source=test_cmtsolution,
                        stations=test_stations)
     assert(st)
+
+    expected_headers = ["iztype", "b", "e", "evla", "evlo", "stla", "stlo", 
+                        "kevnm", "nzyear", "nzjday", "nzhour", "nzmin", 
+                        "nzsec", "nzmsec", "dist", "az", "baz", "gcarc", 
+                        "lpspol", "lcalda", "evdp"]
+    for expected_header in expected_headers:
+        assert(expected_header in st[0].stats.sac)
+
     assert(st[0].stats.sac.stla == 67000.0)
-    assert("evdp" in st[0].stats.sac)
+    assert(st[0].stats.sac.evdp == 30.)
+    assert(st[0].stats.sac.b == -10.)
 
 def test_estimate_prefilter_corners(test_st):
     """
