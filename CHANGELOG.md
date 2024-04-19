@@ -69,6 +69,7 @@
 - Adds version release documentation
 - Slightly modifies pysep-docs conda environment to accomodate converted nbooks
 
+
 ## Version 0.5.0 
 - Improves functions 'read_forcesolution' and 'read_source', which now return
   `obspy.core.event.Event` objects, rather than the makeshift Source objects 
@@ -109,6 +110,15 @@
 - Removed unnused parameters 'legacy_naming' and 'log_level' from 
 	`Pysep.write_config`
 
+
 ## Version 0.5.1
 
 - Bugfix: RecSec subset streams, which checked that 'st' and 'st_syn' had the same stations, would not run for streams of the same length, leading to edge case where same length streams would plot out of order because they had not been sorted. removed the criteria and now subset streams runs at all times
+
+
+## Version 0.6.0
+
+- #136: New read function for ASDFDataSets for misfit window plotting
+- #137: More control over RecSec kwargs and better warning messages
+- #138: Improved SAC header creation for SPECFEM synthetics
+- #139: Improved RecSec preprocessing setup, more manual control for the User 

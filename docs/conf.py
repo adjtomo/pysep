@@ -15,7 +15,7 @@ def setup(app):
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'PySEP'
-copyright = '2023, adjTomo Dev Team'
+copyright = '2024, adjTomo Dev Team'
 author = 'adjTomo Dev Team'
 release = ''
 # Grab version number from 'pyproject.toml'

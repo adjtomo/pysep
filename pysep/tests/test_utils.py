@@ -59,6 +59,16 @@ def test_append_sac_headers(test_st, test_inv, test_event):
     assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
 
 
+def test_append_sac_headers_cartesian(test_st, test_inv, test_event):
+    """
+    Make sure we can write SAC headers correctly
+    """
+    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
+    assert(not hasattr(test_st[0].stats, "sac"))
+    assert(hasattr(st[0].stats, "sac"))
+    assert(st[0].stats.sac["evla"] == test_event.preferred_origin().latitude)
+
+
 def test_event_tag_and_event_tag_legacy(test_event):
     """
     Check that event tagging works as expected
@@ -166,6 +176,14 @@ def test_read_sem():
         st += read_sem(fid=test_synthetic, source=test_cmtsolution,
                        stations=test_stations)
     assert(st)
+
+    expected_headers = ["iztype", "b", "e", "evla", "evlo", "stla", "stlo", 
+                        "stel", "kevnm", "nzyear", "nzjday", "nzhour", "nzmin", 
+                        "nzsec", "nzmsec", "dist", "az", "baz", "gcarc", 
+                        "lpspol", "lcalda", "evdp", "mag"]
+    for expected_header in expected_headers:
+        assert(expected_header in st[0].stats.sac)
+
     assert(st[0].stats.sac.evla == -40.5405)
 
 
@@ -182,7 +200,17 @@ def test_read_sem_cartesian():
         st += read_sem(fid=test_synthetic, source=test_cmtsolution,
                        stations=test_stations)
     assert(st)
+
+    expected_headers = ["iztype", "b", "e", "evla", "evlo", "stla", "stlo", 
+                        "kevnm", "nzyear", "nzjday", "nzhour", "nzmin", 
+                        "nzsec", "nzmsec", "dist", "az", "baz", "gcarc", 
+                        "lpspol", "lcalda", "evdp"]
+    for expected_header in expected_headers:
+        assert(expected_header in st[0].stats.sac)
+
     assert(st[0].stats.sac.stla == 67000.0)
+    assert(st[0].stats.sac.evdp == 30.)
+    assert(st[0].stats.sac.b == -10.)
 
 def test_estimate_prefilter_corners(test_st):
     """
