@@ -269,7 +269,7 @@ def read_specfem2d_source(path_to_source, origin_time=None):
     # First set dummy origin time
     if origin_time is None:
         origin_time = "1970-01-01T00:00:00"
-        logger.warning("no origin time set for SPECFEM2D source, setting "
+        logger.info("no origin time set for SPECFEM2D source, setting "
                        f"dummy value: {origin_time}")
 
     with open(path_to_source, "r") as f:
