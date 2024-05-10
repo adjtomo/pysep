@@ -122,3 +122,8 @@
 - #137: More control over RecSec kwargs and better warning messages
 - #138: Improved SAC header creation for SPECFEM synthetics
 - #139: Improved RecSec preprocessing setup, more manual control for the User 
+
+## Version 0.6.1
+
+- Change log level from warning -> info for empty origin time when reading SPECFEM sources
+- Remove README doc page about publishing to PyPi, moved this to adjDocs

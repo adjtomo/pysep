@@ -340,6 +340,12 @@ class RecordSection:
         :type trim: bool
         :param trim: trim waveforms to the same length, and if any data gaps
             are present, fill with mean values by default
+        :type taper: bool
+        :param taper: if True, taper ends of waveform during preprocessing. Uses
+            keyword arguments `max_percentage` (float) to define the percentage
+            to taper, and `taper_type` (str) to define shape of the taper. See
+            ObsPy's stream.taper() function for acceptable values for these
+            arguments.
         :type integrate: int
         :param integrate: apply integration `integrate` times on all traces.
             acceptable values [-inf, inf], where positive values are integration
