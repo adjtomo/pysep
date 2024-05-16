@@ -11,7 +11,8 @@ from glob import glob
 from obspy import read, read_events, read_inventory, Stream
 from obspy.io.sac.sactrace import SACTrace
 from pysep.utils.cap_sac import (append_sac_headers,
-                                 format_sac_header_w_taup_traveltimes)
+                                 format_sac_header_w_taup_traveltimes,
+                                 write_cap_weights_files)
 from pysep.utils.curtail import (remove_for_clipped_amplitudes, rename_channels,
                                  remove_stations_for_missing_channels,
                                  remove_stations_for_insufficient_length,
@@ -99,6 +100,32 @@ def test_sac_header_correct_origin_time(tmpdir, test_st, test_inv, test_event):
     st[0].write(os.path.join(tmpdir, "test.sac"), format="SAC")  # only write 1
     sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
     assert(sac.reftime == test_event.preferred_origin().time)
+
+
+def test_write_cap_weights_files(tmpdir, test_st, test_inv, test_event):
+    """
+    Test writing out CAP weight files and make sure sorting works for distance
+    and code works as advertised. No testing for az sorting
+    """
+    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
+
+    # Check sorting by dist
+    write_cap_weights_files(st=st, path_out=tmpdir, order_by="dist")
+    assert(os.path.exists(os.path.join(tmpdir, "weights.dat")))
+    dists = np.loadtxt(os.path.join(tmpdir, "weights.dat"), usecols=1)
+    # Check that distances are in ascending order
+    assert(np.all(np.diff(dists) >= 0))
+
+    # Remove so we know that new files are being made each time
+    os.remove(os.path.join(tmpdir, "weights.dat"))
+
+    # Check sorting by code
+    write_cap_weights_files(st=st, path_out=tmpdir, order_by="code")
+    assert(os.path.exists(os.path.join(tmpdir, "weights.dat")))
+    codes = np.loadtxt(os.path.join(tmpdir, "weights.dat"), usecols=0, 
+                       dtype=str)
+    # Check that distances are in ascending order
+    assert(np.all(codes == np.sort(codes)))
 
 
 def test_rename_channels(test_st):
