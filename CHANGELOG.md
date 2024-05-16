@@ -127,3 +127,5 @@
 
 - Change log level from warning -> info for empty origin time when reading SPECFEM sources
 - Remove README doc page about publishing to PyPi, moved this to adjDocs
+- Hotfix: incorrect sorting in CAP weights file related to #144
+- Added some more to the RecSec docstring
