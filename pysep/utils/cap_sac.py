@@ -98,7 +98,7 @@ def write_cap_weights_files(st, path_out="./", order_by="dist"):
 
     # Order codes based on distance, name or azimuth
     idx = ["code", "dist", "az"].index(order_by)
-    code_list = np.array(code_list)
+    code_list = np.array(code_list, dtype="object")
     ordered_codes = code_list[code_list[:, idx].argsort()]
 
     logger.info("writing CAP weight files")
