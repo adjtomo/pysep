@@ -170,6 +170,13 @@ class Declust:
         self.max_lon = \
             self._user_max_lon or np.append(self.evlons, self.stalons).max()
 
+        # Round the domain to the nearest integer values to make things nice
+        logger.info("rounding min/max lat/lon bounds to nearest integer")
+        self.min_lat = np.floor(self.min_lat)
+        self.max_lat = np.ceil(self.max_lat)
+        self.min_lon = np.floor(self.min_lon)
+        self.max_lon = np.ceil(self.max_lon)
+
         # Determine data availability based on station "on" time
         if self.use_data_avail:
             self.data_avail = \
@@ -650,6 +657,7 @@ class Declust:
                             (np.abs(self.depths) < np.abs(z_bot)) &
                             (np.abs(self.depths) >= np.abs(z_top))
                         )[0]
+                    # If no depth information, then we only grid by lat/lon
                     else:
                         idxs = np.where(
                             (np.abs(self.evlons) < np.abs(x_right)) &
@@ -690,7 +698,8 @@ class Declust:
             self._plot_cartesian(
                 cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Pre-Declustered Event Catalog N={len(self.cat)}",
-                save=os.path.join(plot_dir, f"dc0_pre_decluster_crtsn.png")
+                save=os.path.join(plot_dir, f"dc0_pre_decluster_crtsn.png"),
+                **kwargs
             )
             # Plot the declustered catalog
             self._plot_cartesian(
@@ -698,6 +707,7 @@ class Declust:
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
                 save=os.path.join(plot_dir, f"dc1_declustered_crtsn.png"),
+                **kwargs
             )
             # Plot events that were removed during declustering
             cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
@@ -705,7 +715,8 @@ class Declust:
             self._plot_cartesian(
                 cat=cat_rem, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Removed Events N={len(cat_rem)}",
-                save=os.path.join(plot_dir, f"dc2_removed_crtsn.png")
+                save=os.path.join(plot_dir, f"dc2_removed_crtsn.png"),
+                **kwargs
             )
 
         return cat_out
@@ -847,10 +858,10 @@ class Declust:
             )
         return cat_out
 
-    def plot(self, cat=None, inv=None, color_by="depth",
-             connect_data_avail=False, vmin=None, vmax=None, title=None,
-             cmap="inferno_r", show=True, save=None, equal_scale=False,
-             **kwargs):
+    def plot(self, cat=None, inv=None, color_by="depth", 
+             connect_data_avail=False, vmin=None, vmax=None, 
+             title=None, cmap="inferno_r", show=True, save=None, 
+             equal_scale=False, **kwargs):
         """
         Geranalized plot function used to plot an event catalog and station
         inventory.
@@ -888,6 +899,10 @@ class Declust:
         :type equal_scale: bool
         :param equal_scale: set the scale of lat and lon equal, False by default
         """
+        # Main plotting kwargs
+        figsize = kwargs.get("figsize", (8, 6))
+        dpi = kwargs.get("dpi", 100)
+                             
         # Fine-tuning look of the plot with reasonable defaults
         event_marker = kwargs.get("event_marker", "o")
         event_legend_mags = kwargs.get("event_legend_mags", [4, 5, 6])
@@ -941,7 +956,7 @@ class Declust:
         else:
             data = None
 
-        f, ax = plt.subplots()
+        f, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
         # Normalize exp of magnitudes between `a` and `b` to get good size diff.
         legend_mags = sorted(event_legend_mags, reverse=True)
@@ -1039,8 +1054,8 @@ class Declust:
                     fontsize=7, transform=ax.transAxes, ha="center", zorder=15)
 
         # Adjust linewidths and fontsizes to make the figure look nicer
-        set_plot_aesthetic(ax, xtick_major=5, xtick_minor=1, ytick_major=5,
-                           ytick_minor=1, ytick_fontsize=12,
+        set_plot_aesthetic(ax, xtick_major=5, xtick_minor=5, ytick_major=5,
+                           ytick_minor=5, ytick_fontsize=12,
                            xtick_fontsize=12, xlabel_fontsize=15,
                            ylabel_fontsize=15, title_fontsize=15,
                            xgrid_major=False, xgrid_minor=False,
@@ -1054,29 +1069,37 @@ class Declust:
 
         return f, ax
 
-    def _plot_cartesian(self, cat, inv, xedges, yedges, title, save):
+    def _plot_cartesian(self, cat, inv, xedges, yedges, title, save, **kwargs):
         """Convenience function to plot catalogs with edges"""
         f, ax = self.plot(
             cat=cat, inv=inv, show=False, save=None, title=title,
-            color_by="depth", vmin=0, vmax=self.depths.max()
+            color_by="depth", vmin=0, vmax=self.depths.max(), **kwargs
         )
-        lkwargs = dict(c="k", linewidth=0.5, alpha=0.5)
+        lkwargs = dict(c="g", linewidth=0.5, alpha=0.5)
+        ekwargs = dict(c="g", linewidth=1.0, alpha=1.0)
 
         # Add gridlines to the plot
-        for xe in xedges:
-            ax.axvline(xe, **lkwargs)
-        for ye in yedges:
-            ax.axhline(ye, **lkwargs)
+        for i, xe in enumerate(xedges):
+            # delineate the border lines
+            if i in [0, len(xedges) - 1]:
+                ax.axvline(xe, **ekwargs)
+            else:
+                ax.axvline(xe, **lkwargs)
+        for j, ye in enumerate(yedges):
+            if j in [0, len(yedges) - 1]:
+                ax.axhline(ye, **ekwargs)
+            else:
+                ax.axhline(ye, **lkwargs)
 
         plt.savefig(save)
         plt.close()
 
     def _plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
-                    title, save):
+                    title, save, **kwargs):
         """Convenience function to plot catalogs with radial bin lines"""
         f, ax = self.plot(
             cat=cat, inv=inv, show=False, save=None, title=title,
-            color_by="depth", vmin=0, vmax=self.depths.max()
+            color_by="depth", vmin=0, vmax=self.depths.max(), **kwargs
         )
 
         ax.scatter(mid_lon, mid_lat, c="y", edgecolor="k", marker="o", s=10,
