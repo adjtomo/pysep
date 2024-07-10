@@ -286,9 +286,8 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
 
 def set_plot_aesthetic(
         ax, ytick_fontsize=8., xtick_fontsize=12., tick_linewidth=1.5,
-        tick_length=5., tick_length_minor=None, tick_direction="in", 
-        xlabel_fontsize=10., ylabel_fontsize=10., axis_linewidth=2., 
-        spine_zorder=8, spine_top=True,
+        tick_length=5., tick_direction="in", xlabel_fontsize=10.,
+        ylabel_fontsize=10., axis_linewidth=2., spine_zorder=8, spine_top=True,
         spine_bot=True, spine_left=True, spine_right=True, title_fontsize=10.,
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
@@ -308,9 +307,6 @@ def set_plot_aesthetic(
     :param tick_linewidth: thickness of tick marks for both X and Y axes
     :type tick_length: float
     :param tick_length: length of tick marks for both X and Y axes
-    :type tick_length_minor: float
-    :param tick_length_minor: optional override of minor tick length, if not
-        given then minor ticks will take on `tick_length` length value
     :type tick_direction: str
     :param tick_direction: 'in' for ticks pointing inwards, 'out' for ticks
         pointing outwards
@@ -353,10 +349,7 @@ def set_plot_aesthetic(
     """
     ax.title.set_fontsize(title_fontsize)
     ax.tick_params(axis="both", which="both", width=tick_linewidth,
-                   direction=tick_direction, length=tick_length)
-    if tick_length_minor:
-        ax.tick_params(axis="both", which="minor", width=tick_linewidth,
-                       direction=tick_direction, length=tick_length_minor)
+                        direction=tick_direction, length=tick_length)
     ax.tick_params(axis="x", labelsize=xtick_fontsize)
     ax.tick_params(axis="y", labelsize=ytick_fontsize)
     ax.xaxis.label.set_size(xlabel_fontsize)
