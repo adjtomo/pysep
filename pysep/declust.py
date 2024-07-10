@@ -690,14 +690,14 @@ class Declust:
             self._plot_cartesian(
                 cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Pre-Declustered Event Catalog N={len(self.cat)}",
-                save=os.path.join(plot_dir, f"pre_decluster_crtsn.png")
+                save=os.path.join(plot_dir, f"dc0_pre_decluster_crtsn.png")
             )
             # Plot the declustered catalog
             self._plot_cartesian(
                 cat=cat_out, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
-                save=os.path.join(plot_dir, f"declustered_crtsn.png"),
+                save=os.path.join(plot_dir, f"dc1_declustered_crtsn.png"),
             )
             # Plot events that were removed during declustering
             cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
@@ -705,7 +705,7 @@ class Declust:
             self._plot_cartesian(
                 cat=cat_rem, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Removed Events N={len(cat_rem)}",
-                save=os.path.join(plot_dir, f"removed_crtsn.png")
+                save=os.path.join(plot_dir, f"dc2_removed_crtsn.png")
             )
 
         return cat_out
@@ -830,20 +830,20 @@ class Declust:
             self._plot_polar(
                 self.cat, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Pre-Declustering Event Catalog N={len(self.cat)}",
-                save=os.path.join(plot_dir, f"pre_decluster_plr.png")
+                save=os.path.join(plot_dir, f"dc0_pre_decluster_plr.png")
             )
             self._plot_polar(
                 cat_out, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
-                save=os.path.join(plot_dir, f"decluster_plr.png")
+                save=os.path.join(plot_dir, f"dc1_decluster_plr.png")
             )
             # Plot events that were removed during declustering
             cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
             self._plot_polar(
                 cat_rem, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Removed Events N={len(cat_rem)}\n",
-                save=os.path.join(plot_dir, f"removed_plr.png")
+                save=os.path.join(plot_dir, f"dc2_removed_plr.png")
             )
         return cat_out
 
@@ -1043,8 +1043,8 @@ class Declust:
                            ytick_minor=1, ytick_fontsize=12,
                            xtick_fontsize=12, xlabel_fontsize=15,
                            ylabel_fontsize=15, title_fontsize=15,
-                           xgrid_major=True, xgrid_minor=False,
-                           ygrid_major=True, ygrid_minor=False
+                           xgrid_major=False, xgrid_minor=False,
+                           ygrid_major=False, ygrid_minor=False
                            )
 
         if save:
