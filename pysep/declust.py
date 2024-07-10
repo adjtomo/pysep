@@ -1046,12 +1046,14 @@ class Declust:
         # Generate a scale bar for magnitude sizes. Must do this after setting
         # the x limit because we will plot based on axis display coordinates
         # Display the `legend_mags` as black markers at the top left of axis
-        for i, x in enumerate([0.02, 0.05, 0.095]):
-            index = -1 * (i + 1)   # -1, -2, -3,...
-            ax.scatter(x, 0.95, s=mags[index], c="w", edgecolor="k",
-                       linewidth=1, transform=ax.transAxes, zorder=15)
-            ax.text(x, 0.9, s=f"{int(legend_mags[index]):d}", c="k",
-                    fontsize=7, transform=ax.transAxes, ha="center", zorder=15)
+        if self.use_magnitudes:
+            for i, x in enumerate([0.02, 0.05, 0.095]):
+                index = -1 * (i + 1)   # -1, -2, -3,...
+                ax.scatter(x, 0.95, s=mags[index], c="w", edgecolor="k",
+                           linewidth=1, transform=ax.transAxes, zorder=15)
+                ax.text(x, 0.9, s=f"{int(legend_mags[index]):d}", c="k",
+                        fontsize=7, transform=ax.transAxes, ha="center", 
+                        zorder=15)
 
         # Adjust linewidths and fontsizes to make the figure look nicer
         set_plot_aesthetic(ax, xtick_major=5, xtick_minor=5, ytick_major=5,
