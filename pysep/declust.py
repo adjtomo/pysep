@@ -6,6 +6,15 @@ Provides routines for downsizing an event catalog by performing a declustering
 algorithm to remove nearby stations, and also implements a weighting scheme to
 promote unique source receiver pairs.
 
+.. rubric::
+
+    from pysep import Declust
+
+    dc = Declust(cat=cat)
+    dc.threshold_catalog()  # used to kick out events outside given criteria
+    dc.decluster_events(nx=10, ny=10)   # Cartesian declusterig
+
+
 :authors:
     adjTomo Dev Team (2023)  
     Amanda McPherson (2021)  
@@ -24,7 +33,8 @@ class Declust:
     """
     Declustering class in charge of declustering and source receiver weighting
     """
-    def __init__(self, cat, inv=None, data_avail=None, min_lat=None,
+    def __init__(self, cat, inv=None, data_avail=None, use_data_avail=True,
+                 use_magnitudes=True, use_depths=True, min_lat=None,
                  max_lat=None, min_lon=None, max_lon=None):
         """
         User-input parameters to determine algorithm behavior
@@ -33,7 +43,10 @@ class Declust:
         :param cat: Catalog of events to consider. Events must include origin
             information `latitude` and `longitude`
         :type inv: obspy.core.inventory.Inventory
-        :param inv: Inventory of stations to consider
+        :param inv: Inventory of stations to consider, require station "uptime",
+            will be used for selecting events based on data availability, and 
+            plotting. If not provided, decluster will only be done by
+            geographic location
         :type data_avail: dict
         :param data_avail: If None, Declust assumes that all events in `cat`
             were recorded by all stations in `inv`. This is typically not the
@@ -59,6 +72,11 @@ class Declust:
         """
         self.cat = cat
         self.inv = inv
+
+        # Flags for additional constraint information in declustering
+        self.use_data_avail = use_data_avail
+        self.use_magnitudes = use_magnitudes
+        self.use_depths = use_depths
 
         # Allow a user-defined bounding box to define the region. Otherwise
         # will be set based on the min/max values of the Cat and Inv
@@ -112,16 +130,23 @@ class Declust:
         self.evlons = np.array(
             [event.preferred_origin().longitude for event in cat]
         )
-        # Get additional information about events
-        self.depths = np.array(
-            [event.preferred_origin().depth * 1E-3 for event in cat]
-        )
-        self.mags = np.array(
-            [event.preferred_magnitude().mag for event in cat]
-        )
+        # Get optional, additional information about events
         self.evids = np.array(
             [event.resource_id.id for event in cat]
         )
+        if self.use_depths:
+            self.depths = np.array(
+                [event.preferred_origin().depth * 1E-3 for event in cat]
+            )
+        else:
+            self.depths = np.zeros(len(cat))
+
+        if self.use_magnitudes:
+            self.mags = np.array(
+                [event.preferred_magnitude().mag for event in cat]
+            )
+        else:
+            self.mags = np.zeros(len(cat))
 
         # Get information on stations
         self.stalats, self.stalons, self.staids = [], [], []
@@ -146,11 +171,13 @@ class Declust:
             self._user_max_lon or np.append(self.evlons, self.stalons).max()
 
         # Determine data availability based on station "on" time
-        self.data_avail = \
-            self._user_data_avail or get_data_availability(cat, inv)
+        if self.use_data_avail:
+            self.data_avail = \
+                self._user_data_avail or get_data_availability(cat, inv)
 
-        # Count the number of availabler stations for the entire catalog
-        self.navail = np.array([len(val) for val in self.data_avail.values()])
+            # Count the number of availabler stations for the entire catalog
+            self.navail = np.array([len(val) for val in 
+                                    self.data_avail.values()])
 
     def threshold_catalog(self, zedges=None, min_mags=None, min_data=None):
         """
@@ -515,7 +542,7 @@ class Declust:
 
         if zedges is None:
             logger.warning("`zedges` not set, all depth values will be "
-                           "weighted equally")
+                        "weighted equally")
             zedges = [min(self.depths), max(self.depths)]
             assert(isinstance(nkeep, int)), (
                 f"if `zedges` not given , `nkeep` should be an integer"
@@ -614,14 +641,22 @@ class Declust:
                     # Determine the indices that define the events in cell
                     # Use absolute values to only avoid negative signs causing
                     # indexing issues
-                    idxs = np.where(
-                        (np.abs(self.evlons) < np.abs(x_right)) &
-                        (np.abs(self.evlons) >= np.abs(x_left)) &
-                        (np.abs(self.evlats) >= np.abs(y_bot)) &
-                        (np.abs(self.evlats) < np.abs(y_top)) &
-                        (np.abs(self.depths) < np.abs(z_bot)) &
-                        (np.abs(self.depths) >= np.abs(z_top))
-                    )[0]
+                    if self.use_depths:
+                        idxs = np.where(
+                            (np.abs(self.evlons) < np.abs(x_right)) &
+                            (np.abs(self.evlons) >= np.abs(x_left)) &
+                            (np.abs(self.evlats) >= np.abs(y_bot)) &
+                            (np.abs(self.evlats) < np.abs(y_top)) &
+                            (np.abs(self.depths) < np.abs(z_bot)) &
+                            (np.abs(self.depths) >= np.abs(z_top))
+                        )[0]
+                    else:
+                        idxs = np.where(
+                            (np.abs(self.evlons) < np.abs(x_right)) &
+                            (np.abs(self.evlons) >= np.abs(x_left)) &
+                            (np.abs(self.evlats) >= np.abs(y_bot)) &
+                            (np.abs(self.evlats) < np.abs(y_top)) 
+                        )[0]
                     # Ignore empty cells
                     if idxs.size == 0:
                         continue
@@ -880,10 +915,20 @@ class Declust:
         else:
             evlats = np.array([e.preferred_origin().latitude for e in cat])
             evlons = np.array([e.preferred_origin().longitude for e in cat])
-            mags = np.array([event.preferred_magnitude().mag for event in cat])
-            depths = np.array([event.preferred_origin().depth * 1E-3 for
-                               event in cat])
-            data_avail = get_data_availability(cat, inv)
+            if self.use_magnitudes:
+                mags = np.array([event.preferred_magnitude().mag 
+                                 for event in cat])
+            else:
+                mags = np.zeros(len(cat))
+            if self.use_depths:
+                depths = np.array([event.preferred_origin().depth * 1E-3 for
+                                   event in cat])
+            else:
+                depths = np.zeros(len(cat))
+            if self.use_data_avail:
+                data_avail = get_data_availability(cat, inv)
+            else:
+                data_avail = None
 
         if connect_data_avail:
             assert(inv is not None), f"`connect_data_avail` requires `inv`"
@@ -891,7 +936,10 @@ class Declust:
                 f"`connect_data_avail` requires `data_avail`"
 
         # Calculate number of stations on for each event
-        data = np.array([len(val) for val in data_avail.values()])
+        if self.use_data_avail:
+            data = np.array([len(val) for val in data_avail.values()])
+        else:
+            data = None
 
         f, ax = plt.subplots()
 
@@ -1042,3 +1090,4 @@ class Declust:
 
         plt.savefig(save)
         plt.close()
+
