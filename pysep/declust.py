@@ -8,11 +8,20 @@ promote unique source receiver pairs.
 
 .. rubric::
 
+    from obspy import read_events, read_inventory
     from pysep import Declust
 
+    cat = read_events("path/to/catalog.xml")  # User-defined event catalog
+    inv = read_inventory("path/to/inventory.xml")  # Optional station metadata
+
     dc = Declust(cat=cat)
-    dc.threshold_catalog()  # used to kick out events outside given criteria
-    dc.decluster_events(nx=10, ny=10)   # Cartesian declusterig
+    
+    # Remove events based on magnitude or data thresholds
+    dc.threshold_catalog(zedges=[0, 10, 50], min_mags=[4, 5])  
+
+    # Main processing function
+    dc.decluster_events(nx=10, ny=10, choice='cartesian', select_by='depth', 
+                        plot=True)   
 
 
 :authors:
