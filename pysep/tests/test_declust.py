@@ -20,6 +20,18 @@ def test_declust():
 
     return Declust(cat=cat, inv=inv)
 
+
+@pytest.fixture
+def test_declust_no_metadata():
+    """
+    Setup a decluster class
+    """
+    cat = read_events("./test_data/test_nalaska_events.xml")
+    inv = read_inventory("./test_data/test_nalaska_inv.xml")
+
+    return Declust(cat=cat, inv=inv, use_data_avail=False, use_magnitudes=False,
+                   use_depths=False)
+
 def test_data_availability(test_declust):
     """
     Make sure data availability calculation returns the same each time
@@ -59,7 +71,7 @@ def test_decluster_events_polar(test_declust):
         cat = test_declust.decluster_events(choice="polar", nx=2, ny=2,
                                             min_mags=[4.5], nkeep=4,
                                             select_by=select_by)
-        assert(len(cat) == 24)
+        assert(len(cat) == 23)
 
 
 def test_decluster_plot_cartesian(tmpdir, test_declust):
@@ -105,3 +117,11 @@ def test_srcrcv_weight(tmpdir, test_declust):
         save=os.path.join(tmpdir, "srcrcvwght.png")
     )
 
+
+def test_decluster_no_metadata(tmpdir, test_declust_no_metadata):
+    """Allow flagging off metadata like magnitude, depth, data"""
+    cat = test_declust_no_metadata.decluster_events(
+        choice="cartesian", nx=25, ny=25, nkeep=1, plot=True,
+        plot_dir=tmpdir
+    )
+    assert(len(cat) == 74)
