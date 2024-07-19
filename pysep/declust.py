@@ -188,8 +188,13 @@ class Declust:
 
         # Determine data availability based on station "on" time
         if self.use_data_avail:
-            self.data_avail = \
-                self._user_data_avail or get_data_availability(cat, inv)
+            # Need to make sure we are curtailing this original list each time
+            if self._user_data_avail:
+                self.data_avail = {event_id: [] for event_id in self.evids}
+                for key in self.data_avail.keys():
+                    self.data_avail[key] = self._user_data_avail[key]
+            else:
+                self.data_avail = get_data_availability(cat, inv)
 
             # Count the number of availabler stations for the entire catalog
             self.navail = np.array([len(val) for val in 
@@ -284,7 +289,8 @@ class Declust:
                     cat_flag[idxs_remove] *= 0
 
         logger.info(f"event thresholding removed "
-                    f"{len(self.cat) - cat_flag.sum()} events from cat")
+                    f"{len(self.cat) - cat_flag.sum()} events from cat "
+                    f"(originally {len(self.cat)})")
 
         # Updates the internal Catalog and metadata in place
         self.cat = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
@@ -707,27 +713,32 @@ class Declust:
         cat_out = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
 
         if plot:
+            og_cat = self.cat  # original
+            dc_cat = cat_out   # declustered
+            rm_cat = index_cat(cat=self.cat,   # removed
+                               idxs=np.where(cat_flag == 0)[0])
+
             # Plot the original catalog
             self.plot_cartesian(
-                cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
+                cat=og_cat, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Pre-Declustered Event Catalog N={len(self.cat)}",
                 save=os.path.join(plot_dir, f"pre_decluster_crtsn.png"),
                 **kwargs
             )
             # Plot the declustered catalog
+            self.update_metadata(cat=dc_cat)
             self.plot_cartesian(
-                cat=cat_out, inv=self.inv, xedges=xedges, yedges=yedges,
-                title=f"Declustered Event Catalog N={len(cat_out)}\n"
+                cat=dc_cat, inv=self.inv, xedges=xedges, yedges=yedges,
+                title=f"Declustered Event Catalog N={len(dc_cat)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
                 save=os.path.join(plot_dir, f"declustered_crtsn.png"),
                 **kwargs
             )
             # Plot events that were removed during declustering
-            cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
-
+            self.update_metadata(cat=rm_cat)
             self.plot_cartesian(
-                cat=cat_rem, inv=self.inv, xedges=xedges, yedges=yedges,
-                title=f"Removed Events N={len(cat_rem)}",
+                cat=rm_cat, inv=self.inv, xedges=xedges, yedges=yedges,
+                title=f"Removed Events N={len(rm_cat)}",
                 save=os.path.join(plot_dir, f"removed_crtsn.png"),
                 **kwargs
             )
@@ -966,7 +977,6 @@ class Declust:
         # Calculate number of stations on for each event
         if self.use_data_avail:
             data = np.array([len(val) for val in data_avail.values()])
-
         else:
             data = None
 
@@ -1090,8 +1100,7 @@ class Declust:
 
         f, ax = self.plot(
             cat=cat, inv=inv, show=False, save=None, title=title,
-            # color_by="depth", vmin=0, vmax=self.depths.max(), **kwargs
-            color_by="data", **kwargs
+            color_by="depth", vmin=0, vmax=self.depths.max(), **kwargs
         )
         lkwargs = dict(c="g", linewidth=0.5, alpha=0.5)
         ekwargs = dict(c="g", linewidth=1.0, alpha=1.0)
@@ -1108,6 +1117,11 @@ class Declust:
                 ax.axhline(ye, **ekwargs)
             else:
                 ax.axhline(ye, **lkwargs)
+
+        # Hijack the limits since we know the boundaries of the grid
+        buff = 1
+        plt.xlim([xedges[0] - buff, xedges[-1] + buff])
+        plt.ylim([yedges[0] - buff, yedges[-1] + buff])
 
         plt.savefig(save)
         plt.close()
