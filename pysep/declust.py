@@ -247,11 +247,15 @@ class Declust:
         for i, z_top in enumerate(zedges[:-1]):
             z_bot = zedges[i+1]
 
-            # Deal with one depth partition at a time
-            idxs = np.where(
-                (np.abs(self.depths) < np.abs(z_bot)) &
-                (np.abs(self.depths) >= np.abs(z_top))
-            )[0]
+            if self.use_depths:
+                # Deal with one depth partition at a time
+                idxs = np.where(
+                    (np.abs(self.depths) < np.abs(z_bot)) &
+                    (np.abs(self.depths) >= np.abs(z_top))
+                )[0]
+            else:
+                # Otherwise we will run this only one time for all events
+                idxs = np.arange(0, len(self.cat))
 
             # Kick out events with magnitudes below a certain threshold
             if min_mags is not None:
@@ -704,14 +708,14 @@ class Declust:
 
         if plot:
             # Plot the original catalog
-            self._plot_cartesian(
+            self.plot_cartesian(
                 cat=self.cat, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Pre-Declustered Event Catalog N={len(self.cat)}",
                 save=os.path.join(plot_dir, f"pre_decluster_crtsn.png"),
                 **kwargs
             )
             # Plot the declustered catalog
-            self._plot_cartesian(
+            self.plot_cartesian(
                 cat=cat_out, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
@@ -721,7 +725,7 @@ class Declust:
             # Plot events that were removed during declustering
             cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
 
-            self._plot_cartesian(
+            self.plot_cartesian(
                 cat=cat_rem, inv=self.inv, xedges=xedges, yedges=yedges,
                 title=f"Removed Events N={len(cat_rem)}",
                 save=os.path.join(plot_dir, f"removed_crtsn.png"),
@@ -847,12 +851,12 @@ class Declust:
         cat_out = index_cat(cat=self.cat, idxs=np.where(cat_flag == 1)[0])
 
         if plot:
-            self._plot_polar(
+            self.plot_polar(
                 self.cat, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Pre-Declustering Event Catalog N={len(self.cat)}",
                 save=os.path.join(plot_dir, f"pre_decluster_plr.png")
             )
-            self._plot_polar(
+            self.plot_polar(
                 cat_out, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Declustered Event Catalog N={len(cat_out)}\n"
                       f"(zedges={zedges} / nkeep={nkeep})",
@@ -860,7 +864,7 @@ class Declust:
             )
             # Plot events that were removed during declustering
             cat_rem = index_cat(cat=self.cat, idxs=np.where(cat_flag == 0)[0])
-            self._plot_polar(
+            self.plot_polar(
                 cat_rem, self.inv, evrad, theta_array, mid_lon, mid_lat,
                 title=f"Removed Events N={len(cat_rem)}\n",
                 save=os.path.join(plot_dir, f"removed_plr.png")
@@ -962,6 +966,7 @@ class Declust:
         # Calculate number of stations on for each event
         if self.use_data_avail:
             data = np.array([len(val) for val in data_avail.values()])
+
         else:
             data = None
 
@@ -1080,11 +1085,13 @@ class Declust:
 
         return f, ax
 
-    def _plot_cartesian(self, cat, inv, xedges, yedges, title, save, **kwargs):
+    def plot_cartesian(self, cat, inv, xedges, yedges, title, save, **kwargs):
         """Convenience function to plot catalogs with edges"""
+
         f, ax = self.plot(
             cat=cat, inv=inv, show=False, save=None, title=title,
-            color_by="depth", vmin=0, vmax=self.depths.max(), **kwargs
+            # color_by="depth", vmin=0, vmax=self.depths.max(), **kwargs
+            color_by="data", **kwargs
         )
         lkwargs = dict(c="g", linewidth=0.5, alpha=0.5)
         ekwargs = dict(c="g", linewidth=1.0, alpha=1.0)
@@ -1105,7 +1112,7 @@ class Declust:
         plt.savefig(save)
         plt.close()
 
-    def _plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
+    def plot_polar(self, cat, inv, evrad, theta_array, mid_lon, mid_lat,
                     title, save, **kwargs):
         """Convenience function to plot catalogs with radial bin lines"""
         f, ax = self.plot(
