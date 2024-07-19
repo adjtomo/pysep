@@ -950,7 +950,7 @@ class Declust:
             else:
                 depths = np.zeros(len(cat))
             if self.use_data_avail:
-                data_avail = get_data_availability(cat, inv)
+                data_avail = self.data_avail
             else:
                 data_avail = None
 
