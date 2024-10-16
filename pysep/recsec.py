@@ -148,6 +148,7 @@ class RecordSection:
             # Figure generation control parameters
             figsize=(9, 11), show=True, save="./record_section.png",
             overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+            export_traces=False,
             **kwargs):
         """
         .. note::
@@ -427,6 +428,13 @@ class RecordSection:
         :type save: str
         :param save: path to save output figure, will create the parent
             directory if it doesn't exist. If None, will not save (default).
+        :type export_traces: bool
+        :param export_traces: export processed `st` and `st_syn` (if available) 
+            as SAC files to the `save` directory, so that the User can replot
+            the exact waveforms or use what is shown in RecSec in other 
+            analysis. File naming follows PySEP SAC format (pysep._write_sac);
+            Use parameter `legacy_naming` to access the same file name schema
+            that PySEP uses for writing files with legacy naming scheme. 
 
         .. note::
             Internal RecSec parameters
@@ -526,6 +534,7 @@ class RecordSection:
         self.figsize = figsize
         self.show = bool(show)
         self.save = save
+        self.export_traces = bool(export_traces)
         self.overwrite = bool(overwrite)
         self.kwargs = Dict(kwargs)
 
@@ -647,6 +656,33 @@ class RecordSection:
             raise NotImplementedError("`data_type` must be 'data' or 'syn'")
 
         return st                
+
+    def write_stream_sac(self, _st_tag="_st_proc", _syn_tag="_syn_proc",
+                         _legacy_naming=True):
+        """
+        Export processed streams in SAC format so that User can manipulate or 
+        replot exactly what is shown in the Record Section. Naming convention
+        follows original naming schema, but adds a tag to prevent
+        overwriting original data. 
+
+        .. note::
+            
+            mostly copied from Pysep._write_sac()
+        """
+        for st, _tag in zip([self.st, self.st_syn], [_st_tag, _syn_tag]):
+            if st is None:
+                continue
+            for tr in st:
+                if _legacy_naming:
+                    # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
+                    _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
+                    tag = f"{tr.stats.sac.kevnm}.{_trace_id}{_tag}"
+                else:
+                    tag = f"{tr.stats.sac.kevnm}.{tr.get_id()}{_tag}.sac"
+
+                fid = os.path.join(os.path.dirname(self.save),  tag)
+                logger.debug(os.path.basename(fid))
+                tr.write(fid, format="SAC")
 
     def check_parameters(self):
         """
@@ -2444,6 +2480,8 @@ def parse_args():
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
+    parser.add_argument("--export_traces", default=False, action="store_true",
+                        help="export processed waveforms as SAC files")
     parser.add_argument("-o", "--overwrite", default=True, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--synsyn", default=False, action="store_true",
@@ -2508,6 +2546,9 @@ def plotw_rs(*args, **kwargs):
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
+    if rs.export_traces:
+        logger.info("exporting waveforms")
+        rs.write_stream_sac()
 
 
 def main():
