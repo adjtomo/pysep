@@ -130,7 +130,7 @@ class RecordSection:
             # Data input parameters
             self, pysep_path=None, syn_path=None, stations=None, source=None, 
             st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
-            wildcard="*", syn_wildcard=None, ignore_location=False,
+            wildcard="*", syn_wildcard=None, remove_locations=False,
             # Data organization parameters
             sort_by="default", scale_by=None, time_shift_s=None, 
             zero_pad_s=None, move_out=None, 
@@ -197,6 +197,14 @@ class RecordSection:
             format for `source`. Passed to argument `format` of 
             `pysep.utils.io.read_events_plus`. If not given, tries to guess the
             file format based on the name of the file.
+        :type remove_locations: bool
+        :param remove_locations: remove location code from Trace stats when
+            reading in data to avoid the situation where data and synthetics 
+            have mismatched location codes but are meant to correspond to one
+            another (e.g., when MTUQ includes station codes on its outputs).
+            Warning, this strips location codes completely, so corresponding
+            plots and exported traces will NOT match the input data re. 
+            location code.
 
         .. note::
             Used for defining user-input waveforms data
@@ -534,7 +542,10 @@ class RecordSection:
         self.figsize = figsize
         self.show = bool(show)
         self.save = save
+
+        # Misc. parameters
         self.export_traces = bool(export_traces)
+        self.remove_locations = bool(remove_locations)
         self.overwrite = bool(overwrite)
         self.kwargs = Dict(kwargs)
 
@@ -723,6 +734,13 @@ class RecordSection:
         # Make sure stream and synthetic stream have the same length. If they
         # don't, subset so that they do.
         if self.st_syn is not None:
+            if self.remove_locations:
+                logger.warning("option `remove_locations`, removing location "
+                               "codes from all traces in `st` and `st_syn`")
+                for st in zip(self.st, self.st_syn):
+                    for tr in st:
+                        tr.stats.location = ""
+
             self.st, self.st_syn = subset_streams(self.st, self.st_syn)
 
             if len(self.st) == 0:
@@ -2490,6 +2508,11 @@ def parse_args():
                         help="Path to save the resulting record section fig")
     parser.add_argument("--export_traces", default=False, action="store_true",
                         help="export processed waveforms as SAC files")
+    parser.add_argument("--remove_locations", default=False, 
+                        action="store_true",
+                        help="used for data-syn comparison, removes location "
+                             "codes for all traces in `st` and `st_syn` incase "
+                             "they do not match but the rest of the code does")
     parser.add_argument("-o", "--overwrite", default=True, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--synsyn", default=False, action="store_true",
@@ -2508,6 +2531,7 @@ def parse_args():
     parsed, unknown = parser.parse_known_args()
     for arg in unknown:
         if arg.startswith(("-", "--")):
+            import pdb;pdb.set_trace()
             parser.add_argument(arg.split("=")[0])
 
     return parser
