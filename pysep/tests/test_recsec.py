@@ -158,3 +158,22 @@ def test_recsec_zero_amplitude(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+
+def test_recsec_mismatched_locations(recsec_w_synthetics):
+    """
+    Test when RecSec encounters stations that match all their station code 
+    except for location code, which is sometimes used as a free-floating 
+    parameter to indicate e.g., synthetics or something and doesn't always
+    determine that waveforms do not match.
+    """
+    # Ensure that the location codes for `st` and `st_syn` differ 
+    for tr in recsec_w_synthetics.st:
+        tr.stats.location = "11"
+    for tr in recsec_w_synthetics.st_syn:
+        tr.stats.location = "00"
+
+    recsec_w_synthetics.check_parameters()
+    
+    pytest.set_trace()
+    

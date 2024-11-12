@@ -130,7 +130,7 @@ class RecordSection:
             # Data input parameters
             self, pysep_path=None, syn_path=None, stations=None, source=None, 
             st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
-            wildcard="*", syn_wildcard=None, 
+            wildcard="*", syn_wildcard=None, ignore_location=False,
             # Data organization parameters
             sort_by="default", scale_by=None, time_shift_s=None, 
             zero_pad_s=None, move_out=None, 
@@ -725,7 +725,15 @@ class RecordSection:
         if self.st_syn is not None:
             self.st, self.st_syn = subset_streams(self.st, self.st_syn)
 
-            if len(self.st) != len(self.st_syn):
+            if len(self.st) == 0:
+                err.st = f"stream subset removed all traces from `st`, "\
+                         f"please check that you have matching input data"
+            elif len(self.st_syn) == 0:
+                err.st_syn = (
+                    f"stream subset removed all traces from `st_syn`, "
+                    f"please check that you have matching input data"
+                    )
+            elif len(self.st) != len(self.st_syn):
                 err.st_syn = f"length must match `st` (which is {len(self.st)})"
 
         # Check the `sort_by` sorting parameter options
