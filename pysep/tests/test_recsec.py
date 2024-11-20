@@ -14,10 +14,13 @@ from copy import copy
 from pysep import RecordSection
 
 
+# For debugging, turn to True when running tests to show the plots 
+SHOW = True
+
 @pytest.fixture
 def recsec(tmpdir):
     """Initiate a RecordSection instance"""
-    return RecordSection(pysep_path="./test_data/test_SAC", show=False,
+    return RecordSection(pysep_path="./test_data/test_SAC", show=SHOW,
                          save=os.path.join(tmpdir, "recsec.png"))
 
 
@@ -28,7 +31,7 @@ def recsec_w_synthetics(tmpdir):
                          syn_path="./test_data/test_synthetics",
                          source="./test_data/test_CMTSOLUTION_2014p715167",
                          stations="./test_data/test_STATIONS",
-                         show=False, save=os.path.join(tmpdir, "recsec.png"))
+                         show=SHOW, save=os.path.join(tmpdir, "recsec.png"))
 
 
 def test_plot_recsec(recsec):
@@ -158,3 +161,36 @@ def test_recsec_zero_amplitude(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+    
+    
+@pytest.mark.skip(reason="visual test for zero pad acceptance, unskip to view")
+def test_plot_recsec_zero_pad(recsec):
+    """
+    Ensure that zero pad only adds zeros to the start and end of the waveform
+    but does NOT time shift it. 
+    
+    .. note::
+        This is a visual check for now so unskip this test and set constant 
+        SHOW==True to have a look at the waveforms that get plotted. In the 
+        future we could do a check on the time of the max amplitude but I  
+        did not think it was worth the investment to write that test.
+    """
+    recsec.scale_by = "normalize"
+    recsec.min_period_s = 1/3
+    recsec.max_period_s = 10.
+    recsec.xlim_s = [-25, 50]
+    recsec.tmarks = [20]
+
+    recsec_copy = copy(recsec)
+
+    # Zero pad, preprocess, and find the index of the maximum amplitude
+    recsec.process_st()
+    recsec.get_parameters()
+    recsec.plot()
+
+    # Same processing but add zero pad
+    recsec_zeropad = copy(recsec_copy)
+    recsec_zeropad.zero_pad_s = [10, 5]
+    recsec_zeropad.process_st()
+    recsec_zeropad.get_parameters()
+    recsec_zeropad.plot()
