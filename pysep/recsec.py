@@ -1017,6 +1017,7 @@ class RecordSection:
                 # These indices define the index of the user-chosen timestamp
                 start_index = start - sshift
                 end_index = stop - sshift
+
                 # Shift by the total amount that the zero pad adjusted starttime
                 if self.zero_pad_s:
                     zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
@@ -1130,12 +1131,21 @@ class RecordSection:
 
         logger.info(f"calculating starttime offsets from event origin time "
                     f"{event_origin_time}")
+        
+        # Take the zero pad into account when deciding what `starttime` is,
+        # otherwise we are introducing an artificial time shift
+        if self.zero_pad_s:
+            zero_pad_shift = self.zero_pad_s[0]
+        else:
+            zero_pad_shift = 0
 
         for tr in self.st:
-            tr.stats.time_offset = tr.stats.starttime - event_origin_time
+            tr.stats.time_offset = \
+                (tr.stats.starttime + zero_pad_shift) - event_origin_time
         if self.st_syn is not None:
             for tr in self.st_syn:
-                tr.stats.time_offset = tr.stats.starttime - event_origin_time
+                tr.stats.time_offset = \
+                (tr.stats.starttime + zero_pad_shift) - event_origin_time
 
     def get_time_shifts(self):
         """
@@ -1648,7 +1658,7 @@ class RecordSection:
 
                 _start, _end = self.zero_pad_s
                 logger.debug(f"padding zeros to traces with {_start}s before "
-                            f"and {_end}s after")
+                             f"and {_end}s after")
                 for tr in st:
                     tr.trim(starttime=tr.stats.starttime - _start,
                             endtime=tr.stats.endtime + _end,
@@ -1740,6 +1750,7 @@ class RecordSection:
                     y_index = idx
                 else:
                     y_index = y_idx + start
+        
                 log_str += self._plot_trace(idx=idx, y_index=y_index,
                                             choice=choice, **kwargs)
         logger.debug(log_str)
@@ -1907,6 +1918,7 @@ class RecordSection:
 
         x = x[start:stop]
         y = y[start:stop]
+
         self.ax.plot(x, y, c=[obs_color, syn_color][c], linewidth=linewidth, 
                      zorder=10)
         
