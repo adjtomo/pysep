@@ -130,7 +130,7 @@ class RecordSection:
             # Data input parameters
             self, pysep_path=None, syn_path=None, stations=None, source=None, 
             st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
-            wildcard="*", syn_wildcard=None, 
+            wildcard="*", syn_wildcard=None, remove_locations=False,
             # Data organization parameters
             sort_by="default", scale_by=None, time_shift_s=None, 
             zero_pad_s=None, move_out=None, 
@@ -148,6 +148,7 @@ class RecordSection:
             # Figure generation control parameters
             figsize=(9, 11), show=True, save="./record_section.png",
             overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+            export_traces=False,
             **kwargs):
         """
         .. note::
@@ -196,6 +197,14 @@ class RecordSection:
             format for `source`. Passed to argument `format` of 
             `pysep.utils.io.read_events_plus`. If not given, tries to guess the
             file format based on the name of the file.
+        :type remove_locations: bool
+        :param remove_locations: remove location code from Trace stats when
+            reading in data to avoid the situation where data and synthetics 
+            have mismatched location codes but are meant to correspond to one
+            another (e.g., when MTUQ includes station codes on its outputs).
+            Warning, this strips location codes completely, so corresponding
+            plots and exported traces will NOT match the input data re. 
+            location code.
 
         .. note::
             Used for defining user-input waveforms data
@@ -427,6 +436,13 @@ class RecordSection:
         :type save: str
         :param save: path to save output figure, will create the parent
             directory if it doesn't exist. If None, will not save (default).
+        :type export_traces: bool
+        :param export_traces: export processed `st` and `st_syn` (if available) 
+            as SAC files to the `save` directory, so that the User can replot
+            the exact waveforms or use what is shown in RecSec in other 
+            analysis. File naming follows PySEP SAC format (pysep._write_sac);
+            Use parameter `legacy_naming` to access the same file name schema
+            that PySEP uses for writing files with legacy naming scheme. 
 
         .. note::
             Internal RecSec parameters
@@ -526,6 +542,10 @@ class RecordSection:
         self.figsize = figsize
         self.show = bool(show)
         self.save = save
+
+        # Misc. parameters
+        self.export_traces = bool(export_traces)
+        self.remove_locations = bool(remove_locations)
         self.overwrite = bool(overwrite)
         self.kwargs = Dict(kwargs)
 
@@ -648,6 +668,33 @@ class RecordSection:
 
         return st                
 
+    def write_stream_sac(self, _st_tag="_st_proc", _syn_tag="_syn_proc",
+                         _legacy_naming=True):
+        """
+        Export processed streams in SAC format so that User can manipulate or 
+        replot exactly what is shown in the Record Section. Naming convention
+        follows original naming schema, but adds a tag to prevent
+        overwriting original data. 
+
+        .. note::
+            
+            mostly copied from Pysep._write_sac()
+        """
+        for st, _tag in zip([self.st, self.st_syn], [_st_tag, _syn_tag]):
+            if st is None:
+                continue
+            for tr in st:
+                if _legacy_naming:
+                    # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
+                    _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
+                    tag = f"{tr.stats.sac.kevnm}.{_trace_id}{_tag}"
+                else:
+                    tag = f"{tr.stats.sac.kevnm}.{tr.get_id()}{_tag}.sac"
+
+                fid = os.path.join(os.path.dirname(self.save),  tag)
+                logger.debug(os.path.basename(fid))
+                tr.write(fid, format="SAC")
+
     def check_parameters(self):
         """
         Check that parameters are set properly and in line with how they
@@ -687,9 +734,24 @@ class RecordSection:
         # Make sure stream and synthetic stream have the same length. If they
         # don't, subset so that they do.
         if self.st_syn is not None:
+            if self.remove_locations:
+                logger.warning("option `remove_locations`, removing location "
+                               "codes from all traces in `st` and `st_syn`")
+                for st in zip(self.st, self.st_syn):
+                    for tr in st:
+                        tr.stats.location = ""
+
             self.st, self.st_syn = subset_streams(self.st, self.st_syn)
 
-            if len(self.st) != len(self.st_syn):
+            if len(self.st) == 0:
+                err.st = f"stream subset removed all traces from `st`, "\
+                         f"please check that you have matching input data"
+            elif len(self.st_syn) == 0:
+                err.st_syn = (
+                    f"stream subset removed all traces from `st_syn`, "
+                    f"please check that you have matching input data"
+                    )
+            elif len(self.st) != len(self.st_syn):
                 err.st_syn = f"length must match `st` (which is {len(self.st)})"
 
         # Check the `sort_by` sorting parameter options
@@ -2417,7 +2479,7 @@ def parse_args():
                         help="Integrate (positive values) or differentiate "
                              "(negative values) `integrate` times. e.g., -2 "
                              "will differentiate all waveforms twice.")
-    parser.add_argument("--xlim_s", default=None, type=int, nargs="+",
+    parser.add_argument("--xlim_s", default=None, type=float, nargs="+",
                         help="Min and max x limits in units seconds. Input as "
                              "a list, e.g., --xlim_s 10 200 ...")
     parser.add_argument("--zero_pad_s", default=None, type=float, nargs="+",
@@ -2456,6 +2518,13 @@ def parse_args():
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
+    parser.add_argument("--export_traces", default=False, action="store_true",
+                        help="export processed waveforms as SAC files")
+    parser.add_argument("--remove_locations", default=False, 
+                        action="store_true",
+                        help="used for data-syn comparison, removes location "
+                             "codes for all traces in `st` and `st_syn` incase "
+                             "they do not match but the rest of the code does")
     parser.add_argument("-o", "--overwrite", default=True, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--synsyn", default=False, action="store_true",
@@ -2520,6 +2589,9 @@ def plotw_rs(*args, **kwargs):
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
+    if rs.export_traces:
+        logger.info("exporting waveforms")
+        rs.write_stream_sac()
 
 
 def main():

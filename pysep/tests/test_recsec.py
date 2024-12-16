@@ -161,6 +161,41 @@ def test_recsec_zero_amplitude(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+
+def test_recsec_mismatched_locations_fails(recsec_w_synthetics):
+    """
+    Test that when RecSec encounters stations with different location codes, 
+    it fails the parameter check
+    """
+    # Ensure that the location codes for `st` and `st_syn` differ 
+    for tr in recsec_w_synthetics.st:
+        tr.stats.location = "11"
+    for tr in recsec_w_synthetics.st_syn:
+        tr.stats.location = "00"
+
+    with pytest.raises(SystemExit):
+        recsec_w_synthetics.check_parameters()
+
+        
+def test_recsec_mismatched_locations(recsec_w_synthetics):
+    """
+    Test when RecSec encounters stations that match all their station code 
+    except for location code, which is sometimes used as a free-floating 
+    parameter to indicate e.g., synthetics or something and doesn't always
+    determine that waveforms do not match.
+    """
+    # Ensure that the location codes for `st` and `st_syn` differ 
+    for tr in recsec_w_synthetics.st:
+        tr.stats.location = "11"
+    for tr in recsec_w_synthetics.st_syn:
+        tr.stats.location = "00"
+
+    recsec_w_synthetics.remove_locations = True
+    recsec_w_synthetics.check_parameters()
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
     
     
 @pytest.mark.skip(reason="visual test for zero pad acceptance, unskip to view")
