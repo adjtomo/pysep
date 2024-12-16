@@ -2479,7 +2479,7 @@ def parse_args():
                         help="Integrate (positive values) or differentiate "
                              "(negative values) `integrate` times. e.g., -2 "
                              "will differentiate all waveforms twice.")
-    parser.add_argument("--xlim_s", default=None, type=int, nargs="+",
+    parser.add_argument("--xlim_s", default=None, type=float, nargs="+",
                         help="Min and max x limits in units seconds. Input as "
                              "a list, e.g., --xlim_s 10 200 ...")
     parser.add_argument("--zero_pad_s", default=None, type=float, nargs="+",
