@@ -1648,6 +1648,7 @@ class Pysep:
 
             fid = os.path.join(output_dir, tag)
             logger.debug(os.path.basename(fid))
+            import pdb;pdb.set_trace()
             tr.write(fid, format="SAC")
 
     def write_config(self, fid=None, overwrite=False):

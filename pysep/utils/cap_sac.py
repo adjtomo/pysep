@@ -198,8 +198,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
-        #"nzmsec": int(f"{otime.microsecond:0>6}"[:3]),  # micros->ms see #152
+        "nzmsec": int(f"{otime.microsecond:0>6}"[:3]),  # micros->ms see #152
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees

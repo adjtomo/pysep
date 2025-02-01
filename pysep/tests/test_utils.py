@@ -8,7 +8,7 @@ import os
 import pytest
 import numpy as np
 from glob import glob
-from obspy import read, read_events, read_inventory, Stream
+from obspy import read, read_events, read_inventory, Stream, UTCDateTime
 from obspy.io.sac.sactrace import SACTrace
 from pysep.utils.cap_sac import (append_sac_headers,
                                  format_sac_header_w_taup_traveltimes,
@@ -101,11 +101,24 @@ def test_sac_header_correct_origin_time(tmpdir, test_st, test_inv, test_event):
     sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
 
     import pdb;pdb.set_trace()
-
     assert(sac.reftime == test_event.preferred_origin().time)
 
-    # We should have truncated this value to ensure that NZMSEC is only 3 digits
-    # Related to Issue #152
+
+def test_sac_header_correct_nzmsec(tmpdir, test_st, test_inv, test_event):
+    """
+    Make sure NZMSEC is written properly and doesnt change values
+
+    Related to Issue #152
+    """
+    test_event.preferred_origin().time = \
+            UTCDateTime("2009-04-07T20:12:55.999999Z")
+    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
+    st[0].write(os.path.join(tmpdir, "test.sac"), format="SAC")  # only write 1
+    st_read = read(os.path.join(tmpdir, "test.sac"))
+    sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
+
+    import pdb;pdb.set_trace()
+
     assert(sac.nzmsec != test_event.preferred_origin().time.microsecond)
 
 
