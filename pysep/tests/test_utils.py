@@ -100,26 +100,7 @@ def test_sac_header_correct_origin_time(tmpdir, test_st, test_inv, test_event):
     st[0].write(os.path.join(tmpdir, "test.sac"), format="SAC")  # only write 1
     sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
 
-    import pdb;pdb.set_trace()
     assert(sac.reftime == test_event.preferred_origin().time)
-
-
-def test_sac_header_correct_nzmsec(tmpdir, test_st, test_inv, test_event):
-    """
-    Make sure NZMSEC is written properly and doesnt change values
-
-    Related to Issue #152
-    """
-    test_event.preferred_origin().time = \
-            UTCDateTime("2009-04-07T20:12:55.999999Z")
-    st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
-    st[0].write(os.path.join(tmpdir, "test.sac"), format="SAC")  # only write 1
-    st_read = read(os.path.join(tmpdir, "test.sac"))
-    sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
-
-    import pdb;pdb.set_trace()
-
-    assert(sac.nzmsec != test_event.preferred_origin().time.microsecond)
 
 
 def test_write_cap_weights_files(tmpdir, test_st, test_inv, test_event):
