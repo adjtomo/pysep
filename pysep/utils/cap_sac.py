@@ -198,7 +198,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
+        "nzmsec": int(f"{otime.microsecond:0>6}"[3:]),  # micros->ms see #152
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees
@@ -336,7 +336,7 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
+        "nzmsec": int(f"{otime.microsecond:0>6}"[3:]),  # micros->ms see #152
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
