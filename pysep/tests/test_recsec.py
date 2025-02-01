@@ -14,8 +14,8 @@ from copy import copy
 from pysep import RecordSection
 
 
-# For debugging, turn to True when running tests to show the plots 
-SHOW = True
+# For debugging, to show figures turn SHOW=True
+SHOW=False
 
 @pytest.fixture
 def recsec(tmpdir):
