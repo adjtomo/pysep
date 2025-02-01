@@ -99,7 +99,14 @@ def test_sac_header_correct_origin_time(tmpdir, test_st, test_inv, test_event):
     st = append_sac_headers(st=test_st, inv=test_inv, event=test_event)
     st[0].write(os.path.join(tmpdir, "test.sac"), format="SAC")  # only write 1
     sac = SACTrace.read(os.path.join(tmpdir, "test.sac"))
+
+    import pdb;pdb.set_trace()
+
     assert(sac.reftime == test_event.preferred_origin().time)
+
+    # We should have truncated this value to ensure that NZMSEC is only 3 digits
+    # Related to Issue #152
+    assert(sac.nzmsec != test_event.preferred_origin().time.microsecond)
 
 
 def test_write_cap_weights_files(tmpdir, test_st, test_inv, test_event):
@@ -316,3 +323,4 @@ def test_get_gcmt_moment_tensor():
     assert(pytest.approx(m_rr, 1E-20) == 3.56E20)
 
     return event
+
