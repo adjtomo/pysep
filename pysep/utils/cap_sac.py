@@ -198,7 +198,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
+        "nzmsec": int(f"{otime.microsecond:0>6}"[:3]),  # micros->ms see #152
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees
@@ -235,7 +235,8 @@ def _append_sac_headers_trace(tr, event, inv):
     for key in ["cmpinc", "cmpaz", "evdp", "mag"]:
         if key not in sac_header:
             _warn_about.append(key)
-    logger.warning(f"no SAC header values found for: {_warn_about}")
+    if _warn_about:
+        logger.warning(f"no SAC header values found for: {_warn_about}")
 
     # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
@@ -338,7 +339,7 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
+        "nzmsec": int(f"{otime.microsecond:0>6}"[:3]),  # micros->ms see #152
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
