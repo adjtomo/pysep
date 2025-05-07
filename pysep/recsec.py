@@ -961,7 +961,7 @@ class RecordSection:
         # Max amplitudes will be DIFFERENT for synthetics, which affects 
         # normalizations and thus requires its own array
         if self.st_syn is not None:
-            for tr, xlim in zip(self.st_syn, self.xlim):
+            for tr, xlim in zip(self.st_syn, self.xlim_syn):
                 start, stop = xlim  # units: samples
                 self.max_amplitudes_syn = np.append(
                         self.max_amplitudes_syn, max(abs(tr.data[start:stop]))
