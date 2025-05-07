@@ -1629,17 +1629,22 @@ class RecordSection:
             logger.info(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
             preprocess_list = [self.st_syn]
 
+        # Trim all waveforms to the SHORTEST possible time
+        if self.trim:
+            maxstart = max([tr.stats.starttime for tr in self.st + self.st_syn])
+            minend = min([tr.stats.endtime for tr in self.st + self.st_syn])
+
+            logger.info("trimming start and end times and filling any "
+                         f"gaps with {fill_value}")
+            logger.debug(f"global start: {maxstart}")
+            logger.debug(f"global end:   {minend}")
+            for tr in self.st + self.st_syn:
+                if fill_value == "mean":
+                    fill_value = tr.data.mean()
+                tr.trim(starttime=maxstart, endtime=minend, pad=True, 
+                        fill_value=fill_value)
+
         for st in preprocess_list:
-            if self.trim:
-                logger.debug("trimming start and end times and filling any "
-                             f"gaps with {fill_value}")
-                for tr in st:
-                    if fill_value == "mean":
-                        fill_value = tr.data.mean()
-                    tr.trim(starttime=tr.stats.starttime, 
-                            endtime=tr.stats.endtime, pad=True, 
-                            fill_value=fill_value)
-            
             # Taper prior to zero pad so that the taper actually hits signal
             if self.taper:
                 # If we don't demean, then tapering may hit a static offset
