@@ -70,7 +70,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
             --sort_by abs_distance_r --components Z --min_period_s 2 \
             --max_period_s 50 --amplitude_scale_factor 0.25 \
             --y_label_loc x_max --y_label_fontsize 7 --overwrite \
-            --linewidth 1
+            --linewidth 1 
 
     3) From the Python interpreter: this is an example code block that can be
         written into a Python script or run from inside a Python interactive 
@@ -347,8 +347,8 @@ class RecordSection:
         :param max_period_s: maximum filter period in seconds, if not given
             and `min_period_s` also not given, then no filtering is applied
         :type trim: bool
-        :param trim: trim waveforms to the same length, and if any data gaps
-            are present, fill with mean values by default
+        :param trim: trim waveforms to the shortest length, and if any data gaps
+            are present, fill with mean values by default.
         :type taper: bool
         :param taper: if True, taper ends of waveform during preprocessing. Uses
             keyword arguments `max_percentage` (float) to define the percentage
@@ -2398,7 +2398,8 @@ def parse_args():
         from an interactive environment.
     """
     parser = argparse.ArgumentParser(
-        description="Input basic record section params",
+            description="Input basic record section params. To input boolean "
+                        "False for kwargs, use empty quotes, e.g., --trim ''",
         # formatter_class=argparse.RawTextHelpFormatter,
                                      )
 
