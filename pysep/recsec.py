@@ -1631,14 +1631,19 @@ class RecordSection:
 
         # Trim all waveforms to the SHORTEST possible time
         if self.trim:
-            maxstart = max([tr.stats.starttime for tr in self.st + self.st_syn])
-            minend = min([tr.stats.endtime for tr in self.st + self.st_syn])
+            # Consider if we are looking at data or data + syn
+            st = self.st
+            if self.st_syn:
+                st += self.st_syn
+
+            maxstart = max([tr.stats.starttime for tr in st])
+            minend = min([tr.stats.endtime for tr in st])
 
             logger.info("trimming start and end times and filling any "
                          f"gaps with {fill_value}")
             logger.debug(f"global start: {maxstart}")
             logger.debug(f"global end:   {minend}")
-            for tr in self.st + self.st_syn:
+            for tr in st:
                 if fill_value == "mean":
                     fill_value = tr.data.mean()
                 tr.trim(starttime=maxstart, endtime=minend, pad=True, 
