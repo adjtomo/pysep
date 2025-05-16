@@ -127,29 +127,32 @@ class RecordSection:
     3) produces record section waveform figures.
     """
     def __init__(
-            # Data input parameters
-            self, pysep_path=None, syn_path=None, stations=None, source=None, 
-            st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
-            wildcard="*", syn_wildcard=None, remove_locations=False,
-            # Data organization parameters
-            sort_by="default", scale_by=None, time_shift_s=None, 
-            zero_pad_s=None, move_out=None, 
+            # Reading Parameters
+            self, pysep_path=None, wildcard="*", syn_path=None, 
+            syn_wildcard=None, stations=None, source=None, synsyn=False, 
+            srcfmt=None, remove_locations=False, 
+            # User-input data
+            st=None, st_syn=None, windows=None,
+            # Waveform plotting organization parameters
+            sort_by="default", scale_by=None,
+            time_shift_s=None, zero_pad_s=None, amplitude_scale_factor=1,  
+            move_out=None, azimuth_start_deg=0., distance_units="km", 
+            components="ZRTNE12", 
             # Data processing parameters
-            preprocess=True, min_period_s=None, max_period_s=None, integrate=0, 
-            trim=True, taper=True,
-            # Plotting aesthetic 
-            xlim_s=None, components="ZRTNE12", y_label_loc="default",
-            y_axis_spacing=1, amplitude_scale_factor=1, azimuth_start_deg=0., 
-            distance_units="km", tmarks=None,
-            # Geometric Spreading
-            geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
-            geometric_spreading_exclude=None,
-            geometric_spreading_ymax=None, geometric_spreading_save=None,
-            # Figure generation control parameters
-            figsize=(9, 11), show=True, save="./record_section.png",
-            overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+            preprocess=True, min_period_s=None, max_period_s=None, trim=True, 
+            taper=True, integrate=0, 
+            # Geometric Spreading parameters
+            geometric_spreading_factor=0.5, 
+            geometric_spreading_k_val=None, geometric_spreading_exclude=None, 
+            geometric_spreading_ymax=None, geometric_spreading_save=None, 
+            # Figure generation control
+            max_traces_per_rs=None, xlim_s=None,  y_axis_spacing=1, 
+            y_label_loc="default", tmarks=None, 
+            figsize=(9, 11), show=True, save="./record_section.png", 
             export_traces=False,
-            **kwargs):
+            # Miscellaneous parameters
+            overwrite=True, log_level="DEBUG", **kwargs):
+        
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -181,12 +184,6 @@ class RecordSection:
         :param source: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
-        :type cartesian: bool
-        :param cartesian: lets RecSec know that the domain is set in Cartesian
-            coordinates (SPECFEM2D or SPECFEM3D_CARTESIAN in UTM), such that
-            data/metadata reading will need to adjust acoordingly because the
-            ObsPy tools used to read metadata will fail for domains defined in
-            XYZ
         :type synsyn: bool
         :param synsyn: flag to let RecSec know that we are plotting two sets
             of synthetic seismograms. Such that both `pysep_path` and `syn_path`
