@@ -774,7 +774,7 @@ class RecordSection:
                 f"must be in {acceptable_distance_units}"
 
         if self.scale_by is not None:
-            acceptable_scale_by = ["normalize", "global_norm",
+            acceptable_scale_by = ["normalize", "rel_norm", "global_norm",
                                    "geometric_spreading"]
             if self.scale_by not in acceptable_scale_by:
                 err.scale_by = f"must be in {acceptable_scale_by}"
@@ -1299,11 +1299,31 @@ class RecordSection:
         if self.scale_by is None:
             amp_scaling = np.ones(len(self.st))
         # Scale by the max amplitude of each trace
-        elif self.scale_by == "normalize":
-            if _choice == "st":
-                amp_scaling = self.max_amplitudes
-            elif _choice == "st_syn":
-                amp_scaling = self.max_amplitudes_syn
+        elif self.scale_by in ["normalize", "rel_norm"]:
+            # Rel norm requires two sets so if we don't have that then default 
+            # back to normalize
+            if self.scale_by == "rel_norm" and not \
+                self.max_amplitudes_syn.any():
+                logger.warning("no synthetic max amplitudes, using 'normalize' "
+                               "instead of 'rel_norm'")
+                self.scale_by = "normalize"
+
+            # Normalize each trace by it's own max amplitude, all waveforms will
+            # have the same max value 
+            if self.scale_by == "normalize":
+                if _choice == "st":
+                    amp_scaling = self.max_amplitudes
+                elif _choice == "st_syn":
+                    amp_scaling = self.max_amplitudes_syn
+            # Normalize each pair of traces by their max amplitude, preserving
+            # relative amplitude differences for comparisons
+            elif self.scale_by == "rel_norm":
+                # Get the max amplitude of the data and synthetic
+                # waveforms for each trace
+                amp_scaling = np.ones(len(self.sorted_idx))
+                for idx in self.sorted_idx:
+                    amp_scaling[idx] = max(self.max_amplitudes[idx],
+                                            self.max_amplitudes_syn[idx])
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
