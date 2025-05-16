@@ -126,9 +126,9 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(
+    def __init__(self,
             # Reading Parameters
-            self, pysep_path=None, wildcard="*", syn_path=None, 
+            pysep_path=None, wildcard="*", syn_path=None, 
             syn_wildcard=None, stations=None, source=None, synsyn=False, 
             srcfmt=None, remove_locations=False, 
             # User-input data
