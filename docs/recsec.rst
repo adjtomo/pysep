@@ -112,17 +112,39 @@ Customizing RecSec figures
 
 Much of the aesthetic look of RecSec figures is hardcoded, however there are 
 some keyword arguments that you can provide as flags which may help to achieve
-publication-ready figures. Some of these parameters include:
+publication-ready figures. 
 
-- ytick_fontsize: Fontsize of the Y-axis tick labels
-- xtick_fontsize: Fontsize of the X-axis tick labels
-- tick_linewidth: Linewidth of axes tick marks
-- tick_length: Length of axes tick marks
-- label_fontsize: Fontsize of X and Y axis labels
-- axis_linewidth: Linewidth of border around figure
-- title_fontsize: Fontsize of the title
-- xtick_minor: Frequency of minor ticks on the X axis
-- xtick_major: Frequency of major ticks on the X axis
+Parameters are listed in 
+:meth:`set_plot_aesthetic <pysep.utils.plot.set_plot_aesthetic>` 
+and listed below for convenience.
+
+- ytick_fontsize (float): Font size for labels next to Y-axis ticks.
+- xtick_fontsize (float): Font size for labels next to X-axis ticks.
+- xlabel_fontsize (float): Font size for the X-axis main label (e.g., Time).
+- ylabel_fontsize (float): Font size for the Y-axis main label (e.g., Ampli).
+- title_fontsize (float): Font size of the main title at the top of the figure.
+
+- axis_linewidth (float): Line thickness for the borders of the figure.
+- tick_linewidth (float): Thickness of tick marks for both X and Y axes.
+- tick_length (float): Length of tick marks for both X and Y axes.
+- tick_direction (str): 'in' for ticks pointing inwards, 'out' for ticks 
+  pointing outwards.
+
+- spine_zorder (int): Z order (visibility) of the axis borders (spines).
+- spine_top (bool): Toggle on/off the top axis border.
+- spine_bot (bool): Toggle on/off the bottom axis border.
+- spine_left (bool): Toggle on/off the left axis border.
+- spine_right (bool): Toggle on/off the right axis border.
+
+- xtick_minor (float): How often minor tick marks are drawn on the X-axis.
+- xtick_major (float): How often major tick marks are drawn on the X-axis.
+- ytick_minor (float): How often minor tick marks are drawn on the Y-axis.
+- ytick_major (float): How often major tick marks are drawn on the Y-axis.
+
+- xgrid_minor (bool): Turn on grid lines for each minor X tick.
+- xgrid_major (bool): Turn on grid lines for each major X tick.
+- ygrid_minor (bool): Turn on grid lines for each minor Y tick.
+- ygrid_major (bool): Turn on grid lines for each major Y tick.
 
 To set one of these parameters, just set as a flag, e.g.,
 
@@ -136,8 +158,81 @@ Or when scripting RecSec
 
     plotw_rs(pysep_path="./SAC", xtick_minor=100, xtick_major=500)
 
-See :meth:`set_plot_aesthetic <pysep.utils.plot.set_plot_aesthetic>` function
-for the entire list of available tuning options for Record Sections.
+
+Keyword arguments
+------------------
+
+`RecSec` main input parameters and their description are listed in the main 
+`class API <autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
+
+Keyword arguments are meant for advanced users who want more control over 
+processing and plotting options.
+
+Processing Kwargs
+`````````````````
+max_percentage (float): Maximum percentage for ObsPy Stream.taper(). Default 0.05
+taper_type (str): Taper type. Default cosine.
+zerophase (bool): Zero phase filter or not. Default True.
+fill_value (str): Fill value for ObsPy Stream.trim() 
+    (https://docs.obspy.org/packages/autogen/obspy.core.trace.Trace.trim.html)
+    Default 'mean'
+
+Azimuth Sorting Kwargs
+```````````````````````
+azimuth_binsize (int): Size of azimuth bins in degrees. Default 45
+azimuth_bin_c (str): Color of azimuth bins. Default 'red'
+azimuth_bin_lw (int): Linewidth of azimuth bins. Default 0.75
+azimuth_bin_ls (str): Linestyle of azimuth bins. Default '-'
+azimuth_bin_zorder (int): Zorder of azimuth lines. Default 5
+
+Plotting Kwargs
+`````````````````
+linewidth (float): Linewidth of the traces. Default 0.25
+obs_color (str): Color of observed data. Default 'black'
+syn_color (str): Color of synthetic data. Default 'blue'
+window_alpha (float): Alpha value of windows. Default 0.1
+window_color (str): Color of windows. Default 'orange'
+
+Tmark Kwargs
+`````````````
+tmark_c (str): Color of time marks. Default 'red'
+tmark_lw (int): Linewidth of time marks. Default 1.5
+tmark_ls (str): Linestyle of time marks. Default '-'
+tmark_alpha (float): Alpha value of time marks. Default 0.75
+tmark_zorder (int): Zorder of time marks. Default 5
+
+Plot Aesthetic Kwargs
+`````````````````````
+y_label_c (str): Color of Y-axis label. Default 'black'
+title (str): Overwrite the default title of the figure
+
+Applying Kwargs
+---------------
+
+All kwargs can be passed to the command line using their name and requested 
+value.
+
+.. code:: bash
+
+    recsec --pysep_path ./SAC --window_alpha 0.5 --window_color red
+
+.. code:: bash
+
+    recsec --pysep_path ./SAC --xtick_minor 100 --xtick_major 500
+
+To pass `False` booleans to a kwarg through the command line, use an 
+empty string.
+
+.. code:: bash
+
+    recsec --pysep_path ./SAC --zerophase ''
+
+Or when scripting RecSec
+
+.. code:: python
+
+    plotw_rs(pysep_path="./SAC", xtick_minor=100, xtick_major=500)
+
 
 Plotting SPECFEM synthetics
 ---------------------------
