@@ -421,7 +421,7 @@ class Pysep:
             2) If NoneType or an empty string, no files will be written.
             3) If 'all', write all files listed in (1)
         :type plot_files: str or NoneType
-        :param write_files: What to plot after data gathering.
+        :param plot_files: What to plot after data gathering.
             Should be a comma-separated list of the following:
 
             - map: plot a source-receiver map with event and all stations

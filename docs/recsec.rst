@@ -170,41 +170,41 @@ processing and plotting options.
 
 Processing Kwargs
 `````````````````
-max_percentage (float): Maximum percentage for ObsPy Stream.taper(). Default 0.05
-taper_type (str): Taper type. Default cosine.
-zerophase (bool): Zero phase filter or not. Default True.
-fill_value (str): Fill value for ObsPy Stream.trim() 
+- max_percentage (float): Maximum percentage for ObsPy Stream.taper(). Default 0.05
+- taper_type (str): Taper type. Default cosine.
+- zerophase (bool): Zero phase filter or not. Default True.
+- fill_value (str): Fill value for ObsPy Stream.trim() 
     (https://docs.obspy.org/packages/autogen/obspy.core.trace.Trace.trim.html)
     Default 'mean'
 
 Azimuth Sorting Kwargs
 ```````````````````````
-azimuth_binsize (int): Size of azimuth bins in degrees. Default 45
-azimuth_bin_c (str): Color of azimuth bins. Default 'red'
-azimuth_bin_lw (int): Linewidth of azimuth bins. Default 0.75
-azimuth_bin_ls (str): Linestyle of azimuth bins. Default '-'
-azimuth_bin_zorder (int): Zorder of azimuth lines. Default 5
+- azimuth_binsize (int): Size of azimuth bins in degrees. Default 45
+- azimuth_bin_c (str): Color of azimuth bins. Default 'red'
+- azimuth_bin_lw (int): Linewidth of azimuth bins. Default 0.75
+- azimuth_bin_ls (str): Linestyle of azimuth bins. Default '-'
+- azimuth_bin_zorder (int): Zorder of azimuth lines. Default 5
 
 Plotting Kwargs
 `````````````````
-linewidth (float): Linewidth of the traces. Default 0.25
-obs_color (str): Color of observed data. Default 'black'
-syn_color (str): Color of synthetic data. Default 'blue'
-window_alpha (float): Alpha value of windows. Default 0.1
-window_color (str): Color of windows. Default 'orange'
+- linewidth (float): Linewidth of the traces. Default 0.25
+- obs_color (str): Color of observed data. Default 'black'
+- syn_color (str): Color of synthetic data. Default 'blue'
+- window_alpha (float): Alpha value of windows. Default 0.1
+- window_color (str): Color of windows. Default 'orange'
 
 Tmark Kwargs
 `````````````
-tmark_c (str): Color of time marks. Default 'red'
-tmark_lw (int): Linewidth of time marks. Default 1.5
-tmark_ls (str): Linestyle of time marks. Default '-'
-tmark_alpha (float): Alpha value of time marks. Default 0.75
-tmark_zorder (int): Zorder of time marks. Default 5
+- tmark_c (str): Color of time marks. Default 'red'
+- tmark_lw (int): Linewidth of time marks. Default 1.5
+- tmark_ls (str): Linestyle of time marks. Default '-'
+- tmark_alpha (float): Alpha value of time marks. Default 0.75
+- tmark_zorder (int): Zorder of time marks. Default 5
 
 Plot Aesthetic Kwargs
 `````````````````````
-y_label_c (str): Color of Y-axis label. Default 'black'
-title (str): Overwrite the default title of the figure
+- y_label_c (str): Color of Y-axis label. Default 'black'
+- title (str): Overwrite the default title of the figure
 
 Applying Kwargs
 ---------------
