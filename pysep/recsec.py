@@ -1653,23 +1653,27 @@ class RecordSection:
 
         # Trim all waveforms to the SHORTEST possible time
         if self.trim:
-            # Consider if we are looking at data or data + syn
-            st = self.st
+            # Consider if we are looking at data or data + syn, get min max time
+            st_check = self.st.copy()
             if self.st_syn:
-                st += self.st_syn
-
-            maxstart = max([tr.stats.starttime for tr in st])
-            minend = min([tr.stats.endtime for tr in st])
+                st_check += self.st_syn.copy()
+            maxstart = max([tr.stats.starttime for tr in st_check])
+            minend = min([tr.stats.endtime for tr in st_check])
 
             logger.info("trimming start and end times and filling any "
                          f"gaps with {fill_value}")
             logger.debug(f"global start: {maxstart}")
             logger.debug(f"global end:   {minend}")
-            for tr in st:
-                if fill_value == "mean":
-                    fill_value = tr.data.mean()
-                tr.trim(starttime=maxstart, endtime=minend, pad=True, 
-                        fill_value=fill_value)
+            
+            # Trim based on the min and max starttimes of the traces
+            for st in [self.st, self.st_syn]:
+                if st is None:
+                    continue
+                for tr in st:
+                    if fill_value == "mean":
+                        fill_value = tr.data.mean()
+                    tr.trim(starttime=maxstart, endtime=minend, pad=True, 
+                            fill_value=fill_value)
 
         for st in preprocess_list:
             # Taper prior to zero pad so that the taper actually hits signal
