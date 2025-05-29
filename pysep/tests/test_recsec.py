@@ -127,9 +127,12 @@ def test_plot_recsec_plot_options(recsec):
     recsec.plot()
 
 
-def test_recsec_calc_time_offset(recsec_w_synthetics):
+def test_recsec_calc_time_offset_no_trim(recsec_w_synthetics):
     """testing that synthetics and data which do not share origin time 
     plot together correctly by checking that the time offsets are calced"""
+    # Turn off trim so that time shifts are retained
+    recsec_w_synthetics.trim = False
+
     # Pad 100s zeros to data and shift starttime to match
     for tr in recsec_w_synthetics.st:
         tr.data = np.append(np.zeros(int(100 * tr.stats.sampling_rate)), 
@@ -138,8 +141,27 @@ def test_recsec_calc_time_offset(recsec_w_synthetics):
 
     recsec_w_synthetics.process_st()
     recsec_w_synthetics.get_parameters()
+
     for tr in recsec_w_synthetics.st:
         assert(tr.stats.time_offset == -100)
+
+
+def test_recsec_calc_time_offset_w_trim(recsec_w_synthetics):
+    """testing that synthetics and data which do not share origin time 
+    plot together correctly by checking that trim is applied"""
+    # Pad 100s zeros to data and shift starttime to match
+    for tr in recsec_w_synthetics.st:
+        tr.data = np.append(np.zeros(int(100 * tr.stats.sampling_rate)), 
+                            tr.data)
+        tr.stats.starttime -= 100
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+
+    for tr, tr_syn in zip(recsec_w_synthetics.st, recsec_w_synthetics.st_syn):
+        tdiff = tr.stats.starttime - tr_syn.stats.starttime
+        assert(tdiff < tr.stats.delta)
+
 
 def test_recsec_zero_amplitude(recsec):
     """

@@ -174,6 +174,65 @@ exactly what files are produced during a PySEP (see `API documentation
 By default, PySEP will write SAC files, StationXML, QuakeML and config files,
 and create a source-receiver map and record section.
 
+Files
+``````
+
+PySEP can create a number of text or data files that are either modifications
+of the default data structure, or provide files which interface with other 
+tools. 
+
+Files can be selected using the `write_files` parameter, input as a 
+comma-separated string. Options listed below:
+
+- weights_az: write out CAP weight file sorted by azimuth
+- weights_dist: write out CAP weight file sorted by distance
+- weights_code: write out CAP weight file sorted by station code
+- station_list: write out a text file with station information
+
+- inv: save a StationXML (.xml) file (ObsPy inventory)
+- event: save a QuakeML (.xml) file (ObsPy Catalog)
+- stream: save an ObsPy stream in Mseed (.ms) (ObsPy Stream)
+- config_file: save YAML config file w/ all input parameters
+
+- sac: save all waveforms as SAC (.sac) files w/ correct headers. the coordinate 
+    system is defined by the downloaded data and the `rotate` parameter
+- sac_raw: save raw waveforms. these are straight from the
+    data center with no quality check and no SAC headers
+- sac_zne: save ZNE channel SAC files
+- sac_rtz: save RTZ channel SAC files
+- sac_uvw: save UVW channel SAC files
+
+.. note:: 
+    
+    By Default, `write_files` is: 'inv,event,stream,sac,config_file,station_list'
+
+This parameter can be set in the YAML parameter file:
+
+.. code:: yaml
+
+    write_files: inv,event,stream,sac,config_file,station_list
+
+Figures
+```````
+
+PySEP by default will create a source-receiver map and record section plot to
+help the user visualize the data they have gathered. These are saved in the
+output directory with the event tag. 
+
+Users can use the parameter `plot_files` to control which files are created
+
+- `all`: plot all of the above (default value)
+- `null`: No files will be plotted.
+- `map`: plot a source-receiver map with event and all stations
+- `record_section`: plot a record section with default parameters
+
+
+These can be input in the YAML parameter file:
+
+.. code:: yaml
+
+    plot_files: all  # or map, record_section, null
+
 Override Directory Names
 ````````````````````````
 

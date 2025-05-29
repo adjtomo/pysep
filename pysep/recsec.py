@@ -126,30 +126,33 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(
-            # Data input parameters
-            self, pysep_path=None, syn_path=None, stations=None, source=None, 
-            st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
-            wildcard="*", syn_wildcard=None, remove_locations=False,
-            # Data organization parameters
-            sort_by="default", scale_by=None, time_shift_s=None, 
-            zero_pad_s=None, move_out=None, 
+    def __init__(self,
+            # Reading Parameters
+            pysep_path=None, wildcard="*", syn_path=None, 
+            syn_wildcard=None, stations=None, source=None, synsyn=False, 
+            srcfmt=None, remove_locations=False, 
+            # User-input data
+            st=None, st_syn=None, windows=None,
+            # Waveform plotting organization parameters
+            sort_by="default", scale_by=None,
+            time_shift_s=None, zero_pad_s=None, amplitude_scale_factor=1,  
+            move_out=None, azimuth_start_deg=0., distance_units="km", 
+            components="ZRTNE12", 
             # Data processing parameters
-            preprocess=True, min_period_s=None, max_period_s=None, integrate=0, 
-            trim=True, taper=True,
-            # Plotting aesthetic 
-            xlim_s=None, components="ZRTNE12", y_label_loc="default",
-            y_axis_spacing=1, amplitude_scale_factor=1, azimuth_start_deg=0., 
-            distance_units="km", tmarks=None,
-            # Geometric Spreading
-            geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
-            geometric_spreading_exclude=None,
-            geometric_spreading_ymax=None, geometric_spreading_save=None,
-            # Figure generation control parameters
-            figsize=(9, 11), show=True, save="./record_section.png",
-            overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
+            preprocess=True, min_period_s=None, max_period_s=None, trim=True, 
+            taper=True, integrate=0, 
+            # Geometric Spreading parameters
+            geometric_spreading_factor=0.5, 
+            geometric_spreading_k_val=None, geometric_spreading_exclude=None, 
+            geometric_spreading_ymax=None, geometric_spreading_save=None, 
+            # Figure generation control
+            max_traces_per_rs=None, xlim_s=None,  y_axis_spacing=1, 
+            y_label_loc="default", tmarks=None, 
+            figsize=(9, 11), show=True, save="./record_section.png", 
             export_traces=False,
-            **kwargs):
+            # Miscellaneous parameters
+            overwrite=True, log_level="DEBUG", **kwargs):
+        
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -181,12 +184,6 @@ class RecordSection:
         :param source: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
-        :type cartesian: bool
-        :param cartesian: lets RecSec know that the domain is set in Cartesian
-            coordinates (SPECFEM2D or SPECFEM3D_CARTESIAN in UTM), such that
-            data/metadata reading will need to adjust acoordingly because the
-            ObsPy tools used to read metadata will fail for domains defined in
-            XYZ
         :type synsyn: bool
         :param synsyn: flag to let RecSec know that we are plotting two sets
             of synthetic seismograms. Such that both `pysep_path` and `syn_path`
@@ -260,6 +257,11 @@ class RecordSection:
                 the screen. Will not consider waveforms which have been
                 excluded on other basis (e.g., wrong component)
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
+            - 'rel_norm': relative normalization, used when both `pysep_path` 
+                and `syn_path` are provided (or when `st` and `st_syn` are 
+                provided). Scales each trace by the maximum amplitude of the 
+                pair of matching waveforms, maintaining their relative 
+                amplitudes but normalizing pairs of traces to the same value
             - 'geometric_spreading': scale amplitudes by expected reduction
                 through geometric spreading. Related parameters are:
 
@@ -774,7 +776,7 @@ class RecordSection:
                 f"must be in {acceptable_distance_units}"
 
         if self.scale_by is not None:
-            acceptable_scale_by = ["normalize", "global_norm",
+            acceptable_scale_by = ["normalize", "rel_norm", "global_norm",
                                    "geometric_spreading"]
             if self.scale_by not in acceptable_scale_by:
                 err.scale_by = f"must be in {acceptable_scale_by}"
@@ -1299,11 +1301,31 @@ class RecordSection:
         if self.scale_by is None:
             amp_scaling = np.ones(len(self.st))
         # Scale by the max amplitude of each trace
-        elif self.scale_by == "normalize":
-            if _choice == "st":
-                amp_scaling = self.max_amplitudes
-            elif _choice == "st_syn":
-                amp_scaling = self.max_amplitudes_syn
+        elif self.scale_by in ["normalize", "rel_norm"]:
+            # Rel norm requires two sets so if we don't have that then default 
+            # back to normalize
+            if self.scale_by == "rel_norm" and not \
+                self.max_amplitudes_syn.any():
+                logger.warning("no synthetic max amplitudes, using 'normalize' "
+                               "instead of 'rel_norm'")
+                self.scale_by = "normalize"
+
+            # Normalize each trace by it's own max amplitude, all waveforms will
+            # have the same max value 
+            if self.scale_by == "normalize":
+                if _choice == "st":
+                    amp_scaling = self.max_amplitudes
+                elif _choice == "st_syn":
+                    amp_scaling = self.max_amplitudes_syn
+            # Normalize each pair of traces by their max amplitude, preserving
+            # relative amplitude differences for comparisons
+            elif self.scale_by == "rel_norm":
+                # Get the max amplitude of the data and synthetic
+                # waveforms for each trace
+                amp_scaling = np.ones(len(self.sorted_idx))
+                for idx in self.sorted_idx:
+                    amp_scaling[idx] = max(self.max_amplitudes[idx],
+                                            self.max_amplitudes_syn[idx])
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
@@ -1631,23 +1653,27 @@ class RecordSection:
 
         # Trim all waveforms to the SHORTEST possible time
         if self.trim:
-            # Consider if we are looking at data or data + syn
-            st = self.st
+            # Consider if we are looking at data or data + syn, get min max time
+            st_check = self.st.copy()
             if self.st_syn:
-                st += self.st_syn
-
-            maxstart = max([tr.stats.starttime for tr in st])
-            minend = min([tr.stats.endtime for tr in st])
+                st_check += self.st_syn.copy()
+            maxstart = max([tr.stats.starttime for tr in st_check])
+            minend = min([tr.stats.endtime for tr in st_check])
 
             logger.info("trimming start and end times and filling any "
                          f"gaps with {fill_value}")
             logger.debug(f"global start: {maxstart}")
             logger.debug(f"global end:   {minend}")
-            for tr in st:
-                if fill_value == "mean":
-                    fill_value = tr.data.mean()
-                tr.trim(starttime=maxstart, endtime=minend, pad=True, 
-                        fill_value=fill_value)
+            
+            # Trim based on the min and max starttimes of the traces
+            for st in [self.st, self.st_syn]:
+                if st is None:
+                    continue
+                for tr in st:
+                    if fill_value == "mean":
+                        fill_value = tr.data.mean()
+                    tr.trim(starttime=maxstart, endtime=minend, pad=True, 
+                            fill_value=fill_value)
 
         for st in preprocess_list:
             # Taper prior to zero pad so that the taper actually hits signal

@@ -51,31 +51,40 @@ from pysep.recsec import RecordSection
 
 class Pysep:
     """Download, preprocess, and save waveform data using ObsPy"""
-    def __init__(self, config_file=None, event_selection="default",
-                 client="IRIS", origin_time=None, reference_time=None,
-                 networks="*", stations="*", locations="*", channels="*",
-                 station_ids=None, use_mass_download=False,
-                 extra_download_pct=0.005,
-                 event_latitude=None, event_longitude=None, event_depth_km=None,
-                 event_magnitude=None,
-                 remove_response=True, remove_clipped=True,
-                 remove_insufficient_length=True, remove_masked_data=True,
-                 water_level=60, detrend=True, demean=True, taper_percentage=0.,
-                 rotate=None, pre_filt="default", fill_data_gaps=False,
-                 gap_fraction=1.,
-                 mindistance_km=0, maxdistance_km=20E3, minazimuth=0,
-                 maxazimuth=360, minlatitude=None, minlongitude=None,
-                 maxlatitude=None, maxlongitude=None, resample_freq=None,
-                 scale_factor=1, phase_list=None, seconds_before_event=20,
-                 seconds_after_event=20, seconds_before_ref=100,
-                 seconds_after_ref=300, taup_model="ak135", output_unit="VEL",
-                 user=None, password=None, client_debug=False,
-                 log_level="DEBUG", timeout=600,
-                 write_files="inv,event,stream,sac,config_file,station_list",
-                 plot_files="all", llnl_db_path=None, output_dir=None,
-                 overwrite=False, legacy_naming=False,
-                 overwrite_event_tag=None,
-                 **kwargs):
+    def __init__(self,
+            # Data gathering control
+            client="IRIS", minlatitude=None, minlongitude=None, 
+            maxlatitude=None, maxlongitude=None, user=None, password=None,
+            use_mass_download=False, client_debug=False, timeout=600,
+            llnl_db_path=None,
+            # Event selection
+            event_selection="default", origin_time=None, event_latitude=None,
+            event_longitude=None, event_depth_km=None, event_magnitude=None,
+            seconds_before_event=20, seconds_after_event=20,
+            # Waveform and station metadata gathering
+            reference_time=None, seconds_before_ref=100, seconds_after_ref=300,
+            extra_download_pct=0.005, networks="*", stations="*", locations="*",
+            channels="*", station_ids=None,
+            # Station removal and curtailing
+            mindistance_km=0, maxdistance_km=20E3, minazimuth=0, maxazimuth=360,
+            remove_clipped=True, remove_insufficient_length=True, 
+            remove_masked_data=True, fill_data_gaps=False, gap_fraction=1.,
+            # Data processing
+            detrend=True, demean=True, taper_percentage=0., rotate=None,
+            resample_freq=None, scale_factor=1,
+            # Instrument response removal
+            remove_response=True, output_unit="VEL", water_level=60,
+            pre_filt="default",
+            # SAC header control
+            phase_list=None, taup_model="ak135",
+            # PySEP configuration
+            config_file=None, log_level="DEBUG", legacy_naming=False,
+            overwrite_event_tag=None,
+            # Output file and figure control
+            write_files="inv,event,stream,sac,config_file,station_list",
+            plot_files="all", output_dir=None, overwrite=False, 
+            **kwargs
+            ):
         """
         .. note::
             Parameters for general data gathering control
@@ -161,8 +170,7 @@ class Pysep:
         :type seconds_before_event: float
         :param seconds_before_event: For event selection only, only used if
             `event_selection`=='search'. Time [s] before given `origin_time` to
-            search for a matching catalog event from the given `client`
-        :type seconds_after_event: float
+            search
         :param seconds_after_event: For event selection only, only used if
             `event_selection`=='search'. Time [s] after given `origin_time` to
             search for a matching catalog event from the given `client`
@@ -421,7 +429,7 @@ class Pysep:
             2) If NoneType or an empty string, no files will be written.
             3) If 'all', write all files listed in (1)
         :type plot_files: str or NoneType
-        :param write_files: What to plot after data gathering.
+        :param plot_files: What to plot after data gathering.
             Should be a comma-separated list of the following:
 
             - map: plot a source-receiver map with event and all stations
