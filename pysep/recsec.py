@@ -257,6 +257,11 @@ class RecordSection:
                 the screen. Will not consider waveforms which have been
                 excluded on other basis (e.g., wrong component)
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
+            - 'rel_norm': relative normalization, used when both `pysep_path` 
+                and `syn_path` are provided (or when `st` and `st_syn` are 
+                provided). Scales each trace by the maximum amplitude of the 
+                pair of matching waveforms, maintaining their relative 
+                amplitudes but normalizing pairs of traces to the same value
             - 'geometric_spreading': scale amplitudes by expected reduction
                 through geometric spreading. Related parameters are:
 
