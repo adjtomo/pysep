@@ -20,7 +20,8 @@ SHOW=False
 @pytest.fixture
 def recsec(tmpdir):
     """Initiate a RecordSection instance"""
-    return RecordSection(pysep_path="./test_data/test_SAC", show=SHOW,
+    return RecordSection(pysep_path="./test_data/test_SAC", 
+                         scale_by="normalize", show=SHOW,
                          save=os.path.join(tmpdir, "recsec.png"))
 
 
@@ -31,6 +32,7 @@ def recsec_w_synthetics(tmpdir):
                          syn_path="./test_data/test_synthetics",
                          source="./test_data/test_CMTSOLUTION_2014p715167",
                          stations="./test_data/test_STATIONS",
+                         scale_by="normalize",  # for visual checks
                          show=SHOW, save=os.path.join(tmpdir, "recsec.png"))
 
 
@@ -83,6 +85,79 @@ def test_plot_recsec_time_shift(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+
+def test_plot_recsec_time_shift_array(recsec):
+    """apply an array of time shifts to shift each trace differently"""
+    recsec.time_shift_s = [50, 125, 200]
+    recsec.zero_pad_s = [200, 500]
+    recsec.move_out = 4
+    recsec.process_st()
+    recsec.get_parameters()
+    recsec.plot()
+
+def test_plot_recsec_time_shift_syn_same_as_obs(tmpdir):
+    """apply the same time shift to data and synthetics"""
+    # Cannot use fixtures because the time shift values need to be set at init
+    # for this specific use case. This is just a caveat of the test case, Users
+    # will not run into this issue
+    recsec_w_synthetics = RecordSection(
+        pysep_path="./test_data/test_SAC", 
+        syn_path="./test_data/test_synthetics",
+        source="./test_data/test_CMTSOLUTION_2014p715167",
+        stations="./test_data/test_STATIONS",
+        scale_by="normalize",  # for visual checks
+        time_shift_s=88., zero_pad_s=[200, 500],
+        show=SHOW, save=os.path.join(tmpdir, "recsec.png")
+        )
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn_array(recsec_w_synthetics):
+    """apply an array of time shifts to shift each trace differently"""
+    recsec_w_synthetics.time_shift_s = [50, 125, -200]
+    recsec_w_synthetics.time_shift_s_syn = [-200, -100, 25]
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn(recsec_w_synthetics):
+    """apply different time shift to data and synthetics"""
+    recsec_w_synthetics.time_shift_s = 88.
+    recsec_w_synthetics.time_shift_s_syn = -51.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn_zero(recsec_w_synthetics):
+    """make sure zero synthetic time shift works"""
+    recsec_w_synthetics.time_shift_s = 88.
+    recsec_w_synthetics.time_shift_s_syn = 0.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_zero_w_syn(recsec_w_synthetics):
+    """make sure zero time shift and nonzero synthetic time shift works"""
+    recsec_w_synthetics.time_shift_s = 0.
+    recsec_w_synthetics.time_shift_s_syn = 69.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
 
 
 def test_plot_recsec_preprocess(recsec):
