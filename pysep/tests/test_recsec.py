@@ -101,7 +101,28 @@ def test_plot_recsec_time_shift_syn(recsec_w_synthetics):
     recsec_w_synthetics.time_shift_s = 88.
     recsec_w_synthetics.time_shift_s_syn = -51.
     recsec_w_synthetics.zero_pad_s = [200, 500]
-    recsec_w_synthetics.move_out = 4
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn_zero(recsec_w_synthetics):
+    """make sure zero synthetic time shift works"""
+    recsec_w_synthetics.time_shift_s = 88.
+    recsec_w_synthetics.time_shift_s_syn = 0.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_zero_w_syn(recsec_w_synthetics):
+    """make sure zero time shift and nonzero synthetic time shift works"""
+    recsec_w_synthetics.time_shift_s = 0.
+    recsec_w_synthetics.time_shift_s_syn = 69.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
 
     recsec_w_synthetics.process_st()
     recsec_w_synthetics.get_parameters()

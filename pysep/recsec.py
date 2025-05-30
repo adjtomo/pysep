@@ -1035,7 +1035,6 @@ class RecordSection:
 
         # WARNING: this will overwrite the user input time shift values with
         # an array that can be used for plotting.
-        import pdb;pdb.set_trace()
         self.time_shift_s = self.get_time_shifts(self.time_shift_s)  
         self.time_shift_s_syn = self.get_time_shifts(self.time_shift_s_syn)  
 
