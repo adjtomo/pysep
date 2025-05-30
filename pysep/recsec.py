@@ -1322,10 +1322,10 @@ class RecordSection:
             elif self.scale_by == "rel_norm":
                 # Get the max amplitude of the data and synthetic
                 # waveforms for each trace
-                amp_scaling = np.ones(len(self.sorted_idx))
+                amp_scaling = np.ones(len(self.st))
                 for idx in self.sorted_idx:
                     amp_scaling[idx] = max(self.max_amplitudes[idx],
-                                            self.max_amplitudes_syn[idx])
+                                           self.max_amplitudes_syn[idx])
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
