@@ -606,7 +606,7 @@ class RecordSection:
         # Synthetic time shift (optional) either takes on the `time_shift_s`
         # value or has its own value
         if time_shift_s_syn is None:
-            self.time_shift_s_syn = time_shift_s
+            self.time_shift_s_syn = self.time_shift_s
         else:
             try:
                 self.time_shift_s_syn = float(time_shift_s_syn)
@@ -1890,8 +1890,12 @@ class RecordSection:
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
         logger.debug("plotting line check starting from bottom (y=0)")
+        if self.st_syn is not None:
+            SYNSHIFT = f"\t{DLT}T_SYN"
+        else:
+            SYNSHIFT = ""
         logger.debug(
-            "\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX"
+            f"\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\t{DLT}T{SYNSHIFT}\tTOFFSET\tYABSMAX"
         )
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
@@ -2089,6 +2093,12 @@ class RecordSection:
                      zorder=zorder)
         
         # Sanity check print station information to check against plot
+        # take into account that synthetic time shift may or may not exist
+        if self.st_syn is not None:
+            syn_shift = f"\t{self.time_shift_s_syn[idx]:4.2f}"
+        else:
+            syn_shift = ""
+
         log_str = (f"{idx}"
                    f"\t{int(self.y_axis[y_index])}"
                    f"\t{tr.get_id():<6}"
@@ -2096,6 +2106,7 @@ class RecordSection:
                    f"\t{self.azimuths[idx]:6.2f}"
                    f"\t{self.backazimuths[idx]:6.2f}"
                    f"\t{self.time_shift_s[idx]:4.2f}"
+                   f"{syn_shift}"
                    f"\t{toffset_str}"
                    f"\t{max_amplitudes[idx]:.2E}\n"
                    )

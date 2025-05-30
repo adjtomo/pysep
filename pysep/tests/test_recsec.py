@@ -15,7 +15,7 @@ from pysep import RecordSection
 
 
 # For debugging, to show figures turn SHOW=True
-SHOW=True
+SHOW=False
 
 @pytest.fixture
 def recsec(tmpdir):
