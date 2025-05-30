@@ -85,12 +85,10 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
         >>>     st += read(fid)
         >>> plotw_rs(st=st, sort_by="distance_r")
 """
-from encodings.punycode import T
 import os
 import sys
 import argparse
 import textwrap
-import time
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -2343,7 +2341,22 @@ class RecordSection:
         fontsize = self.kwargs.get("y_label_fontsize", 10)
 
         y_tick_labels = []
-        _has_shifted, _has_shifted_syn = False, False  # for labels
+
+        # Check whether we need to consider time shifts in the labels
+        if np.any(self.time_shift_s != 0):
+            _has_shifted = True
+        else:
+            _has_shifted = False
+
+        # If synthetic time shifts are all the same as observed, or if we have 
+        # no synthetic time shifts at all, no need to have separate labels 
+        if (self.st_syn is None) or \
+            np.all(self.time_shift_s_syn == self.time_shift_s) or \
+            np.any(self.time_shift_s_syn != 0):
+            _has_shifted_syn = False
+        else:
+            _has_shifted_syn = True
+
         for idx in self.sorted_idx[start:stop]:
             str_id = self.station_ids[idx]
             if self.sort_by is not None and "backazimuth" in self.sort_by:
@@ -2364,12 +2377,10 @@ class RecordSection:
             label = \
                 f"{str_id:>{self.stats.longest_id}}|{str_az:>8}|{str_dist:>8}"
             # Add time shift if we have shifted at all
-            if self.time_shift_s[idx] != 0:
+            if _has_shifted:
                 label += f"|{self.time_shift_s[idx]:.2f}s"
-                _has_shifted = True
-            if self.st_syn and self.time_shift_s_syn[idx] != 0:
+            if _has_shifted_syn:
                 label += f"|{self.time_shift_s_syn[idx]:.2f}s"
-                _has_shifted_syn = True
             y_tick_labels.append(label)
 
         # Generate a 'template' y-axis format to help Users decipher labels

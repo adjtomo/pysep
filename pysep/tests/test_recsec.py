@@ -15,7 +15,7 @@ from pysep import RecordSection
 
 
 # For debugging, to show figures turn SHOW=True
-SHOW=False
+SHOW=True
 
 @pytest.fixture
 def recsec(tmpdir):
@@ -95,6 +95,25 @@ def test_plot_recsec_time_shift_array(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+def test_plot_recsec_time_shift_syn_same_as_obs(tmpdir):
+    """apply the same time shift to data and synthetics"""
+    # Cannot use fixtures because the time shift values need to be set at init
+    # for this specific use case. This is just a caveat of the test case, Users
+    # will not run into this issue
+    recsec_w_synthetics = RecordSection(
+        pysep_path="./test_data/test_SAC", 
+        syn_path="./test_data/test_synthetics",
+        source="./test_data/test_CMTSOLUTION_2014p715167",
+        stations="./test_data/test_STATIONS",
+        scale_by="normalize",  # for visual checks
+        time_shift_s=88., zero_pad_s=[200, 500],
+        show=SHOW, save=os.path.join(tmpdir, "recsec.png")
+        )
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
 
 
 def test_plot_recsec_time_shift_syn_array(recsec_w_synthetics):
