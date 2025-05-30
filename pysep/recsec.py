@@ -457,6 +457,76 @@ class RecordSection:
             verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'.
 
         :raises AssertionError: if any parameters are set incorrectly
+
+        .. note::
+            **Keyword Arguments** (for fine-tune control)
+
+        Processing Kwargs
+        `````````````````
+        - max_percentage (float): Maximum percentage for 
+            ObsPy Stream.taper(). Default 0.05
+        - taper_type (str): Taper type. Default cosine.
+        - zerophase (bool): Zero phase filter or not. Default True.
+        - fill_value (str): Fill value for ObsPy Stream.trim(fill_value=...) 
+            Default 'mean'
+
+        Azimuth Sorting Kwargs
+        ```````````````````````
+        - azimuth_binsize (int): Size of azimuth bins in degrees. Default 45
+        - azimuth_bin_c (str): Color of azimuth bins. Default 'red'
+        - azimuth_bin_lw (int): Linewidth of azimuth bins. Default 0.75
+        - azimuth_bin_ls (str): Linestyle of azimuth bins. Default '-'
+        - azimuth_bin_zorder (int): Zorder of azimuth lines. Default 5
+
+        Plotting Kwargs
+        `````````````````
+        - linewidth (float): Linewidth of the traces. Default 0.25
+        - obs_color (str): Color of observed data. Default 'black'
+        - syn_color (str): Color of synthetic data. Default 'blue'
+        - window_alpha (float): Alpha value of windows. Default 0.1
+        - window_color (str): Color of windows. Default 'orange'
+
+        Tmark Kwargs
+        `````````````
+        - tmark_c (str): Color of time marks. Default 'red'
+        - tmark_lw (int): Linewidth of time marks. Default 1.5
+        - tmark_ls (str): Linestyle of time marks. Default '-'
+        - tmark_alpha (float): Alpha value of time marks. Default 0.75
+        - tmark_zorder (int): Zorder of time marks. Default 5
+
+        Plot Aesthetic Kwargs
+        `````````````````````
+        - y_label_c (str): Color of Y-axis label. Default 'black'
+        - title (str): Overwrite the default title of the figure
+        - ytick_fontsize (float): Font size for labels next to Y-axis ticks.
+        - xtick_fontsize (float): Font size for labels next to X-axis ticks.
+        - xlabel_fontsize (float): Font size for the X-axis main label 
+        - ylabel_fontsize (float): Font size for the Y-axis main label 
+        - title_fontsize (float): Font size of the main title at the top of 
+            the figure.
+
+        - axis_linewidth (float): Line thickness for the borders of  figure.
+        - tick_linewidth (float): Thickness of tick marks for both X and Y axes.
+        - tick_length (float): Length of tick marks for both X and Y axes.
+        - tick_direction (str): 'in' for ticks pointing inwards, 'out' for 
+            ticks  pointing outwards.
+
+        - spine_zorder (int): Z order (visibility) of the axis borders 
+            (spines).
+        - spine_top (bool): Toggle on/off the top axis border.
+        - spine_bot (bool): Toggle on/off the bottom axis border.
+        - spine_left (bool): Toggle on/off the left axis border.
+        - spine_right (bool): Toggle on/off the right axis border.
+
+        - xtick_minor (float): How often minor tick marks drawn on X-axis.
+        - xtick_major (float): How often major tick marks drawn on X-axis.
+        - ytick_minor (float): How often minor tick marks drawn on Y-axis.
+        - ytick_major (float): How often major tick marks drawn on Y-axis.
+
+        - xgrid_minor (bool): Turn on grid lines for each minor X tick.
+        - xgrid_major (bool): Turn on grid lines for each major X tick.
+        - ygrid_minor (bool): Turn on grid lines for each minor Y tick.
+        - ygrid_major (bool): Turn on grid lines for each major Y tick.
         """
         # Set the logger level before running anything
         logger.setLevel(log_level)
