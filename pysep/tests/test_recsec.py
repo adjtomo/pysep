@@ -15,7 +15,7 @@ from pysep import RecordSection
 
 
 # For debugging, to show figures turn SHOW=True
-SHOW=False
+SHOW=True
 
 @pytest.fixture
 def recsec(tmpdir):
@@ -31,6 +31,7 @@ def recsec_w_synthetics(tmpdir):
                          syn_path="./test_data/test_synthetics",
                          source="./test_data/test_CMTSOLUTION_2014p715167",
                          stations="./test_data/test_STATIONS",
+                         scale_by="normalize",  # for visual checks
                          show=SHOW, save=os.path.join(tmpdir, "recsec.png"))
 
 
@@ -83,6 +84,28 @@ def test_plot_recsec_time_shift(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+# !!! TEST ME
+def test_plot_recsec_time_shift_array(recsec):
+    """apply an array of time shifts to shift each trace differently"""
+    recsec.time_shift_s = [50, 125, 200]
+    recsec.zero_pad_s = [200, 500]
+    recsec.move_out = 4
+    recsec.process_st()
+    recsec.get_parameters()
+    recsec.plot()
+
+# !!! TEST ME
+def test_plot_recsec_time_shift_syn(recsec_w_synthetics):
+    """apply different time shift to data and synthetics"""
+    recsec_w_synthetics.time_shift_s = 88.
+    recsec_w_synthetics.time_shift_s_syn = -51.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+    recsec_w_synthetics.move_out = 4
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
 
 
 def test_plot_recsec_preprocess(recsec):
