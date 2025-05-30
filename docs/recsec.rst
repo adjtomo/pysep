@@ -190,6 +190,8 @@ Plotting Kwargs
 - linewidth (float): Linewidth of the traces. Default 0.25
 - obs_color (str): Color of observed data. Default 'black'
 - syn_color (str): Color of synthetic data. Default 'blue'
+- obs_zorder (int): Zorder of observed data. Default 10
+- syn_zorder (int): Zorder of synthetic data. Default 10
 - window_alpha (float): Alpha value of windows. Default 0.1
 - window_color (str): Color of windows. Default 'orange'
 

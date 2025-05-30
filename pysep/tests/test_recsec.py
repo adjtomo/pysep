@@ -20,7 +20,8 @@ SHOW=True
 @pytest.fixture
 def recsec(tmpdir):
     """Initiate a RecordSection instance"""
-    return RecordSection(pysep_path="./test_data/test_SAC", show=SHOW,
+    return RecordSection(pysep_path="./test_data/test_SAC", 
+                         scale_by="normalize", show=SHOW,
                          save=os.path.join(tmpdir, "recsec.png"))
 
 
@@ -85,7 +86,7 @@ def test_plot_recsec_time_shift(recsec):
     recsec.get_parameters()
     recsec.plot()
 
-# !!! TEST ME
+
 def test_plot_recsec_time_shift_array(recsec):
     """apply an array of time shifts to shift each trace differently"""
     recsec.time_shift_s = [50, 125, 200]
@@ -95,7 +96,18 @@ def test_plot_recsec_time_shift_array(recsec):
     recsec.get_parameters()
     recsec.plot()
 
-# !!! TEST ME
+
+def test_plot_recsec_time_shift_syn_array(recsec_w_synthetics):
+    """apply an array of time shifts to shift each trace differently"""
+    recsec_w_synthetics.time_shift_s = [50, 125, -200]
+    recsec_w_synthetics.time_shift_s_syn = [-200, -100, 25]
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
 def test_plot_recsec_time_shift_syn(recsec_w_synthetics):
     """apply different time shift to data and synthetics"""
     recsec_w_synthetics.time_shift_s = 88.

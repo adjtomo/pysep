@@ -491,6 +491,8 @@ class RecordSection:
         - linewidth (float): Linewidth of the traces. Default 0.25
         - obs_color (str): Color of observed data. Default 'black'
         - syn_color (str): Color of synthetic data. Default 'blue'
+        - obs_zorder (int): Zorder of observed data. Default 10
+        - syn_zorder (int): Zorder of synthetic data. Default 10
         - window_alpha (float): Alpha value of windows. Default 0.1
         - window_color (str): Color of windows. Default 'orange'
 
@@ -1036,7 +1038,8 @@ class RecordSection:
         # WARNING: this will overwrite the user input time shift values with
         # an array that can be used for plotting.
         self.time_shift_s = self.get_time_shifts(self.time_shift_s)  
-        self.time_shift_s_syn = self.get_time_shifts(self.time_shift_s_syn)  
+        if self.st_syn is not None:
+            self.time_shift_s_syn = self.get_time_shifts(self.time_shift_s_syn)  
 
         # Needs to be run before getting xlims so that we know the time offset
         # this will internally modify `tr.stats.time_offset` for `st`, `st_syn`
@@ -1296,13 +1299,14 @@ class RecordSection:
                 logger.info(f"apply time shift by {time_shift_s}")
                 time_shift_arr = [-1 * tr.stats.sac[sac_key] for tr in self.st]
 
-        time_shift_arr = np.array(time_shift_arr)
+        time_shift_arr = np.array(time_shift_arr, dtype="float")
 
         # Further change the time shift if we have move out input
         if self.move_out:
             logger.info(f"apply {self.move_out} {self.distance_units}/s "
                         f"move out")
             move_out_arr = self.distances / self.move_out
+
             time_shift_arr -= move_out_arr
 
         return time_shift_arr
@@ -2006,6 +2010,8 @@ class RecordSection:
         window_color = self.kwargs.get("window_color", "orange")
         obs_color = self.kwargs.get("obs_color", "k")
         syn_color = self.kwargs.get("syn_color", "r")
+        obs_zorder = self.kwargs.get("obs_zorder", 10)
+        syn_zorder = self.kwargs.get("obs_zorder", 10)
 
         # Used to differentiate the two types of streams for plotting diffs
         choices = ["st", "st_syn"]
@@ -2016,8 +2022,10 @@ class RecordSection:
         # Plot actual data on with amplitude scaling, time shift, and y-offset
         if choice == "st":
             tshift = self.time_shift_s[idx]
+            zorder = obs_zorder
         elif choice == "st_syn":
             tshift = self.time_shift_s_syn[idx]
+            zorder = syn_zorder
         
         # These are still the entire waveform. Make sure we honor zero padding
         # and any time shift applied
@@ -2080,7 +2088,7 @@ class RecordSection:
         y = y[start:stop]
 
         self.ax.plot(x, y, c=[obs_color, syn_color][c], linewidth=linewidth, 
-                     zorder=10)
+                     zorder=zorder)
         
         # Sanity check print station information to check against plot
         log_str = (f"{idx}"
@@ -2259,8 +2267,9 @@ class RecordSection:
             logger.info("user requests inverting y-axis with absolute "
                         "reverse sort")
 
-        # X-axis label is different if we time shift
-        if self.time_shift_s.sum() == 0 and self.time_shift_s_syn.sum() == 0:
+        # X-axis label is different if we time shift either data or synthetic
+        if self.time_shift_s.sum() == 0 or \
+            (self.st_syn and self.time_shift_s_syn.sum() == 0):
             plt.xlabel("Time [s]")
         else:
             plt.xlabel("Relative Time [s]")
@@ -2334,6 +2343,7 @@ class RecordSection:
         fontsize = self.kwargs.get("y_label_fontsize", 10)
 
         y_tick_labels = []
+        _has_shifted, _has_shifted_syn = False, False  # for labels
         for idx in self.sorted_idx[start:stop]:
             str_id = self.station_ids[idx]
             if self.sort_by is not None and "backazimuth" in self.sort_by:
@@ -2356,8 +2366,10 @@ class RecordSection:
             # Add time shift if we have shifted at all
             if self.time_shift_s[idx] != 0:
                 label += f"|{self.time_shift_s[idx]:.2f}s"
-            if self.time_shift_s_syn[idx] != 0:
+                _has_shifted = True
+            if self.st_syn and self.time_shift_s_syn[idx] != 0:
                 label += f"|{self.time_shift_s_syn[idx]:.2f}s"
+                _has_shifted_syn = True
             y_tick_labels.append(label)
 
         # Generate a 'template' y-axis format to help Users decipher labels
@@ -2368,9 +2380,9 @@ class RecordSection:
 
         # Y_FMT will include time shift IF there are time shifts
         y_fmt = f"NET.STA.LOC.CHA|{az_str}|DIST"
-        if self.time_shift_s.sum() != 0:
+        if _has_shifted:
             y_fmt += f"|{DLT}T"
-        if self.time_shift_s_syn.sum() != 0:
+        if _has_shifted_syn:
             y_fmt += f"|{DLT}T_SYN"
 
         # Option 1: Replacing y-axis tick labels with waveform labels
