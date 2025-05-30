@@ -2352,7 +2352,7 @@ class RecordSection:
         # no synthetic time shifts at all, no need to have separate labels 
         if (self.st_syn is None) or \
             np.all(self.time_shift_s_syn == self.time_shift_s) or \
-            np.any(self.time_shift_s_syn != 0):
+            np.all(self.time_shift_s_syn == 0):
             _has_shifted_syn = False
         else:
             _has_shifted_syn = True
