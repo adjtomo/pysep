@@ -605,13 +605,14 @@ class RecordSection:
             self.time_shift_s = time_shift_s
         # Synthetic time shift (optional) either takes on the `time_shift_s`
         # value or has its own value
+        breakpoint()
         if time_shift_s_syn is None:
             self.time_shift_s_syn = self.time_shift_s
         else:
             try:
                 self.time_shift_s_syn = float(time_shift_s_syn)
             except (TypeError, ValueError):
-                self.time_shift_s_syn = time_shift_s
+                self.time_shift_s_syn = time_shift_s_syn
         self.zero_pad_s = zero_pad_s
 
         # Processing parameters
@@ -870,7 +871,7 @@ class RecordSection:
 
         for time_shift_s in [self.time_shift_s, self.time_shift_s_syn]:
             if time_shift_s is not None:
-                acceptable_time_shift_s = [float, list, str]
+                acceptable_time_shift_s = [int, float, list, str]
                 if type(time_shift_s) not in acceptable_time_shift_s:
                     err.time_shift_s = f"must be in {acceptable_time_shift_s}"
                 if isinstance(time_shift_s, list) and \
