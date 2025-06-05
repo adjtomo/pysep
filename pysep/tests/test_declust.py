@@ -1,5 +1,7 @@
 """
 Test the declustering algorithm
+
+For debugging, to show figures turn SHOW in __init__.py to True
 """
 import os
 import pytest

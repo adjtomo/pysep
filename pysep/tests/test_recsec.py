@@ -14,10 +14,14 @@ from copy import copy
 from pysep import RecordSection
 
 
+# For debugging, to show figures turn SHOW=True
+SHOW=False
+
 @pytest.fixture
 def recsec(tmpdir):
     """Initiate a RecordSection instance"""
-    return RecordSection(pysep_path="./test_data/test_SAC", show=False,
+    return RecordSection(pysep_path="./test_data/test_SAC", 
+                         scale_by="normalize", show=SHOW,
                          save=os.path.join(tmpdir, "recsec.png"))
 
 
@@ -28,7 +32,8 @@ def recsec_w_synthetics(tmpdir):
                          syn_path="./test_data/test_synthetics",
                          source="./test_data/test_CMTSOLUTION_2014p715167",
                          stations="./test_data/test_STATIONS",
-                         show=False, save=os.path.join(tmpdir, "recsec.png"))
+                         scale_by="normalize",  # for visual checks
+                         show=SHOW, save=os.path.join(tmpdir, "recsec.png"))
 
 
 def test_plot_recsec(recsec):
@@ -82,6 +87,79 @@ def test_plot_recsec_time_shift(recsec):
     recsec.plot()
 
 
+def test_plot_recsec_time_shift_array(recsec):
+    """apply an array of time shifts to shift each trace differently"""
+    recsec.time_shift_s = [50, 125, 200]
+    recsec.zero_pad_s = [200, 500]
+    recsec.move_out = 4
+    recsec.process_st()
+    recsec.get_parameters()
+    recsec.plot()
+
+def test_plot_recsec_time_shift_syn_same_as_obs(tmpdir):
+    """apply the same time shift to data and synthetics"""
+    # Cannot use fixtures because the time shift values need to be set at init
+    # for this specific use case. This is just a caveat of the test case, Users
+    # will not run into this issue
+    recsec_w_synthetics = RecordSection(
+        pysep_path="./test_data/test_SAC", 
+        syn_path="./test_data/test_synthetics",
+        source="./test_data/test_CMTSOLUTION_2014p715167",
+        stations="./test_data/test_STATIONS",
+        scale_by="normalize",  # for visual checks
+        time_shift_s=88., zero_pad_s=[200, 500],
+        show=SHOW, save=os.path.join(tmpdir, "recsec.png")
+        )
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn_array(recsec_w_synthetics):
+    """apply an array of time shifts to shift each trace differently"""
+    recsec_w_synthetics.time_shift_s = [50, 125, -200]
+    recsec_w_synthetics.time_shift_s_syn = [-200, -100, 25]
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn(recsec_w_synthetics):
+    """apply different time shift to data and synthetics"""
+    recsec_w_synthetics.time_shift_s = 88.
+    recsec_w_synthetics.time_shift_s_syn = -51.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_syn_zero(recsec_w_synthetics):
+    """make sure zero synthetic time shift works"""
+    recsec_w_synthetics.time_shift_s = 88.
+    recsec_w_synthetics.time_shift_s_syn = 0.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
+def test_plot_recsec_time_shift_zero_w_syn(recsec_w_synthetics):
+    """make sure zero time shift and nonzero synthetic time shift works"""
+    recsec_w_synthetics.time_shift_s = 0.
+    recsec_w_synthetics.time_shift_s_syn = 69.
+    recsec_w_synthetics.zero_pad_s = [200, 500]
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+
+
 def test_plot_recsec_preprocess(recsec):
     """preprocess and filter the record section"""
     recsec.min_period_s = 10
@@ -124,9 +202,12 @@ def test_plot_recsec_plot_options(recsec):
     recsec.plot()
 
 
-def test_recsec_calc_time_offset(recsec_w_synthetics):
+def test_recsec_calc_time_offset_no_trim(recsec_w_synthetics):
     """testing that synthetics and data which do not share origin time 
     plot together correctly by checking that the time offsets are calced"""
+    # Turn off trim so that time shifts are retained
+    recsec_w_synthetics.trim = False
+
     # Pad 100s zeros to data and shift starttime to match
     for tr in recsec_w_synthetics.st:
         tr.data = np.append(np.zeros(int(100 * tr.stats.sampling_rate)), 
@@ -135,8 +216,27 @@ def test_recsec_calc_time_offset(recsec_w_synthetics):
 
     recsec_w_synthetics.process_st()
     recsec_w_synthetics.get_parameters()
+
     for tr in recsec_w_synthetics.st:
         assert(tr.stats.time_offset == -100)
+
+
+def test_recsec_calc_time_offset_w_trim(recsec_w_synthetics):
+    """testing that synthetics and data which do not share origin time 
+    plot together correctly by checking that trim is applied"""
+    # Pad 100s zeros to data and shift starttime to match
+    for tr in recsec_w_synthetics.st:
+        tr.data = np.append(np.zeros(int(100 * tr.stats.sampling_rate)), 
+                            tr.data)
+        tr.stats.starttime -= 100
+
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+
+    for tr, tr_syn in zip(recsec_w_synthetics.st, recsec_w_synthetics.st_syn):
+        tdiff = tr.stats.starttime - tr_syn.stats.starttime
+        assert(tdiff < tr.stats.delta)
+
 
 def test_recsec_zero_amplitude(recsec):
     """
@@ -158,3 +258,71 @@ def test_recsec_zero_amplitude(recsec):
     recsec.process_st()
     recsec.get_parameters()
     recsec.plot()
+
+
+def test_recsec_mismatched_locations_fails(recsec_w_synthetics):
+    """
+    Test that when RecSec encounters stations with different location codes, 
+    it fails the parameter check
+    """
+    # Ensure that the location codes for `st` and `st_syn` differ 
+    for tr in recsec_w_synthetics.st:
+        tr.stats.location = "11"
+    for tr in recsec_w_synthetics.st_syn:
+        tr.stats.location = "00"
+
+    with pytest.raises(SystemExit):
+        recsec_w_synthetics.check_parameters()
+
+        
+def test_recsec_mismatched_locations(recsec_w_synthetics):
+    """
+    Test when RecSec encounters stations that match all their station code 
+    except for location code, which is sometimes used as a free-floating 
+    parameter to indicate e.g., synthetics or something and doesn't always
+    determine that waveforms do not match.
+    """
+    # Ensure that the location codes for `st` and `st_syn` differ 
+    for tr in recsec_w_synthetics.st:
+        tr.stats.location = "11"
+    for tr in recsec_w_synthetics.st_syn:
+        tr.stats.location = "00"
+
+    recsec_w_synthetics.remove_locations = True
+    recsec_w_synthetics.check_parameters()
+    recsec_w_synthetics.process_st()
+    recsec_w_synthetics.get_parameters()
+    recsec_w_synthetics.plot()
+    
+    
+@pytest.mark.skip(reason="visual test for zero pad acceptance, unskip to view")
+def test_plot_recsec_zero_pad(recsec):
+    """
+    Ensure that zero pad only adds zeros to the start and end of the waveform
+    but does NOT time shift it. 
+    
+    .. note::
+        This is a visual check for now so unskip this test and set constant 
+        SHOW==True to have a look at the waveforms that get plotted. In the 
+        future we could do a check on the time of the max amplitude but I  
+        did not think it was worth the investment to write that test.
+    """
+    recsec.scale_by = "normalize"
+    recsec.min_period_s = 1/3
+    recsec.max_period_s = 10.
+    recsec.xlim_s = [-25, 50]
+    recsec.tmarks = [20]
+
+    recsec_copy = copy(recsec)
+
+    # Zero pad, preprocess, and find the index of the maximum amplitude
+    recsec.process_st()
+    recsec.get_parameters()
+    recsec.plot()
+
+    # Same processing but add zero pad
+    recsec_zeropad = copy(recsec_copy)
+    recsec_zeropad.zero_pad_s = [10, 5]
+    recsec_zeropad.process_st()
+    recsec_zeropad.get_parameters()
+    recsec_zeropad.plot()

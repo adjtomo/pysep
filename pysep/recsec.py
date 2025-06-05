@@ -70,7 +70,7 @@ based on source-receiver characteristics (i.e., src-rcv distance, backazimuth).
             --sort_by abs_distance_r --components Z --min_period_s 2 \
             --max_period_s 50 --amplitude_scale_factor 0.25 \
             --y_label_loc x_max --y_label_fontsize 7 --overwrite \
-            --linewidth 1
+            --linewidth 1 
 
     3) From the Python interpreter: this is an example code block that can be
         written into a Python script or run from inside a Python interactive 
@@ -105,8 +105,9 @@ from pysep.utils.io import read_sem
 from pysep.utils.curtail import subset_streams
 from pysep.utils.plot import plot_geometric_spreading, set_plot_aesthetic
 
-# Unicode degree symbol for plot text
+# Unicode symbols for plot text
 DEG = u"\N{DEGREE SIGN}"
+DLT = u"Δ"
 
 
 class Dict(dict):
@@ -126,29 +127,33 @@ class RecordSection:
     2) sorts source-receiver pairs based on User input,
     3) produces record section waveform figures.
     """
-    def __init__(
-            # Data input parameters
-            self, pysep_path=None, syn_path=None, stations=None, source=None, 
-            st=None, st_syn=None, windows=None, synsyn=False, srcfmt=None, 
-            wildcard="*", syn_wildcard=None, 
-            # Data organization parameters
+    def __init__(self,
+            # Reading Parameters
+            pysep_path=None, wildcard="*", syn_path=None, 
+            syn_wildcard=None, stations=None, source=None, synsyn=False, 
+            srcfmt=None, remove_locations=False, 
+            # User-input data
+            st=None, st_syn=None, windows=None,
+            # Waveform plotting organization parameters
             sort_by="default", scale_by=None, time_shift_s=None, 
-            zero_pad_s=None, move_out=None, 
+            time_shift_s_syn=None, zero_pad_s=None, amplitude_scale_factor=1,  
+            move_out=None, azimuth_start_deg=0., distance_units="km", 
+            components="ZRTNE12", 
             # Data processing parameters
-            preprocess=True, min_period_s=None, max_period_s=None, integrate=0, 
-            trim=True, taper=True,
-            # Plotting aesthetic 
-            xlim_s=None, components="ZRTNE12", y_label_loc="default",
-            y_axis_spacing=1, amplitude_scale_factor=1, azimuth_start_deg=0., 
-            distance_units="km", tmarks=None,
-            # Geometric Spreading
-            geometric_spreading_factor=0.5, geometric_spreading_k_val=None,
-            geometric_spreading_exclude=None,
-            geometric_spreading_ymax=None, geometric_spreading_save=None,
-            # Figure generation control parameters
-            figsize=(9, 11), show=True, save="./record_section.png",
-            overwrite=True, max_traces_per_rs=None, log_level="DEBUG", 
-            **kwargs):
+            preprocess=True, min_period_s=None, max_period_s=None, trim=True, 
+            taper=True, integrate=0, 
+            # Geometric Spreading parameters
+            geometric_spreading_factor=0.5, 
+            geometric_spreading_k_val=None, geometric_spreading_exclude=None, 
+            geometric_spreading_ymax=None, geometric_spreading_save=None, 
+            # Figure generation control
+            max_traces_per_rs=None, xlim_s=None,  y_axis_spacing=1, 
+            y_label_loc="default", tmarks=None, 
+            figsize=(9, 11), show=True, save="./record_section.png", 
+            export_traces=False,
+            # Miscellaneous parameters
+            overwrite=True, log_level="DEBUG", **kwargs):
+        
         """
         .. note::
             Used for reading in Pysep-generated waveforms
@@ -180,12 +185,6 @@ class RecordSection:
         :param source: required for synthetics, full path to SPECFEM source
             file, which was used to generate SPECFEM synthetics. Example
             filenames are CMTSOLUTION, FORCESOLUTION, SOURCE.
-        :type cartesian: bool
-        :param cartesian: lets RecSec know that the domain is set in Cartesian
-            coordinates (SPECFEM2D or SPECFEM3D_CARTESIAN in UTM), such that
-            data/metadata reading will need to adjust acoordingly because the
-            ObsPy tools used to read metadata will fail for domains defined in
-            XYZ
         :type synsyn: bool
         :param synsyn: flag to let RecSec know that we are plotting two sets
             of synthetic seismograms. Such that both `pysep_path` and `syn_path`
@@ -196,6 +195,14 @@ class RecordSection:
             format for `source`. Passed to argument `format` of 
             `pysep.utils.io.read_events_plus`. If not given, tries to guess the
             file format based on the name of the file.
+        :type remove_locations: bool
+        :param remove_locations: remove location code from Trace stats when
+            reading in data to avoid the situation where data and synthetics 
+            have mismatched location codes but are meant to correspond to one
+            another (e.g., when MTUQ includes station codes on its outputs).
+            Warning, this strips location codes completely, so corresponding
+            plots and exported traces will NOT match the input data re. 
+            location code.
 
         .. note::
             Used for defining user-input waveforms data
@@ -251,6 +258,11 @@ class RecordSection:
                 the screen. Will not consider waveforms which have been
                 excluded on other basis (e.g., wrong component)
                 i.e., > st[i].max /= max([max(abs(tr.data)) for tr in st])
+            - 'rel_norm': relative normalization, used when both `pysep_path` 
+                and `syn_path` are provided (or when `st` and `st_syn` are 
+                provided). Scales each trace by the maximum amplitude of the 
+                pair of matching waveforms, maintaining their relative 
+                amplitudes but normalizing pairs of traces to the same value
             - 'geometric_spreading': scale amplitudes by expected reduction
                 through geometric spreading. Related parameters are:
 
@@ -272,7 +284,9 @@ class RecordSection:
                 that number (i.e., -10.2 second time shift applied)
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
-                match the number of traces in your input stream.
+                be equal to the number of traces in your stream, in the same 
+                order as the traces in your stream. Even if your final record 
+                section has less traces due to the use of `components`. 
             3. str: apply time shift based on a theoretical TauP phase arrival
                 if available in the SAC header. These should have been appended
                 by PySEP during data download. If no value is available in the
@@ -282,6 +296,11 @@ class RecordSection:
                 - 'first_arrival_time': shift based on earliest phase arrival
                 - 'p_arrival_time': shift based on earliest P phase arrival
                 - 's_arrival_time': shift based on earliest S phase arrival
+        :type time_shift_s_syn: float OR list of float OR str
+        :param time_shift_s_syn: Optional, apply static time shift to synthetic 
+            waveforms stored in `st_syn`. If not given, but synthetics are,
+            time shift will be taken from `time_shift_s` parameter. Set to 0
+            if no time shift is desired. See available options in `time_shift_s`
         :type zero_pad_s: list
         :param zero_pad_s: zero pad data in units of seconsd. applied after
             tapering and before filtering. Input as a tuple of floats,
@@ -302,8 +321,8 @@ class RecordSection:
         :param move_out: Optional. A velocity value that will be used to
             calculate move out, which will time shift seismograms based on
             their source receiver distance. This parameter will be ADDED
-            to time_shift_s (both float and list), if it is provided.
-            Should be in units of `distance_units`/s
+            to time_shift_s/time_shift_s_syn (both float and list), if it is 
+            provided. Should be in units of `distance_units`/s
         :type azimuth_start_deg: float
         :param azimuth_start_deg: If sorting by azimuth, this defines the
             azimuthal angle for the waveform at the top of the figure.
@@ -338,8 +357,8 @@ class RecordSection:
         :param max_period_s: maximum filter period in seconds, if not given
             and `min_period_s` also not given, then no filtering is applied
         :type trim: bool
-        :param trim: trim waveforms to the same length, and if any data gaps
-            are present, fill with mean values by default
+        :param trim: trim waveforms to the shortest length, and if any data gaps
+            are present, fill with mean values by default.
         :type taper: bool
         :param taper: if True, taper ends of waveform during preprocessing. Uses
             keyword arguments `max_percentage` (float) to define the percentage
@@ -427,6 +446,13 @@ class RecordSection:
         :type save: str
         :param save: path to save output figure, will create the parent
             directory if it doesn't exist. If None, will not save (default).
+        :type export_traces: bool
+        :param export_traces: export processed `st` and `st_syn` (if available) 
+            as SAC files to the `save` directory, so that the User can replot
+            the exact waveforms or use what is shown in RecSec in other 
+            analysis. File naming follows PySEP SAC format (pysep._write_sac);
+            Use parameter `legacy_naming` to access the same file name schema
+            that PySEP uses for writing files with legacy naming scheme. 
 
         .. note::
             Internal RecSec parameters
@@ -439,6 +465,78 @@ class RecordSection:
             verbosity: 'CRITICAL', 'WARNING', 'INFO', 'DEBUG'.
 
         :raises AssertionError: if any parameters are set incorrectly
+
+        .. note::
+            **Keyword Arguments** (for fine-tune control)
+
+        Processing Kwargs
+        `````````````````
+        - max_percentage (float): Maximum percentage for 
+            ObsPy Stream.taper(). Default 0.05
+        - taper_type (str): Taper type. Default cosine.
+        - zerophase (bool): Zero phase filter or not. Default True.
+        - fill_value (str): Fill value for ObsPy Stream.trim(fill_value=...) 
+            Default 'mean'
+
+        Azimuth Sorting Kwargs
+        ```````````````````````
+        - azimuth_binsize (int): Size of azimuth bins in degrees. Default 45
+        - azimuth_bin_c (str): Color of azimuth bins. Default 'red'
+        - azimuth_bin_lw (int): Linewidth of azimuth bins. Default 0.75
+        - azimuth_bin_ls (str): Linestyle of azimuth bins. Default '-'
+        - azimuth_bin_zorder (int): Zorder of azimuth lines. Default 5
+
+        Plotting Kwargs
+        `````````````````
+        - linewidth (float): Linewidth of the traces. Default 0.25
+        - obs_color (str): Color of observed data. Default 'black'
+        - syn_color (str): Color of synthetic data. Default 'blue'
+        - obs_zorder (int): Zorder of observed data. Default 10
+        - syn_zorder (int): Zorder of synthetic data. Default 10
+        - window_alpha (float): Alpha value of windows. Default 0.1
+        - window_color (str): Color of windows. Default 'orange'
+
+        Tmark Kwargs
+        `````````````
+        - tmark_c (str): Color of time marks. Default 'red'
+        - tmark_lw (int): Linewidth of time marks. Default 1.5
+        - tmark_ls (str): Linestyle of time marks. Default '-'
+        - tmark_alpha (float): Alpha value of time marks. Default 0.75
+        - tmark_zorder (int): Zorder of time marks. Default 5
+
+        Plot Aesthetic Kwargs
+        `````````````````````
+        - y_label_c (str): Color of Y-axis label. Default 'black'
+        - title (str): Overwrite the default title of the figure
+        - ytick_fontsize (float): Font size for labels next to Y-axis ticks.
+        - xtick_fontsize (float): Font size for labels next to X-axis ticks.
+        - xlabel_fontsize (float): Font size for the X-axis main label 
+        - ylabel_fontsize (float): Font size for the Y-axis main label 
+        - title_fontsize (float): Font size of the main title at the top of 
+            the figure.
+
+        - axis_linewidth (float): Line thickness for the borders of  figure.
+        - tick_linewidth (float): Thickness of tick marks for both X and Y axes.
+        - tick_length (float): Length of tick marks for both X and Y axes.
+        - tick_direction (str): 'in' for ticks pointing inwards, 'out' for 
+            ticks  pointing outwards.
+
+        - spine_zorder (int): Z order (visibility) of the axis borders 
+            (spines).
+        - spine_top (bool): Toggle on/off the top axis border.
+        - spine_bot (bool): Toggle on/off the bottom axis border.
+        - spine_left (bool): Toggle on/off the left axis border.
+        - spine_right (bool): Toggle on/off the right axis border.
+
+        - xtick_minor (float): How often minor tick marks drawn on X-axis.
+        - xtick_major (float): How often major tick marks drawn on X-axis.
+        - ytick_minor (float): How often minor tick marks drawn on Y-axis.
+        - ytick_major (float): How often major tick marks drawn on Y-axis.
+
+        - xgrid_minor (bool): Turn on grid lines for each minor X tick.
+        - xgrid_major (bool): Turn on grid lines for each major X tick.
+        - ygrid_minor (bool): Turn on grid lines for each minor Y tick.
+        - ygrid_major (bool): Turn on grid lines for each major Y tick.
         """
         # Set the logger level before running anything
         logger.setLevel(log_level)
@@ -507,6 +605,15 @@ class RecordSection:
             self.time_shift_s = float(time_shift_s)
         except (TypeError, ValueError):
             self.time_shift_s = time_shift_s
+        # Synthetic time shift (optional) either takes on the `time_shift_s`
+        # value or has its own value
+        if time_shift_s_syn is None:
+            self.time_shift_s_syn = self.time_shift_s
+        else:
+            try:
+                self.time_shift_s_syn = float(time_shift_s_syn)
+            except (TypeError, ValueError):
+                self.time_shift_s_syn = time_shift_s_syn
         self.zero_pad_s = zero_pad_s
 
         # Processing parameters
@@ -526,6 +633,10 @@ class RecordSection:
         self.figsize = figsize
         self.show = bool(show)
         self.save = save
+
+        # Misc. parameters
+        self.export_traces = bool(export_traces)
+        self.remove_locations = bool(remove_locations)
         self.overwrite = bool(overwrite)
         self.kwargs = Dict(kwargs)
 
@@ -648,6 +759,33 @@ class RecordSection:
 
         return st                
 
+    def write_stream_sac(self, _st_tag="_st_proc", _syn_tag="_syn_proc",
+                         _legacy_naming=True):
+        """
+        Export processed streams in SAC format so that User can manipulate or 
+        replot exactly what is shown in the Record Section. Naming convention
+        follows original naming schema, but adds a tag to prevent
+        overwriting original data. 
+
+        .. note::
+            
+            mostly copied from Pysep._write_sac()
+        """
+        for st, _tag in zip([self.st, self.st_syn], [_st_tag, _syn_tag]):
+            if st is None:
+                continue
+            for tr in st:
+                if _legacy_naming:
+                    # Legacy: e.g., 20000101000000.NN.SSS.LL.CC.c
+                    _trace_id = f"{tr.get_id()[:-1]}.{tr.get_id()[-1].lower()}"
+                    tag = f"{tr.stats.sac.kevnm}.{_trace_id}{_tag}"
+                else:
+                    tag = f"{tr.stats.sac.kevnm}.{tr.get_id()}{_tag}.sac"
+
+                fid = os.path.join(os.path.dirname(self.save),  tag)
+                logger.debug(os.path.basename(fid))
+                tr.write(fid, format="SAC")
+
     def check_parameters(self):
         """
         Check that parameters are set properly and in line with how they
@@ -687,9 +825,24 @@ class RecordSection:
         # Make sure stream and synthetic stream have the same length. If they
         # don't, subset so that they do.
         if self.st_syn is not None:
+            if self.remove_locations:
+                logger.warning("option `remove_locations`, removing location "
+                               "codes from all traces in `st` and `st_syn`")
+                for st in zip(self.st, self.st_syn):
+                    for tr in st:
+                        tr.stats.location = ""
+
             self.st, self.st_syn = subset_streams(self.st, self.st_syn)
 
-            if len(self.st) != len(self.st_syn):
+            if len(self.st) == 0:
+                err.st = f"stream subset removed all traces from `st`, "\
+                         f"please check that you have matching input data"
+            elif len(self.st_syn) == 0:
+                err.st_syn = (
+                    f"stream subset removed all traces from `st_syn`, "
+                    f"please check that you have matching input data"
+                    )
+            elif len(self.st) != len(self.st_syn):
                 err.st_syn = f"length must match `st` (which is {len(self.st)})"
 
         # Check the `sort_by` sorting parameter options
@@ -712,21 +865,22 @@ class RecordSection:
                 f"must be in {acceptable_distance_units}"
 
         if self.scale_by is not None:
-            acceptable_scale_by = ["normalize", "global_norm",
+            acceptable_scale_by = ["normalize", "rel_norm", "global_norm",
                                    "geometric_spreading"]
             if self.scale_by not in acceptable_scale_by:
                 err.scale_by = f"must be in {acceptable_scale_by}"
 
-        if self.time_shift_s is not None:
-            acceptable_time_shift_s = [float, list, str]
-            if type(self.time_shift_s) not in acceptable_time_shift_s:
-                err.time_shift_s = f"must be in {acceptable_time_shift_s}"
-            if isinstance(self.time_shift_s, list) and \
-                    len(self.time_shift_s) != len(self.st):
-                err.time_shift_s = f"must be list of length {len(self.st)}"
-            elif isinstance(self.time_shift_s, str):
-                if self.time_shift_s not in SACDICT:
-                    err.time_shift_s = f"must be {SACDICT} ending w/ '_time'"
+        for time_shift_s in [self.time_shift_s, self.time_shift_s_syn]:
+            if time_shift_s is not None:
+                acceptable_time_shift_s = [int, float, list, str]
+                if type(time_shift_s) not in acceptable_time_shift_s:
+                    err.time_shift_s = f"must be in {acceptable_time_shift_s}"
+                if isinstance(time_shift_s, list) and \
+                        len(time_shift_s) != len(self.st):
+                    err.time_shift_s = f"must be list of length {len(self.st)}"
+                elif isinstance(time_shift_s, str):
+                    if time_shift_s not in SACDICT:
+                        err.time_shift_s = f"must be {SACDICT} ending w/ '_time'"
 
         if self.zero_pad_s is not None:
             assert(isinstance(self.zero_pad_s, list)), (
@@ -863,6 +1017,8 @@ class RecordSection:
                 An array to scale amplitudes based on user choices
             np.array time_shift_s:
                 An array to time shift time series based on user choices
+            np.array time_shift_s_syn:
+                An array to time shift synthetic time series 
             np.array y_axis:
                 Y-Axis values based on sorting algorithm, used for plotting
             np.array distances:
@@ -879,13 +1035,22 @@ class RecordSection:
         self.idx = np.arange(0, len(self.st), 1)
         self.station_ids = np.array([tr.get_id() for tr in self.st])
 
-        self.time_shift_s = self.get_time_shifts()  # !!! OVERWRITES user input
-        # Needs to be run before getting xlims so that we know the time offset
-        self.get_time_offsets()
-        self.xlim = self.get_xlims()
-        # Get xlims synthetic waveforms which may have different start/end times
+        # WARNING: this will overwrite the user input time shift values with
+        # an array that can be used for plotting.
+        self.time_shift_s = self.get_time_shifts(self.time_shift_s)  
         if self.st_syn is not None:
-            self.xlim_syn = self.get_xlims(st=self.st_syn)
+            self.time_shift_s_syn = self.get_time_shifts(self.time_shift_s_syn)  
+
+        # Needs to be run before getting xlims so that we know the time offset
+        # this will internally modify `tr.stats.time_offset` for `st`, `st_syn`
+        self.get_time_offsets()
+
+        # Get xlims synthetic waveforms which may have different start/end times
+        self.xlim = self.get_xlims(st=self.st, time_shift_s=self.time_shift_s)
+        if self.st_syn is not None:
+            self.xlim_syn = self.get_xlims(st=self.st_syn, 
+                                           time_shift_s=self.time_shift_s_syn
+                                           )
 
         # Max amplitudes should be RELATIVE to what were showing (e.g., if
         # zoomed in on the P-wave, max amplitude should NOT be the surface wave)
@@ -899,7 +1064,7 @@ class RecordSection:
         # Max amplitudes will be DIFFERENT for synthetics, which affects 
         # normalizations and thus requires its own array
         if self.st_syn is not None:
-            for tr, xlim in zip(self.st_syn, self.xlim):
+            for tr, xlim in zip(self.st_syn, self.xlim_syn):
                 start, stop = xlim  # units: samples
                 self.max_amplitudes_syn = np.append(
                         self.max_amplitudes_syn, max(abs(tr.data[start:stop]))
@@ -919,7 +1084,7 @@ class RecordSection:
             self.amplitude_scaling_syn = \
                     self.get_amplitude_scaling(_choice="st_syn")
 
-    def get_xlims(self, st=None):
+    def get_xlims(self, st=None, time_shift_s=None):
         """
         The x-limits of each trace depend on the overall time shift (either 
         static or applied through move out), as well as the sampling rate of
@@ -933,6 +1098,11 @@ class RecordSection:
         :param st: stream object to get xlims for. By default this is the 'data'
             stored in `st` but it can also be given `st_syn` to get synthetic
             x limits which may differ
+        :type time_shift_s: float, list, str, or None
+        :param time_shift_s: internal definition of time_shift that is provided
+            from the User input at init. Defaults to the `time_shift_s` but can
+            also be `time_shift_s_syn` if User wants to apply a different time
+            shift to synthetics.
         :rtype: np.array
         :return: an array of tuples defining the start and stop indices for EACH
             trace to be used during plotting. Already includes time shift 
@@ -940,6 +1110,8 @@ class RecordSection:
         """
         if st is None:
             st = self.st
+        if time_shift_s is None:
+            time_shift_s = self.time_shift_s
 
         xlim = []
         if self.xlim_s is None:
@@ -949,12 +1121,13 @@ class RecordSection:
             # Looping to allow for delta varying among traces,
             # AND apply the time shift so that indices can be used directly in
             # the plotting function
-            for tr, tshift in zip(st, self.time_shift_s):
+            for tr, tshift in zip(st, time_shift_s):
                 start, stop = [int(_/tr.stats.delta) for _ in self.xlim_s]
                 sshift = int(tshift / tr.stats.delta)  # unit: samples
                 # These indices define the index of the user-chosen timestamp
                 start_index = start - sshift
                 end_index = stop - sshift
+
                 # Shift by the total amount that the zero pad adjusted starttime
                 if self.zero_pad_s:
                     zero_pad_index = int(self.zero_pad_s[0]/tr.stats.delta)
@@ -967,7 +1140,7 @@ class RecordSection:
                     start_index += abs(int(tr.stats.time_offset/tr.stats.delta))
                     end_index += abs(int(tr.stats.time_offset/tr.stats.delta))
 
-                # When setting xlimits, cannot acces out of bounds (negative 
+                # When setting xlimits, cannot access out of bounds (negative 
                 # indices or greater than max). This might happen when User 
                 # asks for `xlim_s` that is outside data bounds. In this case
                 # we just plot up to the end of the data
@@ -1068,46 +1241,72 @@ class RecordSection:
 
         logger.info(f"calculating starttime offsets from event origin time "
                     f"{event_origin_time}")
+        
+        # Take the zero pad into account when deciding what `starttime` is,
+        # otherwise we are introducing an artificial time shift
+        if self.zero_pad_s:
+            zero_pad_shift = self.zero_pad_s[0]
+        else:
+            zero_pad_shift = 0
 
         for tr in self.st:
-            tr.stats.time_offset = tr.stats.starttime - event_origin_time
+            tr.stats.time_offset = \
+                (tr.stats.starttime + zero_pad_shift) - event_origin_time
         if self.st_syn is not None:
             for tr in self.st_syn:
-                tr.stats.time_offset = tr.stats.starttime - event_origin_time
+                tr.stats.time_offset = \
+                (tr.stats.starttime + zero_pad_shift) - event_origin_time
 
-    def get_time_shifts(self):
+    def get_time_shifts(self, time_shift_s=None):
         """
         Very simple function which allows float inputs for time shifts and
         ensures that time shifts are always per-trace arrays
         Applies the move out by calculating a time shift using src-rcv distance
 
+        .. note::
+        
+            Originally the input of `time_shift_s`  was not needed as we just 
+            took the internal value but now we allow the User to set time shift 
+            for data and synthetics separately so we need some flexibility.
+            See Issue #159
+
+        :type time_shift_s: float, list, str, or None
+        :param time_shift_s: internal definition of time_shift that is provided
+            from the User input at init. Defaults to the `time_shift_s` but can
+            also be `time_shift_s_syn` if User wants to apply a different time
+            shift to synthetics.
         :rtype: np.array
         :return: a stream-lengthed array of time shifts that can be applied
             per trace
         """
+        if time_shift_s is None:
+            time_shift_s = self.time_shift_s
+
         # No user input means time shifts will be 0, so nothing happens
         time_shift_arr = np.zeros(len(self.st))
-        if self.time_shift_s is not None:
+        if time_shift_s is not None:
             # User inputs a static time shift
-            if isinstance(self.time_shift_s, float):
-                logger.info(f"apply constant time shift {self.time_shift_s}s")
-                time_shift_arr += self.time_shift_s
+            if isinstance(time_shift_s, (int, float)):
+                logger.info(f"apply constant time shift {time_shift_s}s")
+                time_shift_arr += time_shift_s
             # User input an array which should have already been checked for len
-            elif isinstance(self.time_shift_s, list):
+            elif isinstance(time_shift_s, list):
                 logger.info(f"apply user-defined array time shift values")
-                time_shift_arr = self.time_shift_s
+                time_shift_arr = time_shift_s
             # Allow shifting by a given phase arrival in the SAC header
-            elif isinstance(self.time_shift_s, str):
-                sac_key = SACDICT[self.time_shift_s]
-                logger.info(f"apply time shift by {self.time_shift_s}")
+            elif isinstance(time_shift_s, str):
+                sac_key = SACDICT[time_shift_s]
+                logger.info(f"apply time shift by {time_shift_s}")
                 time_shift_arr = [-1 * tr.stats.sac[sac_key] for tr in self.st]
-        time_shift_arr = np.array(time_shift_arr)
+
+        time_shift_arr = np.array(time_shift_arr, dtype="float")
 
         # Further change the time shift if we have move out input
         if self.move_out:
             logger.info(f"apply {self.move_out} {self.distance_units}/s "
                         f"move out")
             move_out_arr = self.distances / self.move_out
+
             time_shift_arr -= move_out_arr
 
         return time_shift_arr
@@ -1227,11 +1426,31 @@ class RecordSection:
         if self.scale_by is None:
             amp_scaling = np.ones(len(self.st))
         # Scale by the max amplitude of each trace
-        elif self.scale_by == "normalize":
-            if _choice == "st":
-                amp_scaling = self.max_amplitudes
-            elif _choice == "st_syn":
-                amp_scaling = self.max_amplitudes_syn
+        elif self.scale_by in ["normalize", "rel_norm"]:
+            # Rel norm requires two sets so if we don't have that then default 
+            # back to normalize
+            if self.scale_by == "rel_norm" and not \
+                self.max_amplitudes_syn.any():
+                logger.warning("no synthetic max amplitudes, using 'normalize' "
+                               "instead of 'rel_norm'")
+                self.scale_by = "normalize"
+
+            # Normalize each trace by it's own max amplitude, all waveforms will
+            # have the same max value 
+            if self.scale_by == "normalize":
+                if _choice == "st":
+                    amp_scaling = self.max_amplitudes
+                elif _choice == "st_syn":
+                    amp_scaling = self.max_amplitudes_syn
+            # Normalize each pair of traces by their max amplitude, preserving
+            # relative amplitude differences for comparisons
+            elif self.scale_by == "rel_norm":
+                # Get the max amplitude of the data and synthetic
+                # waveforms for each trace
+                amp_scaling = np.ones(len(self.st))
+                for idx in self.sorted_idx:
+                    amp_scaling[idx] = max(self.max_amplitudes[idx],
+                                           self.max_amplitudes_syn[idx])
             # When using absolute distance scale, scale waveforms to minmax dist
             if "abs" in self.sort_by:
                 if "distance" in self.sort_by:
@@ -1557,17 +1776,31 @@ class RecordSection:
             logger.info(f"preprocessing {len(self.st_syn)} `st_syn` waveforms")
             preprocess_list = [self.st_syn]
 
-        for st in preprocess_list:
-            if self.trim:
-                logger.debug("trimming start and end times and filling any "
-                             f"gaps with {fill_value}")
+        # Trim all waveforms to the SHORTEST possible time
+        if self.trim:
+            # Consider if we are looking at data or data + syn, get min max time
+            st_check = self.st.copy()
+            if self.st_syn:
+                st_check += self.st_syn.copy()
+            maxstart = max([tr.stats.starttime for tr in st_check])
+            minend = min([tr.stats.endtime for tr in st_check])
+
+            logger.info("trimming start and end times and filling any "
+                         f"gaps with {fill_value}")
+            logger.debug(f"global start: {maxstart}")
+            logger.debug(f"global end:   {minend}")
+            
+            # Trim based on the min and max starttimes of the traces
+            for st in [self.st, self.st_syn]:
+                if st is None:
+                    continue
                 for tr in st:
                     if fill_value == "mean":
                         fill_value = tr.data.mean()
-                    tr.trim(starttime=tr.stats.starttime, 
-                            endtime=tr.stats.endtime, pad=True, 
+                    tr.trim(starttime=maxstart, endtime=minend, pad=True, 
                             fill_value=fill_value)
-            
+
+        for st in preprocess_list:
             # Taper prior to zero pad so that the taper actually hits signal
             if self.taper:
                 # If we don't demean, then tapering may hit a static offset
@@ -1586,7 +1819,7 @@ class RecordSection:
 
                 _start, _end = self.zero_pad_s
                 logger.debug(f"padding zeros to traces with {_start}s before "
-                            f"and {_end}s after")
+                             f"and {_end}s after")
                 for tr in st:
                     tr.trim(starttime=tr.stats.starttime - _start,
                             endtime=tr.stats.endtime + _end,
@@ -1659,8 +1892,12 @@ class RecordSection:
         # Do a text output of station information so the user can check
         # that the plot is doing things correctly
         logger.debug("plotting line check starting from bottom (y=0)")
+        if self.st_syn is not None:
+            SYNSHIFT = f"\t{DLT}T_SYN"
+        else:
+            SYNSHIFT = ""
         logger.debug(
-            "\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\tTSHIFT\tTOFFSET\tYABSMAX"
+            f"\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\t{DLT}T{SYNSHIFT}\tTOFFSET\tYABSMAX"
         )
         self.f, self.ax = plt.subplots(figsize=self.figsize)
 
@@ -1678,6 +1915,7 @@ class RecordSection:
                     y_index = idx
                 else:
                     y_index = y_idx + start
+        
                 log_str += self._plot_trace(idx=idx, y_index=y_index,
                                             choice=choice, **kwargs)
         logger.debug(log_str)
@@ -1776,6 +2014,8 @@ class RecordSection:
         window_color = self.kwargs.get("window_color", "orange")
         obs_color = self.kwargs.get("obs_color", "k")
         syn_color = self.kwargs.get("syn_color", "r")
+        obs_zorder = self.kwargs.get("obs_zorder", 10)
+        syn_zorder = self.kwargs.get("obs_zorder", 10)
 
         # Used to differentiate the two types of streams for plotting diffs
         choices = ["st", "st_syn"]
@@ -1784,7 +2024,12 @@ class RecordSection:
         tr = getattr(self, choice)[idx]  # i.e., tr = self.st[idx]
 
         # Plot actual data on with amplitude scaling, time shift, and y-offset
-        tshift = self.time_shift_s[idx]
+        if choice == "st":
+            tshift = self.time_shift_s[idx]
+            zorder = obs_zorder
+        elif choice == "st_syn":
+            tshift = self.time_shift_s_syn[idx]
+            zorder = syn_zorder
         
         # These are still the entire waveform. Make sure we honor zero padding
         # and any time shift applied
@@ -1820,8 +2065,7 @@ class RecordSection:
         # Avoid ZeroDivisionError if the amplitude scaling value is 0 (#131)
         scale = amplitude_scaling[idx]
         if scale == 0:
-            logger.warning("amplitude scaling value is 0, setting to 1, "
-                           "amplitude scaling may not behave as expected")
+            logger.warning(f"amplitude scale for idx {idx} is 0, set to 1")
             scale = 1
 
         y = sign * tr.data / scale + self.y_axis[y_index]
@@ -1845,10 +2089,17 @@ class RecordSection:
 
         x = x[start:stop]
         y = y[start:stop]
+
         self.ax.plot(x, y, c=[obs_color, syn_color][c], linewidth=linewidth, 
-                     zorder=10)
+                     zorder=zorder)
         
         # Sanity check print station information to check against plot
+        # take into account that synthetic time shift may or may not exist
+        if self.st_syn is not None:
+            syn_shift = f"\t{self.time_shift_s_syn[idx]:4.2f}"
+        else:
+            syn_shift = ""
+
         log_str = (f"{idx}"
                    f"\t{int(self.y_axis[y_index])}"
                    f"\t{tr.get_id():<6}"
@@ -1856,6 +2107,7 @@ class RecordSection:
                    f"\t{self.azimuths[idx]:6.2f}"
                    f"\t{self.backazimuths[idx]:6.2f}"
                    f"\t{self.time_shift_s[idx]:4.2f}"
+                   f"{syn_shift}"
                    f"\t{toffset_str}"
                    f"\t{max_amplitudes[idx]:.2E}\n"
                    )
@@ -2025,8 +2277,9 @@ class RecordSection:
             logger.info("user requests inverting y-axis with absolute "
                         "reverse sort")
 
-        # X-axis label is different if we time shift
-        if self.time_shift_s.sum() == 0:
+        # X-axis label is different if we time shift either data or synthetic
+        if self.time_shift_s.sum() == 0 or \
+            (self.st_syn and self.time_shift_s_syn.sum() == 0):
             plt.xlabel("Time [s]")
         else:
             plt.xlabel("Relative Time [s]")
@@ -2100,6 +2353,22 @@ class RecordSection:
         fontsize = self.kwargs.get("y_label_fontsize", 10)
 
         y_tick_labels = []
+
+        # Check whether we need to consider time shifts in the labels
+        if np.any(self.time_shift_s != 0):
+            _has_shifted = True
+        else:
+            _has_shifted = False
+
+        # If synthetic time shifts are all the same as observed, or if we have 
+        # no synthetic time shifts at all, no need to have separate labels 
+        if (self.st_syn is None) or \
+            np.all(self.time_shift_s_syn == self.time_shift_s) or \
+            np.all(self.time_shift_s_syn == 0):
+            _has_shifted_syn = False
+        else:
+            _has_shifted_syn = True
+
         for idx in self.sorted_idx[start:stop]:
             str_id = self.station_ids[idx]
             if self.sort_by is not None and "backazimuth" in self.sort_by:
@@ -2120,8 +2389,10 @@ class RecordSection:
             label = \
                 f"{str_id:>{self.stats.longest_id}}|{str_az:>8}|{str_dist:>8}"
             # Add time shift if we have shifted at all
-            if self.time_shift_s[idx] != 0:
+            if _has_shifted:
                 label += f"|{self.time_shift_s[idx]:.2f}s"
+            if _has_shifted_syn:
+                label += f"|{self.time_shift_s_syn[idx]:.2f}s"
             y_tick_labels.append(label)
 
         # Generate a 'template' y-axis format to help Users decipher labels
@@ -2132,8 +2403,10 @@ class RecordSection:
 
         # Y_FMT will include time shift IF there are time shifts
         y_fmt = f"NET.STA.LOC.CHA|{az_str}|DIST"
-        if self.time_shift_s.sum() != 0:
-            y_fmt += "|TSHIFT"
+        if _has_shifted:
+            y_fmt += f"|{DLT}T"
+        if _has_shifted_syn:
+            y_fmt += f"|{DLT}T_SYN"
 
         # Option 1: Replacing y-axis tick labels with waveform labels
         # Set the y-axis labels to the left side of the left figure border
@@ -2319,7 +2592,8 @@ def parse_args():
         from an interactive environment.
     """
     parser = argparse.ArgumentParser(
-        description="Input basic record section params",
+            description="Input basic record section params. To input boolean "
+                        "False for kwargs, use empty quotes, e.g., --trim ''",
         # formatter_class=argparse.RawTextHelpFormatter,
                                      )
 
@@ -2390,6 +2664,10 @@ def parse_args():
     parser.add_argument("--time_shift_s", default=None, nargs="?",
                         help="Set a constant time shift in unit: seconds OR "
                              "shift by a given phase arrival in SAC header")
+    parser.add_argument("--time_shift_s_syn", default=None, nargs="?",
+                        help="Optional, set a constant synthetic time shift in " 
+                             "unit: seconds OR shift by a given phase arrival "
+                             "in SAC header")
     parser.add_argument("--move_out", default=None, type=float, nargs="?",
                         help="Set a constant velocity-based move out in units:"
                              "`distance_units`/s")
@@ -2405,7 +2683,7 @@ def parse_args():
                         help="Integrate (positive values) or differentiate "
                              "(negative values) `integrate` times. e.g., -2 "
                              "will differentiate all waveforms twice.")
-    parser.add_argument("--xlim_s", default=None, type=int, nargs="+",
+    parser.add_argument("--xlim_s", default=None, type=float, nargs="+",
                         help="Min and max x limits in units seconds. Input as "
                              "a list, e.g., --xlim_s 10 200 ...")
     parser.add_argument("--zero_pad_s", default=None, type=float, nargs="+",
@@ -2444,6 +2722,13 @@ def parse_args():
     parser.add_argument("--save", default="./record_section.png", type=str,
                         nargs="?",
                         help="Path to save the resulting record section fig")
+    parser.add_argument("--export_traces", default=False, action="store_true",
+                        help="export processed waveforms as SAC files")
+    parser.add_argument("--remove_locations", default=False, 
+                        action="store_true",
+                        help="used for data-syn comparison, removes location "
+                             "codes for all traces in `st` and `st_syn` incase "
+                             "they do not match but the rest of the code does")
     parser.add_argument("-o", "--overwrite", default=True, action="store_true",
                         help="overwrite existing figure if path exists")
     parser.add_argument("--synsyn", default=False, action="store_true",
@@ -2508,6 +2793,9 @@ def plotw_rs(*args, **kwargs):
 
     _end = datetime.now()
     logger.info(f"finished record section in t={(_end - _start)}s")
+    if rs.export_traces:
+        logger.info("exporting waveforms")
+        rs.write_stream_sac()
 
 
 def main():

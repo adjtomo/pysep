@@ -181,12 +181,16 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_km = dist_m * 1E-3  # units: m -> km
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
-    otime = event.preferred_origin().time
+    otime = event.preferred_origin().time  # event origin time
+
+    # Define relative start and end times for the SAC header
+    begin_time = tr.stats.starttime - otime
+    end_time = begin_time + (tr.stats.npts * tr.stats.delta)
 
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
-        "b": tr.stats.starttime - event.preferred_origin().time,  # begin time
-        "e": tr.stats.npts * tr.stats.delta,  # end time
+        "b": begin_time,
+        "e": end_time, 
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
         "stla": sta.latitude,
@@ -198,7 +202,7 @@ def _append_sac_headers_trace(tr, event, inv):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
+        "nzmsec": int(f"{otime.microsecond:0>6}"[:3]),  # micros->ms see #152
         "dist": dist_km,
         "az": az,  # degrees
         "baz": baz,  # degrees
@@ -233,8 +237,9 @@ def _append_sac_headers_trace(tr, event, inv):
     for key in ["cmpinc", "cmpaz", "evdp", "mag"]:
         if key not in sac_header:
             _warn_about.append(key)
-    logger.warning(f"no SAC header values found for: {_warn_about}")
-    
+    if _warn_about:
+        logger.warning(f"no SAC header values found for: {_warn_about}")
+
     # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
@@ -316,11 +321,15 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
     azimuth = np.degrees(np.arctan2((rcv_x - src_x), (rcv_y - src_y))) % 360
     backazimuth = (azimuth - 180) % 360
-    
+
+    # Define relative start and end times for the SAC header
+    begin_time = tr.stats.starttime - otime
+    end_time = begin_time + (tr.stats.npts * tr.stats.delta)
+
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
-        "b": tr.stats.starttime - otime,  # begin time
-        "e": tr.stats.npts * tr.stats.delta,  # end time
+        "b": begin_time,
+        "e": end_time,
         "stla": rcv_y,
         "stlo": rcv_x,
         "evla": src_y,
@@ -336,13 +345,12 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
         "nzhour": otime.hour,
         "nzmin": otime.minute,
         "nzsec": otime.second,
-        "nzmsec": otime.microsecond,
+        "nzmsec": int(f"{otime.microsecond:0>6}"[:3]),  # micros->ms see #152
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
 
     tr.stats.sac = sac_header
-
     return tr
 
 
@@ -381,7 +389,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
     for tr in st_out[:]:
         net_sta = ".".join(tr.get_id().split(".")[:2])  # NN.SSS
 
-        # Missing SAC header values may cause certain or all stations to not 
+        # Missing SAC header values may cause certain or all stations to not
         # be present in the `phase_dict`
         if net_sta not in phase_dict:
             logger.warning(f"{tr.get_id()} not present in TauP arrivals, cant "

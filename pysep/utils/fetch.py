@@ -50,8 +50,8 @@ def get_taup_arrivals(st=None, event=None, inv=None, phase_list=("ttall",),
         contain information about phase arrivals
     """
     if st is not None:
-        logger.debug(f"using SAC headers to fetch phase arrivals '{phase_list}'"
-                     f"from model '{model}'")
+        logger.debug(f"using SAC headers to fetch phase arrivals "
+                     f"'{phase_list}' from model '{model}'")
     else:
         assert(event is not None and inv is not None), (
             f"`get_taup_arrivals` requires `st` w/ SAC headers OR `event` and " 
