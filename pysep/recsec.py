@@ -284,7 +284,9 @@ class RecordSection:
                 that number (i.e., -10.2 second time shift applied)
             2. list (e.g., [5., -2., ... 11.2]), will apply individual time
                 shifts to EACH trace in the stream. The length of this list MUST
-                match the number of traces in your input stream.
+                be equal to the number of traces in your stream, in the same 
+                order as the traces in your stream. Even if your final record 
+                section has less traces due to the use of `components`. 
             3. str: apply time shift based on a theoretical TauP phase arrival
                 if available in the SAC header. These should have been appended
                 by PySEP during data download. If no value is available in the
@@ -605,7 +607,6 @@ class RecordSection:
             self.time_shift_s = time_shift_s
         # Synthetic time shift (optional) either takes on the `time_shift_s`
         # value or has its own value
-        breakpoint()
         if time_shift_s_syn is None:
             self.time_shift_s_syn = self.time_shift_s
         else:
