@@ -2065,8 +2065,7 @@ class RecordSection:
         # Avoid ZeroDivisionError if the amplitude scaling value is 0 (#131)
         scale = amplitude_scaling[idx]
         if scale == 0:
-            logger.warning("amplitude scaling value is 0, setting to 1, "
-                           "amplitude scaling may not behave as expected")
+            logger.warning(f"amplitude scale for idx {idx} is 0, set to 1")
             scale = 1
 
         y = sign * tr.data / scale + self.y_axis[y_index]

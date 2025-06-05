@@ -1729,7 +1729,7 @@ class Pysep:
                                    show=show_rs, save=fid)
                 rs.run()
             except Exception as e:  # NOQA
-                logger.warning("could not plot record section: {e}")
+                logger.warning(f"could not plot record section: {e}")
 
     def _event_tag_and_output_dir(self):
         """
