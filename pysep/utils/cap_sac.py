@@ -207,6 +207,8 @@ def _append_sac_headers_trace(tr, event, inv):
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
 
+    sac_header["e"]=sac_header["e"]+sac_header["b"]
+
     # Some Inventory objects will not go all the way to channel, only to station
     try:
         cha = sta[0]
@@ -235,7 +237,7 @@ def _append_sac_headers_trace(tr, event, inv):
             _warn_about.append(key)
     if _warn_about:
         logger.warning(f"no SAC header values found for: {_warn_about}")
-    
+
     # Append SAC header and include back azimuth for rotation
     tr.stats.sac = sac_header
     tr.stats.back_azimuth = baz
@@ -317,7 +319,7 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
     azimuth = np.degrees(np.arctan2((rcv_x - src_x), (rcv_y - src_y))) % 360
     backazimuth = (azimuth - 180) % 360
-    
+
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
         "b": tr.stats.starttime - otime,  # begin time
@@ -341,9 +343,9 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
+    sac_header["e"]=sac_header["e"]+sac_header["b"]
 
     tr.stats.sac = sac_header
-
     return tr
 
 
@@ -382,7 +384,7 @@ def format_sac_header_w_taup_traveltimes(st, model="ak135",
     for tr in st_out[:]:
         net_sta = ".".join(tr.get_id().split(".")[:2])  # NN.SSS
 
-        # Missing SAC header values may cause certain or all stations to not 
+        # Missing SAC header values may cause certain or all stations to not
         # be present in the `phase_dict`
         if net_sta not in phase_dict:
             logger.warning(f"{tr.get_id()} not present in TauP arrivals, cant "

@@ -3,7 +3,7 @@
 Python Seismogram Extraction and Processing (PySEP)
 
 Download, pre-process, and organize seismic waveforms, event and station
-metadata. Save waveforms as SAC files for use in moment tensor inversion and 
+metadata. Save waveforms as SAC files for use in moment tensor inversion and
 adjoint tomography codes.
 """
 import argparse
@@ -521,7 +521,7 @@ class Pysep:
         self.demean = bool(demean)
         self.detrend = bool(detrend)
         self.taper_percentage = taper_percentage
-        self.rotate = rotate 
+        self.rotate = rotate
         self.remove_response = bool(remove_response)
         self.output_unit = output_unit
         self.water_level = water_level
@@ -1073,7 +1073,7 @@ class Pysep:
                     bulk.append((net.code, sta.code, self.locations,
                                  self.channels, t1, t2))
 
-        # Catch edge case where len(bulk)==0 which will cause ObsPy to fail 
+        # Catch edge case where len(bulk)==0 which will cause ObsPy to fail
         assert bulk, (
             f"station curtailing has removed any stations to query data for. "
             f"please check your `distance` and `azimuth` curtailing criteria "
@@ -1263,7 +1263,7 @@ class Pysep:
             logger.info(f"applying amplitude scale factor: {self.scale_factor}")
             for tr in st_out:
                 tr.data = tr.data * self.scale_factor
-                tr.stats.sac["scale"] = self.scale_factor
+                #tr.stats.sac["scale"] = self.scale_factor
         if self.client == "LLNL":
             # This won't do anything if we don't have any 'LL' network codes
             st_out = scale_llnl_waveform_amplitudes(st_out)
@@ -1562,7 +1562,7 @@ class Pysep:
             logger.info("writing stations file")
             logger.debug(fid)
             write_pysep_station_file(
-                    self.inv, self.event, fid, 
+                    self.inv, self.event, fid,
                     order_station_list_by=order_station_list_by
                     )
 
@@ -1668,8 +1668,8 @@ class Pysep:
         :type fid: str
         :param fid: name of the file to write. defaults to config.yaml
         :type overwrite: bool
-        :param overwrite: if True and `fid` already exists, save a new config 
-            file with the same name, overwriting the old file. if False 
+        :param overwrite: if True and `fid` already exists, save a new config
+            file with the same name, overwriting the old file. if False
             (default), throws a warning if encountering existing `fid` and does
             not write config file
         """
@@ -1782,7 +1782,7 @@ class Pysep:
 
         if not save_log:
             return
-    
+
         # Make the output directory that the log file will be saved in
         if not os.path.exists(self._output_dir):
             os.makedirs(self._output_dir)
@@ -1867,13 +1867,20 @@ class Pysep:
         # user wants it, it should have been written out
         del self.st_raw
 
+        ## Waveform preprocessing and standardization
+        self.st = self.preprocess()
+
         self.st = append_sac_headers(self.st, self.event, self.inv)
         if self.taup_model is not None:
-            self.st = format_sac_header_w_taup_traveltimes(self.st, 
+            self.st = format_sac_header_w_taup_traveltimes(self.st,
                                                            self.taup_model,
                                                            self.phase_list)
-        # Waveform preprocessing and standardization
-        self.st = self.preprocess()
+
+        ## Waveform preprocessing and standardization
+        #self.st = self.preprocess()
+        if self.scale_factor:
+            for tr in self.st:
+                tr.stats.sac["scale"] = self.scale_factor
 
         # Rotation to various orientations. The output stream will have ALL
         # components, both rotated and non-rotated
