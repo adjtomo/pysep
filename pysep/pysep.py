@@ -1262,8 +1262,7 @@ class Pysep:
         if self.scale_factor:
             logger.info(f"applying amplitude scale factor: {self.scale_factor}")
             for tr in st_out:
-                tr.data = tr.data * self.scale_factor
-                #tr.stats.sac["scale"] = self.scale_factor
+                tr.data *= self.scale_factor
         if self.client == "LLNL":
             # This won't do anything if we don't have any 'LL' network codes
             st_out = scale_llnl_waveform_amplitudes(st_out)
@@ -1867,7 +1866,9 @@ class Pysep:
         # user wants it, it should have been written out
         del self.st_raw
 
-        ## Waveform preprocessing and standardization
+        # Waveform preprocessing and standardization. Ensure that this happens
+        # before SAC header creation so that any time axis modifications like
+        # trim operations are accounted for in the SAC header #154
         self.st = self.preprocess()
 
         self.st = append_sac_headers(self.st, self.event, self.inv)
@@ -1875,9 +1876,7 @@ class Pysep:
             self.st = format_sac_header_w_taup_traveltimes(self.st,
                                                            self.taup_model,
                                                            self.phase_list)
-
-        ## Waveform preprocessing and standardization
-        #self.st = self.preprocess()
+        # Add in scale factor now that we have SAC headers created
         if self.scale_factor:
             for tr in self.st:
                 tr.stats.sac["scale"] = self.scale_factor

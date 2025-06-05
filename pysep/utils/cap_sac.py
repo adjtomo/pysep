@@ -181,12 +181,16 @@ def _append_sac_headers_trace(tr, event, inv):
     dist_km = dist_m * 1E-3  # units: m -> km
     dist_deg = kilometer2degrees(dist_km)  # spherical earth approximation
 
-    otime = event.preferred_origin().time
+    otime = event.preferred_origin().time  # event origin time
+
+    # Define relative start and end times for the SAC header
+    begin_time = tr.stats.starttime - otime
+    end_time = begin_time + (tr.stats.npts * tr.stats.delta)
 
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
-        "b": tr.stats.starttime - event.preferred_origin().time,  # begin time
-        "e": tr.stats.npts * tr.stats.delta,  # end time
+        "b": begin_time,
+        "e": end_time, 
         "evla": event.preferred_origin().latitude,
         "evlo": event.preferred_origin().longitude,
         "stla": sta.latitude,
@@ -206,8 +210,6 @@ def _append_sac_headers_trace(tr, event, inv):
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
-
-    sac_header["e"]=sac_header["e"]+sac_header["b"]
 
     # Some Inventory objects will not go all the way to channel, only to station
     try:
@@ -320,10 +322,14 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
     azimuth = np.degrees(np.arctan2((rcv_x - src_x), (rcv_y - src_y))) % 360
     backazimuth = (azimuth - 180) % 360
 
+    # Define relative start and end times for the SAC header
+    begin_time = tr.stats.starttime - otime
+    end_time = begin_time + (tr.stats.npts * tr.stats.delta)
+
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
-        "b": tr.stats.starttime - otime,  # begin time
-        "e": tr.stats.npts * tr.stats.delta,  # end time
+        "b": begin_time,
+        "e": end_time,
         "stla": rcv_y,
         "stlo": rcv_x,
         "evla": src_y,
@@ -343,7 +349,6 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
         "lpspol": 0,  # 1 if left-hand polarity (usually no in passive seis)
         "lcalda": 1,  # 1 if DIST, AZ, BAZ, GCARC to be calc'd from metadata
     }
-    sac_header["e"]=sac_header["e"]+sac_header["b"]
 
     tr.stats.sac = sac_header
     return tr
