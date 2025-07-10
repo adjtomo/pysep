@@ -149,7 +149,7 @@ class RecordSection:
             # Figure generation control
             max_traces_per_rs=None, xlim_s=None,  y_axis_spacing=1, 
             y_label_loc="default", tmarks=None, 
-            figsize=(9, 11), show=True, save="./record_section.png", 
+            figsize=(9, 11), dpi=100, show=True, save="./record_section.png", 
             export_traces=False,
             # Miscellaneous parameters
             overwrite=True, log_level="DEBUG", **kwargs):
@@ -441,6 +441,11 @@ class RecordSection:
             vertical lines at 0s, 100s and 200s
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
+        :type dpi: int
+        :param dpi: resolution of the figure, passed into plt.subplots()
+            Defaults to 100. Higher DPI will result in larger file size.
+            If you want to save a high-resolution figure, set this to 300 or
+            higher.
         :type show: bool
         :param show: show the figure as a graphical output
         :type save: str
@@ -631,6 +636,7 @@ class RecordSection:
         self.y_label_loc = y_label_loc
         self.tmarks = tmarks
         self.figsize = figsize
+        self.dpi = int(dpi)
         self.show = bool(show)
         self.save = save
 
@@ -1876,6 +1882,9 @@ class RecordSection:
             name and title to differentiate different pages of the same record
             section
         """
+        # This will set the color of the figure outside of the axes
+        bg_color = self.kwargs.get("bg_color", "white")
+
         if subset is None:
             start, stop = 0, None  # None will allow full list traversal
             nwav = len(self.sorted_idx)
@@ -1899,7 +1908,8 @@ class RecordSection:
         logger.debug(
             f"\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\t{DLT}T{SYNSHIFT}\tTOFFSET\tYABSMAX"
         )
-        self.f, self.ax = plt.subplots(figsize=self.figsize)
+        self.f, self.ax = plt.subplots(figsize=self.figsize, dpi=self.dpi,
+                                       facecolor=bg_color)
 
         log_str = "\n"
         # Allow choosing observed or synthetic data, defaults to observed
@@ -2485,7 +2495,6 @@ class RecordSection:
             it's showing on the page. self.plot() should tell it
         """
         title = self.kwargs.get("title", None)
-        title_c = self.kwargs.get("title_c", "k")
         if title is not None:
             self.ax.set_title(title)
             return
@@ -2558,7 +2567,7 @@ class RecordSection:
             # The following title parts are optional depending on application
             f"{filt}{move_out}"
         )
-        self.ax.set_title(title, color=title_c)
+        self.ax.set_title(title)
 
     def run(self):
         """

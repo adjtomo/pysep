@@ -290,10 +290,10 @@ def set_plot_aesthetic(
         xlabel_fontsize=10., ylabel_fontsize=10., label_color="k",
         axis_linewidth=2., 
         spine_zorder=8, spine_top=True, spine_bot=True, spine_left=True, 
-        spine_right=True, spine_color="k", title_fontsize=10.,
+        spine_right=True, spine_color="k", title_fontsize=10., title_color="k",
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
-        frame_color=None, **kwargs):
+        frame_color=None, bg_color="w", **kwargs):
     """
     Give a nice look to the output figure by creating thick borders on the
     axis, adjusting fontsize etc. All plot aesthetics should be placed here
@@ -334,6 +334,8 @@ def set_plot_aesthetic(
     :param spine_color: color of the axis frames/spines
     :type title_fontsize: float
     :param title_fontsize: font size of the main title at the top of the figure
+    :type title_color: str
+    :param title_color: color of the main title at the top of the figure
     :type xtick_minor: float
     :param xtick_minor: how often minor tick marks are drawn on X axis
     :type xtick_major: float
@@ -350,6 +352,11 @@ def set_plot_aesthetic(
     :param ygrid_minor: turn on grid lines for each minor Y tick
     :type ygrid_major: bool
     :param ygrid_major: turn on grid lines for each minor Y tick
+    :type frame_color: str
+    :param frame_color: color of the frame around the figure, overwrites
+        `spine_color`, `tick_color`, `label_color`, and `title_color`
+    :type bg_color: str
+    :param bg_color: background color of the figure, defaults to white
     :rtype: matplotlib.axes._subplots.AxesSubplot
     :return: input axis with aesthetic changed
     """
@@ -358,18 +365,25 @@ def set_plot_aesthetic(
         tick_color = frame_color
         spine_color = frame_color
         label_color = frame_color
+        title_color = frame_color
 
     ax.title.set_fontsize(title_fontsize)
+    ax.title.set_color(title_color)
+
     ax.tick_params(axis="both", which="both", width=tick_linewidth,
                    direction=tick_direction, length=tick_length, 
                    color=tick_color, labelcolor=tick_color)
     ax.tick_params(axis="x", labelsize=xtick_fontsize)
     ax.tick_params(axis="y", labelsize=ytick_fontsize)
+
     ax.xaxis.label.set_size(xlabel_fontsize)
     ax.yaxis.label.set_size(ylabel_fontsize)
     ax.xaxis.label.set_color(label_color)
     ax.yaxis.label.set_color(label_color)
 
+    # Set background color
+    ax.set_facecolor(bg_color)
+    
     # Thicken up the bounding axis lines
     for axis, flag in zip(["top", "bottom", "left", "right"],
                           [spine_top, spine_bot, spine_left, spine_right]):
