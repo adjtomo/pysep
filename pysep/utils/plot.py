@@ -286,12 +286,14 @@ def plot_source_receiver_map(inv, event, subset=None, save="./station_map.png",
 
 def set_plot_aesthetic(
         ax, ytick_fontsize=8., xtick_fontsize=12., tick_linewidth=1.5,
-        tick_length=5., tick_direction="in", xlabel_fontsize=10.,
-        ylabel_fontsize=10., axis_linewidth=2., spine_zorder=8, spine_top=True,
-        spine_bot=True, spine_left=True, spine_right=True, title_fontsize=10.,
+        tick_length=5., tick_color="k", tick_direction="in", 
+        xlabel_fontsize=10., ylabel_fontsize=10., label_color="k",
+        axis_linewidth=2., 
+        spine_zorder=8, spine_top=True, spine_bot=True, spine_left=True, 
+        spine_right=True, spine_color="k", title_fontsize=10.,
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
-        **kwargs):
+        frame_color=None, **kwargs):
     """
     Give a nice look to the output figure by creating thick borders on the
     axis, adjusting fontsize etc. All plot aesthetics should be placed here
@@ -310,6 +312,8 @@ def set_plot_aesthetic(
     :type tick_direction: str
     :param tick_direction: 'in' for ticks pointing inwards, 'out' for ticks
         pointing outwards
+    :type tick_color: str
+    :param tick_color: color of the tick marks and their labels
     :type xlabel_fontsize: float
     :param xlabel_fontsize: font size for the X-axis main label (e.g., Time)
     :type ylabel_fontsize: float
@@ -326,6 +330,8 @@ def set_plot_aesthetic(
     :param spine_left: toggle on/off the left axis border
     :type spine_right: bool
     :param spine_right: toggle on/off the right axis border
+    :type spine_color: str
+    :param spine_color: color of the axis frames/spines
     :type title_fontsize: float
     :param title_fontsize: font size of the main title at the top of the figure
     :type xtick_minor: float
@@ -347,13 +353,22 @@ def set_plot_aesthetic(
     :rtype: matplotlib.axes._subplots.AxesSubplot
     :return: input axis with aesthetic changed
     """
+    # Overwrite color so we don't have to set each one individually
+    if frame_color is not None:
+        tick_color = frame_color
+        spine_color = frame_color
+        label_color = frame_color
+
     ax.title.set_fontsize(title_fontsize)
     ax.tick_params(axis="both", which="both", width=tick_linewidth,
-                        direction=tick_direction, length=tick_length)
+                   direction=tick_direction, length=tick_length, 
+                   color=tick_color, labelcolor=tick_color)
     ax.tick_params(axis="x", labelsize=xtick_fontsize)
     ax.tick_params(axis="y", labelsize=ytick_fontsize)
     ax.xaxis.label.set_size(xlabel_fontsize)
     ax.yaxis.label.set_size(ylabel_fontsize)
+    ax.xaxis.label.set_color(label_color)
+    ax.yaxis.label.set_color(label_color)
 
     # Thicken up the bounding axis lines
     for axis, flag in zip(["top", "bottom", "left", "right"],
@@ -363,6 +378,7 @@ def set_plot_aesthetic(
             flag = bool(flag.capitalize() == "True")
         ax.spines[axis].set_visible(flag)
         ax.spines[axis].set_linewidth(axis_linewidth)
+        ax.spines[axis].set_color(spine_color)
 
     # Set spines above azimuth bins
     for spine in ax.spines.values():

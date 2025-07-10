@@ -190,7 +190,8 @@ def read_events_plus(fid, format, **kwargs):
                     events=[read_specfem3d_cmtsolution_cartesian(fid)]
                 )
             except Exception as e:
-                raise ValueError(f"unexpected source format {format} for {fid}")
+                raise ValueError(f"unexpected source format {format} for {fid}"
+                                 f"{e}")
 
     return cat
 
