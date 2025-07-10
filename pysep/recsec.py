@@ -2416,7 +2416,7 @@ class RecordSection:
             self.ax.set_yticks(self.y_axis[start:stop])
             self.ax.set_yticklabels(y_tick_labels)
             plt.text(-.01, .99, y_fmt, ha="right", va="top",
-                     transform=self.ax.transAxes, fontsize=fontsize)
+                     transform=self.ax.transAxes, fontsize=fontsize, c=c)
         # Set the y-axis labels to the right side of the right figure border
         elif loc == "y_axis_right":
             self.ax.set_yticks(self.y_axis[start:stop])
@@ -2424,7 +2424,7 @@ class RecordSection:
             self.ax.yaxis.tick_right()
             self.ax.yaxis.set_label_position("right")
             plt.text(1.01, .99, y_fmt, ha="left", va="top",
-                     transform=self.ax.transAxes, fontsize=fontsize)
+                     transform=self.ax.transAxes, fontsize=fontsize, c=c)
         # Option 2: Plotting labels as text objects, separate from y-axis labels
         else:
             # 2a: Set the y-axis labels inside the figure border (xmin or xmax)
@@ -2435,14 +2435,15 @@ class RecordSection:
                 func = min
                 x_val = func(self.stats.xmin)
                 plt.text(.01, .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize, c=c)
             elif loc == "x_max":
                 ha = "right"
                 va = "top"
                 func = max
                 x_val = func(self.stats.xmax)
                 plt.text(.99, .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize,
+                         c=c)
             # 2b: Set the y-axis labels outside figure border, co-existing with
             # y-labels showing distance or azimuth
             elif loc == "y_axis_abs":
@@ -2451,14 +2452,14 @@ class RecordSection:
                 func = min
                 x_val = func(self.stats.xmin)
                 plt.text(0, .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize, c=c)
             elif loc == "y_axis_abs_right":
                 ha = "left"
                 va = "center"
                 func = max
                 x_val = func(self.stats.xmax)
                 plt.text(1., .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize, c=c)
 
             if self.xlim_s is not None:
                 x_val = func([func(self.xlim_s), x_val])
@@ -2484,6 +2485,7 @@ class RecordSection:
             it's showing on the page. self.plot() should tell it
         """
         title = self.kwargs.get("title", None)
+        title_c = self.kwargs.get("title_c", "k")
         if title is not None:
             self.ax.set_title(title)
             return
@@ -2556,7 +2558,7 @@ class RecordSection:
             # The following title parts are optional depending on application
             f"{filt}{move_out}"
         )
-        self.ax.set_title(title)
+        self.ax.set_title(title, color=title_c)
 
     def run(self):
         """
