@@ -1,5 +1,10 @@
 # PySEP Changelog
 
+## Version 0.7.1
+
+- #169: Response removal exception broadened
+- #170: Allow more customization of RecSec
+
 ## Version 0.7.0
 
 - #148: New RecSec features `--remove_locations` and `--export_traces`

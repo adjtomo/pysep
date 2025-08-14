@@ -149,7 +149,7 @@ class RecordSection:
             # Figure generation control
             max_traces_per_rs=None, xlim_s=None,  y_axis_spacing=1, 
             y_label_loc="default", tmarks=None, 
-            figsize=(9, 11), show=True, save="./record_section.png", 
+            figsize=(9, 11), dpi=100, show=True, save="./record_section.png", 
             export_traces=False,
             # Miscellaneous parameters
             overwrite=True, log_level="DEBUG", **kwargs):
@@ -441,6 +441,11 @@ class RecordSection:
             vertical lines at 0s, 100s and 200s
         :type figsize: tuple of float
         :param figsize: size the of the figure, passed into plt.subplots()
+        :type dpi: int
+        :param dpi: resolution of the figure, passed into plt.subplots()
+            Defaults to 100. Higher DPI will result in larger file size.
+            If you want to save a high-resolution figure, set this to 300 or
+            higher.
         :type show: bool
         :param show: show the figure as a graphical output
         :type save: str
@@ -631,6 +636,7 @@ class RecordSection:
         self.y_label_loc = y_label_loc
         self.tmarks = tmarks
         self.figsize = figsize
+        self.dpi = int(dpi)
         self.show = bool(show)
         self.save = save
 
@@ -1876,6 +1882,9 @@ class RecordSection:
             name and title to differentiate different pages of the same record
             section
         """
+        # This will set the color of the figure outside of the axes
+        bg_color = self.kwargs.get("bg_color", "white")
+
         if subset is None:
             start, stop = 0, None  # None will allow full list traversal
             nwav = len(self.sorted_idx)
@@ -1899,7 +1908,8 @@ class RecordSection:
         logger.debug(
             f"\nIDX\tY\t\tID\tDIST\tAZ\tBAZ\t{DLT}T{SYNSHIFT}\tTOFFSET\tYABSMAX"
         )
-        self.f, self.ax = plt.subplots(figsize=self.figsize)
+        self.f, self.ax = plt.subplots(figsize=self.figsize, dpi=self.dpi,
+                                       facecolor=bg_color)
 
         log_str = "\n"
         # Allow choosing observed or synthetic data, defaults to observed
@@ -2416,7 +2426,7 @@ class RecordSection:
             self.ax.set_yticks(self.y_axis[start:stop])
             self.ax.set_yticklabels(y_tick_labels)
             plt.text(-.01, .99, y_fmt, ha="right", va="top",
-                     transform=self.ax.transAxes, fontsize=fontsize)
+                     transform=self.ax.transAxes, fontsize=fontsize, c=c)
         # Set the y-axis labels to the right side of the right figure border
         elif loc == "y_axis_right":
             self.ax.set_yticks(self.y_axis[start:stop])
@@ -2424,7 +2434,7 @@ class RecordSection:
             self.ax.yaxis.tick_right()
             self.ax.yaxis.set_label_position("right")
             plt.text(1.01, .99, y_fmt, ha="left", va="top",
-                     transform=self.ax.transAxes, fontsize=fontsize)
+                     transform=self.ax.transAxes, fontsize=fontsize, c=c)
         # Option 2: Plotting labels as text objects, separate from y-axis labels
         else:
             # 2a: Set the y-axis labels inside the figure border (xmin or xmax)
@@ -2435,14 +2445,15 @@ class RecordSection:
                 func = min
                 x_val = func(self.stats.xmin)
                 plt.text(.01, .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize, c=c)
             elif loc == "x_max":
                 ha = "right"
                 va = "top"
                 func = max
                 x_val = func(self.stats.xmax)
                 plt.text(.99, .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize,
+                         c=c)
             # 2b: Set the y-axis labels outside figure border, co-existing with
             # y-labels showing distance or azimuth
             elif loc == "y_axis_abs":
@@ -2451,14 +2462,14 @@ class RecordSection:
                 func = min
                 x_val = func(self.stats.xmin)
                 plt.text(0, .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize, c=c)
             elif loc == "y_axis_abs_right":
                 ha = "left"
                 va = "center"
                 func = max
                 x_val = func(self.stats.xmax)
                 plt.text(1., .99, y_fmt, ha=ha, va=va,
-                         transform=self.ax.transAxes, fontsize=fontsize)
+                         transform=self.ax.transAxes, fontsize=fontsize, c=c)
 
             if self.xlim_s is not None:
                 x_val = func([func(self.xlim_s), x_val])
