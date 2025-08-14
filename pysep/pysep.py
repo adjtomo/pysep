@@ -1255,7 +1255,7 @@ class Pysep:
                                 zero_mean=self.demean,
                                 output=self.output_unit,
                                 )
-                        except ValueError as e:
+                        except Exception as e:
                             logger.warning(f"can't remove response {code}: {e}"
                                            f"removing trace from stream")
                             st_out.remove(tr)
