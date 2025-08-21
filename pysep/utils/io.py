@@ -250,7 +250,7 @@ def read_specfem3d_cmtsolution_cartesian(path_to_cmtsolution):
     return event
 
 
-def read_specfem2d_source(path_to_source, origin_time=None):
+def read_specfem2d_source(path_to_source, origin_time="1970-01-01T00:00:00"):
     """
     Create a barebones ObsPy Event object from a SPECFEM2D Source file, which
     only contains information required by Pyatoa.
@@ -267,12 +267,6 @@ def read_specfem2d_source(path_to_source, origin_time=None):
         Source files do not provide origin times so we just provide an
         arbitrary value but allow user to set time
     """
-    # First set dummy origin time
-    if origin_time is None:
-        origin_time = "1970-01-01T00:00:00"
-        logger.info("no origin time set for SPECFEM2D source, setting "
-                       f"dummy value: {origin_time}")
-
     with open(path_to_source, "r") as f:
         lines = f.readlines()
 
