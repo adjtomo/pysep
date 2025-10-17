@@ -198,6 +198,7 @@ Notebook Preamble
     # setting pysep's record section plotting defaults
     
     plotting_defaults   = dict( pysep_path                   = '',
+                                wildcard                     = '*',
                                 sort_by                      = 'distance',
                                 scale_by                     = 'normalize',
                                 amplitude_scale_factor       = 1,
