@@ -98,8 +98,6 @@ Notebook Preamble
    is downloaded only once and stored for subsequent use.
 
 .. code:: ipython3
-
-    %matplotlib widget
     
     import matplotlib.pyplot as plt
     import matplotlib.image as img
