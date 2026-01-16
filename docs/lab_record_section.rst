@@ -27,11 +27,11 @@ Instructions
    -  plotting record sections of seismograms.
 
 -  The two main procedures are executed using the software package
-   `PySEP <https://pysep.readthedocs.io/en/devel/index.html>`__, which
+   `PySEP <https://pysep.readthedocs.io/en/latest/index.html>`__, which
    uses `ObsPy <https://docs.obspy.org/>`__. Check PySEP’s `data
-   gathering <https://pysep.readthedocs.io/en/devel/autoapi/pysep/pysep/index.html#pysep.pysep.Pysep>`__
+   gathering <https://pysep.readthedocs.io/en/latest/autoapi/pysep/pysep/index.html#pysep.pysep.Pysep>`__
    and `record section
-   plot <https://pysep.readthedocs.io/en/devel/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
+   plot <https://pysep.readthedocs.io/en/latest/autoapi/pysep/recsec/index.html#pysep.recsec.RecordSection>`__
    pages for details on the two procedures.
 -  The bandpass filter that is applied to the seismograms can have a
    dramatic effect on what is visible. The frequency limits of the
