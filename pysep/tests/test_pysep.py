@@ -36,7 +36,7 @@ def test_get_client(test_pysep):
     """
     Simple check that we're looking at IRIS for our client
     """
-    assert(test_pysep.c.base_url == "http://service.iris.edu")
+    assert(test_pysep.c.base_url == "http://service.earthscope.org")
 
 
 def test_get_event(test_pysep):
