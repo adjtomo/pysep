@@ -2,7 +2,7 @@
 Pysep-specific formatting functions
 """
 from obspy import Catalog, UTCDateTime
-from obspy.clients.iris import Client
+from obspy.geodetics.flinnengdahl import FlinnEngdahl
 
 
 def channel_code(dt):
@@ -127,7 +127,7 @@ def get_data_availability(cat, inv):
 def format_event_tag(event):
     """
     Generate a unique event tag based on event origin time and location using
-    Flinn Engdahl regions
+    Flinn Engdahl regions. 
 
     :type event: obspy.core.event.Event
     :param event: event to generate tag from
@@ -137,8 +137,8 @@ def format_event_tag(event):
     event_lat = event.preferred_origin().latitude
     event_lon = event.preferred_origin().longitude
 
-    client = Client()
-    region = client.flinnengdahl(lat=event_lat, lon=event_lon, rtype="region")
+    fe = FlinnEngdahl()
+    region = fe.get_region(event_lon, event_lat)
     # e.g. NORTH ISLAND, NEW ZEALAND > NORTH_ISLAND_NEW_ZEALAND
     region = region.replace(" ", "_").replace(",", "").upper()
 
