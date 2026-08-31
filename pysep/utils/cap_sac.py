@@ -185,7 +185,7 @@ def _append_sac_headers_trace(tr, event, inv):
 
     # Define relative start and end times for the SAC header
     begin_time = tr.stats.starttime - otime
-    end_time = begin_time + (tr.stats.npts * tr.stats.delta)
+    end_time = begin_time + ((tr.stats.npts - 1) * tr.stats.delta)
 
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
@@ -324,7 +324,7 @@ def _append_sac_headers_cartesian_trace(tr, event, rcv_x, rcv_y):
 
     # Define relative start and end times for the SAC header
     begin_time = tr.stats.starttime - otime
-    end_time = begin_time + (tr.stats.npts * tr.stats.delta)
+    end_time = begin_time + ((tr.stats.npts - 1) * tr.stats.delta)
 
     sac_header = {
         "iztype": 9,  # Ref time equivalence, IB (9): Begin time
