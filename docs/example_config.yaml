@@ -1,0 +1,66 @@
+# Pysep v0.7.1 Config File
+# User-defined tag for saving files
+event_tag: null
+
+# Parameters for general data gathering control
+client: IRIS
+client_debug: false
+timeout: 600
+use_mass_download: false
+
+# Event Selection
+origin_time: null
+event_selection: default
+event_latitude: null
+event_longitude: null
+event_depth_km: null      # optional: plotting/TauP/event_selection=='search'
+
+# [Optional] if event_selection=='search'
+seconds_before_event: 20  
+seconds_after_event: 20  
+event_magnitude: null   
+
+# Waveform and station metadata gathering parameters
+networks: '*'
+stations: '*'
+channels: '*'
+locations: '*'
+reference_time: null
+seconds_before_ref: 0
+seconds_after_ref: 100
+
+# Station curtailing by location
+mindistance_km: 0
+maxdistance_km: 20000.0
+minazimuth: 0
+maxazimuth: 360
+minlatitude: null
+maxlatitude: null
+minlongitude: null
+maxlongitude: null
+
+# Data quality selection criteria
+remove_clipped: true
+remove_insufficient_length: true
+remove_masked_data: true
+fill_data_gaps: false
+gap_fraction: 1.0
+
+# Data processing parameters
+demean: true
+detrend: true
+taper_percentage: 0.0
+rotate: null
+scale_factor: 1
+resample_freq: null
+
+# Instrument response removal parameters
+remove_response: true
+output_unit: VEL
+water_level: 60
+pre_filt: default
+
+# SAC header control parameters
+taup_model: ak135
+phase_list:
+- ttall

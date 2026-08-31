@@ -53,7 +53,7 @@ class Pysep:
     """Download, preprocess, and save waveform data using ObsPy"""
     def __init__(self,
             # Data gathering control
-            client="IRIS", minlatitude=None, minlongitude=None, 
+            client="EARTHSCOPE", minlatitude=None, minlongitude=None, 
             maxlatitude=None, maxlongitude=None, user=None, password=None,
             use_mass_download=False, client_debug=False, timeout=600,
             llnl_db_path=None,
