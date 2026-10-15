@@ -277,27 +277,49 @@ def remove_stations_for_missing_channels(st, required_number_channels=3,
     return st_out
 
 
-def remove_stations_for_insufficient_length(st):
+def remove_stations_for_insufficient_length(st, tolerance_samples=1):
     """
-    Remove stations if the length does not match the mode of all other lengths
-    in the stream, which is assumed to be the expected length
+    Remove stations if the length is shorter than the mode of all other
+    lengths in the stream, which is assumed to be the expected length.
+    Traces that fall short by no more than `tolerance_samples` samples (e.g.,
+    off-by-one errors from trimming) are kept.
 
     :type st: obspy.core.stream.Stream
     :param st: Stream to check for data gaps and insufficient start and
         end times
+    :type tolerance_samples: int
+    :param tolerance_samples: number of samples a trace may fall short of
+        the expected length and still be kept. Defaults to 1 to allow for
+        off-by-one errors in trim operations
+    :rtype: obspy.core.stream.Stream
+    :return: Stream with insufficient length traces removed
     """
     st_out = st.copy()
+    if not st_out:
+        return st_out
 
-    # Assuming that the mode of the stream lengths represents the actual value
-    stream_lengths = [tr.stats.endtime - tr.stats.starttime for tr in st_out]
-    vals, counts = np.unique(stream_lengths, return_counts=True)
+    stream_lengths = np.array(
+        [tr.stats.endtime - tr.stats.starttime for tr in st_out]
+    )
+
+    # Round lengths to the coarsest sample interval before taking the mode so
+    # that floating point noise and off-by-one lengths do not split the vote
+    max_delta = max(tr.stats.delta for tr in st_out)
+    rounded_lengths = np.round(stream_lengths / max_delta) * max_delta
+    vals, counts = np.unique(rounded_lengths, return_counts=True)
+
     expected_length = vals[np.argmax(counts)]
     logger.debug(f"assuming that the expected stream length is: "
                  f"{expected_length}s")
     for tr, length in zip(st_out[:], stream_lengths):
-        if length < expected_length:
+        # Measure shortfall in whole samples so that float error cannot push
+        # an off-by-one trace over the threshold
+        samples_short = int(round((expected_length - length) /
+                                  tr.stats.delta))
+        if samples_short > tolerance_samples:
             logger.debug(f"{tr.get_id()} has unexpected time length of "
-                         f"{length}s, removing")
+                         f"{length}s ({samples_short} samples short), "
+                         f"removing")
             st_out.remove(tr)
 
     return st_out
