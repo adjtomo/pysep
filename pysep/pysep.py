@@ -1375,6 +1375,9 @@ class Pysep:
             for sta in stations:
                 for cha in channels:
                     _st = st_zne.select(station=sta, channel=cha)
+                    # `_st` may not have the channel or station may be removed
+                    if not _st:
+                        continue
 
                     # Check if 'dip' or 'azimuth' is None, because that causes
                     # ObsPy rotate to throw a TypeError. See PySEP Issue #35
