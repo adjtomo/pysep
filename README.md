@@ -7,7 +7,8 @@ Python Seismogram Extraction and Processing
 `PySEP` uses ObsPy routines to request and standardize seismic data and metadata, returning uniform, consistent, and minimally processed waveforms for use in moment tensor and waveform inversions. 
 
 The package also contains core classes `RecSec` a **rec**ord **sec**tion plotter for rapid visualization of
-waveform data, and `Declust`, for earthquake catalog declustering and geographical source-receiver weighting for waveform inversions.
+waveform data, `Declust`, for earthquake catalog declustering and geographical source-receiver weighting for waveform inversions,
+and `PrettyPlot` (`pplot`), for quick, clean figures of individual waveforms with optional response removal and spectrograms.
 
 - Documentation can found ReadTheDocs: https://pysep.readthedocs.io/en/latest
 - Found a bug, requesting a new feature, or wanting to know how to use`PySEP`? [Feel free to open a GitHub issue](https://github.com/adjtomo/pysep/issues).

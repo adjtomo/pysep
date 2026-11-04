@@ -1,5 +1,15 @@
 # PySEP Changelog
 
+## Unreleased
+
+- New tool PrettyPlot (`pysep.pplot`, command line `pplot`), ported from
+  the standalone `prettyplot.py` script: quick waveform figures with
+  instrument response removal, spectrograms, record sections, grids, gap
+  merging, TauP arrivals and a second time series. Adds docs page
+  `docs/pplot.md` and tests `pysep/tests/test_pplot.py`
+- Bugfix (PrettyPlot): `--merge_fill <number>` no longer crashes on
+  integer (raw count) data
+
 ## Version 0.7.1
 
 - #169: Response removal exception broadened

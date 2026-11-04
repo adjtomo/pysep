@@ -18,3 +18,4 @@ from pysep.pysep import Pysep, get_data  # NOQA
 from pysep.recsec import RecordSection, plotw_rs  # NOQA
 from pysep.declust import Declust  # NOQA
 from pysep.utils.io import read_sem, read_stations, read_events_plus  # NOQA
+from pysep.pplot import PrettyPlot  # NOQA

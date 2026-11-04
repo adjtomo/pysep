@@ -14,6 +14,8 @@ core classes to achieve its goals:
 - `PySep <pysep.html>`__: data download and processing tool
 - `RecSec <recsec.html>`__: record section plotter for data visualization
 - `Declust <declust.html>`__: event and station declustering and weighting
+- `PrettyPlot <pplot.html>`__: quick, clean figures of individual waveforms
+  and spectrograms
 
 `PySEP` is hosted on `GitHub <https://github.com/adjtomo/pysep>`_ as part of the  
 `adjTomo organization <https://github.com/adjtomo>`_.
@@ -103,6 +105,7 @@ If you have installed the Development version of PySEP, you can run tests with:
    pysep
    recsec
    declust
+   pplot
    tutorials
    cookbook
    usage
