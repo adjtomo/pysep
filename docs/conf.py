@@ -58,6 +58,10 @@ autoapi_python_class_content = 'both'
 source_suffix = {'.rst': 'restructuredtext',
                  '.md': 'markdown'}
 
+# Generate anchors for Markdown headings so in-page links like
+# '#example-data' resolve (used by pplot.md)
+myst_heading_anchors = 3
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
