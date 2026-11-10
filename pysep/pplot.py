@@ -14,6 +14,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
+from scipy.fft import next_fast_len
+from scipy.ndimage import uniform_filter1d
+from scipy.signal import hilbert
 
 from dateutil.rrule import MINUTELY, SECONDLY
 from matplotlib import mlab
@@ -172,6 +175,18 @@ def parse_args():
     parser.add_argument("--wf_abs", action="store_true", 
                         help="plot the absolute value of the waveform, does" 
                              "not affect processing, just final plotting")
+    parser.add_argument("--wf_env", action="store_true",
+                        help="overlay the envelope of each waveform (the "
+                             "magnitude of its analytic signal from the "
+                             "Hilbert transform) as a solid line")
+    parser.add_argument("--wf_env_smooth", type=float, default=0.,
+                        help="length in seconds of a centred running mean "
+                             "applied to the envelope, e.g. 60 to compare "
+                             "with 1-min mean data. 0 (default) for none")
+    parser.add_argument("--wf_env_color", type=str, default=None,
+                        help="color of the envelope line(s). Defaults to "
+                             "'C0' for a black waveform, otherwise the "
+                             "waveform color")
     parser.add_argument("--wf_recsec_spacing", nargs="?", type=float, default=1,
                         help="if `wf_type` is some form of recsec, choose the " 
                              "spacing modifier between each of the waveforms. " 
@@ -298,6 +313,14 @@ def parse_args():
                         help=" adjust cmap to clip at lower and/or upper end")
     parser.add_argument("--sp_vmax", default=None, type=float,
                         help="maximum value threshold for spectrogram")
+    parser.add_argument("--sp_interp", default="antialiased", type=str,
+                        help="image interpolation of the spectrogram, "
+                             "'antialiased' (default) or e.g. 'nearest'. "
+                             "Not used with `sp_logscale`")
+    parser.add_argument("--sp_vmin", default=None, type=float,
+                        help="minimum value threshold for spectrogram, use "
+                             "with `sp_vmax` to fix the color scale across "
+                             "figures")
     parser.add_argument("--sp_wlen", type=float, default=None,
                         help="spectrogram window length in seconds. By "
                              "default the shortest window (>=128 samples) "
@@ -327,6 +350,12 @@ def parse_args():
                         help="Label text for shared legend")
     parser.add_argument("--tr_color", type=str, default="C0",
                        help="color of the time series")
+    parser.add_argument("--tr_ylim", type=float, nargs=2, default=None,
+                        help="y-limits (min max) of the additional time "
+                             "series axis")
+    parser.add_argument("--tr_front", action="store_true", default=False,
+                        help="draw the additional time series in front of "
+                             "the waveform instead of behind it")
     
     # Misc plotting options
     parser.add_argument("--fig_size", type=float, nargs="+", default=None,
@@ -413,10 +442,34 @@ def _nearest_pow_2(x):
         return b
     
 
+def envelope(data, samp_rate, smooth=0.):
+    """
+    Envelope of a signal: the magnitude of its analytic signal from the
+    Hilbert transform, optionally smoothed with a centred running mean
+
+    :type data: np.array
+    :param data: signal
+    :type samp_rate: float
+    :param samp_rate: sampling rate in Hz
+    :type smooth: float
+    :param smooth: running mean length in seconds, 0 for none
+    :rtype: np.array
+    :return: envelope, same length as `data`
+    """
+    data = np.asarray(data, dtype=float)
+    # Pad the FFT to a fast length; the analytic signal is cut back after
+    env = np.abs(hilbert(data, N=next_fast_len(len(data))))[:len(data)]
+    n = int(round(smooth * samp_rate))
+    if n > 1:
+        env = uniform_filter1d(env, size=n, mode="nearest")
+    return env
+
+
 def spectrogram(ax, xvals, data, samp_rate, xrange=None, per_lap=0.9,
                 wlen=None, log=False, dbscale=False, mult=8., cmap=None,
                 ncolors=256, zorder=None, clip=[0.0, 1.0], vmax=None,
-                max_cols=2000, max_rows=1024):
+                vmin=None, max_cols=2000, max_rows=1024,
+                interpolation="antialiased"):
     """
     Computes and plots the spectrogram of a time series on a shared time axis.
 
@@ -468,10 +521,17 @@ def spectrogram(ax, xvals, data, samp_rate, xrange=None, per_lap=0.9,
         range (linear or dB depending on `dbscale`)
     :type vmax: float or None
     :param vmax: absolute upper color limit, overrides the upper `clip`
+    :type vmin: float or None
+    :param vmin: absolute lower color limit, overrides the lower `clip`
     :type max_cols: int
     :param max_cols: maximum number of time columns
     :type max_rows: int
     :param max_rows: maximum number of frequency rows
+    :type interpolation: str
+    :param interpolation: Matplotlib imshow interpolation of the linear
+        frequency axis. 'antialiased' (default) averages rows and columns
+        when there are more than screen pixels; 'nearest' draws only some
+        of them, which looks speckled
     :rtype: matplotlib.cm.ScalarMappable
     :return: the plotted image, for a colorbar
     """
@@ -547,12 +607,13 @@ def spectrogram(ax, xvals, data, samp_rate, xrange=None, per_lap=0.9,
         specgram = np.sqrt(specgram[1:, :])
     freq = freq[1:]
 
-    vmin, vmax_frac = clip
-    if vmin < 0 or vmax_frac > 1 or vmin >= vmax_frac:
+    vmin_frac, vmax_frac = clip
+    if vmin_frac < 0 or vmax_frac > 1 or vmin_frac >= vmax_frac:
         msg = "Invalid parameters for clip option."
         raise ValueError(msg)
     _range = float(specgram.max() - specgram.min())
-    vmin = specgram.min() + vmin * _range
+    if vmin is None:
+        vmin = specgram.min() + clip[0] * _range
     if vmax is None:
         vmax = specgram.min() + vmax_frac * _range
     norm = Normalize(vmin, vmax, clip=True)
@@ -583,7 +644,7 @@ def spectrogram(ax, xvals, data, samp_rate, xrange=None, per_lap=0.9,
         ax.set_yscale("log")
     else:
         im = ax.imshow(specgram, origin="lower", aspect="auto",
-                       interpolation="nearest",
+                       interpolation=interpolation,
                        extent=(x_edges[0], x_edges[-1], f_edges[0],
                                f_edges[-1]), **kwargs)
     return im
@@ -880,6 +941,7 @@ class PrettyPlot():
                  rr_taper_fraction=0.05, rr_exact=False,
                  # Waveform plotting
                  wf_abs=False, wf_type="default", wf_norm=False, wf_scale=1,
+                 wf_env=False, wf_env_smooth=0., wf_env_color=None,
                  wf_recsec_spacing=1, wf_spacing_exact=False, wf_order=None,
                  wf_grid=None, nrows=None, ncols=None,
                  # Plotting Aesthetics
@@ -895,10 +957,12 @@ class PrettyPlot():
                  # Spectrogram
                  spectrogram=False, sp_cmap="viridis", sp_numcol=256,
                  sp_dbscale=True, sp_logscale=False, sp_clip=None,
-                 sp_vmax=None, sp_idx=0, sp_wlen=None, sp_overlap=0.9,
+                 sp_vmax=None, sp_vmin=None, sp_interp="antialiased",
+                 sp_idx=0, sp_wlen=None,
+                 sp_overlap=0.9,
                  # Additional Time Series
                  add_trace=None, tr_time="a", tr_label="", tr_ylabel="", 
-                 tr_color="C0", 
+                 tr_color="C0", tr_ylim=None, tr_front=False,
                  # Misc.
                  fig_size=None, dpi=100, fig_len=8, fig_asp=None,
                  legend=True, ncol_legend=1, title=None, title_append="",
@@ -941,6 +1005,9 @@ class PrettyPlot():
 
         # Plot structure control
         self.wf_abs = wf_abs
+        self.wf_env = wf_env
+        self.wf_env_smooth = wf_env_smooth
+        self.wf_env_color = wf_env_color
         self.wf_type = wf_type
         self.wf_norm = wf_norm
         self.wf_scale = wf_scale
@@ -991,6 +1058,8 @@ class PrettyPlot():
         self.sp_logscale = sp_logscale
         self.sp_clip = sp_clip or [0., 1.]
         self.sp_vmax = sp_vmax
+        self.sp_vmin = sp_vmin
+        self.sp_interp = sp_interp
         self.sp_idx = sp_idx
         self.sp_wlen = sp_wlen
         self.sp_overlap = sp_overlap
@@ -1001,6 +1070,8 @@ class PrettyPlot():
         self.tr_label = tr_label
         self.tr_ylabel = tr_ylabel
         self.tr_color = tr_color
+        self.tr_ylim = tr_ylim
+        self.tr_front = tr_front
 
         # Figure output control
         self.fig_size = fig_size
@@ -1326,18 +1397,28 @@ class PrettyPlot():
         if not self.wf_order:
             data = np.array([tr.data for tr in self.st])
             labels = [tr.get_id() for tr in self.st]
+            srs = [tr.stats.sampling_rate for tr in self.st]
         else:
             # Allow arbitrary order set by User
-            data, labels = [], []
+            data, labels, srs = [], [], []
             for i in self.wf_order:
                 data.append(self.st[i].data)
                 labels.append(self.st[i].get_id())
+                srs.append(self.st[i].stats.sampling_rate)
 
         # DATA MANIPULATION
         # Normalize data by its own max so everything falls between [-1, 1]
         if self.wf_norm:
             for i, d in enumerate(data[:]):
                 data[i] = d / np.abs(d).max()
+        # Envelopes are taken before `wf_abs`, which would distort them
+        self._env = None
+        if self.wf_env:
+            if "recsec" in self.wf_type:
+                logger.warning("`wf_env` is drawn without record section "
+                               "offsets")
+            self._env = [envelope(d, sr, self.wf_env_smooth) * self.wf_scale
+                         for d, sr in zip(data, srs)]
         # Absolute value of each trace if we just want to look at rel. amplitude
         if self.wf_abs:
             data = [np.abs(d) for d in data]
@@ -1434,6 +1515,17 @@ class PrettyPlot():
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
                     zorder=6+i, alpha=a, label=l, 
                     )
+                if self.wf_env:
+                    if self.wf_env_color:
+                        env_c = self.wf_env_color
+                    else:
+                        env_c = "C0" if c in ["k", "black"] else c
+                    _l = l.removeprefix("abs ") if l else ""
+                    env_l = f"{_l} envelope" if _l else "envelope"
+                    if self.wf_env_smooth:
+                        env_l += f" ({self.wf_env_smooth:g} s mean)"
+                    ax.plot(self._xvals, self._env[i], c=env_c, lw=1.5,
+                            zorder=6 + len(self._data) + i, label=env_l)
 
     def plot_additional_traces(self):
         """
@@ -1485,13 +1577,17 @@ class PrettyPlot():
                   label=tr_label, zorder=5, markersize=1.25, alpha=0.8)
 
         twax.set_ylabel(self.tr_ylabel, rotation=-90, labelpad=20)
+        if self.tr_ylim:
+            twax.set_ylim(self.tr_ylim)
 
         self.twax = twax
         # Draw the waveform axis above the twin axis so the added trace sits
         # behind the waveform; the waveform axis background is hidden so the
-        # added trace still shows through
-        self.ax.set_zorder(twax.get_zorder() + 1)
-        self.ax.patch.set_visible(False)
+        # added trace still shows through. `tr_front` keeps Matplotlib's
+        # default, where the twin axis is drawn on top
+        if not self.tr_front:
+            self.ax.set_zorder(twax.get_zorder() + 1)
+            self.ax.patch.set_visible(False)
         if self.spectrogram:
             _size = 2.5
             _pad = 0.05
@@ -1520,7 +1616,8 @@ class PrettyPlot():
             wlen=self.sp_wlen, per_lap=self.sp_overlap,
             log=self.sp_logscale, dbscale=self.sp_dbscale,
             cmap=self.sp_cmap, ncolors=self.sp_numcol,
-            clip=self.sp_clip, vmax=self.sp_vmax,
+            clip=self.sp_clip, vmax=self.sp_vmax, vmin=self.sp_vmin,
+            interpolation=self.sp_interp,
             )
         self.ax_spectra.set_ylabel("Freq. [Hz]")
         self.ax_spectra.axis("tight")
@@ -1844,14 +1941,17 @@ class PrettyPlot():
         else:
             title = self.title
 
-        self.ax.set_title(title, fontsize=FONTSIZES["title"])
+        # With a spectrogram the title goes on the top (spectrogram) axis
+        # rather than between the spectrogram and the waveform
+        title_ax = self.ax_spectra if self.spectrogram else self.ax
+        title_ax.set_title(title, fontsize=FONTSIZES["title"])
         # plt.suptitle(title)
 
         # Brute force turn off everything
         if self.frameoff:
             self.ax.set_axis_off()
             self.ax.get_legend().remove()
-            self.ax.set_title("")
+            title_ax.set_title("")
 
         plt.tight_layout()
 
